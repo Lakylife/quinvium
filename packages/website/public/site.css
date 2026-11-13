@@ -547,3 +547,26 @@ h3, .tile h3 { font-size: 18px; }
 .btn.lg { font-size: 15px; }
 .nums strong { font-size: 22px; }
 .notfound h1 { font-size: 72px; }
+
+/* patička, nová podoba (14. 11.) */
+.foot { background: var(--tint); border-top: 0; color: var(--ink-2); padding: 72px 0 28px; margin-top: 0; }
+.foot-top { display: grid; grid-template-columns: minmax(280px, 1.1fr) 2fr; gap: 64px; }
+.foot-brand .brand { font-size: 20px; }
+.foot-brand .brand img { border-radius: 10px; }
+.foot-brand p { margin: 16px 0 0; font-size: 15px; max-width: 28em; color: var(--ink-2); }
+.foot-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.foot-chips span { background: #ffffff; border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.foot-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.foot-actions .ic { width: 18px; height: 18px; }
+.foot-cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+.foot-cols > div { display: flex; flex-direction: column; gap: 10px; }
+.foot-cols h4 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); margin: 0 0 6px; }
+.foot-cols a { color: var(--ink); font-size: 15px; }
+.foot-cols a:hover { color: var(--accent); }
+.foot-status { display: inline-flex; align-items: center; gap: 10px; margin-top: 48px; background: #ffffff; border-radius: 999px; padding: 8px 16px; font-size: 14px; color: var(--ink-2); }
+.foot-status a { color: var(--ink-2); font-family: var(--mono); font-size: 13px; }
+.foot-status .sep { color: var(--ink-3); }
+.foot-base { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 24px; padding-top: 22px; border-top: 1px solid rgba(15, 23, 42, 0.08); font-size: 13.5px; color: var(--ink-3); }
+.foot-base a { color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 940px) { .foot-top { grid-template-columns: 1fr; gap: 40px; } .foot-cols { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 420px) { .foot-actions .btn { flex: 1 1 auto; } }

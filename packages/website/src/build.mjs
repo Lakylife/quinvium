@@ -24,6 +24,8 @@ const NAV = [
   ['Mine', [['mining', 'pick', 'Mine QU on a graphics card']]],
   ['Build', [['developers', 'code', 'Guide, RPC and contract addresses'], ['@params', 'chip', 'Chain IDs, RPC and seeds'], ['@testnet', 'bolt', 'Test network with tQU']]],
 ];
+const GITHUB = 'https://github.com/Lakylife/quinvium';
+const GH = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg>';
 const ARROW = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
 const CHEV = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 const EXT = '<svg class="ic ext" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>';
@@ -99,17 +101,31 @@ ${head}
 ${p.body}
 </main>
 <footer class="foot">
-  <div class="wrap foot-grid">
-    <div class="foot-brand">
-      <a class="brand" href="${u('')}"><img src="/logo.svg" alt="" width="28" height="28"><span>Quinvium</span></a>
-      <p>${L('Programovatelný blockchain s Proof-of-Work. Experimentální software, používejte na vlastní riziko.', 'A programmable proof-of-work blockchain. Experimental software, use at your own risk.')}</p>
+  <div class="wrap">
+    <div class="foot-top">
+      <div class="foot-brand">
+        <a class="brand" href="${u('')}"><img src="/logo.svg" alt="" width="36" height="36"><span>Quinvium</span></a>
+        <p>A programmable proof-of-work blockchain. Mined on graphics cards, open to everyone, owned by no one.</p>
+        <div class="foot-chips"><span>Chain ID 52401</span><span>QU</span><span>Proof-of-Work + EVM</span></div>
+        <div class="foot-actions">
+          <button type="button" class="btn secondary md" data-add="main">Add to MetaMask</button>
+          <a class="btn secondary md" href="${GITHUB}">${GH}Source code</a>
+        </div>
+        <p class="msg" data-add-msg></p>
+      </div>
+      <nav class="foot-cols" aria-label="Footer">
+        <div><h4>Learn</h4>${foot(['about', 'whitepaper', 'tokenomics', 'roadmap', 'faq'])}</div>
+        <div><h4>Use</h4>${foot(['wallets', 'download', 'ecosystem'])}<a href="${EXPLORER}">Explorer</a></div>
+        <div><h4>Mine &amp; build</h4>${foot(['mining', 'developers'])}<a href="${EXPLORER}/docs">Documentation</a><a href="https://testnet.quinvium.com">Testnet</a></div>
+        <div><h4>Community</h4><a href="${GITHUB}">GitHub</a><a href="${GITHUB}/releases">Releases</a><a href="${GITHUB}/issues">Report an issue</a>${foot(['security', 'contact'])}</div>
+      </nav>
     </div>
-    <div><h4>${L('Síť', 'Network')}</h4>${foot(['about', 'whitepaper', 'tokenomics', 'mining', 'roadmap'])}</div>
-    <div><h4>${L('Použití', 'Use')}</h4>${foot(['wallets', 'ecosystem', 'download'])}<a href="${EXPLORER}">Explorer</a></div>
-    <div><h4>${L('Vývoj', 'Build')}</h4>${foot(['developers'])}<a href="${EXPLORER}/docs">${L('Dokumentace', 'Docs')}</a><a href="https://testnet.quinvium.com">Testnet</a></div>
-    <div><h4>Quinvium</h4>${foot(['security', 'faq', 'legal', 'contact'])}</div>
+    <div class="foot-status" data-foot-status><span class="dot" data-foot-dot></span><span data-foot-text>Mainnet</span><span class="sep">·</span><a href="https://rpc.quinvium.com/health">rpc.quinvium.com</a></div>
+    <div class="foot-base">
+      <span>Open, decentralised software. No company, no owner. <a href="${GITHUB}/blob/main/LICENSE">MIT License</a>.</span>
+      <span><a href="${u('legal')}">Disclaimer</a> · No cookies, no tracking.</span>
+    </div>
   </div>
-  <div class="wrap foot-base"><span>Quinvium is open, decentralised software. No company, no owner.</span><span>${L('Bez cookies a sledování.', 'No cookies, no tracking.')}</span></div>
 </footer>
 </body>
 </html>

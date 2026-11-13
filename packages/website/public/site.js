@@ -76,12 +76,21 @@
     en: { none: 'No browser wallet found. Install MetaMask or use the Quinvium app.', ok: 'Network added.', no: 'The request was rejected in the wallet.' },
   }[lang];
   document.querySelectorAll('[data-add]').forEach((btn) => btn.addEventListener('click', async () => {
-    const msg = btn.closest('section')?.querySelector('[data-add-msg]');
+    const msg = btn.closest('section, footer')?.querySelector('[data-add-msg]');
     const say = (t) => { if (msg) msg.textContent = t; };
     if (!window.ethereum) return say(T.none);
     try { await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [NETS[btn.dataset.add]] }); say(T.ok); }
     catch (e) { say(e && e.code === 4001 ? T.no : T.none); }
   }));
+
+  // Stav mainnetu v patičce (všechny stránky)
+  const fdot = document.querySelector('[data-foot-dot]');
+  const ftext = document.querySelector('[data-foot-text]');
+  if (fdot && ftext) {
+    fetch(RPC, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }), signal: AbortSignal.timeout(8000) })
+      .then((r) => r.json()).then((d) => { const h = Number(BigInt(d.result)); ftext.textContent = `Mainnet · block #${h.toLocaleString('en-US')}`; fdot.className = 'dot on'; })
+      .catch(() => { ftext.textContent = 'Mainnet · status unavailable'; fdot.className = 'dot off'; });
+  }
 
   // Živý stav mainnetu
   const live = document.querySelector('[data-live]');

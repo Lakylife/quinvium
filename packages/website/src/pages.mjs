@@ -522,7 +522,7 @@ console.log(await provider.getBlockNumber());</code></pre>
       <details class="sha"><summary>SHA-256</summary><code>${f.sha256}</code><span class="muted small">${f.file}</span></details>
       ${f.note ? `<p class="small muted">${f.note}</p>` : ''}
     </article>`).join('')}</div>
-  <p><a class="more" href="/downloads/${dl.version}/SHA256SUMS.txt">SHA256SUMS.txt ${icon('arrow')}</a></p>` : ''}
+  <p class="row-btns"><a class="btn link" href="/downloads/${dl.version}/SHA256SUMS.txt">SHA256SUMS.txt${icon('arrow')}</a><a class="btn link" href="https://github.com/Lakylife/quinvium/releases">Also on GitHub Releases${icon('ext')}</a></p>` : ''}
 
   <h2>Wpayin (iOS, Android)</h2>
   <div class="cards c2">
@@ -570,7 +570,7 @@ certutil -hashfile Quinvium-${dl ? dl.version : 'x'}-Windows-x64.exe SHA256    #
   ${faq(L('Kdy je platba jistá?', 'When is a payment final?'), L('Každý další blok ji zpevní. Hlubší přepis než 256 bloků (asi hodina) uzly odmítnou.', 'Each new block makes it firmer. Nodes refuse a rewrite deeper than 256 blocks (about an hour).'))}
   ${faq(L('Proběhl audit?', 'Has there been an audit?'), L('Interní přezkumy ano, nezávislý audit zatím ne.', 'Internal reviews yes, an independent audit not yet.'))}
   ${faq(L('Co je testnet?', 'What is the testnet?'), L('Zkušební síť s mincí tQU bez hodnoty, pro vývoj a testování.', 'A test network with tQU coins that have no value, for development and testing.'))}
-  ${faq(L('Kde je zdrojový kód?', 'Where is the source code?'), L('<span class="placeholder">Odkaz na repozitář bude doplněn.</span>', '<span class="placeholder">A repository link will be added.</span>'))}
+  ${faq(L('Kde je zdrojový kód?', 'Where is the source code?'), 'On GitHub under the MIT license: <a href="https://github.com/Lakylife/quinvium">github.com/Lakylife/quinvium</a>. Anyone can read, run, verify and build on it.')}
 </div></section>`,
     },
 
@@ -603,7 +603,7 @@ certutil -hashfile Quinvium-${dl ? dl.version : 'x'}-Windows-x64.exe SHA256    #
   <div class="cards c3">
     ${card('globe', L('E-mail', 'E-mail'), `<span class="placeholder">${L('bude doplněn', 'to be added')}</span>`)}
     ${card('users', L('Komunita', 'Community'), `<span class="placeholder">${L('bude doplněna', 'to be added')}</span>`)}
-    ${card('code', L('Zdrojový kód', 'Source code'), `<span class="placeholder">${L('bude doplněn', 'to be added')}</span>`)}
+    ${card('code', L('Zdrojový kód', 'Source code'), '<a href="https://github.com/Lakylife/quinvium">github.com/Lakylife/quinvium</a>, issues and pull requests welcome.')}
   </div>
   <p class="muted">${L('Kdo po vás chce obnovovací frázi nebo poslání mincí „na ověření“, je podvodník.', 'Anyone who asks for your recovery phrase or for coins “for verification” is a scammer.')}</p>
 </div></section>`,
