@@ -1,0 +1,752 @@
+// Stránky aplikace: těžba, Explorer, síť, nastavení a O projektu. Peněženka má vlastní kód ve wallet/popup.js.
+(() => {
+  const el = (id) => document.getElementById(id);
+  const d = window.desktop;
+  const i18n = window.AetherI18n;
+  const tr = i18n.t;
+  const TABS = ['wallet', 'mining', 'pools', 'explorer', 'node', 'settings', 'about'];
+  const CHART_MS = 10_000;
+  const number = (n) => Number(n).toLocaleString(i18n.locale());
+  const coin = (wei) => (Number(BigInt(wei) / 10n ** 14n) / 10000).toLocaleString(i18n.locale());
+  const hashRate = (h) => {
+    if (h >= 1e9) return `${(h / 1e9).toFixed(2)} GH/s`;
+    if (h >= 1e6) return `${(h / 1e6).toFixed(2)} MH/s`;
+    if (h >= 1e3) return `${(h / 1e3).toFixed(1)} kH/s`;
+    return `${Math.round(h)} H/s`;
+  };
+  const wallet = (cmd) => new Promise((r) => chrome.runtime.sendMessage({ cmd }, r));
+  let height = null;
+  let seedShown = false;
+  let seedSet = false;
+  let last = null;
+  let lastStats = null;
+  let explorer = null;
+
+  // Návrat na záložku ukáže to, co odpovídá stavu peněženky, ne starou obrazovku.
+  const refreshWallet = () => { if (!el('tab-wallet').hidden && !window.approvalActive()) start(); };
+  window.currentTab = () => document.querySelector('nav button[data-tab].active')?.dataset.tab ?? null;
+  window.openAppTab = (name) => document.querySelector(`nav button[data-tab="${name}"]`)?.click();
+
+  // Swap a most jsou stránky Exploreru. V aplikaci vypadají jako její záložky, proto bez hlavičky Exploreru.
+  // Záložka Explorer otevře vždy jeho úvod. Na konkrétní stránku vede jen odkaz, třeba „Zobrazit v Exploreru“.
+  const EXPLORER_PAGES = { swap: '/swap', bridge: '/bridge', explorer: '/' };
+
+  // Pooly patří pod těžbu a O aplikaci pod nastavení: boční panel má jen to, kam se chodí každý den.
+  const NAV_PARENT = { pools: 'mining', about: 'settings' };
+
+  window.showTab = (name, { path } = {}) => {
+    const section = EXPLORER_PAGES[name] ? 'explorer' : name;
+    document.querySelectorAll('nav button[data-tab]').forEach((x) => x.classList.toggle('active', x.dataset.tab === (NAV_PARENT[name] ?? name)));
+    for (const s of TABS) el(`tab-${s}`).hidden = s !== section;
+    if (name === 'mining') { fillAddress(); drawCharts(); showPoolEarnings(); }
+    if (name === 'pools') { drawPools(); showRunPool(); }
+    if (section === 'explorer') showExplorerPage(path ?? EXPLORER_PAGES[name], name !== 'explorer');
+    if (name === 'about') showAbout();
+    if (name === 'settings') showUpdate();
+  };
+  document.querySelectorAll('nav button[data-tab]').forEach((b) => {
+    b.onclick = () => {
+      window.showTab(b.dataset.tab);
+      if (b.dataset.tab === 'wallet') refreshWallet();
+    };
+  });
+
+  // ---- zámek aplikace: po nečinnosti heslo na celou aplikaci, těžba a uzel běží dál ------------------
+  const ACTIVITY_MS = 30_000;
+  const LOCK_TIMES = [5, 15, 30, 60];
+  const walletStatus = async () => (await wallet('status').catch(() => null))?.result ?? {};
+
+  function showLock() {
+    el('lock-password').value = '';
+    el('lock-error').textContent = '';
+    el('app-lock').hidden = false;
+    el('lock-password').focus();
+  }
+  window.onWalletLocked = showLock;
+  window.appLocked = () => !el('app-lock').hidden;
+
+  el('lock-form').onsubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await call('unlock', { password: el('lock-password').value });
+    } catch {
+      el('lock-error').textContent = tr('Wrong password');
+      return;
+    }
+    el('app-lock').hidden = true;
+    await window.onWalletChanged?.();
+    if (window.approvalActive()) window.resumeApproval();
+    else start();
+    fillAddress();
+    followWallet();
+  };
+  el('lock-forgot').onclick = () => {
+    el('app-lock').hidden = true;
+    window.showTab('wallet');
+    logoutScreen(showLock);
+  };
+
+  let touched = 0;
+  const activity = () => {
+    if (Date.now() - touched < ACTIVITY_MS || !el('app-lock').hidden) return;
+    touched = Date.now();
+    wallet('touch');
+  };
+  for (const type of ['pointerdown', 'keydown', 'wheel']) addEventListener(type, activity, { capture: true, passive: true });
+
+  /** Heslo před změnou, která určuje, kam jdou mince. Bez peněženky není co chránit. */
+  async function askPassword(title) {
+    const status = await walletStatus();
+    if (!status.initialized || status.external) return true;     // klíče drží peněženka mimo aplikaci, heslo tu žádné není
+    return new Promise((resolve) => {
+      const done = (ok) => { el('pw-box').hidden = true; resolve(ok); };
+      el('pw-title').textContent = title;
+      el('pw-error').textContent = '';
+      el('pw-input').value = '';
+      el('pw-box').hidden = false;
+      el('pw-input').focus();
+      el('pw-cancel').onclick = () => done(false);
+      el('pw-form').onsubmit = async (e) => {
+        e.preventDefault();
+        try {
+          await call('checkPassword', { password: el('pw-input').value });
+          done(true);
+        } catch { el('pw-error').textContent = tr('Wrong password'); }
+      };
+    });
+  }
+
+  // ---- přihlášení peněženkou mimo aplikaci ------------------------------------------------------------
+  const nodePort = () => last?.node.rpc ?? d.testRpcPort ?? (last?.node.network === 'mainnet' ? 8545 : 8546);
+  const chainInfo = () => ({
+    chainId: lastStats?.chainId ?? (last?.node.network === 'mainnet' ? 52401 : 52402),
+    name: last?.node.network === 'mainnet' ? 'Quinvium' : 'Quinvium Testnet',
+    rpc: `http://127.0.0.1:${nodePort()}`,
+    symbol: lastStats?.currency ?? 'tQU',
+  });
+  const signedIn = async () => {
+    await window.onWalletChanged?.();
+    fillAddress();
+    start();
+  };
+
+  /** MetaMask je v prohlížeči: stránka v něm zprostředkuje přihlášení i pozdější podpisy. */
+  window.signInBrowserWallet = async () => {
+    const ask = async () => { await d.walletLinkOpen({ lang: i18n.lang(), chain: chainInfo() }); };
+    render(`${screenHead('MetaMask')}<p>${tr('We opened your browser. Confirm the connection in MetaMask there and keep that tab open.')}</p>
+      <div class="err" id="ext-error"></div><button id="ext-again">${tr('Open the browser again')}</button>`);
+    on('#back', welcome);
+    on('#ext-again', ask);
+    await ask();
+  };
+  async function browserWalletHello({ address, signature, message, name, rdns }) {
+    const box = el('ext-error');
+    try {
+      // Podpis dokazuje, že adresa opravdu patří této peněžence. Bez něj by šlo těžit na překlep.
+      if (ethers.verifyMessage(message, signature).toLowerCase() !== address.toLowerCase()) throw new Error('Invalid signature');
+      await call('setExternal', { kind: 'browser', name, address, rdns });
+      await signedIn();
+    } catch (e) { if (box) box.textContent = errorText(e); }
+  }
+
+  let wc = null;
+  async function walletConnect() {
+    if (wc) return wc;
+    if (!window.AetherWalletConnect) {
+      await new Promise((resolve, reject) => {
+        const tag = document.createElement('script');
+        tag.src = 'wallet/walletconnect.js';
+        tag.onload = resolve;
+        tag.onerror = () => reject(new Error('WalletConnect could not be loaded'));
+        document.head.appendChild(tag);
+      });
+    }
+    const projectId = window.AETHER_CONFIG?.walletConnectProjectId || store.get('aether.wcProject');
+    const chain = chainInfo();
+    wc = await window.AetherWalletConnect.init({
+      projectId, chainId: chain.chainId, rpcUrl: chain.rpc, metadata: { name: 'Quinvium', description: 'Quinvium app', url: 'https://aether.invalid', icons: [] },
+    });
+    wc.on('disconnect', () => { wc = null; });
+    return wc;
+  }
+  /** Telefon se připojí přes QR kód. Project ID vydává zdarma dashboard.reown.com, bez něj se relay nepřipojí. */
+  window.signInWalletConnect = async () => {
+    if (!window.AETHER_CONFIG?.walletConnectProjectId && !store.get('aether.wcProject')) {
+      render(`${screenHead('WalletConnect')}<p>${tr('WalletConnect needs a free Project ID from dashboard.reown.com.')}</p>
+        <form id="f"><label>Project ID<input name="project" required autocomplete="off" spellcheck="false"></label><div class="err"></div><button class="primary" type="submit">${tr('Continue')}</button></form>`);
+      on('#back', welcome);
+      bindForm('#f', async (v) => { store.set('aether.wcProject', v.project.trim()); window.signInWalletConnect(); });
+      return;
+    }
+    render(`${screenHead('WalletConnect')}<p>${tr('Waiting for the wallet…')}</p><div class="err" id="ext-error"></div>`);
+    on('#back', welcome);
+    try {
+      const provider = await walletConnect();
+      provider.on('display_uri', (uri) => {
+        const code = window.qrcode(0, 'M');
+        code.addData(uri);
+        code.make();
+        render(`${screenHead('WalletConnect')}<p>${tr('Scan this code with your phone wallet.')}</p><div class="card qr-card"><div class="qr" id="wc-qr">${code.createSvgTag({ cellSize: 4, margin: 2, scalable: true })}</div></div><div class="err" id="ext-error"></div>`);
+        on('#back', welcome);
+      });
+      await provider.connect();
+      await call('setExternal', { kind: 'walletconnect', name: provider.session?.peer?.metadata?.name ?? 'WalletConnect', address: provider.accounts[0] });
+      await signedIn();
+    } catch (e) {
+      wc = null;
+      if (el('ext-error')) el('ext-error').textContent = errorText(e);
+    }
+  };
+
+  /** Podpisy z aplikace jdou do peněženky, kterou se uživatel přihlásil. Klíče aplikace nikdy nevidí. */
+  globalThis.externalRequest = async (external, method, params) => {
+    if (external.kind === 'walletconnect') return (await walletConnect()).request({ method, params });
+    return d.walletLinkRequest(method, params, { chain: chainInfo(), signedIn: true, rdns: external.rdns });
+  };
+
+  const errorText = (e) => tr(e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''));
+  /** Dokud těžař nemá DAG, ukazuje se průběh v procentech, potom skutečný výkon. */
+  const LOAD_TEXT = { start: 'Starting the graphics card', dag: 'Loading mining data', check: 'Checking the card' };
+  function showLoading(m) {
+    const running = m.running ?? true;
+    const loading = running && m.progress !== null && m.progress !== undefined && m.progress < 100;
+    el('m-load').hidden = !loading;
+    el('m-rate').hidden = !running || loading;
+    if (loading) {
+      el('m-load-text').textContent = tr(LOAD_TEXT[m.stage] ?? LOAD_TEXT.start);
+      el('m-load-pct').textContent = `${m.progress} %`;
+      el('m-load-bar').style.width = `${m.progress}%`;
+    } else if (running) el('m-rate').textContent = i18n.decimal(m.rate ?? '0 H/s');
+    el('h-rate').hidden = !running;
+    el('h-rate').textContent = loading ? `${m.progress} %` : el('m-rate').textContent;
+  }
+  const showTemperature = (gpu) => {
+    const known = Number.isFinite(gpu?.temp);
+    el('m-temp-box').hidden = !known;
+    if (known) el('m-temp').textContent = `${gpu.temp} °C`;
+  };
+  const setState = (id, on, text) => {
+    el(id).classList.toggle('on', on);
+    el(id).querySelector('span').textContent = text;
+  };
+  const tail = (id, lines) => { const p = el(id); p.textContent = lines.join('\n'); p.scrollTop = p.scrollHeight; };
+  const append = (id, line) => { const p = el(id); p.textContent += `${line}\n`; p.scrollTop = p.scrollHeight; };
+
+
+  /** Výplata jde vždy na přihlášenou peněženku, jiná adresa se nastavit nedá. */
+  const payoutAddress = async () => (await wallet('address').catch(() => null))?.result ?? null;
+  async function fillAddress() {
+    const address = await payoutAddress() ?? (await d.state()).miner.address;
+    el('m-address').textContent = address ?? '—';
+  }
+
+  /** Jiný účet znamená jinou výplatu: běžící těžba přejde na nový účet hned, ne až po restartu. */
+  let followingWallet = false;
+  async function followWallet() {
+    if (followingWallet || !last?.miner.running) return;
+    const address = await payoutAddress();
+    if (!address || address.toLowerCase() === last.miner.address?.toLowerCase()) return;
+    followingWallet = true;
+    try {
+      await d.stopMiner();
+      await d.startMiner({ address, device: el('m-device').value });
+    } finally {
+      followingWallet = false;
+    }
+    fillAddress();
+  }
+
+  /** Bez peněženky se těžit nedá: odměny by neměly kam dojít. */
+  async function requireWallet() {
+    const status = (await wallet('status').catch(() => null))?.result;
+    const ready = !!status?.initialized;
+    el('m-need').hidden = ready;
+    el('m-hero').hidden = !ready;
+    return ready;
+  }
+
+  /** Graf bez knihovny: jen čára, měřítko podle zobrazených hodnot. */
+  function chart(box, values) {
+    box.closest('.panel').hidden = values.length < 2;     // prázdný graf se neukazuje, přijde s prvními daty
+    if (values.length < 2) return;
+    const [w, h] = [480, 92];
+    const max = Math.max(...values) || 1;
+    const min = Math.min(...values, 0);
+    const span = max - min || 1;
+    const x = (i) => (i / (values.length - 1)) * w;
+    const y = (v) => h - 4 - ((v - min) / span) * (h - 10);
+    const path = values.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+    box.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img"><path class="line" d="${path}"/></svg>`;
+  }
+
+  async function rpc(method, params = []) {
+    const r = await fetch(`http://127.0.0.1:${nodePort()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) });
+    return (await r.json()).result;
+  }
+
+  // ---- pooly: seznam čte přímo z kontraktu továrny, proto v něm nemůže být cizí kód ---------------------
+  const nodeUrl = () => `http://127.0.0.1:${nodePort()}`;
+  let abi = null;
+  async function chain() {
+    abi ??= await (await fetch(`${nodeUrl()}/contracts.json`)).json();
+    return new ethers.JsonRpcProvider(nodeUrl(), undefined, { staticNetwork: true });
+  }
+  const factory = (provider) => new ethers.Contract(abi.PoolFactory.address, abi.PoolFactory.abi, provider);
+  const poolAt = (address, provider) => new ethers.Contract(address, abi.AetherPool.abi, provider);
+
+  const TOP_POOLS = 10;
+  let poolQuery = '';
+  let poolDraw = 0;
+  const poolRow = (p) => ({ address: ethers.getAddress(p.address), name: p.name, url: p.url, fee: p.feeBps / 100, share: p.share, blocks: p.blocks, miners: p.miners });
+  /** Pooly podle uzlu: nejsilnější podle bloků za 24 hodin, nebo výsledek hledání. Uzel je řadí a stránkuje sám. */
+  async function loadPools(query) {
+    const r = await rpc('aether_pools', [{ limit: TOP_POOLS, query }]).catch(() => null);
+    return r ? { total: r.total, matched: r.matched, items: r.items.map(poolRow) } : { total: 0, matched: 0, items: [] };
+  }
+
+  /** Výběr, kam těžit: sólo, deset nejsilnějších poolů a vybraný pool, i když mezi nimi není. Další najde hledání. */
+  async function drawPools() {
+    const ticket = ++poolDraw;
+    const box = el('p-list');
+    const chosen = last?.miner.pool?.address ?? '';
+    const query = poolQuery.trim();
+    const found = await loadPools(query);
+    if (ticket !== poolDraw) return;     // mezitím přišlo novější hledání
+    const pools = found.items;
+    if (chosen && !query && !pools.some((p) => p.address.toLowerCase() === chosen.toLowerCase())) {
+      const mine = (await rpc('aether_pools', [{ query: chosen.toLowerCase(), limit: 1 }]).catch(() => null))?.items?.map(poolRow)?.[0];
+      pools.unshift(mine ?? { address: chosen, name: last.miner.pool.name || chosen.slice(0, 10), url: last.miner.pool.url, fee: 0, share: 0, blocks: 0, miners: 0 });
+    }
+    const span = (cls, text) => { const x = document.createElement('span'); x.className = cls; x.textContent = text; return x; };
+    const card = ({ id, title, note, meta, on, off }) => {
+      const b = document.createElement('button');
+      b.className = `choice${on ? ' selected' : ''}`;
+      b.dataset.pool = id;
+      b.disabled = !!off;
+      const main = document.createElement('span');
+      main.className = 'main';
+      const name = document.createElement('b');
+      name.textContent = title;
+      main.append(name, span('small', off ?? note));
+      if (meta) main.append(span('choice-meta', meta));
+      b.append(main, span('mark', on ? tr('Selected') : ''));
+      return b;
+    };
+    const locale = i18n.locale();
+    const share = (p) => (p.blocks ? tr('{share} % of blocks in 24 h', { share: (p.share * 100).toLocaleString(locale, { maximumFractionDigits: 1 }) }) : tr('No blocks in 24 h'));
+    const items = pools.map((p) => card({
+      id: p.address, title: p.name, on: p.address.toLowerCase() === chosen.toLowerCase(),
+      note: `${tr('Fee {fee} %', { fee: p.fee.toLocaleString(locale) })} · ${share(p)} · ${tr('{n} miners', { n: number(p.miners ?? 0) })}`,
+      meta: `${p.address.slice(0, 8)}…${p.address.slice(-4)}`,
+      off: p.url ? null : tr('The operator has not published a server address.'),
+    }));
+    box.replaceChildren(...(query ? [] : [card({ id: '', title: tr('Solo'), note: tr('You keep every block you find'), on: !chosen })]), ...items);
+    if (query && !items.length) box.append(span('dim choice-empty', tr('No pool matches the search.')));
+    el('p-count').textContent = !query && found.total > TOP_POOLS ? tr('The {n} strongest pools by blocks in the last 24 hours. All {total} pools are in the Explorer.', { n: number(TOP_POOLS), total: number(found.total) }) : '';
+    box.querySelectorAll('[data-pool]').forEach((b) => {
+      b.onclick = async () => {
+        el('p-error').textContent = '';
+        const pool = pools.find((p) => p.address === b.dataset.pool);
+        if (!(await askPassword(tr('Change mining pool')))) return;
+        try {
+          await d.setPool(pool ? { address: pool.address, url: pool.url, name: pool.name } : null);
+          await refresh();
+          drawPools();
+        } catch (e) { el('p-error').textContent = errorText(e); }
+      };
+    });
+    el('p-open').hidden = !chosen;
+  }
+  let poolTimer = null;
+  el('p-search').addEventListener('input', () => {
+    poolQuery = el('p-search').value;
+    clearTimeout(poolTimer);
+    poolTimer = setTimeout(drawPools, 250);
+  });
+  el('p-all').onclick = () => window.openExplorer('/pools');
+
+  el('p-open').onclick = () => window.openExplorer(`/pool/${last.miner.pool.address}`);
+  el('p-create').onclick = () => window.openExplorer('/pools/new');
+  el('m-mode-open').onclick = () => window.showTab('pools');
+
+  async function showPoolEarnings() {
+    const pool = last?.miner.pool;
+    const address = await payoutAddress();
+    if (!pool || !address) return;
+    const pending = await poolAt(pool.address, await chain()).pendingOf(address).catch(() => null);
+    if (pending !== null) el('m-pending').textContent = `${coin(pending)} ${lastStats?.currency ?? ''}`;
+  }
+
+  /** Stav vlastního poolu: účet na gas musí mít mince, jinak se podíly neodešlou. */
+  async function showRunPool() {
+    if (!last?.node.running) return;
+    const running = last.node.runPool?.address ?? '';
+    if (document.activeElement !== el('s-pool')) el('s-pool').value = running;
+    const info = running ? await rpc('aether_poolInfo').catch(() => null) : null;
+    el('s-pool-state').textContent = !info ? '' : `${tr('Pool server is running, devices connected: {n}.', { n: info.workers })} ${tr('The gas account {address} holds {amount} {coin}. It pays for submitting shares, so keep a small balance on it.', {
+      address: info.payer, amount: coin(info.payerBalance), coin: lastStats?.currency ?? '',
+    })}${info.lastError ? ` ${info.lastError}` : ''}`;
+  }
+
+  el('s-pool-save').onclick = async () => {
+    if (!(await askPassword(tr('Change pool server')))) return;
+    el('s-pool-error').textContent = '';
+    const address = el('s-pool').value.trim();
+    try {
+      if (address && !(await factory(await chain()).isPool(address).catch(() => false))) throw new Error('This address is not a pool from the network factory.');
+      await d.runPool(address);
+      await refresh();
+      showRunPool();
+    } catch (e) {
+      el('s-pool-error').textContent = errorText(e);
+    }
+  };
+
+  async function drawCharts() {
+    if (el('tab-mining').hidden) return;
+    const s = await d.state();
+    chart(el('c-rate'), s.miner.history);
+    // Graf je historie, číslo vedle něj platí pro teď: zastavený miner nemá žádný výkon.
+    el('c-rate-now').textContent = s.miner.running && s.miner.history.length ? hashRate(s.miner.history.at(-1)) : '';
+    if (!s.node.running) return;
+    const series = await rpc('aether_charts', [120]).catch(() => null);
+    if (series) {
+      chart(el('c-diff'), series.map((p) => Number(p.difficulty)));
+      el('c-diff-now').textContent = series.length ? `${(Number(series.at(-1).difficulty) / 1e6).toFixed(1)} M` : '';
+    }
+  }
+
+  /** Adresy RPC, které se zadávají do peněženky v telefonu nebo v prohlížeči. */
+  function showEndpoints(s) {
+    const e = s.node.running ? s.node.endpoints : null;
+    const rows = [];
+    if (e) {
+      rows.push([tr('RPC on this computer'), e.local]);
+      for (const url of e.lan) rows.push([tr('RPC on the home network'), url]);
+      if (e.public) rows.push([tr(e.access?.nat === 'double' ? 'RPC from the internet (after forwarding)' : 'RPC from the internet'), e.public]);
+    }
+    el('n-endpoints').replaceChildren(...rows.map(([label, url]) => {
+      const row = document.createElement('div');
+      row.className = 'endpoint';
+      const name = document.createElement('span');
+      name.textContent = label;
+      const code = document.createElement('code');
+      code.textContent = url;
+      const copy = document.createElement('button');
+      copy.className = 'small';
+      copy.textContent = tr('Copy');
+      copy.onclick = () => { navigator.clipboard.writeText(url); copy.textContent = tr('Copied'); };
+      row.append(name, code, copy);
+      return row;
+    }));
+    const a = e?.access;
+    let hint = '';
+    if (s.node.access === 'internet' && s.node.running) {
+      if (!a?.checked) hint = tr('Looking for the router and the public address…');
+      else if (a.nat === 'double') hint = tr("The router is behind another router or the provider's modem. On that modem, forward TCP ports {ports} to the home router, or switch the modem to bridge mode.", { ports: a.ports.join(', ') });
+      else if (a.behindNat) hint = tr('The internet provider shares one public address between customers, so this computer cannot be reached from the internet. Ask the provider for a public IP address.');
+      else if (a.upnp) hint = tr('The router opened ports {ports} automatically. Wallets on mobile data can connect.', { ports: a.ports.join(', ') });
+      else hint = tr('The router did not open the ports automatically. In the router settings, forward TCP ports {ports} to {ip}.', { ports: a.ports.join(', '), ip: a.internal ?? s.node.lan ?? '' });
+    } else if (s.node.access === 'lan') {
+      hint = tr('Phones on mobile data cannot connect. Choose the internet option for that.');
+    }
+    el('n-access-hint').textContent = hint;
+    el('n-public-row').hidden = el('n-access').value !== 'internet';
+    el('n-public-note').hidden = el('n-access').value !== 'internet';
+  }
+
+  async function refresh() {
+    const s = await d.state();
+    last = s;
+    seedSet = !!s.node.seed;
+    if (!seedShown) { el('n-seed').value = s.node.seed; el('n-access').value = s.node.access ?? (s.node.share ? 'lan' : 'off'); el('n-public-host').value = s.node.publicHost ?? ''; el('m-power').value = s.miner.power; seedShown = true; }
+    el('m-power-value').textContent = `${el('m-power').value} %`;
+    el('version').textContent = tr('Version {v}', { v: s.version });
+    el('n-lan').textContent = s.node.lan ? tr('This computer has the address {ip} on the local network.', { ip: s.node.lan }) : '';
+    el('n-share-url').textContent = s.node.share && s.node.lan ? tr('Explorer from another computer: {url}', { url: `http://${s.node.lan}:${nodePort()}` }) : '';
+    showEndpoints(s);
+    el('n-start').disabled = s.node.running;
+    el('n-stop').disabled = !s.node.running;
+    el('n-network').disabled = s.node.running;
+    if (s.node.network) { el('n-network').value = s.node.network; el('net-name').textContent = s.node.network; }
+    el('m-start').hidden = s.miner.running;
+    el('m-stop').hidden = !s.miner.running;
+    setState('m-state', s.miner.running, tr(s.miner.running ? 'Mining is running' : 'Mining is off'));
+    setState('n-state', s.node.running, tr(s.node.running ? 'Node is running' : 'Node is not running'));
+    el('dot').classList.toggle('on', s.node.running);
+    if (!s.node.running) el('status').textContent = tr('Node is not running');
+    showLoading(s.miner);
+    el('m-blocks').textContent = s.miner.blocks;
+    el('m-shares').textContent = number(s.miner.shares);
+    showTemperature(s.miner.gpu);
+    document.querySelectorAll('.pool-only').forEach((x) => { x.hidden = !s.miner.pool; });
+    const place = s.miner.pool ? tr('Mining in the pool {name}', { name: s.miner.pool.name || s.miner.pool.address.slice(0, 10) }) : tr('Solo: you keep every block you find');
+    el('m-mode-name').textContent = place;
+    el('h-where').textContent = place;
+    el('h-start').hidden = s.miner.running;
+    el('h-stop').hidden = !s.miner.running;
+    setState('h-state', s.miner.running, tr(s.miner.running ? 'Mining is running' : 'Mining is off'));
+    setState('h-node', s.node.running, tr(s.node.running ? 'Node is running' : 'Node is not running'));
+    el('h-blocks').textContent = s.miner.blocks;
+    el('s-about-version').textContent = tr('Version {v}', { v: s.version });
+    tail('n-log', s.node.log);
+    tail('m-log', s.miner.log);
+    requireWallet();
+  }
+
+  d.onEvent((e) => {
+    if (e.type === 'activity') activity();
+    if (e.type === 'wallet-link') browserWalletHello(e);
+    if (e.type === 'state') refresh();
+    if (e.type === 'node-log') append('n-log', e.line);
+    if (e.type === 'miner-log') {
+      append('m-log', e.line);
+      showLoading(e);
+      el('m-blocks').textContent = e.blocks;
+      el('h-blocks').textContent = e.blocks;
+      if (e.shares !== undefined) el('m-shares').textContent = number(e.shares);
+    }
+    if (e.type === 'stats') {
+      showTemperature(e.gpu);
+      const s = e.stats;
+      lastStats = s;
+      el('n-height').textContent = number(s.height);
+      el('n-peers').textContent = s.peers;
+      el('n-diff').textContent = number(s.difficulty);
+      el('n-pool').textContent = s.mempool;
+      el('m-reward').textContent = `${coin(s.reward)} ${s.currency}`;
+      el('m-network').textContent = hashRate(Number(s.hashrate));
+      el('h-reward').textContent = el('m-reward').textContent;
+      el('h-hash').textContent = el('m-network').textContent;
+      el('h-height').textContent = `#${number(s.height)}`;
+      el('h-peers').textContent = s.peers;
+      el('n-hint').textContent = tr(s.peers ? 'Your computer verifies the whole chain itself. Your data stays with you.'
+        : seedSet ? 'Connecting to the other computer. It needs the Quinvium app open on the same network.'
+          : 'Looking for other computers on the local network. For now the chain is only on this one.');
+      el('status').textContent = `${s.network} · ${tr('block {n}', { n: number(s.height) })}${s.syncing ? ` · ${tr('syncing')}` : ''}`;
+      // Nový blok obnoví jen přehled. Rozepsaný převod, vklad ani nastavení peněženky se pod rukama nesmí zavřít.
+      if (s.height !== height) { height = s.height; if (el('balance')) refreshWallet(); }
+    }
+  });
+
+  el('n-start').onclick = async () => {
+    const network = el('n-network').value;
+    await d.startNode(network);
+    await chrome.storage.local.set({ chainId: network === 'mainnet' ? 52401 : 52402 });
+    refresh();
+  };
+  el('n-stop').onclick = async () => { await d.stopNode(); refresh(); };
+  el('n-access').onchange = () => { el('n-public-row').hidden = el('n-access').value !== 'internet'; el('n-public-note').hidden = el('n-access').value !== 'internet'; };
+  el('n-seed-save').onclick = async () => {
+    el('n-seed-error').textContent = '';
+    try {
+      await d.setNetworkOptions({ seed: el('n-seed').value, access: el('n-access').value, publicHost: el('n-public-host').value });
+    } catch (e) {
+      el('n-seed-error').textContent = errorText(e);
+    }
+    refresh();
+  };
+  async function startMining() {
+    el('m-error').textContent = '';
+    try {
+      await d.startMiner({ address: await payoutAddress(), device: el('m-device').value });
+    } catch (e) {
+      el('m-error').textContent = errorText(e);
+    }
+    refresh();
+  }
+  const stopMining = async () => { await d.stopMiner(); refresh(); };
+  el('m-start').onclick = startMining;
+  el('m-stop').onclick = stopMining;
+  // Přehled ovládá těžbu přímo. Chyba se ukáže na stránce Těžba, kde je i její vysvětlení.
+  el('h-start').onclick = async () => { await startMining(); if (el('m-error').textContent) window.showTab('mining'); };
+  el('h-stop').onclick = stopMining;
+  el('h-mining-open').onclick = () => window.showTab('mining');
+  el('h-node-open').onclick = () => window.showTab('node');
+  el('p-back').onclick = () => window.showTab('mining');
+  el('a-back').onclick = () => window.showTab('settings');
+  el('s-about').onclick = () => window.showTab('about');
+  el('m-power').oninput = () => { el('m-power-value').textContent = `${el('m-power').value} %`; };
+  el('m-power').onchange = async () => { await d.setPower(el('m-power').value); refresh(); };
+  el('m-wallet').onclick = () => window.showTab('wallet');
+  el('s-wallet').onclick = () => window.showTab('wallet');
+
+  // ---- Explorer přímo v aplikaci, přihlášený peněženkou z aplikace ---------------------------------
+  async function trustExplorer() {
+    if (!explorer || !(await requireWallet())) return;
+    const { sites = {} } = await chrome.storage.local.get('sites');
+    if (!sites[explorer.origin]) await chrome.storage.local.set({ sites: { ...sites, [explorer.origin]: { at: Date.now() } } });
+  }
+  const explorerUrl = (hash = '') => `${explorer.url}?embedded=1&lang=${i18n.lang()}&theme=${shownTheme()}${hash}`;
+  async function openExplorer() {
+    if (explorer) return;
+    explorer = await d.explorerInfo();
+    await trustExplorer();
+    el('explorer-view').src = explorerUrl();
+  }
+  /** Ukáže stránku Exploreru. Swap a most jsou bez hlavičky Exploreru, jako by byly záložky aplikace. */
+  async function showExplorerPage(path, solo) {
+    await openExplorer();
+    const view = el('explorer-view');
+    const target = JSON.stringify(String(path).replace(/^#/, '') || '/');
+    const go = () => view.executeJavaScript(`document.body.classList.toggle('solo', ${!!solo}); window.explorerGo ? window.explorerGo(${target}) : (location.hash = '#' + ${target});`).catch(() => {});
+    if (!viewReady || view.isLoading()) view.addEventListener('did-finish-load', go, { once: true });
+    else go();
+  }
+  /** Konkrétní stránka Exploreru přímo v aplikaci, peněženka je tam přihlášená. Starší odkazy s #/ fungují dál. */
+  window.openExplorer = (path) => window.showTab('explorer', { path: String(path).replace(/^#/, '') });
+  // Přiřazení do `src` za běžícího načítání končí chybou ERR_ABORTED. Platí poslední adresa, předchozí načtení se může přerušit.
+  let viewReady = false;
+  el('explorer-view').addEventListener('dom-ready', () => { viewReady = true; }, { once: true });
+  const reloadExplorer = () => {
+    if (!explorer) return;
+    const view = el('explorer-view');
+    if (!viewReady) {
+      view.addEventListener('dom-ready', reloadExplorer, { once: true });
+      return;
+    }
+    view.loadURL(explorerUrl()).catch(() => {});
+    const tab = window.currentTab();
+    if (tab === 'swap' || tab === 'bridge') view.addEventListener('did-finish-load', () => showExplorerPage(EXPLORER_PAGES[tab], true), { once: true });
+  };
+  el('a-docs').onclick = () => window.openExplorer('/api');
+  el('a-explorer').onclick = () => window.showTab('explorer');
+  el('side-lock').onclick = async () => {
+    const status = await walletStatus();
+    if (status.initialized && !status.external) await call('lock');
+  };
+  el('a-update').onclick = () => window.showTab('settings');
+
+  // Po odhlášení nesmí odměny dál chodit na starou adresu: těžba se zastaví a výplata se vyplní podle nové peněženky.
+  window.onWalletRemoved = async () => {
+    el('m-address').textContent = '—';
+    await d.stopMiner();
+    refresh();
+    reloadExplorer();
+  };
+  window.onWalletChanged = async () => {
+    await requireWallet();
+    await trustExplorer();
+    reloadExplorer();
+  };
+
+  // ---- nastavení a O projektu ----------------------------------------------------------------------
+  function showUpdate() {
+    if (!last) return;
+    const u = last.update;
+    el('s-version').textContent = tr('Version {v}', { v: last.version });
+    el('s-update').textContent = u.error ? tr('Update failed: {reason}', { reason: u.error })
+      : !u.packaged || !u.configured ? tr('Updates are managed by the publisher of this build.')
+        : u.downloading ? tr('Downloading version {v}…', { v: u.available })
+          : tr('You have the latest version.');
+  }
+  el('s-check').onclick = async () => {
+    el('s-update').textContent = tr('Checking…');
+    const s = await d.checkUpdate();
+    last = { ...last, update: { ...last.update, ...s } };
+    showUpdate();
+  };
+  function showAbout() {
+    if (!last) return;
+    el('a-version').textContent = tr('Version {v}', { v: last.version });
+    const s = lastStats;
+    if (!s) return;
+    const rows = [
+      [tr('Network'), s.network], ['Chain ID', s.chainId], [tr('Coin'), s.currency], [tr('Target block time'), `${s.blockTimeTarget} s`],
+      [tr('Block reward'), `${coin(s.reward)} ${s.currency}`], [tr('Halving every'), tr('{n} blocks', { n: number(s.halvingInterval) })],
+    ];
+    el('a-facts').replaceChildren(...rows.map(([k, v]) => {
+      const box = document.createElement('div');
+      const name = document.createElement('span');
+      name.textContent = k;
+      const value = document.createElement('b');
+      value.textContent = v;
+      box.append(name, value);
+      return box;
+    }));
+  }
+  el('s-lang').innerHTML = Object.entries(i18n.languages).map(([code, name]) => `<option value="${code}" ${code === i18n.lang() ? 'selected' : ''}>${name}</option>`).join('');
+  el('s-lang').onchange = async () => {
+    i18n.setLang(el('s-lang').value);
+    i18n.apply(document);
+    await refresh();
+    showUpdate();
+    start();
+    reloadExplorer();
+    drawPools();
+  };
+
+  // Vzhled: podle systému, nebo napevno. Explorer v aplikaci dostane stejný.
+  const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* no storage */ } } };
+  const themeChoice = () => store.get('aether.theme') ?? 'system';
+  function shownTheme() {
+    const c = themeChoice();
+    return c === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : c;
+  }
+  function applyTheme() {
+    document.documentElement.dataset.theme = shownTheme();
+    el('s-theme').querySelectorAll('button').forEach((b) => b.classList.toggle('active', b.dataset.themeSet === themeChoice()));
+  }
+  el('s-theme').querySelectorAll('button').forEach((b) => {
+    b.onclick = () => { store.set('aether.theme', b.dataset.themeSet); applyTheme(); reloadExplorer(); };
+  });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { applyTheme(); if (themeChoice() === 'system') reloadExplorer(); });
+  applyTheme();
+
+  const shell = document.querySelector('.shell');
+  /** Sbalení panelu je poslední řádek panelu, zkratka je stejná jako ve VS Code nebo Slacku. */
+  const sideKey = /Mac/.test(navigator.platform) ? '⌘B' : 'Ctrl B';
+  function setSide(closed) {
+    shell.classList.toggle('collapsed', closed);
+    store.set('aether.side', closed ? 'closed' : 'open');
+    const label = tr(closed ? 'Expand sidebar' : 'Collapse sidebar');
+    el('side-toggle-text').textContent = label;
+    el('side-toggle').title = `${label} (${sideKey})`;
+    el('side-toggle').setAttribute('aria-expanded', String(!closed));
+  }
+  el('side-key').textContent = sideKey;
+  el('side-toggle').onclick = () => setSide(!shell.classList.contains('collapsed'));
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'b') { e.preventDefault(); setSide(!shell.classList.contains('collapsed')); }
+  });
+
+  /**
+   * Příkaz quinvium v terminálu. Cestu přidá aplikace jen na kliknutí, sama na nastavení systému nesahá.
+   * Na Windows nikdy `setx PATH "%PATH%;…"`: zkrátí cestu na 1024 znaků a v PowerShellu %PATH% nerozbalí.
+   */
+  d.cliPath().then((cli) => {
+    if (!cli) return;
+    el('s-cli').hidden = false;
+    el('s-cli-line').textContent = cli.line;
+    el('s-cli-copy').onclick = () => navigator.clipboard.writeText(cli.line);
+    el('s-cli-install').onclick = async () => {
+      el('s-cli-install').disabled = true;
+      const r = await d.cliInstall().catch((e) => ({ ok: false, error: e.message }));
+      el('s-cli-state').textContent = !r.ok ? tr('It did not work: {error}', { error: r.error })
+        : r.added ? tr('Done. Open a new terminal and type quinvium --help.') : tr('The quinvium command is already set up. Open a new terminal and type quinvium --help.');
+      el('s-cli-install').disabled = false;
+    };
+  });
+
+  i18n.apply(document);
+  setSide(store.get('aether.side') === 'closed');
+  document.querySelectorAll('nav button[data-tab]').forEach((b) => { b.title = b.textContent.trim(); });
+  setInterval(drawCharts, CHART_MS);
+  setInterval(showPoolEarnings, CHART_MS * 3);
+
+  (async () => {
+    const minutes = (await wallet('autoLock'))?.result ?? 15;
+    el('s-lock').innerHTML = LOCK_TIMES.map((m) => `<option value="${m}" ${m === minutes ? 'selected' : ''}>${tr('{n} minutes', { n: m })}</option>`).join('');
+    el('s-lock').onchange = () => call('setAutoLock', { minutes: Number(el('s-lock').value) });
+    const lockState = await walletStatus();
+    if (lockState.initialized && !lockState.unlocked) showLock();
+    setInterval(followWallet, CHART_MS);
+    const devices = await d.listDevices();
+    el('m-device').innerHTML = `<option value="all">${tr('All cards')}</option>${devices.map((x) => `<option value="${x.id}">${x.name.replace(/[<>&]/g, '')}</option>`).join('')}`;
+    el('m-card').textContent = devices.length === 1 ? devices[0].name : devices.length ? tr('{n} graphics cards', { n: devices.length }) : tr('No graphics card found');
+    fillAddress();
+    const s = await d.state();
+    if (!s.node.running) el('n-start').click();
+    refresh();
+  })();
+})();

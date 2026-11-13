@@ -1,0 +1,28 @@
+{
+  "keyFile": "validator.key",
+  "stateFile": "most-stav.json",
+  "pollMs": 15000,
+  "chains": [
+    { "id": 52402, "name": "Quinvium Testnet", "rpc": "http://127.0.0.1:8546", "gateway": "0x0000000000000000000000000000000000000000", "confirmations": 60, "startBlock": 0 },
+    { "id": 11155111, "name": "Sepolia", "rpc": "http://127.0.0.1:8551", "gateway": "0x0000000000000000000000000000000000000000", "confirmations": 64, "startBlock": 0 }
+  ],
+  "bitcoin": {
+    "rpc": "http://127.0.0.1:18332",
+    "user": "aether",
+    "passwordFile": "bitcoind.heslo",
+    "network": "testnet",
+    "chainId": 52402,
+    "token": "0x0000000000000000000000000000000000000000",
+    "keyFile": "validator-btc.key",
+    "threshold": 2,
+    "confirmations": 6,
+    "minDeposit": 10000,
+    "maxFeeRate": 200,
+    "dailyLimit": 1000000000,
+    "validators": [
+      { "address": "0x0000000000000000000000000000000000000001", "btcKey": "02…" },
+      { "address": "0x0000000000000000000000000000000000000002", "btcKey": "02…" },
+      { "address": "0x0000000000000000000000000000000000000003", "btcKey": "03…" }
+    ]
+  }
+}

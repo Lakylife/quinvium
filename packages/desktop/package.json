@@ -1,0 +1,95 @@
+{
+  "name": "aether-desktop",
+  "productName": "Quinvium",
+  "version": "2.14.1",
+  "description": "Quinvium: peněženka, plný uzel a GPU těžba",
+  "author": "Quinvium",
+  "main": "src/bootstrap.cjs",
+  "private": true,
+  "devDependencies": {
+    "electron": "45.2.1",
+    "electron-builder": "^26.18.0",
+    "esbuild": "^0.28.2",
+    "postject": "^1.0.0-alpha.6"
+  },
+  "build": {
+    "appId": "org.aether.desktop",
+    "productName": "Quinvium",
+    "copyright": "Quinvium",
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
+    "files": [
+      "src/**/*",
+      "assets/icon.png",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../explorer/public",
+        "to": "explorer"
+      }
+    ],
+    "afterPack": "scripts/after-pack.cjs",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "executableName": "Aether",
+      "signAndEditExecutable": false,
+      "artifactName": "Quinvium-${version}-Windows-${arch}.${ext}",
+      "extraResources": [
+        {
+          "from": "build/win",
+          "to": "bin"
+        }
+      ]
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.finance",
+      "identity": null,
+      "extraResources": [
+        {
+          "from": "build/mac",
+          "to": "bin"
+        }
+      ],
+      "extendInfo": {
+        "CFBundleDisplayName": "Quinvium",
+        "NSHighResolutionCapable": true
+      }
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Quinvium"
+    },
+    "npmRebuild": false,
+    "electronVersion": "45.2.1"
+  }
+}

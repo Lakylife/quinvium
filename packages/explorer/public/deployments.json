@@ -1,0 +1,14 @@
+{
+  "52402": {
+    "registry": "0x1F29eD151d57E51706494aB3E9579B2212102C10",
+    "swap": {
+      "factory": "0xFb23f601b0Ef32CB133eBa4ec519C3f6cD4120c7",
+      "router": "0xfee495049060F02Fc9Ef91e179fF48E8a7471E95",
+      "tokens": []
+    },
+    "p2p": {
+      "swapERC20": "0x60FD058c896B7E039363F07485016116f915ae02",
+      "version": "4.3"
+    }
+  }
+}

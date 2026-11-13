@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src http://127.0.0.1:* ws://127.0.0.1:* wss://*.walletconnect.org wss://*.walletconnect.com https://*.walletconnect.org https://*.walletconnect.com wss://*.reown.com https://*.reown.com; frame-src http://127.0.0.1:* https://verify.walletconnect.org https://verify.walletconnect.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<title>Quinvium</title>
+<link rel="stylesheet" href="wallet/popup.css">
+<link rel="stylesheet" href="desktop.css">
+</head>
+<body>
+<div class="app-lock" id="app-lock" hidden>
+  <form class="lock-card" id="lock-form">
+    <div class="logo logo-big"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="0" y="0" width="64" height="64" rx="14.4" fill="#0B1622"/><path transform="translate(7.13 7.13) scale(0.78)" d="M32 2.75L59.58 22.79L49.05 55.21L14.95 55.21L4.42 22.79ZM18.21 27.27L23.48 43.48L40.52 43.48L45.79 27.27L32 17.25ZM39.37 33.81L55.24 55.66L47.56 61.24L31.69 39.4Z" fill="#F2B544"/></svg></div>
+    <h1 data-t>Quinvium is locked</h1>
+    <p class="dim" id="lock-note" data-t>Enter your wallet password to continue.</p>
+    <label><span data-t>Password</span><input type="password" id="lock-password" autocomplete="current-password" required></label>
+    <div class="err" id="lock-error"></div>
+    <button class="primary cta" type="submit"><span data-t>Unlock</span></button>
+    <button class="link-button" type="button" id="lock-forgot"><span data-t>Forgot password?</span></button>
+  </form>
+</div>
+<div class="app-lock" id="pw-box" hidden>
+  <form class="lock-card" id="pw-form">
+    <h1 id="pw-title"></h1>
+    <p class="dim" data-t>Confirm this change with your wallet password.</p>
+    <label><span data-t>Password</span><input type="password" id="pw-input" autocomplete="current-password" required></label>
+    <div class="err" id="pw-error"></div>
+    <div class="row"><button class="primary" type="submit"><span data-t>Confirm</span></button><button type="button" id="pw-cancel"><span data-t>Cancel</span></button></div>
+  </form>
+</div>
+<div class="shell">
+  <aside class="side">
+    <div class="side-brand"><div class="logo"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="0" y="0" width="64" height="64" rx="14.4" fill="#0B1622"/><path transform="translate(7.13 7.13) scale(0.78)" d="M32 2.75L59.58 22.79L49.05 55.21L14.95 55.21L4.42 22.79ZM18.21 27.27L23.48 43.48L40.52 43.48L45.79 27.27L32 17.25ZM39.37 33.81L55.24 55.66L47.56 61.24L31.69 39.4Z" fill="#F2B544"/></svg></div><div class="side-name"><strong>Quinvium</strong><small id="net-name">testnet</small></div></div>
+    <nav>
+      <button data-tab="wallet" class="active"><svg viewBox="0 0 24 24"><path d="M3 11.500 12 4l9 7.500M5.500 9.500V20h13V9.500"/></svg><span data-t>Overview</span></button>
+      <button data-tab="mining"><svg viewBox="0 0 24 24"><path d="M4 20 14 10m-3-5 8 8M7 3c6 0 11 4 14 10-6-3-9-6-14-10Z"/></svg><span data-t>Mining</span></button>
+      <button data-tab="swap"><svg viewBox="0 0 24 24"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg><span data-t>Swap</span></button>
+      <button data-tab="bridge"><svg viewBox="0 0 24 24"><path d="M3 17h18M5 17V9M19 17V9M5 11c3 0 5-3 7-3s4 3 7 3M12 8v9"/></svg><span data-t>Bridge</span></button>
+      <button data-tab="explorer"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span data-t>Explorer</span></button>
+    </nav>
+    <nav class="side-end">
+      <button data-tab="node"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M11 7 6 17m7-10 5 10M7.5 19h9"/></svg><span data-t>Network</span></button>
+      <button data-tab="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2"/></svg><span data-t>Settings</span></button>
+    </nav>
+    <div class="side-foot">
+      <div class="status"><span id="dot"></span><span id="status">Node is not running</span></div>
+      <button class="side-lock" id="side-lock" title="Lock app" aria-label="Lock app"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2.500"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
+      <small id="version"></small>
+    </div>
+    <button class="side-collapse" id="side-toggle" aria-expanded="true">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 6-6 6 6 6M19 6l-6 6 6 6"/></svg>
+      <span id="side-toggle-text" data-t>Collapse sidebar</span><kbd id="side-key">Ctrl B</kbd>
+    </button>
+  </aside>
+
+  <div class="content">
+    <section id="tab-wallet">
+      <div class="home">
+        <main id="app"></main>
+        <aside class="home-side">
+          <div class="side-card" id="h-mining">
+            <div class="panel-row"><b data-t>Mining</b><span class="state" id="h-state"><i></i><span>Mining is off</span></span></div>
+            <strong class="big" id="h-rate" hidden></strong>
+            <span class="dim" id="h-where"></span>
+            <dl class="mini"><dt data-t>Blocks found</dt><dd id="h-blocks">0</dd><dt data-t>Block reward</dt><dd id="h-reward">—</dd></dl>
+            <div class="side-actions">
+              <button class="primary" id="h-start"><span data-t>Start mining</span></button>
+              <button id="h-stop" hidden><span data-t>Stop mining</span></button>
+              <button id="h-mining-open"><span data-t>Details</span></button>
+            </div>
+          </div>
+          <div class="side-card" id="h-network">
+            <div class="panel-row"><b data-t>Network</b><span class="state" id="h-node"><i></i><span>Node is not running</span></span></div>
+            <dl class="mini"><dt data-t>Latest block</dt><dd id="h-height">—</dd><dt data-t>Connected nodes</dt><dd id="h-peers">—</dd><dt data-t>Network hash rate</dt><dd id="h-hash">—</dd></dl>
+            <div class="side-actions"><button id="h-node-open"><span data-t>Details</span></button></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="tab-mining" hidden>
+      <div class="page">
+        <div class="hero card-need" id="m-need" hidden>
+          <strong data-t>Create a wallet first</strong>
+          <span class="dim" data-t>Mining rewards go to your wallet, so you need one before you start.</span>
+          <button class="primary cta" id="m-wallet"><span data-t>Open wallet</span></button>
+        </div>
+        <h1 data-t>Mining</h1>
+        <div class="hero" id="m-hero">
+          <div class="hero-main">
+            <span class="state" id="m-state"><i></i><span>Mining is off</span></span>
+            <strong class="big" id="m-rate" hidden></strong>
+            <span class="dim" id="m-card"></span>
+          </div>
+          <div class="hero-actions">
+            <button class="primary cta" id="m-start"><span data-t>Start mining</span></button>
+            <button class="cta" id="m-stop" hidden><span data-t>Stop mining</span></button>
+          </div>
+          <div class="load" id="m-load" hidden>
+            <div class="load-top"><span id="m-load-text"></span><b id="m-load-pct">0 %</b></div>
+            <div class="load-bar"><i id="m-load-bar"></i></div>
+          </div>
+          <div class="err" id="m-error"></div>
+        </div>
+        <button class="mode-row" id="m-mode-open"><span><b data-t>Where you mine</b><small class="dim" id="m-mode-name"></small></span><span class="dim" data-t>Change</span></button>
+        <div class="stats">
+          <div><span data-t>Blocks found</span><strong id="m-blocks">0</strong></div>
+          <div><span data-t>Block reward</span><strong id="m-reward">—</strong></div>
+          <div><span data-t>Network hash rate</span><strong id="m-network">—</strong></div>
+          <div id="m-temp-box" hidden><span data-t>Card temperature</span><strong id="m-temp">—</strong></div>
+          <div class="pool-only" hidden><span data-t>Accepted shares</span><strong id="m-shares">0</strong></div>
+          <div class="pool-only" hidden><span data-t>Ready to withdraw</span><strong id="m-pending">—</strong></div>
+        </div>
+        <div class="panel-pair">
+          <div class="panel" hidden>
+            <div class="panel-row"><b data-t>Your hash rate</b><span class="dim" id="c-rate-now"></span></div>
+            <div class="chart" id="c-rate"></div>
+          </div>
+          <div class="panel" hidden>
+            <div class="panel-row"><b data-t>Network difficulty</b><span class="dim" id="c-diff-now"></span></div>
+            <div class="chart" id="c-diff"></div>
+          </div>
+        </div>
+        <details id="m-settings">
+          <summary data-t>Mining settings</summary>
+          <div class="panel">
+            <div class="panel-row"><b data-t>Mining power</b><span id="m-power-value">100 %</span></div>
+            <input type="range" id="m-power" min="10" max="100" step="10" value="100">
+            <small class="dim" data-t>Lower power keeps your computer cooler and more responsive, and earns proportionally less.</small>
+          </div>
+          <div class="payout"><b data-t>Payout address</b><span class="mono" id="m-address">—</span><small class="dim" data-t>Rewards always go to the wallet you are signed in with.</small></div>
+          <label><span data-t>Graphics card</span><select id="m-device"></select></label>
+        </details>
+        <details>
+          <summary data-t>Detailed log</summary>
+          <pre id="m-log"></pre>
+        </details>
+      </div>
+    </section>
+
+    <section id="tab-pools" hidden>
+      <div class="page">
+        <div class="page-title"><button class="icon" id="p-back" title="Mining" aria-label="Mining"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><h1 data-t>Pools</h1></div>
+        <p class="lead" data-t>In a pool you get paid for your share of the work, so income stays steady even with a small card. A contract holds the rewards, so the operator cannot take them.</p>
+        <input class="pool-search" id="p-search" type="search" data-t-ph="Search pools by name or address" placeholder="Search pools by name or address" spellcheck="false" autocomplete="off">
+        <div class="choice-list" id="p-list"></div>
+        <p class="dim pool-count" id="p-count"></p>
+        <div class="err" id="p-error"></div>
+        <div class="row"><button class="primary" id="p-create"><span data-t>Create a pool</span></button><button id="p-all"><span data-t>All pools in Explorer</span></button><button id="p-open" hidden><span data-t>Open pool in Explorer</span></button></div>
+        <details class="panel" id="p-run">
+          <summary data-t>Run a pool</summary>
+          <small class="dim" data-t>Other miners can connect to this computer. The pool contract splits the rewards and you only keep your fee. Create the pool first, then paste its address here.</small>
+          <label><span data-t>Pool address</span><input id="s-pool" spellcheck="false" autocomplete="off"></label>
+          <small class="dim" id="s-pool-state"></small>
+          <div class="row"><button id="s-pool-save"><span data-t>Save and restart the node</span></button></div>
+          <div class="err" id="s-pool-error"></div>
+        </details>
+      </div>
+    </section>
+
+    <section id="tab-explorer" class="full" hidden><webview id="explorer-view" partition="persist:explorer"></webview></section>
+
+    <section id="tab-node" hidden>
+      <div class="page">
+        <h1 data-t>Network</h1>
+        <div class="hero">
+          <div class="hero-main">
+            <span class="state" id="n-state"><i></i><span>Node is not running</span></span>
+            <strong class="big" id="n-height">—</strong>
+            <span class="dim" data-t>current block</span>
+          </div>
+        </div>
+        <div class="stats">
+          <div><span data-t>Connected nodes</span><strong id="n-peers">—</strong></div>
+          <div><span data-t>Pending transactions</span><strong id="n-pool">—</strong></div>
+          <div><span data-t>Difficulty</span><strong id="n-diff">—</strong></div>
+        </div>
+        <p class="hint" id="n-hint"></p>
+        <details id="n-join">
+          <summary data-t>Connect to another computer</summary>
+          <p class="hint" data-t>Computers on the same network find each other. Enter an address only if they do not connect.</p>
+          <p class="hint" id="n-lan"></p>
+          <label><span data-t>Address of the other computer</span><input id="n-seed" placeholder="192.168.1.20" spellcheck="false" autocomplete="off"></label>
+          <label><span data-t>Who can connect to this node</span><select id="n-access">
+            <option value="off" data-t>Only this computer</option>
+            <option value="lan" data-t>Computers and phones on this network</option>
+            <option value="internet" data-t>Anyone from the internet (automatic)</option>
+          </select></label>
+          <p class="hint" id="n-access-hint"></p>
+          <label id="n-public-row" hidden><span data-t>Public address (optional)</span><input id="n-public-host" placeholder="203.0.113.7" spellcheck="false" autocomplete="off"></label>
+          <p class="hint" id="n-public-note" hidden data-t>Without a public address filled in, the node asks the service api.ipify.org for it, so that service learns the address of this computer. Mining is served only to this computer and the local network.</p>
+          <div class="endpoints" id="n-endpoints"></div>
+          <p class="hint" id="n-share-url"></p>
+          <div class="err" id="n-seed-error"></div>
+          <div class="row"><button id="n-seed-save"><span data-t>Save</span></button></div>
+        </details>
+        <details id="n-settings">
+          <summary data-t>Node settings</summary>
+          <label><span data-t>Network</span><select id="n-network"><option value="testnet">Testnet</option><option value="mainnet">Mainnet</option></select></label>
+          <div class="row"><button id="n-start"><span data-t>Start node</span></button><button id="n-stop" disabled><span data-t>Stop node</span></button></div>
+        </details>
+        <details>
+          <summary data-t>Detailed log</summary>
+          <pre id="n-log"></pre>
+        </details>
+      </div>
+    </section>
+
+    <section id="tab-settings" hidden>
+      <div class="page">
+        <h1 data-t>Settings</h1>
+        <div class="panel">
+          <div class="panel-row"><b data-t>Language</b><select id="s-lang"></select></div>
+          <div class="panel-row"><b data-t>Lock after inactivity</b><select id="s-lock"></select></div>
+        </div>
+        <div class="panel">
+          <div class="panel-row"><b data-t>Appearance</b><div class="seg" id="s-theme" role="group"><button data-theme-set="system"><span data-t>System</span></button><button data-theme-set="light"><span data-t>Light</span></button><button data-theme-set="dark"><span data-t>Dark</span></button></div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-row"><b data-t>App updates</b><span class="dim" id="s-version"></span></div>
+          <small class="dim" id="s-update"></small>
+          <div class="row"><button id="s-check"><span data-t>Check for updates</span></button></div>
+        </div>
+        <div class="panel" id="s-cli" hidden>
+          <div class="panel-row"><b data-t>Command line</b></div>
+          <small class="dim" data-t>Everything in this app also works from a terminal: wallet, transfers, swap, bridge, mining and the network apps such as the notary or names.</small>
+          <div class="row"><button class="primary" id="s-cli-install"><span data-t>Set up the quinvium command</span></button></div>
+          <small class="dim" id="s-cli-state" aria-live="polite"></small>
+          <div class="panel-row"><small class="dim" data-t>Or run this line once in a terminal, then open a new one and type quinvium --help.</small><button id="s-cli-copy"><span data-t>Copy</span></button></div>
+          <code class="mono" id="s-cli-line"></code>
+        </div>
+        <div class="panel">
+          <div class="panel-row"><b data-t>Wallet</b></div>
+          <small class="dim" data-t>Your recovery phrase, private key and connected sites are in Wallet settings.</small>
+          <div class="row"><button id="s-wallet"><span data-t>Open wallet</span></button></div>
+        </div>
+        <button class="mode-row" id="s-about"><span><b data-t>About</b><small class="dim" id="s-about-version"></small></span><span class="dim" data-t>Details</span></button>
+      </div>
+    </section>
+
+    <section id="tab-about" hidden>
+      <div class="page about">
+        <div class="page-title"><button class="icon" id="a-back" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><h1 data-t>About</h1></div>
+        <div class="about-hero">
+          <div class="logo logo-big"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="0" y="0" width="64" height="64" rx="14.4" fill="#0B1622"/><path transform="translate(7.13 7.13) scale(0.78)" d="M32 2.75L59.58 22.79L49.05 55.21L14.95 55.21L4.42 22.79ZM18.21 27.27L23.48 43.48L40.52 43.48L45.79 27.27L32 17.25ZM39.37 33.81L55.24 55.66L47.56 61.24L31.69 39.4Z" fill="#F2B544"/></svg></div>
+          <div><strong>Quinvium</strong><span id="a-version"></span></div>
+        </div>
+        <p class="lead" data-t>Quinvium is an independent proof-of-work blockchain compatible with Ethereum smart contracts. Anyone can run a node and mine with a graphics card. There is no premine, and all fees go to the miners.</p>
+        <div class="coin-card">
+          <span class="coin-mark"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#F2B544"/><path fill="#0B1622" d="M32 12.4L50.55 25.87L43.46 47.68L20.54 47.68L13.45 25.87ZM22.73 28.89L26.27 39.79L37.73 39.79L41.27 28.89L32 22.15ZM36.96 33.28L47.63 47.97L42.45 51.73L31.78 37.05Z"/></svg></span>
+          <div><b>Quinvium <em>QU</em></b><p data-t>Its coin, Quinvium (QU), can only be mined. No coin was created in advance, every one comes from real work.</p></div>
+        </div>
+        <div class="fact-grid" id="a-facts"></div>
+        <div class="row"><button id="a-explorer"><span data-t>Explorer</span></button><button id="a-docs"><span data-t>Developer documentation</span></button><button id="a-update"><span data-t>App updates</span></button></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script src="wallet/ethers.umd.min.js"></script>
+<script src="wallet/i18n.js"></script>
+<script src="wallet/qrcode.js"></script>
+<script src="wallet/config.js"></script>
+<script src="chrome-shim.js"></script>
+<script src="wallet/background.js"></script>
+<script src="wallet/popup.js"></script>
+<script src="desktop.js"></script>
+</body>
+</html>

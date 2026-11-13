@@ -1,0 +1,175 @@
+#!/usr/bin/env node
+// Spuštění plného uzlu Quinvium z příkazové řádky.
+import { randomBytes } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
+import { AetherNode, VERSION } from './node.js';
+import { NETWORKS } from './params.js';
+import { DevMiner } from './mining/devminer.js';
+import { fromHex } from './util/bytes.js';
+import { L } from './lang.js';
+
+const HELP = L(`${VERSION}
+
+Použití: quintium-node [volby]
+
+  --network <mainnet|testnet|dev>   síť (výchozí mainnet)
+  --data-dir <složka>               data uzlu (výchozí ~/.aether/<síť>)
+  --seeds <host:port,...>           další uzly pro první kontakt
+  --p2p-port <port>                 port sítě
+  --rpc-port <port>                 port JSON-RPC a exploreru
+  --rpc-host <adresa>               adresa RPC (výchozí 127.0.0.1)
+  --rate-limit <n>                  limit RPC požadavků za minutu na IP (0 = bez limitu)
+  --trust-proxy                     IP klienta číst z X-Forwarded-For, jen za vlastní reverzní proxy
+  --no-mining-rpc                   vypnout getWork, submitWork a submitHashrate, pro veřejné uzly
+  --stratum-port <port>             port pro minery
+  --stratum-host <adresa>           adresa Stratum (0.0.0.0 pro minery v síti)
+  --stratum-sessions <n>            kolik zařízení obslouží Stratum, výchozí 1024
+  --stratum-sessions-per-ip <n>     kolik zařízení smí z jedné adresy, výchozí 128
+  --miner-address <0x...>           výchozí adresa výplaty pro eth_getWork
+  --extra <text>                    značka v bloku, nejvýše 32 bajtů
+  --pool <0x...>                    provozovat pool: adresa kontraktu z továrny
+  --pool-key-file <soubor>          klíč účtu, který platí gas za podíly (vznikne sám)
+  --explorer <složka>               složka se statickým explorerem
+  --dev-mine                        vestavěný procesorový miner, jen pro síť dev
+  --public                          přístup z internetu: otevře porty v routeru (UPnP) a zjistí veřejnou adresu
+  --public-host <adresa>            veřejná adresa nebo doména uzlu, když ji chcete zadat ručně
+  --lan                             najít uzly v místní síti automaticky
+  --lan-port <port>                 port hledání v místní síti, jen pro oddělené testy
+  --allow-private                   povolit uzly v lokální síti
+  --verbose                         podrobný výpis sítě
+  --help                            tato nápověda
+`, `${VERSION}
+
+Usage: quintium-node [options]
+
+  --network <mainnet|testnet|dev>   network (default mainnet)
+  --data-dir <folder>               node data (default ~/.aether/<network>)
+  --seeds <host:port,...>           more nodes for the first contact
+  --p2p-port <port>                 network port
+  --rpc-port <port>                 JSON-RPC and explorer port
+  --rpc-host <address>              RPC address (default 127.0.0.1)
+  --rate-limit <n>                  RPC requests per minute per IP (0 = no limit)
+  --trust-proxy                     read the client IP from X-Forwarded-For, only behind your own reverse proxy
+  --no-mining-rpc                   disable getWork, submitWork and submitHashrate, for public nodes
+  --stratum-port <port>             port for miners
+  --stratum-host <address>          Stratum address (0.0.0.0 for miners on the network)
+  --stratum-sessions <n>            how many devices Stratum serves, default 1024
+  --stratum-sessions-per-ip <n>     how many devices one address may use, default 128
+  --miner-address <0x...>           default payout address for eth_getWork
+  --extra <text>                    block tag, at most 32 bytes
+  --pool <0x...>                    run a pool: contract address from the factory
+  --pool-key-file <file>            key of the account that pays gas for shares (created automatically)
+  --explorer <folder>               folder with the static explorer
+  --dev-mine                        built-in CPU miner, dev network only
+  --public                          access from the internet: open ports in the router (UPnP) and find the public address
+  --public-host <address>           public address or domain of the node, to set it by hand
+  --lan                             find nodes on the local network automatically
+  --lan-port <port>                 local discovery port, only for separate tests
+  --allow-private                   allow nodes on the local network
+  --verbose                         detailed network log
+  --help                            this help
+`);
+
+const { values: v } = parseArgs({
+  options: {
+    network: { type: 'string', default: 'mainnet' }, 'data-dir': { type: 'string' }, seeds: { type: 'string' },
+    'p2p-port': { type: 'string' }, 'rpc-port': { type: 'string' }, 'rpc-host': { type: 'string' }, 'rate-limit': { type: 'string' },
+    'stratum-port': { type: 'string' }, 'stratum-host': { type: 'string' }, 'stratum-sessions': { type: 'string' }, 'stratum-sessions-per-ip': { type: 'string' }, 'miner-address': { type: 'string' }, extra: { type: 'string' },
+    pool: { type: 'string' }, 'pool-key-file': { type: 'string' },
+    explorer: { type: 'string' }, 'dev-mine': { type: 'boolean' }, 'allow-private': { type: 'boolean' }, lan: { type: 'boolean' }, public: { type: 'boolean' }, 'public-host': { type: 'string' }, 'lan-port': { type: 'string' }, verbose: { type: 'boolean' },
+    'trust-proxy': { type: 'boolean' }, 'no-mining-rpc': { type: 'boolean' },
+    help: { type: 'boolean' },
+  },
+});
+
+if (v.help) {
+  console.log(HELP);
+  process.exit(0);
+}
+
+const num = (s) => (s === undefined ? undefined : Number(s));
+
+/** Klíč poolu slouží jen na gas za podíly. Vznikne při prvním spuštění a nikam se nevypisuje. */
+function poolKey() {
+  const dir = v['data-dir'] ?? join(homedir(), '.aether', NETWORKS[v.network]?.folder ?? v.network);
+  const file = v['pool-key-file'] ?? join(dir, 'pool.key');
+  if (!existsSync(file)) {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, `0x${randomBytes(32).toString('hex')}\n`, { mode: 0o600 });
+  }
+  return fromHex(readFileSync(file, 'utf8').trim());
+}
+
+const here = typeof __dirname === 'string' ? __dirname : dirname(fileURLToPath(import.meta.url));
+const explorer = v.explorer ?? [join(here, 'explorer'), join(here, '..', '..', 'explorer', 'public')].find((d) => existsSync(d));
+const node = new AetherNode({
+  network: v.network, dataDir: v['data-dir'], seeds: v.seeds?.split(',').filter(Boolean), p2pPort: num(v['p2p-port']),
+  rpcPort: num(v['rpc-port']), rpcHost: v['rpc-host'] ?? (v.public || v['public-host'] ? '0.0.0.0' : undefined), rateLimit: num(v['rate-limit']), stratumPort: num(v['stratum-port']),
+  stratumHost: v['stratum-host'], stratumSessions: num(v['stratum-sessions']), stratumSessionsPerIp: num(v['stratum-sessions-per-ip']), minerAddress: v['miner-address'], extra: v.extra, pool: v.pool, poolKey: v.pool ? poolKey() : undefined, staticDir: explorer, allowPrivate: v['allow-private'], lan: v.lan && v['lan-port'] ? { listenPort: num(v['lan-port']) } : v.lan, verbose: v.verbose,
+  trustProxy: v['trust-proxy'], miningRpc: !v['no-mining-rpc'],
+  publicAccess: v.public || !!v['public-host'], publicHost: v['public-host'],
+});
+
+// Chyba při obsluze jednoho požadavku nesmí ukončit celý uzel. Databáze je po každém bloku konzistentní.
+// Když se ale chyby sypou, je něco špatně a správce služby uzel raději restartuje čistý.
+const FATAL_PER_MINUTE = 60;
+let faults = [];
+const fault = (e) => {
+  const now = Date.now();
+  faults = faults.filter((t) => now - t < 60_000);
+  faults.push(now);
+  console.error(`${L('Neočekávaná chyba', 'Unexpected error')}: ${e?.stack ?? e}`);
+  if (faults.length > FATAL_PER_MINUTE) process.exit(1);
+};
+process.on('uncaughtException', fault);
+process.on('unhandledRejection', fault);
+
+async function main() {
+await node.start();
+const n = node.chain.network;
+node.log(L(`${VERSION}, síť ${n.name}, chainId ${n.chainId}, výška ${node.chain.head.number}`, `${VERSION}, network ${n.name}, chainId ${n.chainId}, height ${node.chain.head.number}`));
+node.log(`RPC http://${node.rpc.host}:${node.rpc.port}  P2P ${node.network.port}  Stratum ${node.stratum.host}:${node.stratum.port}`);
+// 0.0.0.0 je jen adresa, na které uzel naslouchá. Peněženka potřebuje skutečnou adresu tohoto počítače.
+{
+  const ends = node.endpoints();
+  node.log(`${L('RPC pro peněženky na tomto počítači', 'RPC for wallets on this computer')}: ${ends.local}`);
+  for (const url of ends.lan) node.log(`${L('RPC pro peněženky v místní síti', 'RPC for wallets on the local network')}: ${url}`);
+  if (ends.public) node.log(`${L('RPC pro peněženky z internetu', 'RPC for wallets from the internet')}: ${ends.public}`);
+}
+
+let dev = null;
+if (v['dev-mine']) {
+  if (n.name !== 'dev') {
+    node.log(L('Volba --dev-mine je povolena jen v síti dev.', 'The --dev-mine option is allowed only on the dev network.'));
+    process.exit(1);
+  }
+  if (!v['miner-address']) {
+    node.log(L('Volba --dev-mine vyžaduje --miner-address.', 'The --dev-mine option needs --miner-address.'));
+    process.exit(1);
+  }
+  dev = new DevMiner(node);
+  dev.start();
+}
+
+let stopping = false;
+const shutdown = async () => {
+  if (stopping) return;
+  stopping = true;
+  node.log(L('Ukončuji uzel...', 'Stopping the node...'));
+  dev?.stop();
+  await node.stop();
+  process.exit(0);
+};
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+}
+
+main().catch((e) => {
+  if (e.code === 'EADDRINUSE') console.error(L(`Chyba: port ${e.port ?? ''} už používá jiný program, nejspíš běžící uzel nebo aplikace Quinvium. Zvolte jiný přes --p2p-port, --rpc-port nebo --stratum-port.`, `Error: port ${e.port ?? ''} is used by another program, probably a running node or the Quinvium app. Choose another with --p2p-port, --rpc-port or --stratum-port.`));
+  else console.error(`${L('Chyba', 'Error')}: ${e.message}`);
+  process.exit(1);
+});

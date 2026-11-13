@@ -1,0 +1,65 @@
+{
+ "version": "2.14.1",
+ "items": [
+  {
+   "file": "Quinvium-2.14.1-macOS-x64.zip",
+   "title": "Quinvium app",
+   "platform": "macOS 13+, Intel (Apple Silicon via Rosetta)",
+   "icon": "cube",
+   "desc": "Wallet, full node, GPU mining, Explorer and Swap in one app.",
+   "note": null,
+   "size": "130.6 MB",
+   "sha256": "bfdc0c622b48e4c44b52337343bbcd0ee521a7bf087465d640bd42ddd07c555a"
+  },
+  {
+   "file": "Quinvium-2.14.1-Windows-x64.exe",
+   "title": "Quinvium app",
+   "platform": "Windows 10/11, 64-bit, installer",
+   "icon": "cube",
+   "desc": "Wallet, full node, GPU mining, Explorer and Swap in one app.",
+   "note": null,
+   "size": "127.0 MB",
+   "sha256": "5e753f73fafe5244cd1ffeb6b8089909205b1e2083a9f1913c4521e898d34fe8"
+  },
+  {
+   "file": "Quinvium-2.14.1-Windows-x64.zip",
+   "title": "Quinvium app, portable",
+   "platform": "Windows 10/11, 64-bit, no install",
+   "icon": "cube",
+   "desc": "The same app as a zip, runs without installing.",
+   "note": null,
+   "size": "159.7 MB",
+   "sha256": "ade4c247c0be99f062e50fdb3ac5cd48f08af3b1db71ba080e18e1aadddffc80"
+  },
+  {
+   "file": "Quinvium-Node-Miner-2.14.1-Windows-x64.zip",
+   "title": "Node and miner",
+   "platform": "Windows 10/11, 64-bit, command line",
+   "icon": "chip",
+   "desc": "The node as a single program and quintium-miner for the GPU, without the app.",
+   "note": null,
+   "size": "41.5 MB",
+   "sha256": "ba59b06d4ded862d75ee16a05fd13df92e6025320c0bc43eec6d0b86bf6f41f8"
+  },
+  {
+   "file": "Quinvium-Node-2.14.1.tar.gz",
+   "title": "Node",
+   "platform": "Linux, macOS, any system with Node.js 24",
+   "icon": "code",
+   "desc": "The full node from source with the Explorer. See README.txt inside.",
+   "note": null,
+   "size": "667 kB",
+   "sha256": "4690ada1edfe7a644d7f898dcdeaf96792c2da85f48aad8a328378d0a40626ba"
+  },
+  {
+   "file": "Quinvium-Wallet-Chrome-2.14.1.zip",
+   "title": "Wallet for Chrome",
+   "platform": "Chrome, Edge, Brave",
+   "icon": "globe",
+   "desc": "A browser wallet for Quinvium apps. Install with Load unpacked, steps below.",
+   "note": null,
+   "size": "246 kB",
+   "sha256": "b9a45a1848ec8b212cc56a7f971ebc23ce468ef9609c0858e475034a596e6ce8"
+  }
+ ]
+}

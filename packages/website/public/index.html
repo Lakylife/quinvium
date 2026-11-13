@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quinvium: the blockchain mined on graphics cards</title>
+<meta name="description" content="Quinvium (QU) is a programmable proof-of-work network with the EVM. No premine, 4 QU per block, capped at 64 million.">
+<meta name="theme-color" content="#0b1622">
+<link rel="canonical" href="https://quinvium.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Quinvium">
+<meta property="og:title" content="Quinvium: the blockchain mined on graphics cards">
+<meta property="og:description" content="Quinvium (QU) is a programmable proof-of-work network with the EVM. No premine, 4 QU per block, capped at 64 million.">
+<meta property="og:url" content="https://quinvium.com/">
+<meta property="og:image" content="https://quinvium.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/site.css">
+<script src="/site.js" defer></script>
+</head>
+<body data-lang="en">
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="wrap top-in">
+    <a class="brand" href="/"><img src="/logo.svg" alt="" width="30" height="30"><span>Quinvium</span></a>
+    <nav class="nav" id="nav" aria-label="Main menu"><div class="nav-in"><div class="ng"><button type="button" class="ng-btn" aria-expanded="false" aria-controls="ng0">Learn<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="ng-panel" id="ng0"><a class="ni" href="/about/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg><span><strong>About</strong><small>What Quinvium is and how it launched</small></span></a><a class="ni" href="/whitepaper/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6zM14 3v6h6M9 15l2 2 4-4"/></svg><span><strong>Whitepaper</strong><small>Design, consensus and monetary policy</small></span></a><a class="ni" href="/tokenomics/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M15.5 9.5a6 6 0 1 1-6 6"/></svg><span><strong>Tokenomics</strong><small>Supply, rewards and fees</small></span></a><a class="ni" href="/security/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/></svg><span><strong>Security</strong><small>Status, reviews and risks</small></span></a><a class="ni" href="/roadmap/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l10 5-10 5L2 7l10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg><span><strong>Roadmap</strong><small>What is done and what is next</small></span></a><a class="ni" href="/faq/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span><strong>FAQ</strong><small>Short answers to common questions</small></span></a></div></div><div class="ng"><button type="button" class="ng-btn" aria-expanded="false" aria-controls="ng1">Use<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="ng-panel" id="ng1"><a class="ni" href="/wallets/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zM3 7l12-4v4M16 13h2"/></svg><span><strong>Wallets</strong><small>Wallets and adding the network</small></span></a><a class="ni" href="/ecosystem/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5zM3 7l9 5 9-5M12 12v10"/></svg><span><strong>Ecosystem</strong><small>Built-in apps, Swap and tools</small></span></a><a class="ni" href="/download/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12M6 11l6 6 6-6M5 21h14"/></svg><span><strong>Download</strong><small>Apps for macOS, Windows and Chrome</small></span></a></div></div><div class="ng"><a class="ng-btn" href="/mining/">Mine</a></div><div class="ng"><button type="button" class="ng-btn" aria-expanded="false" aria-controls="ng3">Build<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="ng-panel" id="ng3"><a class="ni" href="/developers/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6l-6 6 6 6M16 6l6 6-6 6"/></svg><span><strong>Developers</strong><small>Guide, RPC and contract addresses</small></span></a><a class="ni" href="/developers/#parameters"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg><span><strong>Network parameters</strong><small>Chain IDs, RPC and seeds</small></span></a><a class="ni" href="https://testnet.quinvium.com"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg><span><strong>Testnet</strong><small>Test network with tQU</small></span></a></div></div><div class="ng"><a class="ng-btn" href="https://explorer.quinvium.com">Explorer<svg class="ic ext" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a></div></div><a class="btn primary lg nav-dl" href="/download/">Download<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></nav>
+    <div class="tools">
+      <a class="btn primary md head-dl" href="/download/">Download<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <button class="menu" id="menu" aria-label="Menu" aria-expanded="false" aria-controls="nav"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+<main id="main">
+
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <p class="status-pill"><span class="dot" data-live-dot></span><span data-hero-status data-before="Mainnet launches 14 Nov 2026 at 00:00 CET" data-on="Mainnet live since 14 Nov 2026">Mainnet launches 14 Nov 2026 at 00:00 CET</span></p>
+      <h1>The blockchain mined on graphics cards</h1>
+      <p class="lead">Quinvium is an open proof-of-work network with a full EVM. No premine, no presale, and wallets you already know.</p>
+      <div class="row-btns"><a class="btn primary lg" href="/wallets/">Get started<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="btn secondary lg" href="https://explorer.quinvium.com">Open Explorer<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a></div>
+    </div>
+    <div class="hero-art" aria-hidden="true"><svg viewBox="0 0 480 440" class="art">
+  <polygon class="p1 drift" points="240.0,20.0 435.0,161.7 360.5,390.8 119.5,390.8 45.0,161.7"/>
+  <polygon class="p2 drift2" points="334.0,95.6 392.2,274.4 240.0,385.0 87.8,274.4 146.0,95.6"/>
+  <polygon class="p3" points="240.0,113.0 346.5,190.4 305.8,315.6 174.2,315.6 133.5,190.4"/>
+  <polygon class="f1 float" points="76.2,50.7 99.8,76.9 82.2,107.4 47.7,100.1 44.0,65.0"/>
+  <polygon class="f2 float2" points="407.0,324.3 449.9,336.6 451.5,381.2 409.5,396.5 382.0,361.3"/>
+  <polygon class="f3 float" points="439.0,74.4 447.6,93.7 431.9,107.9 413.6,97.3 418.0,76.6"/>
+  <polygon class="f4 float2" points="60.0,354.0 75.2,365.1 69.4,382.9 50.6,382.9 44.8,365.1"/>
+  <g class="orbit"><circle class="o" cx="240" cy="20" r="7"/><circle class="o o2" cx="445" cy="225" r="5"/></g>
+  <g transform="translate(180 165) scale(1.875)"><path class="mark" d="M32 2.75L59.58 22.79L49.05 55.21L14.95 55.21L4.42 22.79ZM18.21 27.27L23.48 43.48L40.52 43.48L45.79 27.27L32 17.25ZM39.37 33.81L55.24 55.66L47.56 61.24L31.69 39.4Z"/></g>
+</svg></div>
+  </div>
+</section>
+
+<section class="statbar-wrap">
+  <div class="wrap">
+    <div class="statbar" data-live>
+      <div><span>Block height</span><strong data-m="height" class="sk"></strong></div>
+      <div><span>Hashrate</span><strong data-m="hashrate" class="sk"></strong></div>
+      <div><span>Avg. block time</span><strong data-m="blocktime" class="sk"></strong></div>
+      <div><span>Mined supply</span><strong data-m="supply" class="sk"></strong></div>
+    </div>
+    <p class="live-note" data-live-note data-before="Numbers start moving when mainnet launches on 14 November 2026 at 00:00 CET." data-off="The public node is not answering right now." data-on="Live from rpc.quinvium.com, refreshed every 15 s."></p>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="wrap">
+    <div class="sec-head"><h2>Why Quinvium</h2><p>A network secured by miners and usable by anyone who knows Ethereum.</p></div>
+    <div class="bento">
+      <article class="tile t-blue span-6 rows-2">
+        <div class="tile-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6l-6 6 6 6M16 6l6 6-6 6"/></svg></div>
+        <h3>Full EVM, familiar tools</h3>
+        <p>Solidity, ethers.js, Hardhat and MetaMask work unchanged. Point them at the public RPC and deploy.</p>
+        <pre class="mini"><code>const provider = new ethers.JsonRpcProvider(
+  'https://rpc.quinvium.com', 52401);
+await provider.getBlockNumber();</code></pre>
+        <div class="row-btns"><button type="button" class="btn primary md" data-add="main">Add to MetaMask<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>
+        <p class="msg" data-add-msg></p>
+      </article>
+      <a class="tile t-amber span-6 go" href="/mining/">
+        <div class="tile-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l7-7M14 4l6 6-3 1-4-4 1-3zM9 9l6 6"/></svg></div>
+        <h3>Mined on graphics cards</h3>
+        <p>Ethash on an ordinary AMD or NVIDIA card. Blocks are backed by work done, not by the size of a stake.</p>
+        <span class="go-arrow" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+      <a class="tile t-amber span-3 go" href="/tokenomics/">
+        <div class="tile-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 7h14M5 7l-3 7h6l-3-7zM19 7l-3 7h6l-3-7z"/></svg></div>
+        <h3>Fair launch</h3>
+        <p>No premine, no presale, no company and no owner.</p>
+        <span class="go-arrow" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+      <article class="tile t-green span-3">
+        <div class="tile-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M15.5 9.5a6 6 0 1 1-6 6"/></svg></div>
+        <h3>Fees to miners</h3>
+        <p>Fees are not burned. The block miner keeps all of them.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="sec tint">
+  <div class="wrap">
+    <div class="sec-head"><h2>Start in a minute</h2><p>The network is open. No account or permission needed.</p></div>
+    <ol class="stepper">
+      <li><span class="n">1</span><div><h3>Get a wallet</h3><p>The Quinvium app, Wpayin, the Chrome wallet or MetaMask.</p><a class="btn link" href="/wallets/">Choose a wallet<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div></li>
+      <li><span class="n">2</span><div><h3>Add the network</h3><p>One click adds Quinvium mainnet to MetaMask.</p><button type="button" class="btn link" data-add="main">Add to MetaMask<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div></li>
+      <li><span class="n">3</span><div><h3>Mine or explore</h3><p>Switch on mining in the app, or follow the chain in the Explorer.</p><a class="btn link" href="/mining/">How to mine<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div></li>
+    </ol>
+    <p class="msg" data-add-msg></p>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="wrap">
+    <div class="sec-head"><h2>Issuance you can check</h2><p>The rules live in the node code. Difficulty adjusts after every block from the last 60 blocks (LWMA).</p></div>
+    <div class="bento">
+      <a class="tile t-amber span-8 rows-2 go" href="/tokenomics/">
+        <h3>Mined QU over time</h3>
+        <figure class="chart"><svg viewBox="0 0 560 260" role="img" aria-label="Mined QU in millions by years since launch">
+  <line class="gl" x1="44" x2="550" y1="240" y2="240"/><text x="36" y="244" text-anchor="end">0</text><line class="gl" x1="44" x2="550" y1="185" y2="185"/><text x="36" y="189" text-anchor="end">16</text><line class="gl" x1="44" x2="550" y1="130" y2="130"/><text x="36" y="134" text-anchor="end">32</text><line class="gl" x1="44" x2="550" y1="75" y2="75"/><text x="36" y="79" text-anchor="end">48</text><line class="gl" x1="44" x2="550" y1="20" y2="20"/><text x="36" y="24" text-anchor="end">64</text><line class="hv" x1="108.13718666666666" x2="108.13718666666666" y1="20" y2="240"/><line class="hv" x1="172.27437333333333" x2="172.27437333333333" y1="20" y2="240"/><line class="hv" x1="236.41155999999998" x2="236.41155999999998" y1="20" y2="240"/><line class="hv" x1="300.54874666666666" x2="300.54874666666666" y1="20" y2="240"/><polygon class="area" points="44,240 44.0,240.0 52.4,225.5 60.9,211.1 69.3,196.6 77.7,182.1 86.2,167.7 94.6,153.2 103.0,138.8 111.5,127.1 119.9,119.9 128.3,112.7 136.8,105.4 145.2,98.2 153.6,91.0 162.1,83.8 170.5,76.5 178.9,72.1 187.4,68.5 195.8,64.9 204.2,61.3 212.7,57.7 221.1,54.1 229.5,50.4 238.0,47.2 246.4,45.4 254.8,43.6 263.3,41.7 271.7,39.9 280.1,38.1 288.6,36.3 297.0,34.5 305.4,33.2 313.9,32.3 322.3,31.4 330.7,30.5 339.2,29.6 347.6,28.7 356.0,27.8 364.5,26.9 372.9,26.4 381.3,26.0 389.8,25.5 398.2,25.1 406.6,24.6 415.1,24.2 423.5,23.7 431.9,23.4 440.4,23.1 448.8,22.9 457.2,22.7 465.7,22.5 474.1,22.2 482.5,22.0 491.0,21.8 499.4,21.6 507.8,21.5 516.3,21.4 524.7,21.3 533.1,21.2 541.6,21.1 550.0,21.0 550,240"/><polyline class="ln" points="44.0,240.0 52.4,225.5 60.9,211.1 69.3,196.6 77.7,182.1 86.2,167.7 94.6,153.2 103.0,138.8 111.5,127.1 119.9,119.9 128.3,112.7 136.8,105.4 145.2,98.2 153.6,91.0 162.1,83.8 170.5,76.5 178.9,72.1 187.4,68.5 195.8,64.9 204.2,61.3 212.7,57.7 221.1,54.1 229.5,50.4 238.0,47.2 246.4,45.4 254.8,43.6 263.3,41.7 271.7,39.9 280.1,38.1 288.6,36.3 297.0,34.5 305.4,33.2 313.9,32.3 322.3,31.4 330.7,30.5 339.2,29.6 347.6,28.7 356.0,27.8 364.5,26.9 372.9,26.4 381.3,26.0 389.8,25.5 398.2,25.1 406.6,24.6 415.1,24.2 423.5,23.7 431.9,23.4 440.4,23.1 448.8,22.9 457.2,22.7 465.7,22.5 474.1,22.2 482.5,22.0 491.0,21.8 499.4,21.6 507.8,21.5 516.3,21.4 524.7,21.3 533.1,21.2 541.6,21.1 550.0,21.0"/><text x="44" y="258" text-anchor="middle">0</text><text x="128.33333333333331" y="258" text-anchor="middle">5</text><text x="212.66666666666666" y="258" text-anchor="middle">10</text><text x="297" y="258" text-anchor="middle">15</text><text x="381.3333333333333" y="258" text-anchor="middle">20</text><text x="465.6666666666667" y="258" text-anchor="middle">25</text><text x="550" y="258" text-anchor="middle">30</text>
+</svg><figcaption>Mined QU (millions) by years since launch; vertical lines mark reward halvings.</figcaption></figure>
+        <span class="go-arrow" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+      <div class="tile t-amber span-2 num"><strong>4 QU</strong><span>block reward</span></div>
+      <div class="tile t-amber span-2 num"><strong>15 s</strong><span>target block time</span></div>
+      <div class="tile t-amber span-2 num"><strong>8M</strong><span>blocks per halving</span></div>
+      <div class="tile t-amber span-2 num"><strong>64M</strong><span>QU maximum</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec tint">
+  <div class="wrap">
+    <div class="sec-head row"><div><h2>Latest blocks</h2><p>Straight from mainnet.</p></div><a class="btn link" href="https://explorer.quinvium.com">All in the Explorer<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a></div>
+    <div class="blocklist" data-blocks data-txs="tx" data-ago="ago" data-miner="miner" data-explorer="https://explorer.quinvium.com"><p class="empty">The first blocks appear after the mainnet launch.</p></div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="wrap">
+    <div class="sec-head"><h2>Built into the network</h2><p>Twelve contracts are part of the genesis. They have no owner and nobody can switch them off.</p></div>
+    <div class="applist"><div class="appitem"><span class="ai-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6zM14 3v6h6M9 15l2 2 4-4"/></svg></span><span class="ai-txt"><a href="https://explorer.quinvium.com/address/0xae00000000000000000000000000000000000001"><strong>Notary</strong></a><small>Proof that a document existed at a block time.</small></span><button type="button" class="copy" data-copy="0xae00000000000000000000000000000000000001" aria-label="Copy address of Notary" title="0xae00000000000000000000000000000000000001"><code>0xae00…0001</code><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div><div class="appitem"><span class="ai-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></svg></span><span class="ai-txt"><a href="https://explorer.quinvium.com/address/0xae00000000000000000000000000000000000002"><strong>.qu names</strong></a><small>A readable name instead of an address.</small></span><button type="button" class="copy" data-copy="0xae00000000000000000000000000000000000002" aria-label="Copy address of .qu names" title="0xae00000000000000000000000000000000000002"><code>0xae00…0002</code><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div><div class="appitem"><span class="ai-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="6"/><path d="M8.5 14L7 22l5-3 5 3-1.5-8"/></svg></span><span class="ai-txt"><a href="https://explorer.quinvium.com/address/0xae00000000000000000000000000000000000003"><strong>Credentials</strong></a><small>Issue and revoke credentials.</small></span><button type="button" class="copy" data-copy="0xae00000000000000000000000000000000000003" aria-label="Copy address of Credentials" title="0xae00000000000000000000000000000000000003"><code>0xae00…0003</code><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div><div class="appitem"><span class="ai-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 4h14v12H1zM15 9h4l3 3v4h-7M5.5 19.5a2 2 0 1 0 0-.01M18.5 19.5a2 2 0 1 0 0-.01"/></svg></span><span class="ai-txt"><a href="https://explorer.quinvium.com/address/0xae00000000000000000000000000000000000004"><strong>Supply chain</strong></a><small>Step-by-step history of a shipment.</small></span><button type="button" class="copy" data-copy="0xae00000000000000000000000000000000000004" aria-label="Copy address of Supply chain" title="0xae00000000000000000000000000000000000004"><code>0xae00…0004</code><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div><div class="appitem"><span class="ai-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><span class="ai-txt"><a href="https://explorer.quinvium.com/address/0xae00000000000000000000000000000000000005"><strong>Escrow</strong></a><small>Payment released when a condition is met.</small></span><button type="button" class="copy" data-copy="0xae00000000000000000000000000000000000005" aria-label="Copy address of Escrow" title="0xae00000000000000000000000000000000000005"><code>0xae00…0005</code><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div><div class="appitem"><span class="ai-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><span class="ai-txt"><a href="https://explorer.quinvium.com/address/0xae00000000000000000000000000000000000006"><strong>Polls</strong></a><small>On-chain polls and votes.</small></span><button type="button" class="copy" data-copy="0xae00000000000000000000000000000000000006" aria-label="Copy address of Polls" title="0xae00000000000000000000000000000000000006"><code>0xae00…0006</code><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div><div class="appitem"><span class="ai-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M15.5 9.5a6 6 0 1 1-6 6"/></svg></span><span class="ai-txt"><a href="https://explorer.quinvium.com/address/0xae00000000000000000000000000000000000007"><strong>Token factory</strong></a><small>Your own ERC-20 token without writing code.</small></span><button type="button" class="copy" data-copy="0xae00000000000000000000000000000000000007" aria-label="Copy address of Token factory" title="0xae00000000000000000000000000000000000007"><code>0xae00…0007</code><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div><div class="appitem"><span class="ai-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span><span class="ai-txt"><a href="https://explorer.quinvium.com/address/0xae00000000000000000000000000000000000008"><strong>NFT collections</strong></a><small>Your own ERC-721 collection.</small></span><button type="button" class="copy" data-copy="0xae00000000000000000000000000000000000008" aria-label="Copy address of NFT collections" title="0xae00000000000000000000000000000000000008"><code>0xae00…0008</code><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div><div class="appitem"><span class="ai-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M17 4a4 4 0 0 1 0 8M22 21c0-3-2-5-4-6"/></svg></span><span class="ai-txt"><a href="https://explorer.quinvium.com/address/0xae00000000000000000000000000000000000009"><strong>Multisig</strong></a><small>A wallet that needs several signatures.</small></span><button type="button" class="copy" data-copy="0xae00000000000000000000000000000000000009" aria-label="Copy address of Multisig" title="0xae00000000000000000000000000000000000009"><code>0xae00…0009</code><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div><div class="appitem"><span class="ai-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/></svg></span><span class="ai-txt"><a href="https://explorer.quinvium.com/address/0xae0000000000000000000000000000000000000a"><strong>Wrapped QU (WQU)</strong></a><small>QU as an ERC-20 token.</small></span><button type="button" class="copy" data-copy="0xae0000000000000000000000000000000000000a" aria-label="Copy address of Wrapped QU (WQU)" title="0xae0000000000000000000000000000000000000a"><code>0xae00…000a</code><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div><div class="appitem"><span class="ai-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l10 5-10 5L2 7l10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></span><span class="ai-txt"><a href="https://explorer.quinvium.com/address/0xae0000000000000000000000000000000000000b"><strong>Multicall</strong></a><small>Several reads in one call.</small></span><button type="button" class="copy" data-copy="0xae0000000000000000000000000000000000000b" aria-label="Copy address of Multicall" title="0xae0000000000000000000000000000000000000b"><code>0xae00…000b</code><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div><div class="appitem"><span class="ai-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5zM3 7l9 5 9-5M12 12v10"/></svg></span><span class="ai-txt"><a href="https://explorer.quinvium.com/address/0xae0000000000000000000000000000000000000c"><strong>Pool factory</strong></a><small>Mining pools that pay out through a contract.</small></span><button type="button" class="copy" data-copy="0xae0000000000000000000000000000000000000c" aria-label="Copy address of Pool factory" title="0xae0000000000000000000000000000000000000c"><code>0xae00…000c</code><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div></div>
+  </div>
+</section>
+
+<section class="sec tint">
+  <div class="wrap">
+    <div class="sec-head"><h2>Ecosystem</h2><p>The tools that get you onto the network.</p></div>
+    <div class="bento">
+      <a class="tile t-green span-6 go" href="/download/">
+        <div class="tile-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5zM3 7l9 5 9-5M12 12v10"/></svg></div>
+        <h3>Quinvium app</h3>
+        <p>Wallet, full node, GPU mining and Explorer for macOS and Windows.</p>
+        <span class="go-arrow" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+      <a class="tile t-green span-3 go" href="/wallets/">
+        <div class="tile-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zM3 7l12-4v4M16 13h2"/></svg></div>
+        <h3>Wpayin</h3>
+        <p>A mobile wallet for iOS and Android.</p>
+        <span class="go-arrow" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+      <a class="tile t-blue span-3 go" href="https://explorer.quinvium.com">
+        <div class="tile-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg></div>
+        <h3>Explorer</h3>
+        <p>Blocks, transactions and addresses.</p>
+        <span class="go-arrow" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></span>
+      </a>
+      <a class="tile t-neutral span-6 go" href="/developers/">
+        <div class="tile-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg></div>
+        <h3>For builders</h3>
+        <p>Public RPC for mainnet and testnet, contract addresses and the JSON-RPC docs.</p>
+        <span class="go-arrow" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+      <a class="tile t-neutral span-6 go" href="/ecosystem/">
+        <div class="tile-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
+        <h3>Swap and P2P <span class="tag">testnet only</span></h3>
+        <p>Token swaps and direct trades, not deployed on mainnet yet.</p>
+        <span class="go-arrow" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="wrap narrow-wrap">
+    <div class="sec-head"><h2>Common questions</h2></div>
+    <details class="qa"><summary>How do I get QU?</summary><div>By mining, or by a transfer from someone who has QU. There is no presale and no exchange.</div></details>
+    <details class="qa"><summary>Did anyone get coins before launch?</summary><div>No. The genesis has no balances; every QU is mined, by anyone.</div></details>
+    <details class="qa"><summary>Does MetaMask work?</summary><div>Yes, as with any EVM network. Add the network with the button above.</div></details>
+    <details class="qa"><summary>Has there been an audit?</summary><div>Internal reviews yes, an independent audit not yet. Quinvium is experimental software.</div></details>
+    <p><a class="btn link" href="/faq/">All questions<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></p>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="wrap">
+    <div class="cta-box">
+      <div><h2>Join the network</h2><p>Run a node, start mining or deploy your first contract.</p></div>
+      <div class="row-btns"><a class="btn primary lg" href="/download/">Download the app<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+    </div>
+  </div>
+</section>
+</main>
+<footer class="foot">
+  <div class="wrap foot-grid">
+    <div class="foot-brand">
+      <a class="brand" href="/"><img src="/logo.svg" alt="" width="28" height="28"><span>Quinvium</span></a>
+      <p>A programmable proof-of-work blockchain. Experimental software, use at your own risk.</p>
+    </div>
+    <div><h4>Network</h4><a href="/about/">About</a><a href="/whitepaper/">Whitepaper</a><a href="/tokenomics/">Tokenomics</a><a href="/mining/">Mining</a><a href="/roadmap/">Roadmap</a></div>
+    <div><h4>Use</h4><a href="/wallets/">Wallets</a><a href="/ecosystem/">Ecosystem</a><a href="/download/">Download</a><a href="https://explorer.quinvium.com">Explorer</a></div>
+    <div><h4>Build</h4><a href="/developers/">Developers</a><a href="https://explorer.quinvium.com/docs">Docs</a><a href="https://testnet.quinvium.com">Testnet</a></div>
+    <div><h4>Quinvium</h4><a href="/security/">Security</a><a href="/faq/">FAQ</a><a href="/legal/">Disclaimer</a><a href="/contact/">Contact</a></div>
+  </div>
+  <div class="wrap foot-base"><span>Quinvium is open, decentralised software. No company, no owner.</span><span>No cookies, no tracking.</span></div>
+</footer>
+</body>
+</html>

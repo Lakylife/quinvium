@@ -1,0 +1,8 @@
+{
+  "name": "@aether/bridge",
+  "version": "2.3.0",
+  "private": true,
+  "type": "module",
+  "description": "Validátor mostu Quinvium: řetězce EVM a Bitcoin",
+  "bin": { "aether-bridge": "src/cli.js" }
+}

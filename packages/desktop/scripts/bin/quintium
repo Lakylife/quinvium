@@ -1,0 +1,11 @@
+#!/bin/sh
+# Příkazová řádka Quinvium. Použije Node zabudovaný v aplikaci, nic dalšího se neinstaluje.
+self="$0"
+while [ -L "$self" ]; do
+  link="$(readlink "$self")"
+  case "$link" in /*) self="$link" ;; *) self="$(dirname "$self")/$link" ;; esac
+done
+dir="$(cd "$(dirname "$self")" && pwd -P)"
+exe="$dir/../../MacOS/Quinvium"
+[ -x "$exe" ] || exe="$dir/../../MacOS/Quintium"     # sestavení do 2.12.x se jmenovala Quintium
+ELECTRON_RUN_AS_NODE=1 exec "$exe" "$dir/quintium-node.cjs" cli "$@"

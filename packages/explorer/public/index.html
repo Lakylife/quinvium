@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quinvium Explorer</title>
+<link rel="stylesheet" href="/styles.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect x=%220%22 y=%220%22 rx=%2214.4%22 fill=%22%230B1622%22/%3E%3Cpath transform=%22translate%287.13 7.13%29 scale%280.78%29%22 d=%22M32 2.75L59.58 22.79L49.05 55.21L14.95 55.21L4.42 22.79ZM18.21 27.27L23.48 43.48L40.52 43.48L45.79 27.27L32 17.25ZM39.37 33.81L55.24 55.66L47.56 61.24L31.69 39.4Z%22 fill=%22%23F2B544%22/%3E%3C/svg%3E">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-inner">
+    <a class="app-brand" href="/">
+      <span class="brand-symbol"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="0" y="0" width="64" height="64" rx="14.4" fill="#0B1622"/><path transform="translate(7.13 7.13) scale(0.78)" d="M32 2.75L59.58 22.79L49.05 55.21L14.95 55.21L4.42 22.79ZM18.21 27.27L23.48 43.48L40.52 43.48L45.79 27.27L32 17.25ZM39.37 33.81L55.24 55.66L47.56 61.24L31.69 39.4Z" fill="#F2B544"/></svg></span>
+      <span class="brand-copy"><strong>Quinvium</strong><small id="brand-net">mainnet</small></span>
+    </a>
+    <button class="icon-button menu-toggle" id="menu-btn" aria-label="Menu" aria-expanded="false" title="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <nav class="main-nav" id="main-nav" aria-label="Main">
+      <div class="nav-group" data-group="blocks,block,txs,tx,mempool,richlist">
+        <button class="nav-link" type="button" aria-expanded="false"><span data-t="nav.blockchain">Blockchain</span><svg class="chev" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 3.500 3 3 3-3"/></svg></button>
+        <div class="nav-menu">
+          <a href="/blocks" data-nav="blocks" data-t="nav.blocks">Blocks</a>
+          <a href="/txs" data-nav="txs" data-t="nav.txs">Transactions</a>
+          <a href="/mempool" data-nav="mempool" data-t="nav.mempool">Pending</a>
+          <a href="/richlist" data-nav="richlist" data-t="nav.richlist">Rich list</a>
+        </div>
+      </div>
+      <a class="nav-link" href="/tokens" data-nav="tokens" data-t="nav.tokens">Tokens</a>
+      <a class="nav-link" href="/swap" data-nav="swap" data-t="nav.swap">Swap</a>
+      <a class="nav-link" href="/bridge" data-nav="bridge" data-t="nav.bridge">Bridge</a>
+      <div class="nav-group" data-group="network,charts,miners,pools,pool,mining">
+        <button class="nav-link" type="button" aria-expanded="false"><span data-t="side.network">Network</span><svg class="chev" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 3.500 3 3 3-3"/></svg></button>
+        <div class="nav-menu">
+          <a href="/network" data-nav="network" data-t="nav.network">Network</a>
+          <a href="/charts" data-nav="charts" data-t="nav.charts">Charts</a>
+          <a href="/miners" data-nav="miners" data-t="nav.miners">Miners</a>
+          <a href="/pools" data-nav="pools" data-t="nav.pools">Pools</a>
+          <a href="/mining" data-nav="mining" data-t="nav.mining">Start mining</a>
+        </div>
+      </div>
+      <div class="nav-group" data-group="apps,api">
+        <button class="nav-link" type="button" aria-expanded="false"><span data-t="nav.more">More</span><svg class="chev" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 3.500 3 3 3-3"/></svg></button>
+        <div class="nav-menu">
+          <a href="/apps" data-nav="apps" data-t="nav.apps">Apps</a>
+          <a href="/api" data-nav="api" data-t="nav.api">Developers</a>
+        </div>
+      </div>
+    </nav>
+    <form class="header-search js-search" role="search">
+      <input class="js-search-input" type="text" placeholder="Block, transaction, address…" autocomplete="off" spellcheck="false" data-t-ph="search.ph" aria-label="Search">
+    </form>
+    <div class="pop-wrap" id="account-wrap">
+      <button class="login-button" id="login-btn">Connect wallet</button>
+      <div class="pop account-pop" id="account-pop" role="menu"></div>
+    </div>
+  </div>
+</header>
+
+<main class="app-main">
+  <div class="page-inner" id="app"></div>
+</main>
+
+<footer class="app-footer" id="strip">
+  <div class="footer-inner">
+    <div class="footer-main">
+      <div class="footer-brand">
+        <a class="footer-logo" href="/"><span class="brand-symbol"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="0" y="0" width="64" height="64" rx="14.4" fill="#0B1622"/><path transform="translate(7.13 7.13) scale(0.78)" d="M32 2.75L59.58 22.79L49.05 55.21L14.95 55.21L4.42 22.79ZM18.21 27.27L23.48 43.48L40.52 43.48L45.79 27.27L32 17.25ZM39.37 33.81L55.24 55.66L47.56 61.24L31.69 39.4Z" fill="#F2B544"/></svg></span><strong>Quinvium Explorer</strong></a>
+        <p data-t="foot.about">Explorer for the Quinvium network: blocks, transactions, addresses, tokens and mining. Data comes straight from the node.</p>
+        <p class="strip-stats"><span class="strip-node"><i class="status-dot" id="node-dot"></i><span id="footer-net">—</span></span><span id="footer-status">—</span></p>
+      </div>
+      <nav class="footer-links" aria-label="Footer">
+        <div><h2 class="footer-title" data-t="nav.blockchain">Blockchain</h2><a href="/blocks" data-t="nav.blocks">Blocks</a><a href="/txs" data-t="nav.txs">Transactions</a><a href="/mempool" data-t="nav.mempool">Pending</a><a href="/richlist" data-t="nav.richlist">Rich list</a><a href="/tokens" data-t="nav.tokens">Tokens</a></div>
+        <div><h2 class="footer-title" data-t="side.network">Network</h2><a href="/network" data-t="foot.status">Network status</a><a href="/charts" data-t="nav.charts">Charts</a><a href="/miners" data-t="nav.miners">Miners</a><a href="/pools" data-t="nav.pools">Pools</a><a href="/mining" data-t="nav.mining">Start mining</a></div>
+        <div><h2 class="footer-title" data-t="foot.tools">Tools</h2><a href="/swap" data-t="nav.swap">Swap</a><a href="/bridge" data-t="nav.bridge">Bridge</a><a href="/apps" data-t="nav.apps">Apps</a><a href="/api" data-t="nav.api">Developers</a></div>
+      </nav>
+    </div>
+    <div class="footer-bar">
+      <p class="footer-meta"><span>© <span id="footer-year">2026</span> Quinvium</span><span id="footer-chain"></span><span id="footer-ver"></span></p>
+    <div class="strip-actions">
+      <div class="embedded-hide footer-prefs">
+      <div class="pop-wrap" id="net-wrap">
+        <button class="chip" id="net-btn" aria-haspopup="menu" aria-expanded="false" title="Network"><i class="net-dot" id="net-dot"></i><span id="net-label">Testnet</span><svg class="chev" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 3.500 3 3 3-3"/></svg></button>
+        <div class="pop" id="net-pop" role="menu">
+          <button role="menuitemradio" data-net="mainnet" id="net-mainnet"><i class="net-dot"></i>Mainnet</button>
+          <button role="menuitemradio" data-net="testnet" id="net-testnet"><i class="net-dot testnet"></i>Testnet</button>
+        </div>
+      </div>
+      <div class="pop-wrap" id="lang-wrap">
+        <button class="chip" id="lang-btn" aria-haspopup="menu" aria-expanded="false" title="Language" aria-label="Language"><span id="lang-label">EN</span><svg class="chev" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 3.500 3 3 3-3"/></svg></button>
+        <div class="pop" id="lang-pop" role="menu"></div>
+      </div>
+      <div class="theme-switch" id="theme-switch" role="group" aria-label="Theme">
+        <button data-theme-set="light" aria-label="Light" title="Light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.900 4.900l1.400 1.400M17.700 17.700l1.400 1.400M2 12h2M20 12h2M4.900 19.100l1.400-1.400M17.700 6.300l1.400-1.400"/></svg></button>
+        <button data-theme-set="dark" aria-label="Dark" title="Dark"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.500 14.300A8.500 8.500 0 0 1 9.700 3.500a8.500 8.500 0 1 0 10.800 10.800z"/></svg></button>
+      </div>
+      </div>
+      <button type="button" class="chip" id="to-top"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8.500V1.500M2 4.500l3-3 3 3"/></svg><span data-t="foot.top">Back to top</span></button>
+    </div>
+    </div>
+  </div>
+</footer>
+
+<div class="toasts" id="toasts"></div>
+
+<script src="/ethers.umd.min.js"></script>
+<script src="/config.js"></script>
+<script src="/qrcode.js"></script>
+<script src="/i18n.js"></script>
+<script src="/docs.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

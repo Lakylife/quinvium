@@ -1,0 +1,9 @@
+{
+  "name": "@quintium/cli",
+  "version": "2.14.1",
+  "private": true,
+  "type": "module",
+  "description": "Příkazová řádka Quinvium: peněženka, převody, swap, most, pooly, těžba a uzel",
+  "bin": { "quinvium": "bin/quintium.js", "quintium": "bin/quintium.js" },
+  "engines": { "node": ">=24" }
+}

@@ -1,0 +1,25 @@
+node_modules/
+target/
+dist/
+data/
+*.log
+.DS_Store
+wallet*.json
+.env
+packages/desktop/build/
+packages/desktop/src/renderer/wallet/
+packages/desktop/release/
+release/
+# Tajné a provozní soubory: dnes leží mimo repozitář, tohle je pojistka
+*.key
+*.pem
+*.db
+*.db-wal
+*.db-shm
+mempool.bin
+# Zálohy původních souborů před úpravami
+backups/
+target-dist/
+# Soukromé poznámky a snímky z domácího prostředí se nezveřejňují
+CLAUDE.md
+docs/snimky/

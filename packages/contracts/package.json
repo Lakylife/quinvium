@@ -1,0 +1,13 @@
+{
+  "name": "@aether/contracts",
+  "version": "2.0.0",
+  "type": "module",
+  "description": "Systémové chytré kontrakty sítě Quintium",
+  "scripts": {
+    "build": "node build.js",
+    "test": "node --no-warnings --test test/*.test.js"
+  },
+  "devDependencies": {
+    "@openzeppelin/contracts": "5.6.1"
+  }
+}

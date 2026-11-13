@@ -1,0 +1,400 @@
+// Bitcoinová strana mostu. Na Bitcoinu nejde spustit kontrakt, mince proto drží vícepodpisová adresa validátorů:
+// utratit je může jen `threshold` z nich. Tenhle kód je část, kterou spouští každý validátor zvlášť.
+//
+// Vklad: každý příjemce má vlastní adresu, ve které je jeho adresa na Quinviu zapsaná. Po potvrzení validátoři
+// podepíší zprávu pro bránu a ta vyrazí přemostěný token.
+// Výběr: brána token spálí, navrhovatel zveřejní transakci a ostatní ji podepíší, jen když sami ověří, že úschova
+// přijde přesně o spálenou částku a peníze jdou uživateli. Navrhovatel tak nemůže nic ukrást, jen zdržet.
+import { ethers } from 'ethers';
+import {
+  addressScript, custodyScript, dataOutput, multisigWitness, parseTx, publicKey, scriptAddress, scriptOutput, serializeTx, sha256, signInput, txidOf,
+  verifyInput, virtualSize,
+} from './bitcoin.js';
+import { StateFile, queryRange } from './relayer.js';
+
+export const BITCOIN = 0xB17C01n;
+const DUST = 546n;
+const MAX_INPUTS = 50;
+const SCAN_BATCH = 200;
+const MAX_POST = 64 * 1024;
+const LOG_BATCH = 2000;
+const DAY_MS = 86_400_000;
+const FAKE_SIGNATURE = 72;
+const SATS = 100_000_000;
+
+const sats = (btc) => BigInt(Math.round(btc * SATS));
+const nonceOf = (text) => BigInt(`0x${sha256(Buffer.from(text)).subarray(0, 8).toString('hex')}`);
+
+export class BitcoinBridge {
+  /**
+   * @param {object} o
+   * @param {(method: string, params?: any[]) => Promise<any>} o.rpc volání vlastního uzlu Bitcoinu
+   * @param {'mainnet'|'testnet'|'regtest'} o.network
+   * @param {import('./relayer.js').Relayer} o.relayer validátor pro stranu Quinvia
+   * @param {bigint} o.chainId řetězec Quinvia
+   * @param {string} o.token přemostěný token na Quinviu
+   * @param {string} o.btcKey soukromý klíč pro úschovu, jiný než klíč validátora v bráně
+   * @param {{ address: string, btcKey: string }[]} o.validators všichni validátoři: adresa v bráně a veřejný klíč úschovy
+   * @param {number} o.threshold
+   * @param {number} [o.confirmations] potvrzení na Bitcoinu před připsáním
+   * @param {bigint} [o.minDeposit] menší vklad se nepřipíše, jeho utracení by stálo víc, než má hodnotu
+   * @param {number} [o.maxFeeRate] nejvyšší poplatek v sat/vB, nad něj validátor nepodepíše
+   * @param {number} [o.fallbackFeeRate] když uzel odhad nezná
+   * @param {bigint} [o.dailyLimit] kolik smí za den odejít v satoshi
+   * @param {number} [o.proposeTimeoutMs] po této době se role navrhovatele posune na dalšího
+   */
+  constructor(o) {
+    Object.assign(this, { confirmations: 6, minDeposit: 10_000n, maxFeeRate: 200, fallbackFeeRate: 5, dailyLimit: 1_000_000_000n, proposeTimeoutMs: 600_000, log: () => {}, now: Date.now }, o);
+    this.chain = this.relayer.chains.get(this.chainId);
+    this.gateway = this.chain.gateway;
+    this.me = this.relayer.address;
+    this.validators = [...this.validators].sort((a, b) => (BigInt(a.address) < BigInt(b.address) ? -1 : 1));
+    this.pubkeys = this.validators.map((v) => Buffer.from(v.btcKey.replace(/^0x/, ''), 'hex'));
+    this.ownKey = publicKey(this.btcKey).toString('hex');
+    if (!this.pubkeys.some((k) => k.toString('hex') === this.ownKey)) throw new Error('Klíč úschovy není mezi validátory');
+    this.mainScript = custodyScript(this.pubkeys, this.threshold);
+    this.mainOutput = scriptOutput(this.mainScript).toString('hex');
+    this.state = new StateFile(this.statePath);
+    const d = this.state.data;
+    d.watch ??= {};
+    d.unscanned ??= [];
+    d.utxos ??= {};
+    d.credited ??= {};
+    d.withdrawals ??= {};
+    d.signed ??= {};
+    d.spent ??= { day: 0, sats: 0n };
+    d.spends ??= {};
+    this.sent = new Set();
+  }
+
+  /** Adresa úschovy, kterou lze dobít mimo vklady. */
+  get mainAddress() { return scriptAddress(this.mainScript, this.network); }
+
+  depositAddress(recipient) { return scriptAddress(custodyScript(this.pubkeys, this.threshold, ethers.getAddress(recipient)), this.network); }
+
+  async tick() {
+    await this.syncAether();
+    await this.scanBlocks();
+    await this.scanRegistered();
+    for (const [id, w] of Object.entries(this.state.data.withdrawals)) {
+      if (w.status !== 'open') continue;
+      try { await this.withdrawal(id, w); } catch (e) { this.log(`výběr ${id.slice(0, 10)}: ${e.shortMessage ?? e.message}`); }
+    }
+    this.state.save();
+  }
+
+  // ---- co se děje na Quinviu ---------------------------------------------------------------------
+
+  async syncAether() {
+    const d = this.state.data;
+    const safe = await this.chain.provider.getBlockNumber() - this.chain.confirmations;
+    let from = d.cursor ?? this.chain.startBlock ?? 0;
+    while (from <= safe) {
+      const to = Math.min(from + LOG_BATCH - 1, safe);
+      for (const log of await this.gateway.queryFilter('BitcoinDepositRequested', from, to)) this.watch(log.args.recipient);
+      for (const log of await this.gateway.queryFilter(this.gateway.filters.Sent(null, BITCOIN), from, to)) this.acceptWithdrawal(log);
+      from = to + 1;
+      d.cursor = from;
+      this.state.save();
+    }
+  }
+
+  /** Od registrace se adresa sleduje. Registrace stojí jen gas, takže sama nesmí spouštět drahé prohledávání. */
+  watch(recipient) {
+    const d = this.state.data;
+    const script = custodyScript(this.pubkeys, this.threshold, recipient);
+    const output = scriptOutput(script).toString('hex');
+    if (d.watch[output]) return;
+    d.watch[output] = recipient;
+    d.unscanned.push(output);
+  }
+
+  /** Platbu odeslanou před registrací najde prohledání aktuálních mincí, jedna dávka na průchod. */
+  async scanRegistered() {
+    const d = this.state.data;
+    const batch = d.unscanned.slice(0, SCAN_BATCH);
+    if (!batch.length) return;
+    const { unspents = [] } = await this.rpc('scantxoutset', ['start', batch.map((output) => `raw(${output})`)]);
+    d.unscanned = d.unscanned.slice(batch.length);
+    for (const u of unspents) {
+      const recipient = d.watch[u.scriptPubKey];
+      if (recipient && u.height < (d.height ?? 0) && !u.coinbase) this.deposit(u.txid, u.vout, sats(u.amount), recipient);
+    }
+  }
+
+  acceptWithdrawal(log) {
+    const d = this.state.data;
+    const { id, token, sender, recipient, amount, nonce } = log.args;
+    if (d.withdrawals[id] || token.toLowerCase() !== this.token.toLowerCase()) return;
+    let address = null;
+    try {
+      address = ethers.toUtf8String(recipient);
+      addressScript(address, this.network);
+    } catch {
+      // Token je spálený a adresa nejde zaplatit. Uživatel dostane token zpět stejnou cestou jako vklad.
+      this.relayer.enqueue({ srcChain: BITCOIN, dstChain: this.chainId, nonce: nonceOf(`refund:${id}`), srcToken: ethers.ZeroHash, recipient: sender, amount });
+      d.withdrawals[id] = { nonce, sender, amount, status: 'refunded' };
+      this.log(`výběr ${id.slice(0, 10)}: neplatná adresa, vracím token`);
+      return;
+    }
+    d.withdrawals[id] = { nonce, sender, address, amount, status: 'open', seenAt: this.now(), block: log.blockNumber };
+  }
+
+  // ---- co se děje na Bitcoinu --------------------------------------------------------------------
+
+  async scanBlocks() {
+    const d = this.state.data;
+    const safe = await this.rpc('getblockcount') - this.confirmations + 1;
+    d.height ??= Math.max(0, safe + 1);
+    while (d.height <= safe) {
+      const hash = await this.rpc('getblockhash', [d.height]);
+      const block = await this.rpc('getblock', [hash, 2]);
+      block.tx.forEach((tx, i) => this.scanTx(tx, i === 0));
+      d.height += 1;
+      this.state.save();
+    }
+  }
+
+  scanTx(tx, coinbase) {
+    const d = this.state.data;
+    for (const input of tx.vin) {
+      const key = `${input.txid}:${input.vout}`;
+      if (!d.utxos[key]) continue;
+      delete d.utxos[key];
+      d.spends[tx.txid] = true;
+    }
+    for (const out of tx.vout) {
+      const script = out.scriptPubKey.hex;
+      const recipient = d.watch[script];
+      if (recipient && !coinbase) this.deposit(tx.txid, out.n, sats(out.value), recipient);
+      else if (script === this.mainOutput) d.utxos[`${tx.txid}:${out.n}`] = { value: sats(out.value), recipient: null };
+    }
+  }
+
+  deposit(txid, vout, value, recipient) {
+    const d = this.state.data;
+    const key = `${txid}:${vout}`;
+    if (d.credited[key]) return;
+    d.credited[key] = true;
+    d.utxos[key] = { value, recipient };
+    if (value < this.minDeposit) {
+      this.log(`vklad ${key} je pod minimem, nepřipisuji`);
+      return;
+    }
+    this.relayer.enqueue({ srcChain: BITCOIN, dstChain: this.chainId, nonce: nonceOf(key), srcToken: ethers.ZeroHash, recipient, amount: value });
+    this.log(`vklad ${value} sat pro ${recipient}`);
+  }
+
+  // ---- výběr ----------------------------------------------------------------------------------------
+
+  proposer(w) {
+    const turns = BigInt(Math.floor((this.now() - w.seenAt) / this.proposeTimeoutMs));
+    return this.validators[Number((w.nonce + turns) % BigInt(this.validators.length))].address;
+  }
+
+  /**
+   * Výběr je vyplacený, když se potvrdila transakce utrácející úschovu a nese jeho značku. Samotnou značku může
+   * napodobit kdokoli, utratit úschovu ne. Pozná to i validátor, který transakci nepodepsal.
+   */
+  settled(id, w, posts) {
+    for (const post of posts) {
+      if (!post.tx) continue;
+      try {
+        const tx = parseTx(Buffer.from(post.tx, 'hex'));
+        const txid = txidOf(tx);
+        if (this.state.data.spends[txid] && tx.outputs[1]?.script.equals(dataOutput(Buffer.from(id.slice(2), 'hex')))) {
+          w.status = 'paid';
+          w.txid = txid;
+          this.log(`výběr ${id.slice(0, 10)}: vyplaceno v ${txid.slice(0, 12)}`);
+          return true;
+        }
+      } catch { /* neplatný návrh se tady jen přeskočí */ }
+    }
+    return false;
+  }
+
+  async withdrawal(id, w) {
+    const posts = await this.posts(id, w);
+    if (this.settled(id, w, posts)) return;
+    const proposal = posts.map((p) => this.parseProposal(id, w, p)).find(Boolean);
+    if (!proposal) {
+      if (this.proposer(w).toLowerCase() === this.me.toLowerCase()) await this.propose(id, w);
+      return;
+    }
+    const { tx, txid } = proposal;
+    const d = this.state.data;
+    const signatures = this.collect(posts, tx, txid);
+    if (!signatures.has(this.ownKey) && !d.signed[id]) {
+      await this.rejectUnspent(tx);
+      this.spend(w.amount);
+      // Zápis před zveřejněním: po pádu validátor nepodepíše jinou transakci pro stejný výběr.
+      d.signed[id] = { txid, inputs: tx.inputs.map((i) => `${i.txid}:${i.vout}`) };
+      this.state.save();
+      const list = tx.inputs.map((input, i) => signInput(tx, i, this.scriptOf(input), d.utxos[`${input.txid}:${input.vout}`].value, this.btcKey).toString('hex'));
+      await this.post(id, { txid, sigs: list });
+      signatures.set(this.ownKey, list.map((s) => Buffer.from(s, 'hex')));
+    }
+    if (signatures.size >= this.threshold && !this.sent.has(txid)) await this.broadcast(tx, txid, signatures);
+  }
+
+  scriptOf(input) {
+    const { recipient } = this.state.data.utxos[`${input.txid}:${input.vout}`];
+    return custodyScript(this.pubkeys, this.threshold, recipient ?? undefined);
+  }
+
+  async posts(id, w) {
+    const head = await this.chain.provider.getBlockNumber();
+    const logs = await queryRange(this.gateway, this.gateway.filters.Posted(id), w.block ?? this.chain.startBlock ?? 0, head);
+    return logs.flatMap((log) => {
+      if (ethers.dataLength(log.args.data) > MAX_POST) return [];
+      try { return [{ validator: log.args.validator, ...JSON.parse(ethers.toUtf8String(log.args.data)) }]; } catch { return []; }
+    });
+  }
+
+  async post(id, body) {
+    await this.gateway.post(id, ethers.toUtf8Bytes(JSON.stringify(body)));
+  }
+
+  /** Celá kontrola návrhu vychází z toho, co validátor viděl sám. Návrh nic nedokazuje, jen se porovná. */
+  parseProposal(id, w, post) {
+    if (!post.tx) return null;
+    try {
+      const tx = parseTx(Buffer.from(post.tx, 'hex'));
+      this.check(id, w, tx);
+      return { tx, txid: txidOf(tx) };
+    } catch (e) {
+      this.log(`návrh pro ${id.slice(0, 10)} od ${post.validator.slice(0, 10)} odmítnut: ${e.message}`);
+      return null;
+    }
+  }
+
+  check(id, w, tx) {
+    const d = this.state.data;
+    const refuse = (why) => { throw new Error(why); };
+    if (tx.version !== 2 || tx.locktime !== 0) refuse('neobvyklá transakce');
+    if (tx.inputs.length === 0 || tx.inputs.length > MAX_INPUTS) refuse('špatný počet vstupů');
+    const keys = tx.inputs.map((i) => `${i.txid}:${i.vout}`);
+    if (new Set(keys).size !== keys.length) refuse('opakovaný vstup');
+    const reserved = this.reserved(id);
+    let total = 0n;
+    for (const key of keys) {
+      const utxo = d.utxos[key] ?? refuse(`vstup ${key} není v úschově`);
+      if (reserved.has(key)) refuse(`vstup ${key} patří jinému výběru`);
+      total += utxo.value;
+    }
+    const [pay, note, change, ...rest] = tx.outputs;
+    if (!pay || !note || rest.length) refuse('špatné výstupy');
+    if (!pay.script.equals(addressScript(w.address, this.network))) refuse('platba jde jinam, než si uživatel přál');
+    if (note.value !== 0n || !note.script.equals(dataOutput(Buffer.from(id.slice(2), 'hex')))) refuse('chybí značka výběru');
+    const left = total - w.amount;
+    if (left < 0n) refuse('vstupy nekryjí částku');
+    if (change) {
+      if (change.script.toString('hex') !== this.mainOutput) refuse('zbytek jde mimo úschovu');
+      if (change.value !== left) refuse('úschova by přišla o víc než spálenou částku');
+    } else if (left >= DUST) refuse('chybí vrácení zbytku do úschovy');
+    if (pay.value < DUST || pay.value >= w.amount) refuse('špatná částka platby');
+    if (w.amount - pay.value > BigInt(this.maxFeeRate) * BigInt(this.sizeWithWitness(tx))) refuse('poplatek je nad limitem');
+  }
+
+  /** Mince, které už jsou slíbené jiným výběrům, ať se dvě platby navzájem nezablokují. */
+  reserved(except) {
+    const out = new Set();
+    for (const [id, s] of Object.entries(this.state.data.signed)) if (id !== except) s.inputs.forEach((k) => out.add(k));
+    return out;
+  }
+
+  sizeWithWitness(tx) {
+    const inputs = tx.inputs.map((input) => ({ ...input, witness: [Buffer.alloc(0), ...Array(this.threshold).fill(Buffer.alloc(FAKE_SIGNATURE)), this.scriptOf(input)] }));
+    return virtualSize({ ...tx, inputs });
+  }
+
+  async rejectUnspent(tx) {
+    for (const i of tx.inputs) if (!await this.rpc('gettxout', [i.txid, i.vout, true])) throw new Error(`vstup ${i.txid}:${i.vout} je utracený`);
+  }
+
+  spend(amount) {
+    const d = this.state.data;
+    const day = Math.floor(this.now() / DAY_MS);
+    if (d.spent.day !== day) d.spent = { day, sats: 0n };
+    if (d.spent.sats + amount > this.dailyLimit) throw new Error('denní limit výběrů je vyčerpaný');
+    d.spent.sats += amount;
+  }
+
+  async feeRate() {
+    const { feerate } = await this.rpc('estimatesmartfee', [3]);
+    const rate = feerate ? Math.ceil(feerate * 100_000) : this.fallbackFeeRate;
+    return Math.min(rate, this.maxFeeRate);
+  }
+
+  async propose(id, w) {
+    if (this.sent.has(id)) return;
+    const d = this.state.data;
+    const reserved = this.reserved(id);
+    const free = Object.entries(d.utxos).filter(([k]) => !reserved.has(k)).sort(([, a], [, b]) => (a.value < b.value ? 1 : -1));
+    const inputs = [];
+    let total = 0n;
+    for (const [key, utxo] of free) {
+      if (total >= w.amount || inputs.length === MAX_INPUTS) break;
+      const [txid, vout] = key.split(':');
+      inputs.push({ txid, vout: Number(vout) });
+      total += utxo.value;
+    }
+    if (total < w.amount) throw new Error('úschova zatím nemá dost potvrzených mincí');
+    const left = total - w.amount;
+    const outputs = [{ value: 0n, script: addressScript(w.address, this.network) }, { value: 0n, script: dataOutput(Buffer.from(id.slice(2), 'hex')) }];
+    if (left >= DUST) outputs.push({ value: left, script: Buffer.from(this.mainOutput, 'hex') });
+    const tx = { version: 2, locktime: 0, inputs, outputs };
+    const fee = BigInt(await this.feeRate()) * BigInt(this.sizeWithWitness(tx));
+    outputs[0].value = w.amount - fee;
+    if (outputs[0].value < DUST) throw new Error('částka nepokryje poplatek sítě');
+    await this.post(id, { tx: serializeTx(tx).toString('hex') });
+    this.sent.add(id);
+    this.log(`výběr ${id.slice(0, 10)}: navrhuji platbu ${outputs[0].value} sat, poplatek ${fee}`);
+  }
+
+  /** Jen podpisy, které opravdu patří validátorům a této transakci. */
+  collect(posts, tx, txid) {
+    const d = this.state.data;
+    const found = new Map();
+    for (const post of posts) {
+      if (post.txid !== txid || !Array.isArray(post.sigs) || post.sigs.length !== tx.inputs.length) continue;
+      const entry = this.validators.find((v) => v.address.toLowerCase() === post.validator.toLowerCase());
+      if (!entry) continue;
+      const key = entry.btcKey.replace(/^0x/, '');
+      const list = post.sigs.map((s) => Buffer.from(s, 'hex'));
+      const good = list.every((sig, i) => {
+        const input = tx.inputs[i];
+        const utxo = d.utxos[`${input.txid}:${input.vout}`];
+        return utxo && verifyInput(tx, i, this.scriptOf(input), utxo.value, Buffer.from(key, 'hex'), sig);
+      });
+      if (good) found.set(key, list);
+    }
+    return found;
+  }
+
+  async broadcast(tx, txid, signatures) {
+    const inputs = tx.inputs.map((input, i) => {
+      const script = this.scriptOf(input);
+      const forInput = new Map([...signatures].map(([key, list]) => [key, list[i]]));
+      return { ...input, witness: multisigWitness(this.pubkeys, this.threshold, forInput, script) };
+    });
+    try {
+      await this.rpc('sendrawtransaction', [serializeTx({ ...tx, inputs }, true).toString('hex')]);
+      this.log(`výběr: transakce ${txid.slice(0, 12)} odeslána`);
+    } catch (e) {
+      if (!/already|known/i.test(e.message)) throw e;
+    }
+    this.sent.add(txid);
+  }
+}
+
+/** Volání uzlu Bitcoin Core přes JSON-RPC. */
+export function bitcoinRpc(url, { user, password } = {}) {
+  const auth = user ? { Authorization: `Basic ${Buffer.from(`${user}:${password}`).toString('base64')}` } : {};
+  return async (method, params = []) => {
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...auth }, body: JSON.stringify({ jsonrpc: '1.0', id: 1, method, params }) });
+    const j = await r.json();
+    if (j.error) throw new Error(j.error.message);
+    return j.result;
+  };
+}

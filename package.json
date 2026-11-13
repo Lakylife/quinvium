@@ -1,0 +1,19 @@
+{
+  "name": "aether",
+  "private": true,
+  "version": "2.0.0",
+  "description": "Quinvium: vlastní programovatelný Proof-of-Work blockchain s GPU těžbou",
+  "workspaces": [
+    "packages/node",
+    "packages/contracts",
+    "packages/desktop"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "@walletconnect/ethereum-provider": "2.21.8",
+    "bitcoinjs-lib": "6.1.7",
+    "playwright": "1.64.1"
+  }
+}

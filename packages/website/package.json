@@ -1,0 +1,11 @@
+{
+  "name": "@aether/website",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Web quinvium.com (statický, cs a en)",
+  "scripts": {
+    "build": "node src/build.mjs",
+    "og": "node src/og.mjs"
+  }
+}
