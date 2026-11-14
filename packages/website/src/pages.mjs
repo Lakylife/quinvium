@@ -354,6 +354,18 @@ quintium-miner --address VAŠE_ADRESA --node http://127.0.0.1:8545</code></pre>
     ${card('users', L('Pool v kontraktu', 'Contract pool'), L('Továrna poolů je přímo v síti. Pool sčítá podíly těžařů a kontrakt vyplácí odměny podle nich. Veřejný pool na mainnetu zatím nikdo neprovozuje.', 'The pool factory is built into the network. A pool counts miner shares and the contract pays rewards by them. Nobody runs a public mainnet pool yet.'))}
   </div>
 
+  <h2 id="run-a-pool">${L('Provozovat pool', 'Run a pool')}</h2>
+  <p>${L('Pool na Quinviu je chytrý kontrakt z továrny sítě. Odměny jdou přímo do kontraktu, ten je dělí podle prokázané práce (PPLNS) a provozovatel si smí vzít jen svůj pevný poplatek, nejvýš 5 %.', 'A pool on Quinvium is a smart contract from the network factory. Rewards go straight into the contract, which splits them by proven work (PPLNS); the operator can take only its fixed fee, at most 5 %.')}</p>
+  <ol class="steps3">
+    <li><span class="n">1</span><h3>${L('Založte kontrakt', 'Create the contract')}</h3><p>${L('V Exploreru Pools → Create a pool, nebo:', 'In the Explorer, Pools → Create a pool, or:')}</p><pre><code>quinvium pool create --name "My Pool" \\
+  --url https://pool.example.org --fee-percent 1</code></pre></li>
+    <li><span class="n">2</span><h3>${L('Spusťte server poolu', 'Run the pool server')}</h3><p>${L('Uzel s volbou --pool. Vlastní účet uzlu platí gas za podíly, pošlete mu trochu QU.', 'A node with --pool. The node\'s own account pays gas for shares; send it a little QU.')}</p><pre><code>node packages/node/src/cli.js --network mainnet \\
+  --pool 0xPOOL --stratum-port 3333</code></pre></li>
+    <li><span class="n">3</span><h3>${L('Přiveďte těžaře', 'Bring miners')}</h3><p>${L('Těžaři se připojí minerem nebo přes Stratum a výdělek si vyberou v aplikaci nebo v Exploreru.', 'Miners connect with the miner or over Stratum and withdraw earnings in the app or the Explorer.')}</p><pre><code>quintium-miner --address YOUR_ADDRESS \\
+  --node https://pool.example.org --pool 0xPOOL</code></pre></li>
+  </ol>
+  <p class="row-btns"><a class="btn link" href="https://github.com/Lakylife/quinvium/blob/main/docs/POOLS.md">${L('Celý návod pro pooly', 'Full pool guide')}${icon('arrow')}</a><a class="btn link" href="${EXPLORER}/pools">${L('Pooly v Exploreru', 'Pools in the Explorer')}${icon('ext')}</a></p>
+
   <h2>${L('Obtížnost', 'Difficulty')}</h2>
   <p>${L('Obtížnost se upravuje po každém bloku podle posledních 60 bloků (LWMA). Když výkon sítě přibude, bloky se na chvíli zrychlí a obtížnost během minut doroste. Když výkon odejde, srovná se stejně. Nejnižší obtížnost je 2<sup>24</sup>.', 'Difficulty adjusts after every block based on the last 60 blocks (LWMA). When hashrate joins, blocks speed up for a while and difficulty catches up within minutes. When hashrate leaves, it settles the same way. The minimum difficulty is 2<sup>24</sup>.')}</p>
 

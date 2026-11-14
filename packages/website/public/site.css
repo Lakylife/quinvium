@@ -189,6 +189,9 @@ body.locked { overflow: hidden; }
 .steps3 li { background: var(--card); border: 1px solid var(--hair); border-radius: var(--r); padding: 30px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; align-items: flex-start; }
 .steps3 .n { width: 40px; height: 40px; border-radius: 12px; background: var(--ink); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 750; margin-bottom: 20px; }
 .steps3 p { color: var(--ink-2); flex: 1; }
+.steps3 li { min-width: 0; }
+.steps3 pre { max-width: 100%; margin: 12px 0 0; padding: 14px 16px; }
+.steps3 pre code { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
 .steps3 a { font-weight: 650; display: inline-flex; align-items: center; gap: 6px; }
 .steps3 a .ic { width: 18px; height: 18px; vertical-align: 0; }
 
