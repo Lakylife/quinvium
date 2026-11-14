@@ -1,0 +1,23 @@
+# Dependencies are pinned to exact versions on purpose: an update of EthereumJS or cryptography can be a hard fork
+# (docs/GOVERNANCE.md). Dependabot therefore opens only security fixes for npm and Cargo (limit 0 = no routine
+# version updates) and routine updates only for GitHub Actions. Every pull request still has to pass CI and the
+# consensus guard; a change of packages/node/package.json needs an accepted QIP or "No consensus change".
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: npm
+    directories: ['/', '/packages/node', '/packages/contracts', '/packages/desktop', '/packages/cli', '/packages/bridge', '/packages/extension']
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: '@walletconnect/*'   # stays on 2.21.8, the last Apache-2.0 release
+  - package-ecosystem: cargo
+    directory: /packages/miner
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
