@@ -856,10 +856,10 @@ body.compact-nav.home .header-search { display: none; }
   .brand-copy small { display: none; }
   .app-main { padding: 20px var(--gutter) 40px; }
   .page-head h1 { font-size: 28px; }
-  .hero { margin-top: -20px; padding: 36px var(--gutter) 24px; }
+  /* the overview card overlaps the band by 40 px, so the band needs room under the block ribbon */
+  .hero { margin-top: -20px; padding: 36px var(--gutter) 64px; }
   .hero h1 { font-size: 32px; }
   .ribbon { margin-top: 32px; }
-  .hero-search input { font-size: 14px; }
   .login-button { padding: 0 12px; font-size: 13px; }
   .metric-card > strong { font-size: 20px; }
 }
@@ -921,3 +921,12 @@ body.compact-nav.home .header-search { display: none; }
 .footer-social { display: inline-flex; flex-wrap: wrap; gap: 12px; }
 .footer-social a { color: inherit; }
 .footer-social a:hover { color: var(--accent); }
+
+/* Touch screens of any size (phones, tablets, landscape): iOS zooms into any field with text under 16 px. */
+@media (pointer: coarse) {
+  /* !important: this rule must win over every smaller size set for desktop (filters, search, forms) */
+  input, select, textarea { font-size: 16px !important; }
+}
+@media (max-width: 640px) {
+  .strip-actions { flex: 1 1 100%; min-width: 0; }
+}
