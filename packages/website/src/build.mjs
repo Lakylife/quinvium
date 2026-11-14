@@ -149,7 +149,7 @@ ${p.body}
 
 writeFileSync(join(out, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${SITE}/sitemap.xml\n`);
 writeFileSync(join(out, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((p) => `  <url><loc>${SITE}${p}</loc></url>`).join('\n')}\n</urlset>\n`);
-for (const f of ['site.css', 'site.js', 'logo.svg']) copyFileSync(join(here, f), join(out, f));
+for (const f of ['site.css', 'site.js', 'logo.svg', 'Quinvium-Symbol.ttf']) copyFileSync(join(here, f), join(out, f));
 copyFileSync(join(here, 'logo.svg'), join(out, 'favicon.svg'));
 for (const f of ['og.png', 'apple-touch-icon.png', 'quinvium-whitepaper.pdf']) { try { copyFileSync(join(here, f), join(out, f)); } catch { console.warn(`chybí ${f}, spusťte node src/og.mjs`); } }
 console.log(`Hotovo: ${urls.length} stránek v ${out}`);

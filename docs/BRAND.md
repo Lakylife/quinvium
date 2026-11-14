@@ -2,7 +2,12 @@
 
 ## Name
 
-**Quinvium**, ticker **QU**. On testnet tQU, on the development network dQU.
+| | |
+| --- | --- |
+| Currency name | **Quinvium** |
+| Ticker | **QU** (testnet tQU, development network dQU) |
+| Symbol | the Quinvium mark, glyph U+E000 (also on the letter Q) in [`assets/brand/Quinvium-Symbol.ttf`](../assets/brand/Quinvium-Symbol.ttf) |
+| Decimals | 18 (the smallest unit is 10^-18 QU, like wei) |
 
 The name comes from the Latin *quinta essentia*, the fifth essence. That is aether, the fifth element next to earth, water, air and fire. Ethereum is derived from it, and this project was originally named after it. The -ium ending is the same as for metals, so the name suits a currency that is mined.
 
@@ -29,14 +34,29 @@ What the check cannot guarantee: new tokens appear every day and anyone can pick
 
 ## Logo
 
-The mark is the letter Q made from a pentagon: five sides for the fifth essence. The tail runs along the axis of the fifth vertex and enters the shape so that it does not look like a magnifying glass. The mark holds up at 16 pixels and uses no gradients or shadows.
+<img src="../assets/brand/quinvium-logo.svg" width="96" alt="Quinvium logo"> <img src="../assets/brand/quinvium-coin.svg" width="96" alt="QU coin">
+
+The mark is the letter Q drawn as a hexagon, the shape of a block in a chain, with a tail that cuts through the lower right corner. The outline comes from the glyph in `Quinvium-Symbol.ttf`, so the logo, the app icons and the currency symbol are one shape. The mark holds up at 16 pixels and uses no gradients or shadows.
 
 | Colour | Value | Use |
 | --- | --- | --- |
-| Star gold | `#F2B544` | the mark, the coin |
-| Night blue | `#0B1622` | icon background, the mark on light backgrounds |
+| Quinvium yellow | `#FFCD02` | the mark, the coin |
+| Night blue | `#0B1622` | icon background, the mark on the coin |
 
-Files are in `assets/brand`. All icons are generated from one shape by `node scripts/make-brand.mjs`.
+| File in `assets/brand` | Content |
+| --- | --- |
+| `quinvium-logo.svg`, `quinvium-logo.png` | the mark in yellow, transparent background (PNG 1024 px) |
+| `quinvium-logo-black.png` | the mark on black, 1024 px |
+| `quinvium-coin.svg`, `quinvium-coin.png` | the coin: yellow disc with the dark mark |
+| `quintium-ikona-aplikace.svg`, `.png` | app icon: the mark on a night-blue tile |
+| `Quinvium-Symbol.ttf` | font with the currency symbol (U+E000 and Q) |
+
+All icons are generated from one shape by `node scripts/make-brand.mjs`. To use the symbol on a web page:
+
+```css
+@font-face { font-family: "Quinvium Symbol"; src: url("Quinvium-Symbol.ttf") format("truetype"); }
+.qu { font-family: "Quinvium Symbol"; }  /* <span class="qu">&#xE000;</span> */
+```
 
 ## Look
 
@@ -50,7 +70,7 @@ The Explorer, the app and the wallet share the same rules:
 - Empty things are not shown: a chart without data or an empty list takes no space.
 - Overviews have four numbers; a list row is one line. A table holds what the row is looked up by; the rest is on the detail page.
 - Only the main link in a row is blue; other links get colour on hover.
-- No gradients and no glow. Blue is the accent; gold appears only in the logo.
+- No gradients and no glow. Blue is the accent; yellow appears only in the logo.
 
 The rules are checked by `packages/explorer/test/design.test.mjs` and `packages/explorer/test/pages.mjs`. The website (`packages/website`) has its own light look that differs from the Explorer.
 

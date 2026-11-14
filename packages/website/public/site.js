@@ -1,10 +1,10 @@
-// quinvium.com: nabídka, jazyk, živý stav mainnetu, přidání sítě do peněženky, plynulé odhalení sekcí.
+// quinvium.com: menu, live mainnet status, adding the network to a wallet, smooth reveal of sections.
 (() => {
   const RPC = 'https://rpc.quinvium.com';
-  const GENESIS = 1794610800; // 14. 11. 2026 00:00 SEČ
+  const GENESIS = 1794610800; // 14 Nov 2026 00:00 CET
   const lang = document.body.dataset.lang || 'en';
 
-  // Skupiny nabídky: kliknutí otevře panel, druhé kliknutí, Escape nebo klik mimo ho zavře
+  // Menu groups: a click opens the panel; a second click, Escape or a click outside closes it
   const groups = [...document.querySelectorAll('.ng-btn[aria-controls]')];
   const closeAll = (except) => groups.forEach((b) => { if (b !== except) b.setAttribute('aria-expanded', 'false'); });
   groups.forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); const open = b.getAttribute('aria-expanded') !== 'true'; closeAll(b); b.setAttribute('aria-expanded', String(open)); }));
@@ -17,7 +17,7 @@
   });
   document.querySelectorAll('.ng').forEach((g) => g.addEventListener('mouseleave', () => g.classList.remove('shut')));
 
-  // Nabídka na mobilu: panel přes celou výšku, zamčené posouvání stránky, fokus zůstává v panelu
+  // Mobile menu: full-height panel, page scrolling locked, focus stays in the panel
   const menu = document.getElementById('menu');
   const nav = document.getElementById('nav');
   const top = document.querySelector('.top');
@@ -40,11 +40,11 @@
     });
     matchMedia('(min-width: 941px)').addEventListener('change', (m) => { if (m.matches) setMenu(false); });
   }
-  // Linka pod hlavičkou až po posunutí
+  // Line below the header only after scrolling
   const onScroll = () => top?.classList.toggle('scrolled', scrollY > 4);
   addEventListener('scroll', onScroll, { passive: true });
   onScroll();
-  // Šipky v otevřeném panelu
+  // Arrow keys in an open panel
   document.querySelectorAll('.ng-panel').forEach((panel) => panel.addEventListener('keydown', (e) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
     const items = [...panel.querySelectorAll('a')];
@@ -54,19 +54,19 @@
   }));
   groups.forEach((b) => b.addEventListener('keydown', (e) => { if (e.key === 'ArrowDown') { e.preventDefault(); b.setAttribute('aria-expanded', 'true'); b.nextElementSibling.querySelector('a')?.focus(); } }));
 
-  // Odhalení sekcí při posunu
+  // Revealing sections on scroll
   const reveal = document.querySelectorAll('.reveal');
   if ('IntersectionObserver' in window) {
     const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
     reveal.forEach((el) => io.observe(el));
   } else reveal.forEach((el) => el.classList.add('in'));
 
-  // Kopírování adres
+  // Copying addresses
   document.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(b.dataset.copy); b.classList.add('done'); setTimeout(() => b.classList.remove('done'), 1500); } catch { /* bez schránky */ }
   }));
 
-  // Přidání sítě do peněženky
+  // Adding the network to the wallet
   const NETS = {
     main: { chainId: '0xccb1', chainName: 'Quinvium', rpcUrls: ['https://rpc.quinvium.com'], nativeCurrency: { name: 'Quinvium', symbol: 'QU', decimals: 18 }, blockExplorerUrls: ['https://explorer.quinvium.com'] },
     test: { chainId: '0xccb2', chainName: 'Quinvium Testnet', rpcUrls: ['https://rpc1.quinvium.com'], nativeCurrency: { name: 'Quinvium Testnet', symbol: 'tQU', decimals: 18 }, blockExplorerUrls: ['https://testnet.quinvium.com'] },
@@ -83,7 +83,7 @@
     catch (e) { say(e && e.code === 4001 ? T.no : T.none); }
   }));
 
-  // Stav mainnetu v patičce (všechny stránky)
+  // Mainnet status in the footer (all pages)
   const fdot = document.querySelector('[data-foot-dot]');
   const ftext = document.querySelector('[data-foot-text]');
   if (fdot && ftext) {
@@ -92,7 +92,7 @@
       .catch(() => { ftext.textContent = 'Mainnet · status unavailable'; fdot.className = 'dot off'; });
   }
 
-  // Živý stav mainnetu
+  // Live mainnet status
   const live = document.querySelector('[data-live]');
   if (!live) return;
   const note = document.querySelector('[data-live-note]');

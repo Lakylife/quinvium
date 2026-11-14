@@ -249,7 +249,7 @@ await provider.getBlockNumber();</code></pre>
 <section class="sec"><div class="wrap prose">
   <h2>${L('Co je Quinvium', 'What Quinvium is')}</h2>
   <p>${L('Quinvium (zkratka QU) je samostatný blockchain s vlastním uzlem, peněženkami a Explorerem. Bloky vytvářejí těžaři algoritmem Ethash na grafických kartách, transakce a kontrakty zpracovává EVM, stejný stroj jako v Ethereu.', 'Quinvium (ticker QU) is an independent blockchain with its own node, wallets and Explorer. Miners produce blocks with the Ethash algorithm on graphics cards, and transactions and contracts run on the EVM, the same machine as in Ethereum.')}</p>
-  <p>${L('Jméno vychází z latinského <em>quinta essentia</em>, pátá esence. Proto má znak tvar pětiúhelníku.', 'The name comes from the Latin <em>quinta essentia</em>, the fifth essence. That is why the logo is a pentagon.')}</p>
+  <p>${L('Jméno vychází z latinského <em>quinta essentia</em>, pátá esence. Znak je písmeno Q v šestiúhelníku, tvaru bloku v řetězci. Měna se jmenuje Quinvium, zkratka QU, a má vlastní symbol.', 'The name comes from the Latin <em>quinta essentia</em>, the fifth essence. The mark is the letter Q drawn as a hexagon, the shape of a block in a chain. The currency is called Quinvium, its ticker is QU, and it has its own symbol.')}</p>
   <h2>${L('Proč Proof-of-Work a EVM', 'Why proof-of-work and the EVM')}</h2>
   <div class="cards c2">
     ${card('pick', 'Proof-of-Work', L('O pořadí transakcí rozhoduje vykonaná práce, ne velikost vkladu. Do sítě se zapojí každý s grafickou kartou.', 'The order of transactions is decided by work done, not by the size of a stake. Anyone with a graphics card can take part.'))}
@@ -282,11 +282,21 @@ await provider.getBlockNumber();</code></pre>
       lead: L('Všechny QU vznikají těžbou podle pravidel v kódu uzlu.', 'Every QU is created by mining under rules in the node code.'),
       body: `
 <section class="sec"><div class="wrap">
+  <div class="coin-id">
+    <span class="qu-sym" aria-hidden="true">&#xE000;</span>
+    <div class="kv two">
+      <div><span>${L('Název', 'Name')}</span><strong>Quinvium</strong></div>
+      <div><span>${L('Zkratka', 'Ticker')}</span><strong>QU</strong></div>
+      <div><span>${L('Symbol', 'Symbol')}</span><strong><span class="qu-sym">&#xE000;</span> <a href="/Quinvium-Symbol.ttf" download>Quinvium-Symbol.ttf</a></strong></div>
+      <div><span>${L('Desetinná místa', 'Decimals')}</span><strong>18</strong></div>
+      <div><span>Testnet</span><strong>tQU</strong></div>
+    </div>
+  </div>
   <div class="stats-row">
     <div><strong>4 QU</strong><span>${L('odměna za blok', 'block reward')}</span></div>
     <div><strong>15 s</strong><span>${L('cílová doba bloku', 'target block time')}</span></div>
-    <div><strong>8 000 000</strong><span>${L('bloků do půlení', 'blocks per halving')}</span></div>
-    <div><strong>64 mil.</strong><span>${L('QU nejvýše', 'QU maximum')}</span></div>
+    <div><strong>${L('8 000 000', '8,000,000')}</strong><span>${L('bloků do půlení', 'blocks per halving')}</span></div>
+    <div><strong>${L('64 mil.', '64M')}</strong><span>${L('QU nejvýše', 'QU maximum')}</span></div>
   </div>
   <div class="panel chart-big">${emissionChart(L)}</div>
   <h2>${L('Období odměn', 'Reward eras')}</h2>
@@ -611,26 +621,26 @@ certutil -hashfile Quinvium-${dl ? dl.version : 'x'}-Windows-x64.exe SHA256    #
   ];
 }
 
-/** Illustration on the home page: layered translucent pentagons around the mark, flat colours without gradients. */
+/** Illustration on the home page: layered translucent hexagons around the mark, flat colours without gradients. */
 function heroArt() {
   const pent = (cx, cy, r, rot = 0) => {
     const pts = [];
-    for (let i = 0; i < 5; i += 1) {
-      const a = ((-90 + rot + i * 72) * Math.PI) / 180;
+    for (let i = 0; i < 6; i += 1) {
+      const a = ((-90 + rot + i * 60) * Math.PI) / 180;
       pts.push(`${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`);
     }
     return pts.join(' ');
   };
   return `<svg viewBox="0 0 480 440" class="art">
   <polygon class="p1 drift" points="${pent(240, 225, 205, 0)}"/>
-  <polygon class="p2 drift2" points="${pent(240, 225, 160, 36)}"/>
+  <polygon class="p2 drift2" points="${pent(240, 225, 160, 30)}"/>
   <polygon class="p3" points="${pent(240, 225, 112, 0)}"/>
   <polygon class="f1 float" points="${pent(70, 80, 30, 12)}"/>
   <polygon class="f2 float2" points="${pent(420, 360, 38, -20)}"/>
   <polygon class="f3 float" points="${pent(430, 90, 18, 30)}"/>
   <polygon class="f4 float2" points="${pent(60, 370, 16, 0)}"/>
   <g class="orbit"><circle class="o" cx="240" cy="20" r="7"/><circle class="o o2" cx="445" cy="225" r="5"/></g>
-  <g transform="translate(180 165) scale(1.875)"><path class="mark" d="M32 2.75L59.58 22.79L49.05 55.21L14.95 55.21L4.42 22.79ZM18.21 27.27L23.48 43.48L40.52 43.48L45.79 27.27L32 17.25ZM39.37 33.81L55.24 55.66L47.56 61.24L31.69 39.4Z"/></g>
+  <g transform="translate(180 165) scale(1.875)"><path class="mark" d="M26.33 36.92L28.75 39.63L37.24 48.48L46.52 58.68L58.57 58.68L46.87 45.48L40.38 38.28L39.46 37.49L38.88 37.14L38.03 36.92L30.54 36.92L30.47 36.85L30.32 36.92L28.9 36.92L28.83 36.85L28.68 36.92ZM32.39 2.75L30.75 2.75L30.04 2.89L29.04 3.18L28.04 3.68L18.55 9.88L8.64 16.59L7.71 17.23L7.21 17.8L6.57 18.66L5.78 20.16L5.64 20.73L5.43 21.8L5.43 42.42L5.71 43.99L6.35 45.55L6.99 46.41L8.28 47.7L15.34 52.4L27.4 60.39L28.54 60.96L29.9 61.25L32.04 61.18L32.89 60.96L34.1 60.39L41.31 55.19L35.82 49.05L35.6 49.12L32.61 51.26L31.82 51.69L31.46 51.83L30.47 51.83L29.61 51.48L21.26 45.77L15.98 42.27L15.27 41.49L14.84 40.63L14.56 39.56L14.56 25.15L14.7 24.51L15.06 23.65L15.34 23.3L16.2 22.44L26.33 15.73L30.39 13.02L31.39 12.74L31.82 12.74L32.61 12.95L34.89 14.38L38.6 16.95L46.09 21.94L47.37 23.08L47.73 23.8L47.94 24.87L47.94 40.2L47.73 41.42L47.37 42.13L46.52 42.92L51.94 48.98L52.08 49.19L52.23 49.19L54.51 47.62L55.36 46.98L55.94 46.41L56.86 44.98L57.15 44.2L57.43 42.7L57.43 21.8L57.22 20.59L56.93 19.66L56.36 18.59L55.79 17.8L54.94 16.95L53.22 15.73L38.88 6.1L34.68 3.46L33.82 3.04Z"/></g>
 </svg>`;
 }
 

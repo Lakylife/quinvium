@@ -1,8 +1,10 @@
+<p align="center"><img src="assets/brand/quinvium-logo.svg" width="120" alt="Quinvium"></p>
+
 # Quinvium
 
 **A programmable proof-of-work blockchain mined on graphics cards.**
 
-Quinvium (QU) combines Ethash proof-of-work with the Ethereum Virtual Machine. Blocks arrive about every 15 seconds, smart contracts and wallets built for Ethereum work unchanged, and every coin is created by mining: no premine, no presale, no team allocation, no treasury. Quinvium is a decentralised network, not a company. Nobody owns it, holds an admin key or can change its rules; anyone can run a node, mine or build on it.
+Quinvium (ticker QU) combines Ethash proof-of-work with the Ethereum Virtual Machine. Blocks arrive about every 15 seconds, smart contracts and wallets built for Ethereum work unchanged, and every coin is created by mining: no premine, no presale, no team allocation, no treasury. Quinvium is a decentralised network, not a company. Nobody owns it, holds an admin key or can change its rules; anyone can run a node, mine or build on it.
 
 [Website](https://quinvium.com) · [Whitepaper](https://quinvium.com/whitepaper/) · [Explorer](https://explorer.quinvium.com) · [Download](https://quinvium.com/download/) · [Releases](https://github.com/Lakylife/quinvium/releases)
 

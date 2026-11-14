@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Quinvium logo and icons. Everything comes from one shape so the logo never diverges. Run: node scripts/make-brand.mjs
-// The mark is the letter Q made from a pentagon: five sides for the fifth essence, aether. The tail runs along the axis of the fifth vertex and enters inside so it is not a magnifying glass.
+// The mark is the letter Q drawn as a hexagon with a cut-through tail. Its outline comes from assets/brand/Quinvium-Symbol.ttf
+// (glyph "quinvium", mapped to Q and U+E000), so the logo, the icons and the currency symbol QU stay one shape.
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -10,26 +11,39 @@ import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const { chromium } = createRequire(join(root, 'package.json'))('playwright');
-const GOLD = '#F2B544';
+const GOLD = '#FFCD02';
 const NIGHT = '#0B1622';
 const f = (n) => +n.toFixed(2);
 
-/** One path with the nonzero fill rule: the outer outline clockwise, the inner one counter-clockwise, the tail clockwise again.
- * @param R radius of the pentagon, r radius of the inner pentagon, w width of the tail */
-export function markPath(R = 29, r = 14.5, w = 9.5, cx = 32, cy = 31.75) {
-  const at = (radius, deg) => [cx + radius * Math.cos((deg * Math.PI) / 180), cy + radius * Math.sin((deg * Math.PI) / 180)];
-  const pentagon = (radius) => [0, 1, 2, 3, 4].map((i) => at(radius, -90 + i * 72));
-  const closed = (pts) => `M${pts.map((p) => `${f(p[0])} ${f(p[1])}`).join('L')}Z`;
-  const AXIS = 54;     // axis of the fifth vertex
-  const u = [Math.cos((AXIS * Math.PI) / 180), Math.sin((AXIS * Math.PI) / 180)];
-  const side = [-u[1] * (w / 2), u[0] * (w / 2)];
-  const [from, to] = [R * 0.207, R * 1.138];
-  const tail = [[-1, from], [-1, to], [1, to], [1, from]].map(([s, d]) => [cx + u[0] * d + s * side[0], cy + u[1] * d + s * side[1]]);
-  return `${closed(pentagon(R))}${closed(pentagon(r).reverse())}${closed(tail)}`;
+// Outline of the glyph in font units (1000 per em, y pointing up), copied from Quinvium-Symbol.ttf.
+const GLYPH = 'M358 411 392 373 511 249 641 106H810L646 291L555 392L542 403L534 408L522 411H417L416 412L414 411H394L393 412L391 411ZM443 890H420L410 888L396 884L382 877L249 790L110 696L97 687L90 679L81 667L70 646L68 638L65 623V334L69 312L78 290L87 278L105 260L204 194L373 82L389 74L408 70L438 71L450 74L467 82L568 155L491 241L488 240L446 210L435 204L430 202H416L404 207L287 287L213 336L203 347L197 359L193 374V576L195 585L200 597L204 602L216 614L358 708L415 746L429 750H435L446 747L478 727L530 691L635 621L653 605L658 595L661 580V365L658 348L653 338L641 327L717 242L719 239H721L753 261L765 270L773 278L786 298L790 309L794 330V623L791 640L787 653L779 668L771 679L759 691L735 708L534 843L475 880L463 886Z';
+
+/** Contours of the glyph as lists of points; only M, L, H, V and Z occur in it. */
+function contours(d) {
+  const out = [];
+  let cur = null, x = 0, y = 0, cmd = '';
+  const t = d.match(/[MLHVZ]|-?[\d.]+/g);
+  for (let i = 0; i < t.length;) {
+    if (/[MLHVZ]/.test(t[i])) { cmd = t[i++]; if (cmd === 'Z') { out.push(cur); cur = null; } continue; }
+    if (cmd === 'M') { x = +t[i++]; y = +t[i++]; cur = [[x, y]]; cmd = 'L'; }
+    else if (cmd === 'L') { x = +t[i++]; y = +t[i++]; cur.push([x, y]); }
+    else if (cmd === 'H') { x = +t[i++]; cur.push([x, y]); }
+    else { y = +t[i++]; cur.push([x, y]); }
+  }
+  return out;
+}
+
+/** The glyph scaled to height h and centred on (cx, cy) in a 64 x 64 box. */
+export function markPath(h = 58.5, cx = 32, cy = 32) {
+  const c = contours(GLYPH);
+  const xs = c.flat().map((p) => p[0]), ys = c.flat().map((p) => p[1]);
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  const s = h / (y1 - y0), mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+  return c.map((k) => `M${k.map(([x, y]) => `${f(cx + (x - mx) * s)} ${f(cy - (y - my) * s)}`).join('L')}Z`).join('');
 }
 
 const MARK = markPath();
-const COIN_MARK = markPath(19.5, 9.75, 6.4, 32, 31.9);
+const COIN_MARK = markPath(39.3);
 const svg = (size, body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">${body}</svg>`;
 const placed = (x, y, scale, path, fill) => `<path transform="translate(${x} ${y}) scale(${scale})" d="${path}" fill="${fill}"/>`;
 
@@ -51,6 +65,9 @@ writeFileSync(join(brand, 'quintium-znak-zlaty.svg'), brandMark(GOLD));
 writeFileSync(join(brand, 'quintium-znak-tmavy.svg'), brandMark(NIGHT));
 writeFileSync(join(brand, 'quintium-mince.svg'), brandCoin);
 writeFileSync(join(brand, 'quintium-ikona-aplikace.svg'), tile(1024, { margin: 100 }));
+writeFileSync(join(brand, 'quinvium-logo.svg'), brandMark(GOLD));
+writeFileSync(join(brand, 'quinvium-coin.svg'), brandCoin);
+for (const dir of [join(root, 'packages', 'website', 'src')]) copyFileSync(join(brand, 'Quinvium-Symbol.ttf'), join(dir, 'Quinvium-Symbol.ttf'));
 writeFileSync(join(root, 'packages', 'desktop', 'assets', 'logo.svg'), brandMark(GOLD));
 writeFileSync(join(root, 'packages', 'explorer', 'public', 'coin.svg'), brandCoin);
 writeFileSync(join(root, 'packages', 'explorer', 'public', 'logo.svg'), tile(64, { share: 0.68 }));
@@ -86,6 +103,9 @@ execFileSync(process.execPath, [join(root, 'packages', 'desktop', 'scripts', 'ma
 // Browser extension.
 for (const s of [16, 48, 128, 256]) await png(tile(s, { radius: 0.2, share: s === 16 ? 0.8 : 0.66 }), s, join(root, 'packages', 'extension', 'icons', `${s}.png`));
 copyFileSync(join(desktop, 'icon.png'), join(brand, 'quintium-ikona-aplikace.png'));
+await png(brandMark(GOLD), 1024, join(brand, 'quinvium-logo.png'));
+await png(svg(1024, `<rect width="1024" height="1024" fill="#000"/>${placed(64, 64, 14, MARK, GOLD)}`), 1024, join(brand, 'quinvium-logo-black.png'));
+await png(brandCoin, 512, join(brand, 'quinvium-coin.png'));
 await browser.close();
 rmSync(work, { recursive: true, force: true });
 console.log('Cesta znaku:', MARK);

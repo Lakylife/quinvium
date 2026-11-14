@@ -1,5 +1,6 @@
 /* The quinvium.com website: the brand's light look. A warm white page, white cards with a soft shadow and a hairline,
    blue as the main accent, gold only in the mark. Flat colours without gradients or glow. */
+@font-face { font-family: "Quinvium Symbol"; src: url("/Quinvium-Symbol.ttf") format("truetype"); font-display: block; }
 :root {
   --page: #fafaf7;
   --tint: #f2f5f9;
@@ -13,7 +14,7 @@
   --accent-soft: #e8f1fc;
   --accent-2: #0e8a6b;
   --on-accent: #ffffff;
-  --gold: #f2b544;
+  --gold: #ffcd02;
   --warn: #8a5300;
   --warn-soft: #fff3dc;
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05), 0 2px 8px rgba(15, 23, 42, 0.04);
@@ -570,3 +571,11 @@ h3, .tile h3 { font-size: 18px; }
 .foot-base a { color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 940px) { .foot-top { grid-template-columns: 1fr; gap: 40px; } .foot-cols { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 420px) { .foot-actions .btn { flex: 1 1 auto; } }
+
+/* The currency: name, ticker and the symbol from Quinvium-Symbol.ttf (U+E000, also on the letter Q). */
+.qu-sym { font-family: "Quinvium Symbol"; font-weight: 400; font-style: normal; line-height: 1; }
+.coin-id { display: flex; align-items: center; gap: 28px; margin-bottom: 28px; }
+.coin-id > .qu-sym { font-size: 96px; flex: 0 0 auto; color: var(--gold); background: #0b1622; border-radius: 28px; padding: 22px 26px; }
+.coin-id .kv { margin: 0; }
+.coin-id .kv { flex: 1; min-width: 0; }
+@media (max-width: 640px) { .coin-id { flex-direction: column; align-items: flex-start; gap: 12px; } .coin-id .kv { width: 100%; } .coin-id > .qu-sym { font-size: 64px; padding: 16px 18px; border-radius: 20px; } }

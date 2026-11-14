@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- New logo: the letter Q as a hexagon in Quinvium yellow `#FFCD02`, drawn from the glyph in `assets/brand/Quinvium-Symbol.ttf`. App, wallet, Explorer and website icons are regenerated.
+- Currency identity: name Quinvium, ticker QU, symbol in the `Quinvium Symbol` font (U+E000), shown on the website's Tokenomics page.
+
 ## 2.14.1 (14 November 2026)
 
 - Mainnet can be selected in the desktop app (it was disabled in 2.14.0 and earlier).
