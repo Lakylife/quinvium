@@ -18,7 +18,7 @@ import { fromHex, toHex } from './util/bytes.js';
 import predeploys from './genesis/predeploys.json' with { type: 'json' };
 import { L } from './lang.js';
 
-export const VERSION = 'quintium-node/2.14.1';
+export const VERSION = 'quintium-node/2.14.2';
 const POOL_RETRY_MS = 60_000;
 const JOURNAL_MS = 30_000;       // queue on disk; after a crash at most the last half minute is missing
 const REBROADCAST_MS = 60_000;   // own pending transactions to peers again
