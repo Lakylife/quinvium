@@ -1,0 +1,27 @@
+# Quinvium mining pool server (docs/POOLS.md): a mainnet node with --pool, its own data folder and ports.
+# The pool contract address comes from /etc/quinvium/pool.env (POOL_ADDRESS=0x...). The node keeps its gas account
+# key in /var/lib/quinvium/pool/pool.key (created once, never printed); fund that account with a little QU.
+# Miners: HTTPS JSON-RPC through Caddy (pool.quinvium.com) and Stratum on port 3333.
+[Unit]
+Description=Quinvium mining pool server
+After=network-online.target quinvium-mainnet.service
+Wants=network-online.target
+ConditionPathExists=/etc/quinvium/pool.env
+
+[Service]
+User=quinvium
+Group=quinvium
+WorkingDirectory=/opt/quinvium
+EnvironmentFile=/etc/quinvium/pool.env
+ExecStart=/usr/bin/node /opt/quinvium/packages/node/src/cli.js --network mainnet --data-dir /var/lib/quinvium/pool --rpc-host 127.0.0.1 --rpc-port 8555 --p2p-port 30534 --stratum-host 0.0.0.0 --stratum-port 3333 --trust-proxy --pool ${POOL_ADDRESS}
+Restart=always
+RestartSec=5
+LimitNOFILE=65536
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/quinvium
+
+[Install]
+WantedBy=multi-user.target
