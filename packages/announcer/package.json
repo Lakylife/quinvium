@@ -1,0 +1,15 @@
+{
+  "name": "@quinvium/announcer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Posts important Quinvium network events to Telegram and X within free-tier limits",
+  "type": "module",
+  "license": "MIT",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js",
+    "dry-run": "node src/main.js --once --dry-run",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": ">=20" }
+}

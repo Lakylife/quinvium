@@ -26,3 +26,5 @@ target-dist/
 CLAUDE.md
 docs/snimky/
 docs/cs/
+packages/announcer/announcer.env
+announcer-state.json

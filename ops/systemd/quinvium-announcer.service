@@ -1,0 +1,26 @@
+# Quinvium announcer: posts important mainnet events to Telegram and X (packages/announcer).
+# Install: copy to /etc/systemd/system/, put the keys into /etc/quinvium/announcer.env (chmod 600, see
+# packages/announcer/announcer.env.example), then `systemctl daemon-reload && systemctl enable --now quinvium-announcer`.
+# Without keys it runs in dry-run mode and only writes what it would post to the journal.
+[Unit]
+Description=Quinvium announcer (Telegram and X)
+After=network-online.target quinvium-mainnet.service
+Wants=network-online.target
+
+[Service]
+DynamicUser=yes
+StateDirectory=quinvium-announcer
+WorkingDirectory=/var/lib/quinvium-announcer
+Environment=QUINVIUM_RPC=http://127.0.0.1:8545
+Environment=ANNOUNCER_STATE=/var/lib/quinvium-announcer/state.json
+EnvironmentFile=-/etc/quinvium/announcer.env
+ExecStart=/usr/bin/node /opt/quinvium/packages/announcer/src/main.js
+Restart=always
+RestartSec=30
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
