@@ -917,3 +917,7 @@ body.compact-nav.home .header-search { display: none; }
 }
 @media (max-width: 520px) { .home-stats { grid-template-columns: minmax(0, 1fr); } }
 .latest-main a { white-space: nowrap; }
+
+.footer-social { display: inline-flex; flex-wrap: wrap; gap: 12px; }
+.footer-social a { color: inherit; }
+.footer-social a:hover { color: var(--accent); }

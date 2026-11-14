@@ -6,7 +6,7 @@
 
 Quinvium (ticker QU) combines Ethash proof-of-work with the Ethereum Virtual Machine. Blocks arrive about every 15 seconds, smart contracts and wallets built for Ethereum work unchanged, and every coin is created by mining: no premine, no presale, no team allocation, no treasury. Quinvium is a decentralised network, not a company. Nobody owns it, holds an admin key or can change its rules; anyone can run a node, mine or build on it.
 
-[Website](https://quinvium.com) · [Whitepaper](https://quinvium.com/whitepaper/) · [Explorer](https://explorer.quinvium.com) · [Download](https://quinvium.com/download/) · [Releases](https://github.com/Lakylife/quinvium/releases)
+[Website](https://quinvium.com) · [Whitepaper](https://quinvium.com/whitepaper/) · [Explorer](https://explorer.quinvium.com) · [Download](https://quinvium.com/download/) · [Releases](https://github.com/Lakylife/quinvium/releases) · [X](https://x.com/Quinvium) · [Telegram](https://t.me/Quinvium)
 
 > Quinvium is experimental software. No independent security audit has been done yet. Use it at your own risk.
 

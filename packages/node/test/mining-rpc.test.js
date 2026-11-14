@@ -26,3 +26,18 @@ test('without the option, mining over RPC stays enabled', () => {
   assert.equal(methods.eth_submitHashrate(['0x10', '0x' + '11'.repeat(32)]), true);
   assert.equal(reports.length, 1);
 });
+
+test('peer IP addresses are visible only to this computer and the local network', () => {
+  const peer = { address: '203.0.113.7:30524', inbound: true, agent: 'quinvium-node/test', height: 5, td: '10', id: 'ab'.repeat(16), verified: true };
+  const { node } = fakeNode(undefined);
+  const { methods } = createMethods({ ...node, network: { peersInfo: () => [peer] } });
+  for (const name of ['aether_peers', 'quintium_peers', 'quinvium_peers']) {
+    const far = methods[name]([], { ip: '198.51.100.9', local: false });
+    assert.equal(far[0].address, null, name);
+    assert.equal(far[0].id, peer.id, 'the node ID stays');
+    assert.equal(far[0].height, 5);
+    assert.ok(!JSON.stringify(far).includes('203.0.113.7'), name);
+  }
+  assert.equal(methods.aether_peers([], { ip: '192.168.1.5', local: true })[0].address, peer.address);
+  assert.equal(methods.aether_peers([])[0].address, peer.address, 'the node itself (the app) sees addresses');
+});

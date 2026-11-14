@@ -2589,8 +2589,8 @@
     app.innerHTML = `${head(t('net.title'), '', `<button class="ghost-btn" id="add-net">${t('wallet.add')}</button>`)}
       <div class="card">${kv([['Network', esc(s.network)], ['Chain ID', num(s.chainId)], ...rpcRows, ['Genesis', `<span class="hash">${esc(short(s.genesisHash, 22))}</span>`], ['Node', esc(s.version)], [t('nh.peers'), num(s.peers)]])}
       <p class="muted">${t('net.rpcHint')}</p></div>
-      <div class="card"><div class="table-wrap"><table><thead><tr><th>${t('t.address')}</th><th>Agent</th><th>${t('m.height')}</th></tr></thead><tbody>
-      ${peers.map((p) => `<tr><td class="hash">${esc(p.address)}</td><td>${esc(p.agent)}</td><td>${num(p.height)}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">—</td></tr>'}</tbody></table></div></div>`;
+      <div class="card"><div class="table-wrap"><table><thead><tr><th>${peers.some((p) => p.address) ? t('t.address') : 'ID'}</th><th>Agent</th><th>${t('m.height')}</th></tr></thead><tbody>
+      ${peers.map((p) => `<tr><td class="hash">${esc(p.address ?? short(p.id ?? '', 16))}</td><td>${esc(p.agent)}</td><td>${num(p.height)}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">—</td></tr>'}</tbody></table></div></div>`;
     $('add-net').onclick = () => addNetwork().catch((e) => toast(esc(e.message)));
   }
 

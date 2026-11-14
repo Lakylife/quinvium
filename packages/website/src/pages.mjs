@@ -607,12 +607,13 @@ certutil -hashfile Quinvium-${dl ? dl.version : 'x'}-Windows-x64.exe SHA256    #
       slug: 'contact', label: L('Kontakt', 'Contact'), footerOnly: true,
       title: L('Kontakt', 'Contact'),
       desc: L('Komunita kolem sítě Quinvium.', 'The community around the Quinvium network.'),
-      lead: L('Quinvium je decentralizovaná síť bez firmy a bez vlastníka. Komunitní kanály budou doplněny.', 'Quinvium is a decentralised network with no company and no owner. Community channels will be listed here.'),
+      lead: L('Quinvium je decentralizovaná síť bez firmy a bez vlastníka. Novinky a diskuse jsou na X a Telegramu.', 'Quinvium is a decentralised network with no company and no owner. News and discussion are on X and Telegram.'),
       body: `
 <section class="sec"><div class="wrap">
-  <div class="cards c3">
+  <div class="cards c2">
     ${card('globe', L('E-mail', 'E-mail'), `<span class="placeholder">${L('bude doplněn', 'to be added')}</span>`)}
-    ${card('users', L('Komunita', 'Community'), `<span class="placeholder">${L('bude doplněna', 'to be added')}</span>`)}
+    ${card('users', 'X (Twitter)', `<a href="https://x.com/Quinvium" rel="me">@Quinvium</a>, ${L('novinky a oznámení', 'news and announcements')}`)}
+    ${card('users', 'Telegram', `<a href="https://t.me/Quinvium" rel="me">t.me/Quinvium</a>, ${L('diskuse komunity', 'community chat')}`)}
     ${card('code', L('Zdrojový kód', 'Source code'), '<a href="https://github.com/Lakylife/quinvium">github.com/Lakylife/quinvium</a>, issues and pull requests welcome.')}
   </div>
   <p class="muted">${L('Kdo po vás chce obnovovací frázi nebo poslání mincí „na ověření“, je podvodník.', 'Anyone who asks for your recovery phrase or for coins “for verification” is a scammer.')}</p>

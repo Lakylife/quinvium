@@ -117,7 +117,7 @@ ${p.body}
         <div><h4>Learn</h4>${foot(['about', 'whitepaper', 'tokenomics', 'roadmap', 'faq'])}</div>
         <div><h4>Use</h4>${foot(['wallets', 'download', 'ecosystem'])}<a href="${EXPLORER}">Explorer</a></div>
         <div><h4>Mine &amp; build</h4>${foot(['mining', 'developers'])}<a href="${EXPLORER}/docs">Documentation</a><a href="https://testnet.quinvium.com">Testnet</a></div>
-        <div><h4>Community</h4><a href="${GITHUB}">GitHub</a><a href="${GITHUB}/releases">Releases</a><a href="${GITHUB}/issues">Report an issue</a>${foot(['security', 'contact'])}</div>
+        <div><h4>Community</h4><a href="https://x.com/Quinvium" rel="me">X (Twitter)</a><a href="https://t.me/Quinvium" rel="me">Telegram</a><a href="${GITHUB}">GitHub</a><a href="${GITHUB}/releases">Releases</a><a href="${GITHUB}/issues">Report an issue</a>${foot(['security', 'contact'])}</div>
       </nav>
     </div>
     <div class="foot-status" data-foot-status><span class="dot" data-foot-dot></span><span data-foot-text>Mainnet</span><span class="sep">·</span><a href="https://rpc.quinvium.com/health">rpc.quinvium.com</a></div>

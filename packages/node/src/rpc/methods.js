@@ -855,7 +855,12 @@ export function createMethods(node) {
       }
       return out;
     },
-    aether_peers: () => network?.peersInfo() ?? [],
+    // IP addresses of peers belong only to this computer and the local network. A foreign caller (the public RPC, the Explorer on the web)
+    // gets the peers without their address: a home miner's IP would otherwise be visible to anyone.
+    aether_peers: (_, caller) => {
+      const peers = network?.peersInfo() ?? [];
+      return caller?.local === false ? peers.map(({ address, ...p }) => ({ ...p, address: null })) : peers;
+    },
     /** Addresses on which the node accepts wallets. An empty `lan` array means RPC listens on this computer only. */
     // The layout of the local network belongs only to callers from it. A foreign caller gets only the public address.
     aether_endpoints: (_, caller) => {
