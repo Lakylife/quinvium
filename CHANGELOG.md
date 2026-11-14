@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.15.0 (14 November 2026)
+
+- Desktop app runs in the background: closing the window keeps the node and mining running. A Q icon in the macOS menu bar or next to the Windows clock shows the network, block height and hashrate, starts or stops mining, opens the window, sets "Start at login" and quits the app.
+- Mainnet is the default network. The choice of network is remembered; testnet can be selected under Node settings.
+- The Explorer and the wallet inside the app follow the running node after switching networks (before, the Explorer kept asking the old port, for example "node at http://127.0.0.1:8546 is not responding").
+
 ## 2.14.2 (14 November 2026)
 
 - Desktop app: the built-in wallet uses the app's own node again. In 2.14.1 it tried the public RPC, which the app's security policy blocks, and showed "Node https://rpc.quinvium.com is not reachable".

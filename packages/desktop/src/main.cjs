@@ -1,5 +1,5 @@
 // Main process of the Quinvium app: manages the node, the miner and the window.
-const { app, BrowserWindow, ipcMain, nativeTheme, powerSaveBlocker, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, nativeImage, nativeTheme, Notification, powerSaveBlocker, shell, Tray } = require('electron');
 const { spawn, execFile } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -17,6 +17,8 @@ const TEST_RPC_PORT = Number(process.env.AETHER_RPC_PORT) || null;
 const TEST_STRATUM_PORT = Number(process.env.AETHER_STRATUM_PORT) || null;
 const CHAIN_FOLDERS = { testnet: 'testnet-5' };   // testnet restart: a new genesis needs an empty database; the old one stays next to it
 const LOG_LINES = 200;
+// Mainnet is the default since 2.15.0; the test app stays on testnet. The user's choice is remembered in the settings.
+const defaultNetwork = () => loadSettings().network ?? (TEST_RPC_PORT ? 'testnet' : 'mainnet');
 const isWin = process.platform === 'win32';
 const packaged = app.isPackaged;
 // The updated version has its own folder, passed in by the launcher.
@@ -41,7 +43,7 @@ const miner = { proc: null, log: [], rate: null, blocks: 0, address: null, count
 const HISTORY_POINTS = 360;
 const update = { checked: null, available: null, error: null, downloading: false };
 
-const send = (e) => { if (win && !win.isDestroyed()) win.webContents.send('event', e); };
+const send = (e) => { if (win && !win.isDestroyed()) win.webContents.send('event', e); if (e.type === 'state') refreshTray(); };
 const push = (list, line) => { list.push(line); if (list.length > LOG_LINES) list.shift(); };
 
 function follow(proc, onLine) {
@@ -111,6 +113,7 @@ function startNode(network) {
   if (!NETWORKS[network]) throw new Error('Unknown network');
   node.network = network;
   node.log = [];
+  if (!TEST_RPC_PORT) saveSettings({ network });
   const dataDir = path.join(app.getPath('userData'), 'chain', CHAIN_FOLDERS[network] ?? network);
   fs.mkdirSync(dataDir, { recursive: true });
   node.proc = spawn(process.execPath, [nodeBundle, '--network', network, '--data-dir', dataDir, '--explorer', explorerDir, ...networkArgs(network)], {
@@ -194,6 +197,7 @@ function startMiner({ address, device }) {
   args.push('--intensity', String(power ?? 100));
   if ((power ?? 100) >= 100) setGpuState(GPU_FULL_POWER);
   miner.proc = spawn(minerPath, args, { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+  saveSettings({ lastMining: { address, device: device ?? 'all' } });   // the tray can start mining again without the window
   keepAwake(true);
   follow(miner.proc, (l) => {
     push(miner.log, l);
@@ -234,7 +238,7 @@ const listDevices = () => new Promise((resolve) => {
 const walletFile = () => path.join(app.getPath('userData'), 'wallet.json');
 
 ipcMain.handle('state', () => ({
-  node: { running: !!node.proc, network: node.network, rpc: rpcPort(), runPool: loadSettings().runPool ?? null, stats: node.stats, log: node.log.slice(-60), seed: loadSettings().seed ?? '', share: accessMode() !== 'off', access: accessMode(), publicHost: loadSettings().publicHost ?? '', endpoints: node.proc ? node.endpoints ?? null : null, lan: lanAddress() },
+  node: { running: !!node.proc, network: node.network, preferred: defaultNetwork(), rpc: rpcPort(), runPool: loadSettings().runPool ?? null, stats: node.stats, log: node.log.slice(-60), seed: loadSettings().seed ?? '', share: accessMode() !== 'off', access: accessMode(), publicHost: loadSettings().publicHost ?? '', endpoints: node.proc ? node.endpoints ?? null : null, lan: lanAddress() },
   miner: { running: !!miner.proc, rate: miner.rate, progress: miner.progress ?? null, stage: miner.stage ?? null, blocks: miner.blocks, shares: miner.shares ?? 0, gpu: miner.gpu ?? null, pool: activePool(), address: miner.address, power: loadSettings().power ?? 100, history: miner.history, log: miner.log.slice(-60) },
   update: { ...update, configured: !!loadSettings().updateUrl, packaged: app.isPackaged },
   version: app.getVersion(),
@@ -402,6 +406,71 @@ function createWindow() {
     return { action: 'deny' };
   });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  // Closing the window does not stop the node or mining: the app keeps running in the menu bar / next to the clock.
+  win.on('close', (e) => {
+    if (quitting || !tray) return;
+    e.preventDefault();
+    win.hide();
+    if (process.platform === 'darwin') app.dock?.hide();
+    if (!loadSettings().trayNoticeShown) {
+      saveSettings({ trayNoticeShown: true });
+      if (Notification.isSupported()) {
+        new Notification({ title: T('Quinvium běží dál', 'Quinvium keeps running'), body: process.platform === 'darwin' ? T('Uzel i těžba pokračují. Otevřít nebo ukončit Quinvium jde ikonou Q v horní liště.', 'The node and mining continue. Open or quit Quinvium from the Q icon in the menu bar.') : T('Uzel i těžba pokračují. Otevřít nebo ukončit Quinvium jde ikonou Q u hodin.', 'The node and mining continue. Open or quit Quinvium from the Q icon next to the clock.') }).show();
+      }
+    }
+  });
+}
+
+/** Shows the window again, also after it was hidden into the tray. */
+function showWindow() {
+  if (process.platform === 'darwin') app.dock?.show();
+  if (!win || win.isDestroyed()) createWindow();
+  else { win.show(); win.focus(); }
+}
+
+// ---- tray: menu bar on macOS, notification area next to the clock on Windows ------------------------------
+let tray = null;
+// Tray texts follow the system language: Czech or English.
+const T = (cs, en) => ((app.getPreferredSystemLanguages?.()[0] ?? app.getLocale()).startsWith('cs') ? cs : en);
+function trayIcon() {
+  const dir = path.join(__dirname, '..', 'assets');
+  const image = nativeImage.createFromPath(path.join(dir, process.platform === 'darwin' ? 'trayTemplate.png' : 'tray.png'));
+  if (process.platform === 'darwin') image.setTemplateImage(true);
+  return image;
+}
+const trayRate = () => miner.rate ?? (miner.counters?.rate ? `${(miner.counters.rate / 1e6).toFixed(2)} MH/s` : '—');
+
+function trayMenu() {
+  const s = node.stats;
+  const last = loadSettings().lastMining;
+  const login = app.getLoginItemSettings();
+  return Menu.buildFromTemplate([
+    { label: node.proc ? `${T('Síť', 'Network')}: ${node.network === 'mainnet' ? 'Mainnet' : 'Testnet'} · ${T('blok', 'block')} ${s?.height?.toLocaleString('en-US') ?? '…'}` : T('Uzel neběží', 'Node is not running'), enabled: false },
+    { label: miner.proc ? `${T('Těžba', 'Mining')}: ${trayRate()} · ${T('nalezené bloky', 'blocks found')} ${miner.blocks}` : T('Těžba je vypnutá', 'Mining is off'), enabled: false },
+    { type: 'separator' },
+    miner.proc
+      ? { label: T('Zastavit těžbu', 'Stop mining'), click: () => { stop(miner.proc).then(() => send({ type: 'state' })); } }
+      : { label: T('Spustit těžbu', 'Start mining'), enabled: !!node.proc && !!last?.address, click: () => { try { startMiner(last); } catch { showWindow(); } } },
+    { label: T('Otevřít Quinvium', 'Open Quinvium'), click: showWindow },
+    { type: 'separator' },
+    { label: T('Spouštět po přihlášení', 'Start at login'), type: 'checkbox', checked: !!login.openAtLogin, click: (item) => app.setLoginItemSettings({ openAtLogin: item.checked }) },
+    { label: T('Ukončit Quinvium', 'Quit Quinvium'), click: () => app.quit() },
+  ]);
+}
+
+function refreshTray() {
+  if (!tray || tray.isDestroyed()) return;
+  tray.setContextMenu(trayMenu());
+  tray.setToolTip(miner.proc ? `Quinvium · ${T('těží', 'mining')} ${trayRate()}` : 'Quinvium');
+}
+
+function createTray() {
+  if (tray || process.env.AETHER_NO_TRAY) return;
+  tray = new Tray(trayIcon());
+  // On Windows a click opens the window, the menu is on the right button. On macOS a click opens the menu.
+  if (isWin) tray.on('click', showWindow);
+  refreshTray();
+  globalThis.quinviumTray = { labels: () => trayMenu().items.map((i) => i.label).filter(Boolean) };   // read by test/tray.mjs
 }
 
 setInterval(async () => {
@@ -413,6 +482,7 @@ setInterval(async () => {
     const changed = JSON.stringify(endpoints) !== JSON.stringify(node.endpoints ?? null);
     node.endpoints = endpoints;
     send({ type: 'stats', stats: node.stats, gpu: miner.gpu ?? null });
+    refreshTray();
     if (changed) send({ type: 'state' });
     resumeMining();
   } catch { /* the node is still starting */ }
@@ -554,9 +624,11 @@ const confirmHealthy = () => {
 };
 setTimeout(confirmHealthy, HEALTHY_MS);
 
-app.whenReady().then(() => { createWindow(); refreshCli(); });
-app.on('second-instance', () => win?.focus());
-app.on('window-all-closed', () => app.quit());
+app.whenReady().then(() => { createWindow(); createTray(); refreshCli(); });
+app.on('second-instance', showWindow);
+app.on('activate', showWindow);
+// Without the tray (tests) closing the last window ends the app as before.
+app.on('window-all-closed', () => { if (!tray) app.quit(); });
 let quitting = false;
 app.on('before-quit', async (e) => {
   if (quitting) return;

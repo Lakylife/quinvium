@@ -336,6 +336,7 @@
     "Address of the other computer": ["Adresa druhého počítače", "Adresse des anderen Computers", "Dirección del otro ordenador", "Adresse de l'autre ordinateur"],
     "Share the Explorer and mining with other computers on this network": ["Zpřístupnit Explorer a těžbu ostatním počítačům v síti", "Explorer und Mining für andere Computer im Netzwerk freigeben", "Compartir Explorer y minería con otros ordenadores de esta red", "Partager l'Explorer et le minage avec les autres ordinateurs du réseau"],
     "Node settings": ["Nastavení uzlu", "Knoten-Einstellungen", "Ajustes del nodo", "Paramètres du nœud"],
+    "Mainnet is the real network and the default. Testnet is for trying things out with coins of no value; choose it here when you need it.": ["Mainnet je skutečná síť a je výchozí. Testnet slouží k vyzkoušení s mincemi bez hodnoty, zvolte ho tady, když ho potřebujete.", "Mainnet ist das echte Netzwerk und die Voreinstellung. Das Testnet dient zum Ausprobieren mit wertlosen Münzen; wählen Sie es hier, wenn Sie es brauchen.", "Mainnet es la red real y la predeterminada. Testnet sirve para probar con monedas sin valor; elígela aquí cuando la necesites.", "Le mainnet est le vrai réseau et le choix par défaut. Le testnet sert à faire des essais avec des pièces sans valeur ; choisissez-le ici si vous en avez besoin."],
     "Start node": ["Spustit uzel", "Knoten starten", "Iniciar nodo", "Démarrer le nœud"],
     "Stop node": ["Zastavit uzel", "Knoten stoppen", "Detener nodo", "Arrêter le nœud"],
     "Language": ["Jazyk", "Sprache", "Idioma", "Langue"],
