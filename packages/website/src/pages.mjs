@@ -360,7 +360,7 @@ quintium-miner --address VAŠE_ADRESA --node http://127.0.0.1:8545</code></pre>
     <li><span class="n">1</span><h3>${L('Založte kontrakt', 'Create the contract')}</h3><p>${L('V Exploreru Pools → Create a pool, nebo:', 'In the Explorer, Pools → Create a pool, or:')}</p><pre><code>quinvium pool create --name "My Pool" \\
   --url https://pool.example.org --fee-percent 1</code></pre></li>
     <li><span class="n">2</span><h3>${L('Spusťte server poolu', 'Run the pool server')}</h3><p>${L('Uzel s volbou --pool. Vlastní účet uzlu platí gas za podíly, pošlete mu trochu QU.', 'A node with --pool. The node\'s own account pays gas for shares; send it a little QU.')}</p><pre><code>node packages/node/src/cli.js --network mainnet \\
-  --pool 0xPOOL --stratum-port 3333</code></pre></li>
+  --pool 0xPOOL --stratum-port 4444</code></pre></li>
     <li><span class="n">3</span><h3>${L('Přiveďte těžaře', 'Bring miners')}</h3><p>${L('Těžaři se připojí minerem nebo přes Stratum a výdělek si vyberou v aplikaci nebo v Exploreru.', 'Miners connect with the miner or over Stratum and withdraw earnings in the app or the Explorer.')}</p><pre><code>quintium-miner --address YOUR_ADDRESS \\
   --node https://pool.example.org --pool 0xPOOL</code></pre></li>
   </ol>
