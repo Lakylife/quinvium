@@ -1,0 +1,24 @@
+# Quinvium testnet node as a systemd service.
+# Install: copy to /etc/systemd/system/, then `systemctl daemon-reload && systemctl enable --now quinvium-testnet`.
+# JSON-RPC listens on localhost only; put an HTTPS reverse proxy (see ../caddy/Caddyfile) in front of it.
+[Unit]
+Description=Quinvium testnet node
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=quinvium
+Group=quinvium
+WorkingDirectory=/opt/quinvium
+ExecStart=/usr/bin/node /opt/quinvium/packages/node/src/cli.js --network testnet --data-dir /var/lib/quinvium/testnet --rpc-host 127.0.0.1 --rpc-port 8546 --p2p-port 30525 --rate-limit 600 --trust-proxy --no-mining-rpc --explorer /opt/quinvium/packages/explorer/public
+Restart=always
+RestartSec=5
+LimitNOFILE=65536
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/quinvium
+
+[Install]
+WantedBy=multi-user.target

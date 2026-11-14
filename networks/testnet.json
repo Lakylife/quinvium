@@ -1,0 +1,114 @@
+{
+  "name": "Quinvium Testnet",
+  "network": "testnet",
+  "chainId": 52402,
+  "nativeCurrency": {
+    "name": "Quinvium Testnet",
+    "symbol": "tQU",
+    "decimals": 18
+  },
+  "genesis": {
+    "hash": "0x4845f69c270efcf1f74a789a9ad85d31a5128a1907a7fdf5d1dd131eebaed121",
+    "timestamp": 1794600000,
+    "timestampIso": "2026-11-13T20:00:00.000Z",
+    "difficulty": "0x400000",
+    "extraData": "Quinvium: vlastni sit pro kazdy ",
+    "gasLimit": 10000000,
+    "extraDataNote": "On-chain value: the first 32 bytes of the text in params.js."
+  },
+  "consensus": {
+    "algorithm": "Ethash",
+    "targetBlockTimeSeconds": 15,
+    "difficultyAdjustment": "LWMA over 60 blocks",
+    "minimumDifficulty": "0x10000",
+    "blockRewardWei": "4000000000000000000",
+    "halvingIntervalBlocks": 8000000,
+    "maxSupplyWei": "64000000000000000000000000",
+    "maxReorgDepth": 256,
+    "feesBurned": false
+  },
+  "ports": {
+    "p2p": 30525,
+    "rpc": 8546,
+    "stratum": 3334
+  },
+  "seeds": [
+    "2df5ea8b9b4e18c552a001434e6b7ed0fc99348a03478fd809de1f92fde2f78d@seed.quinvium.com:30525"
+  ],
+  "publicRpc": [
+    "https://rpc1.quinvium.com"
+  ],
+  "publicWs": [
+    "wss://rpc1.quinvium.com"
+  ],
+  "explorer": "https://testnet.quinvium.com",
+  "forks": [
+    {
+      "name": "pools",
+      "block": 1
+    }
+  ],
+  "systemContracts": [
+    {
+      "address": "0xae00000000000000000000000000000000000001",
+      "name": "Notary"
+    },
+    {
+      "address": "0xae00000000000000000000000000000000000002",
+      "name": "AetherNames"
+    },
+    {
+      "address": "0xae00000000000000000000000000000000000003",
+      "name": "Credentials"
+    },
+    {
+      "address": "0xae00000000000000000000000000000000000004",
+      "name": "SupplyChain"
+    },
+    {
+      "address": "0xae00000000000000000000000000000000000005",
+      "name": "Escrow"
+    },
+    {
+      "address": "0xae00000000000000000000000000000000000006",
+      "name": "Polls"
+    },
+    {
+      "address": "0xae00000000000000000000000000000000000007",
+      "name": "TokenFactory"
+    },
+    {
+      "address": "0xae00000000000000000000000000000000000008",
+      "name": "CollectionFactory"
+    },
+    {
+      "address": "0xae00000000000000000000000000000000000009",
+      "name": "MultisigFactory"
+    },
+    {
+      "address": "0xae0000000000000000000000000000000000000a",
+      "name": "WAET"
+    },
+    {
+      "address": "0xae0000000000000000000000000000000000000b",
+      "name": "Multicall"
+    },
+    {
+      "address": "0xae0000000000000000000000000000000000000c",
+      "name": "PoolFactory",
+      "addedBy": "fork pools at block 1"
+    }
+  ],
+  "deployments": {
+    "registry": "0x1F29eD151d57E51706494aB3E9579B2212102C10",
+    "swap": {
+      "factory": "0xFb23f601b0Ef32CB133eBa4ec519C3f6cD4120c7",
+      "router": "0xfee495049060F02Fc9Ef91e179fF48E8a7471E95",
+      "tokens": []
+    },
+    "p2p": {
+      "swapERC20": "0x60FD058c896B7E039363F07485016116f915ae02",
+      "version": "4.3"
+    }
+  }
+}

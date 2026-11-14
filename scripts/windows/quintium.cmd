@@ -1,3 +1,3 @@
 @echo off
-rem Prikazova radka Quinvium vedle samostatneho uzlu.
+rem Quinvium command line next to the standalone node.
 "%~dp0quintium-node.exe" cli %*

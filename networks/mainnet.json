@@ -1,0 +1,102 @@
+{
+  "name": "Quinvium",
+  "network": "mainnet",
+  "chainId": 52401,
+  "nativeCurrency": {
+    "name": "Quinvium",
+    "symbol": "QU",
+    "decimals": 18
+  },
+  "genesis": {
+    "hash": "0x49c889ad9d4f44869cf7f97a6e079a50dbf13974263b1afedec3b774ebeeac39",
+    "timestamp": 1794610800,
+    "timestampIso": "2026-11-13T23:00:00.000Z",
+    "difficulty": "0x8000000",
+    "extraData": "Quintium: vlastni sit pro kazdy ",
+    "gasLimit": 10000000,
+    "extraDataNote": "On-chain value: the first 32 bytes of the text in params.js. The mainnet text still carries the earlier project name Quintium."
+  },
+  "consensus": {
+    "algorithm": "Ethash",
+    "targetBlockTimeSeconds": 15,
+    "difficultyAdjustment": "LWMA over 60 blocks",
+    "minimumDifficulty": "0x1000000",
+    "blockRewardWei": "4000000000000000000",
+    "halvingIntervalBlocks": 8000000,
+    "maxSupplyWei": "64000000000000000000000000",
+    "maxReorgDepth": 256,
+    "feesBurned": false
+  },
+  "ports": {
+    "p2p": 30524,
+    "rpc": 8545,
+    "stratum": 3333
+  },
+  "seeds": [
+    "2df5ea8b9b4e18c552a001434e6b7ed0fc99348a03478fd809de1f92fde2f78d@seed.quinvium.com:30524"
+  ],
+  "publicRpc": [
+    "https://rpc.quinvium.com"
+  ],
+  "publicWs": [
+    "wss://rpc.quinvium.com"
+  ],
+  "explorer": "https://explorer.quinvium.com",
+  "forks": [
+    {
+      "name": "pools",
+      "block": 1
+    }
+  ],
+  "systemContracts": [
+    {
+      "address": "0xae00000000000000000000000000000000000001",
+      "name": "Notary"
+    },
+    {
+      "address": "0xae00000000000000000000000000000000000002",
+      "name": "AetherNames"
+    },
+    {
+      "address": "0xae00000000000000000000000000000000000003",
+      "name": "Credentials"
+    },
+    {
+      "address": "0xae00000000000000000000000000000000000004",
+      "name": "SupplyChain"
+    },
+    {
+      "address": "0xae00000000000000000000000000000000000005",
+      "name": "Escrow"
+    },
+    {
+      "address": "0xae00000000000000000000000000000000000006",
+      "name": "Polls"
+    },
+    {
+      "address": "0xae00000000000000000000000000000000000007",
+      "name": "TokenFactory"
+    },
+    {
+      "address": "0xae00000000000000000000000000000000000008",
+      "name": "CollectionFactory"
+    },
+    {
+      "address": "0xae00000000000000000000000000000000000009",
+      "name": "MultisigFactory"
+    },
+    {
+      "address": "0xae0000000000000000000000000000000000000a",
+      "name": "WAET"
+    },
+    {
+      "address": "0xae0000000000000000000000000000000000000b",
+      "name": "Multicall"
+    },
+    {
+      "address": "0xae0000000000000000000000000000000000000c",
+      "name": "PoolFactory",
+      "addedBy": "fork pools at block 1"
+    }
+  ]
+}

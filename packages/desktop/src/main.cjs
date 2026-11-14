@@ -440,7 +440,7 @@ const versionsDir = () => path.join(app.getPath('userData'), 'versions');
 async function updateNow() {
   const { updateUrl } = loadSettings();
   if (!updateUrl || !app.isPackaged || updating) return;
-  // Mainnet bez aktualizací na dálku, dokud podpisový klíč leží na jednom počítači (docs/MAINNET-START.md).
+  // Mainnet bez aktualizací na dálku, dokud podpisový klíč leží na jednom počítači (docs/MAINNET-LAUNCH.md).
   if (node.network === 'mainnet') { update.error = 'Updates over the network are off on mainnet, install new versions manually.'; return; }
   update.error = null;
   const manifest = await updater.checkForUpdate(updateUrl, app.getVersion(), isWin ? 'manifest' : 'manifest-mac', isWin ? 'win32' : 'darwin');

@@ -17,7 +17,7 @@ export const CONSENSUS = Object.freeze({
   elasticity: 2n,                  // EIP-1559: cíl je polovina limitu
   gasLimitBoundDivisor: 1024n,     // změna limitu gasu za blok
   minGasLimit: 5_000_000n,
-  genesisGasLimit: 10_000_000n,    // nejhorší známý blok se na běžném počítači ověří asi za 6 s, viz docs/SPECIFIKACE.md
+  genesisGasLimit: 10_000_000n,    // nejhorší známý blok se na běžném počítači ověří asi za 6 s, viz docs/SPECIFICATION.md
   maxExtraData: 32,
   maxBlockBytes: 2 * 1024 * 1024,
   maxTxBytes: 128 * 1024,
@@ -65,7 +65,7 @@ export const NETWORKS = Object.freeze({
     minDifficulty: 2n ** 16n,
     genesisExtra: 'Quinvium: vlastni sit pro kazdy obor / testnet',   // od testnetu-5 (13. 11. 2026) nové jméno, mainnet a dev beze změny
     ports: { p2p: 30525, rpc: 8546, stratum: 3334 },
-    seeds: ['2df5ea8b9b4e18c552a001434e6b7ed0fc99348a03478fd809de1f92fde2f78d@seed.quinvium.com:30525'],   // server u Hostingeru (docs/SERVER-HOSTINGER.md), klíč identity připnutý
+    seeds: ['2df5ea8b9b4e18c552a001434e6b7ed0fc99348a03478fd809de1f92fde2f78d@seed.quinvium.com:30525'],   // server u Hostingeru (docs/RUNNING-A-PUBLIC-NODE.md), klíč identity připnutý
     forks: [{ ...POOLS, block: 1n }],
   },
   dev: {

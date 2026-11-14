@@ -1,0 +1,47 @@
+# Caddy configuration of the public quinvium.com server. Adapt the domain names for your own node.
+
+# Website (packages/website/public, built by packages/website/src/build.mjs)
+quinvium.com {
+	encode zstd gzip
+	# the site is English only; old Czech paths redirect to the English pages
+	redir /cs /  permanent
+	@cs path_regexp cs ^/cs/(.*)$
+	redir @cs /{re.cs.1} permanent
+	# release downloads (ops/deploy-downloads.sh)
+	handle_path /downloads/* {
+		root * /var/www/quinvium-downloads
+		header Content-Disposition attachment
+		header Cache-Control "public, max-age=31536000, immutable"
+		header /*SHA256SUMS.txt Cache-Control "public, max-age=300"
+		file_server
+	}
+	root * /var/www/quinvium
+	file_server
+	handle_errors {
+		rewrite * /404.html
+		file_server
+	}
+	header {
+		Content-Security-Policy "default-src 'self'; connect-src https://rpc.quinvium.com; img-src 'self' data:; style-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+		Strict-Transport-Security "max-age=31536000"
+	}
+}
+
+www.quinvium.com {
+	redir https://quinvium.com{uri} permanent
+}
+
+# Mainnet: Explorer and JSON-RPC (service quinvium-mainnet)
+explorer.quinvium.com, rpc.quinvium.com {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8545
+}
+
+# Testnet: Explorer and JSON-RPC (service quinvium-testnet)
+testnet.quinvium.com, rpc1.quinvium.com {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8546
+}

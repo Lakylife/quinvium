@@ -6,7 +6,7 @@
 // Shanghai se pouští s čistým ceníkem Shanghai. Cancun s pravidly Quinvia bez cen z Fusaky, protože
 // sada Cancun očekává původní cenu MODEXP. Osaka přidává EIP-7823 a EIP-7883 a slouží pro testy MODEXP
 // z ethereum/execution-spec-tests. Sada Osaka očekává i EIP-7623, který Quinvium nemá, proto pro ni
-// AETHER_EXTRA_EIPS=7623. Rozdíly oproti Ethereu popisuje docs/SPECIFIKACE.md.
+// AETHER_EXTRA_EIPS=7623. Rozdíly oproti Ethereu popisuje docs/SPECIFICATION.md.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { createBlock } from '@ethereumjs/block';

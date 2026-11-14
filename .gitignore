@@ -1,6 +1,8 @@
 node_modules/
 target/
 dist/
+# compiled contracts belong in the repository (bytecode verification, node tests)
+!packages/contracts/dist/
 data/
 *.log
 .DS_Store
@@ -10,16 +12,17 @@ packages/desktop/build/
 packages/desktop/src/renderer/wallet/
 packages/desktop/release/
 release/
-# Tajné a provozní soubory: dnes leží mimo repozitář, tohle je pojistka
+# Secrets and operational files live outside the repository; this is a safety net
 *.key
 *.pem
 *.db
 *.db-wal
 *.db-shm
 mempool.bin
-# Zálohy původních souborů před úpravami
+# Local backups of files before edits
 backups/
 target-dist/
-# Soukromé poznámky a snímky z domácího prostředí se nezveřejňují
+# Private notes, local screenshots and Czech working copies of the docs are not published
 CLAUDE.md
 docs/snimky/
+docs/cs/

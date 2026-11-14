@@ -1,93 +1,128 @@
 # Quinvium
 
-Vlastní programovatelný blockchain s těžbou na grafických kartách.
+**A programmable proof-of-work blockchain mined on graphics cards.**
 
-| Parametr | Hodnota |
+Quinvium (QU) combines Ethash proof-of-work with the Ethereum Virtual Machine. Blocks arrive about every 15 seconds, smart contracts and wallets built for Ethereum work unchanged, and every coin is created by mining: no premine, no presale, no team allocation, no treasury. Quinvium is a decentralised network, not a company. Nobody owns it, holds an admin key or can change its rules; anyone can run a node, mine or build on it.
+
+[Website](https://quinvium.com) · [Whitepaper](https://quinvium.com/whitepaper/) · [Explorer](https://explorer.quinvium.com) · [Download](https://quinvium.com/download/) · [Releases](https://github.com/Lakylife/quinvium/releases)
+
+> Quinvium is experimental software. No independent security audit has been done yet. Use it at your own risk.
+
+## Network
+
+| | Mainnet | Testnet |
+| --- | --- | --- |
+| Chain ID | 52401 | 52402 |
+| Currency | QU | tQU (no value) |
+| Genesis | 14 November 2026 00:00 CET, `0x49c889ad…ac39` | `0x4845f69c…d121` |
+| Public RPC | https://rpc.quinvium.com | https://rpc1.quinvium.com |
+| WebSocket | wss://rpc.quinvium.com | wss://rpc1.quinvium.com |
+| Explorer | https://explorer.quinvium.com | https://testnet.quinvium.com |
+| P2P seed | seed.quinvium.com:30524 | seed.quinvium.com:30525 |
+
+Machine-readable parameters: [`networks/mainnet.json`](networks/mainnet.json), [`networks/testnet.json`](networks/testnet.json).
+
+| Parameter | Value |
 | --- | --- |
-| Mince | Quinvium (QU), na testnetu tQU |
-| Konsensus | Proof of Work, Ethash, obtížnost LWMA po každém bloku |
-| Čas bloku | 15 s |
-| Odměna | 4 QU, půlení po 8 000 000 blocích (asi 3,8 roku) |
-| Maximální nabídka | 64 000 000 QU, bez předtěžených mincí |
-| Poplatky | EIP-1559: základní poplatek i dýško dostane těžař, nic se nepálí |
-| Chytré kontrakty | EVM Shanghai a Cancun bez blobů, Solidity, nástroje a peněženky pro Ethereum |
-| Kapacita | 10 milionů gasu v bloku, asi 31 převodů za sekundu, nejvýš 15 milionů hlasováním |
-| Těžební pooly | Odměny drží kontrakt a dělí je podle práce ověřené sítí, provozovatel je nemůže vzít |
-| Most | ETH, BTC a tokeny oběma směry, ověřují nezávislí validátoři, zatím neběží, viz [docs/MOST.md](docs/MOST.md) |
-| Swap | Pooly likvidity s konstantním součinem, poplatek 0,3 % poskytovatelům, bez správce |
-| Stablecoiny | Připravený token pro vydavatele a seznam ověřených tokenů. Testnet nemá přednastavené tokeny, zakládají si je jejich autoři |
-| Aktualizace | Forky s výškou aktivace, uzly se poznají identifikátorem podle EIP-2124 |
-| Ochrana před přepisem | Reorganizace hlubší než 256 bloků se odmítá |
-| Chain ID | mainnet 52401, testnet 52402, dev 52403 |
+| Consensus | Proof-of-work, Ethash, LWMA difficulty adjusted after every block (60-block window) |
+| Block time | 15 s |
+| Reward | 4 QU, halving every 8,000,000 blocks (about 3.8 years) |
+| Maximum supply | 64,000,000 QU, no premined coins |
+| Fees | EIP-1559; the miner receives both the base fee and the tip, nothing is burned |
+| Smart contracts | EVM (Shanghai plus selected Cancun features, no blobs), Solidity, Ethereum tools and wallets |
+| Capacity | 10 million gas per block (about 31 transfers per second), up to 15 million by miner vote |
+| Built-in apps | Notary, names, credentials, supply chain, escrow, polls, token and NFT factories, multisig, wrapped QU, multicall |
+| Mining pools | Rewards are held by a contract and split by work verified by the network; the operator cannot take them |
+| Reorg protection | Reorganisations deeper than 256 blocks need twice the work |
+| Upgrades | Forks with an activation height; nodes identify each other by an EIP-2124 fork ID |
 
-## Obsah repozitáře
+## Repository
 
-| Složka | Účel |
+| Folder | Purpose |
 | --- | --- |
-| `packages/node` | Plný uzel: konsensus, síť, JSON-RPC, Stratum |
-| `packages/miner` | GPU miner v Rustu (OpenCL, Vulkan, DirectX 12, Metal) |
-| `packages/contracts` | Systémové kontrakty pro různé obory |
-| `packages/explorer` | Webový explorer a aplikace pro obory |
-| `packages/extension` | Quinvium Wallet pro Chrome |
-| `packages/desktop` | Aplikace pro Windows a macOS: peněženka, uzel, těžba, pooly, Swap a Bridge |
-| `packages/bridge` | Validátor mostu pro řetězce EVM a Bitcoin |
-| `packages/cli` | Příkazová řádka `quinvium` anglicky i česky: peněženka, převody, swap, most, pooly, těžba, aplikace sítě (notář, certifikáty, dodavatelský řetězec, úschova, hlasování, jména, token, NFT, multisig) a kontrola řetězce, viz `docs/PRIKAZOVA-RADKA.md` |
-| `scripts/zatez` | Zátěžové testy |
-| `docs` | Návody, bezpečnost a plán spuštění |
+| [`packages/node`](packages/node) | Full node: consensus, EVM, P2P, JSON-RPC, Stratum, pool server, built-in Explorer |
+| [`packages/miner`](packages/miner) | `quintium-miner`, GPU miner in Rust (OpenCL, Vulkan, DirectX 12, Metal) |
+| [`packages/contracts`](packages/contracts) | System contracts in Solidity and their compiled artifacts |
+| [`packages/explorer`](packages/explorer) | Block explorer with the network apps and developer docs |
+| [`packages/desktop`](packages/desktop) | Desktop app for Windows and macOS: wallet, node, mining, pools, Swap and Bridge |
+| [`packages/extension`](packages/extension) | Quinvium Wallet for Chrome |
+| [`packages/cli`](packages/cli) | `quinvium` command line for wallets, transfers, apps, pools and mining |
+| [`packages/bridge`](packages/bridge) | Bridge validators for EVM chains and Bitcoin (not deployed) |
+| [`packages/website`](packages/website) | The quinvium.com website |
+| [`networks`](networks) | Network parameters, genesis and system contract addresses |
+| [`ops`](ops) | Server setup for a public node: systemd units, Caddy, deployment scripts |
+| [`scripts`](scripts) | Release, deployment and load-test scripts |
+| [`docs`](docs) | Specification, whitepaper and guides |
 
-Název, logo a ověření jedinečnosti popisuje [docs/ZNACKA.md](docs/ZNACKA.md).
+## Quick start
 
-## Příkazová řádka
+You need Node.js 24, and Rust for the miner.
 
-Vše, co umí aplikace, jde dělat i z terminálu příkazem `quinvium`: peněženka, převody, swap, most, pooly, těžba, uzel a kontrola celého řetězce. Viz [docs/PRIKAZOVA-RADKA.md](docs/PRIKAZOVA-RADKA.md).
-
-## Rychlé spuštění
-
-Potřebujete Node.js 24 a pro miner Rust.
-
-```
+```bash
 npm install
 cd packages/miner && cargo build --release && cd ../..
-node packages/node/src/cli.js --network testnet
-./packages/miner/target/release/quintium-miner --address 0xVASE_ADRESA --node http://127.0.0.1:8546
+node packages/node/src/cli.js --network mainnet
+./packages/miner/target/release/quintium-miner --address YOUR_ADDRESS --node http://127.0.0.1:8545
 ```
 
-Explorer pak běží na http://127.0.0.1:8546.
+The Explorer then runs at http://127.0.0.1:8545. Ready-made builds of the app, the wallet and the node are on the [download page](https://quinvium.com/download/) and in [Releases](https://github.com/Lakylife/quinvium/releases).
 
-## Testy
+Connect a wallet or a tool:
 
+```js
+const provider = new ethers.JsonRpcProvider('https://rpc.quinvium.com', 52401);
 ```
+
+## Documentation
+
+| Document | Contents |
+| --- | --- |
+| [Whitepaper](docs/WHITEPAPER.md) | Design, consensus, monetary policy, security and roadmap |
+| [Specification](docs/SPECIFICATION.md) | Exact consensus rules for auditors and other implementations |
+| [Guide](docs/GUIDE.md) | Using the app, the Explorer, wallets and mining |
+| [Command line](docs/CLI.md) | The `quinvium` command |
+| [Running a public node](docs/RUNNING-A-PUBLIC-NODE.md) | Servers, seeds, outages and network upgrades |
+| [Chain integrity](docs/CHAIN-INTEGRITY.md) | Why balances cannot be changed, `quinvium audit`, readiness |
+| [Security model](docs/SECURITY-MODEL.md) | What is tested, fixed vulnerabilities, known risks |
+| [Internal review](docs/REVIEW.md) | Findings of internal code reviews (not an independent audit) |
+| [Capacity](docs/CAPACITY.md) | Load measurements and scaling |
+| [Bridge](docs/BRIDGE.md) | Bridge and stablecoins |
+| [Mainnet launch](docs/MAINNET-LAUNCH.md) | Launch parameters and open items |
+| [Brand](docs/BRAND.md) | Name, logo and design rules |
+
+Developer documentation with runnable examples and the RPC and contract reference is in the Explorer at https://explorer.quinvium.com/docs.
+
+## Tests
+
+```bash
 npm test --workspace packages/node
 npm test --workspace packages/contracts
-node packages/explorer/test/e2e.mjs
-node packages/explorer/test/connect.mjs
-node packages/explorer/test/pools.mjs
-node packages/explorer/test/bridge.mjs
-node packages/explorer/test/swap.mjs
-node packages/explorer/test/pages.mjs
 node --test --test-concurrency=1 packages/bridge/test/*.test.js
 node --no-warnings --test packages/cli/test/cli.test.js
-node packages/explorer/test/tokens.mjs
-node --test packages/explorer/test/i18n.test.mjs
+node packages/explorer/test/e2e.mjs
+node packages/explorer/test/pages.mjs
 node packages/explorer/test/docs.mjs
 node packages/extension/test/e2e.mjs
 node packages/desktop/test/e2e.mjs
 node --test packages/desktop/test/updater.test.cjs
-node packages/desktop/test/update-e2e.mjs      # skutečná aktualizace sestavené aplikace na macOS
 cargo test --release --manifest-path packages/miner/Cargo.toml
 ```
 
-Oficiální testy EVM z repozitáře `ethereum/tests` (značka v14.1) a Ethash ve vysokých epochách:
+Official EVM tests from `ethereum/tests` (tag v14.1) and Ethash in high epochs:
 
-```
-node packages/node/test/statetests.mjs <cesta>/GeneralStateTests Cancun
+```bash
+node packages/node/test/statetests.mjs <path>/GeneralStateTests Cancun
 AETHER_SLOW=1 node --test packages/node/test/ethash.test.js
 ```
 
-Delší náhodné běhy nad kontrakty: `AETHER_FUZZ_STEPS=300 node --test --test-concurrency=1 packages/contracts/test/invariants.test.js`.
+Longer random runs over the contracts: `AETHER_FUZZ_STEPS=300 node --test --test-concurrency=1 packages/contracts/test/invariants.test.js`.
 
-Sestavení všech balíčků pro Windows: `bash scripts/release.sh`. Sestavení a instalace na macOS: `bash scripts/install-mac.sh`.
+Windows packages: `bash scripts/release.sh`. macOS build and install: `bash scripts/install-mac.sh`.
 
-Dokumentace pro vývojáře je v exploreru na stránce Pro vývojáře. Její příklady spouští test `packages/explorer/test/docs.mjs`.
+## Contributing and security
 
-Další dokumentace: [docs/NAVOD.md](docs/NAVOD.md), [docs/SPECIFIKACE.md](docs/SPECIFIKACE.md), [docs/BEZPECNOST.md](docs/BEZPECNOST.md), [docs/AUDIT.md](docs/AUDIT.md), [docs/KAPACITA.md](docs/KAPACITA.md), [docs/MOST.md](docs/MOST.md), [docs/SPUSTENI-SITE.md](docs/SPUSTENI-SITE.md).
+Contributions are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). Please report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+
+## License
+
+[MIT](LICENSE). Bundled third-party code keeps its own licence (for example AirSwap and Solady under MIT in `packages/contracts/vendor`, WalletConnect under Apache-2.0).
