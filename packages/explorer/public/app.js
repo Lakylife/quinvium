@@ -271,7 +271,7 @@
       $('footer-chain').textContent = `Chain ID ${stats.chainId}`;
       $('footer-ver').textContent = fill('foot.node', { v: String(stats.version ?? '').split('/').pop() });
       $('node-dot').style.background = '';
-      document.title = `Quinvium Explorer · ${stats.network}`;
+      pageMeta();
       $('net-label').textContent = stats.network === 'mainnet' ? 'Mainnet' : stats.network === 'testnet' ? 'Testnet' : stats.network;
       $('net-dot').classList.toggle('testnet', stats.network !== 'mainnet');
       document.querySelectorAll('#net-pop button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.net === stats.network)));
@@ -3711,10 +3711,20 @@
   // (for example "Cannot set properties of null" from an element that disappeared) and if it still finishes later, the new one is drawn again.
   let renderSeq = 0;
   let renderDone = 0;
+  /** Title, description and canonical address of the page for search engines and shared links. */
+  function pageMeta() {
+    const h1 = app.querySelector('h1')?.textContent?.trim();
+    const name = stats?.network && stats.network !== 'mainnet' ? `Quinvium Explorer · ${stats.network}` : 'Quinvium Explorer';
+    document.title = h1 && h1 !== 'Quinvium Explorer' ? `${h1} · ${name}` : name;
+    const canonical = document.querySelector('link[rel=canonical]');
+    if (canonical) canonical.href = `${location.origin}${location.pathname}`;
+  }
   async function render() {
     const seq = ++renderSeq;
     try {
-      return await renderPage();
+      const out = await renderPage();
+      if (seq === renderSeq) pageMeta();
+      return out;
     } catch (e) {
       if (seq === renderSeq) app.innerHTML = errorBox(e.message);
       return undefined;

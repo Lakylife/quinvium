@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://explorer.quinvium.com/</loc><changefreq>always</changefreq></url>
+  <url><loc>https://explorer.quinvium.com/blocks</loc><changefreq>always</changefreq></url>
+  <url><loc>https://explorer.quinvium.com/txs</loc><changefreq>always</changefreq></url>
+  <url><loc>https://explorer.quinvium.com/miners</loc><changefreq>daily</changefreq></url>
+  <url><loc>https://explorer.quinvium.com/pools</loc><changefreq>daily</changefreq></url>
+  <url><loc>https://explorer.quinvium.com/network</loc><changefreq>daily</changefreq></url>
+  <url><loc>https://explorer.quinvium.com/charts</loc><changefreq>daily</changefreq></url>
+  <url><loc>https://explorer.quinvium.com/tokens</loc><changefreq>daily</changefreq></url>
+  <url><loc>https://explorer.quinvium.com/richlist</loc><changefreq>daily</changefreq></url>
+  <url><loc>https://explorer.quinvium.com/mempool</loc><changefreq>always</changefreq></url>
+  <url><loc>https://explorer.quinvium.com/mining</loc><changefreq>daily</changefreq></url>
+  <url><loc>https://explorer.quinvium.com/swap</loc><changefreq>daily</changefreq></url>
+  <url><loc>https://explorer.quinvium.com/bridge</loc><changefreq>daily</changefreq></url>
+  <url><loc>https://explorer.quinvium.com/apps</loc><changefreq>daily</changefreq></url>
+  <url><loc>https://explorer.quinvium.com/api</loc><changefreq>daily</changefreq></url>
+</urlset>

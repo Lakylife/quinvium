@@ -9,6 +9,7 @@ const CAP = 64_000_000;
 const n = (v) => Math.round(Number(v)).toLocaleString('en-US');
 const qu = (v, digits = 2) => `${Number(v).toLocaleString('en-US', { maximumFractionDigits: digits })} QU`;
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const short = (a) => `${String(a).slice(0, 6)}…${String(a).slice(-4)}`;
 const bare = (url) => url.replace(/^https:\/\//, '');
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const date = (unix) => { const d = new Date(unix * 1000); return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
@@ -76,6 +77,27 @@ export function compose(e) {
       return { emoji: '🏊', title: `New mining pool: ${d.name || 'unnamed'}`, link: `${EXPLORER}/pool/${d.address}`, lines: [
         `${d.feeBps != null ? `Fee ${(d.feeBps / 100).toLocaleString('en-US')}%. ` : ''}Rewards are split by a contract on chain; the operator cannot take miners' coins.`,
       ] };
+    case 'miner':
+      return { emoji: '⛏', title: 'New miner on Quinvium', link: `${EXPLORER}/address/${d.address}`, lines: [
+        `${short(d.address)} mined its first block, #${n(d.block)}. Welcome to the network.`,
+      ] };
+    case 'node':
+      return { emoji: '🛰', title: 'New node joined the network', link: `${EXPLORER}/network`, lines: [
+        `Node ${String(d.id).slice(0, 8)}…${d.agent ? ` running ${String(d.agent).replace('quintium-node/', 'v')}` : ''}. More nodes, more resilience.`,
+      ] };
+    case 'hashrate-jump':
+      return { emoji: '📈', title: 'Hashrate rising fast', link: `${EXPLORER}/charts`, lines: [
+        `The Quinvium network is at ${hashrate(d.hashrate)}, up ${n((d.hashrate / d.base - 1) * 100)}% on its recent average.`,
+      ] };
+    case 'week':
+      return { emoji: '👷', title: `${n(d.miners)} new miner${d.miners === 1 ? '' : 's'} this week`, link: `${EXPLORER}/miners`, lines: [
+        `${n(d.miners)} address${d.miners === 1 ? '' : 'es'} mined ${d.miners === 1 ? 'its' : 'their'} first Quinvium block in the last 7 days.`,
+      ] };
+    case 'digest': {
+      const count = (k) => d.items.filter((i) => i.kind === k).length;
+      const parts = [count('miner') && `⛏ New miners: ${n(count('miner'))}`, count('node') && `🛰 New nodes: ${n(count('node'))}`, count('hashrate-jump') && '📈 Hashrate rising fast'].filter(Boolean);
+      return { emoji: '🗞', title: 'Network update', link: `${EXPLORER}/network`, lines: parts };
+    }
     default:
       throw new Error(`unknown event ${e.kind}`);
   }

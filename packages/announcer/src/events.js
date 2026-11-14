@@ -2,6 +2,10 @@
 // the output is a list of events and the new state. Nothing here talks to the network, so it can be tested exactly.
 
 export const DAY = 86400;
+export const WEEK = 7 * DAY;
+const NODE_MEMORY = 2000;   // remembered node IDs
+/** Week number, weeks start on Monday (1 January 1970 was a Thursday). */
+const weekOf = (t) => Math.floor((t - 4 * DAY) / WEEK);
 
 /** Heights worth a post. After 1 million every further million. */
 export function milestonesUpTo(height) {
@@ -29,6 +33,12 @@ export function initialState(snap, now) {
     pools: snap.pools ?? [],
     stalledSince: null,
     counts: {},
+    minerHeight: snap.height,           // miners whose first block is above this height are new
+    nodes: (snap.nodes ?? []).map((n) => n.id).filter(Boolean).slice(0, NODE_MEMORY),
+    hashrateBase: snap.hashrate,
+    jumpAnnounced: 0,
+    weekMiners: 0,
+    lastWeek: weekOf(now),
   };
 }
 
@@ -96,8 +106,40 @@ export function detect(state, snap, now, { stallAfter = 600, summaryHour = 12 } 
   // (f) New mining pool (Telegram only, it is a small event).
   if (Array.isArray(snap.pools)) {
     const known = new Set(s.pools.map((p) => p.address.toLowerCase()));
-    for (const p of snap.pools) if (!known.has(p.address.toLowerCase())) add(`pool:${p.address.toLowerCase()}`, 'pool', p, ['telegram']);
+    for (const p of snap.pools) if (!known.has(p.address.toLowerCase())) add(`pool:${p.address.toLowerCase()}`, 'pool', p, ['telegram', 'x']);
     s.pools = snap.pools;
+  }
+  // New miner: the first block of an address that has never mined before. Telegram only; many at once are merged later.
+  if (Array.isArray(snap.recentMiners)) {
+    s.minerHeight ??= snap.height;
+    for (const m of snap.recentMiners) {
+      if (m.first > s.minerHeight) { add(`miner:${m.address.toLowerCase()}`, 'miner', { address: m.address, block: m.first }, ['telegram']); s.weekMiners = (s.weekMiners ?? 0) + 1; }
+    }
+    s.minerHeight = Math.max(s.minerHeight, snap.height);
+  }
+
+  // New node: identified by its node ID only, never by IP address. Telegram only.
+  if (Array.isArray(snap.nodes)) {
+    const known = new Set(s.nodes ?? []);
+    for (const n of snap.nodes) if (n.id && !known.has(n.id)) { add(`node:${n.id}`, 'node', { id: n.id, agent: n.agent }, ['telegram']); known.add(n.id); }
+    s.nodes = [...known].slice(-NODE_MEMORY);
+  }
+
+  // A sharp rise of the hashrate against its slow average (half-life of about a day): Telegram, at most every 6 hours.
+  const base = s.hashrateBase ?? snap.hashrate;
+  if (base > 0 && snap.hashrate >= base * 1.5 && now - (s.jumpAnnounced ?? 0) >= 6 * 3600) {
+    add(`jump:${Math.floor(now / 3600)}`, 'hashrate-jump', { hashrate: snap.hashrate, base }, ['telegram']);
+    s.jumpAnnounced = now;
+  }
+  s.hashrateBase = base + (snap.hashrate - base) * 0.0005;   // one sample a minute
+
+  // Weekly summary of new miners, Monday after the summary hour: Telegram and X.
+  const week = weekOf(now);
+  s.lastWeek ??= week;
+  if (week > s.lastWeek && (now % DAY) >= summaryHour * 3600) {
+    if (s.weekMiners > 0) add(`week:${week}`, 'week', { miners: s.weekMiners }, ['telegram', 'x']);
+    s.weekMiners = 0;
+    s.lastWeek = week;
   }
   return { events, state: s };
 }
@@ -125,4 +167,8 @@ export function count(state, channel, now) {
 }
 
 /** The more important event wins when the X budget is tight. */
-export const PRIORITY = { halving: 0, 'halving-soon': 1, release: 2, milestone: 3, hashrate: 4, summary: 5, stall: 6, resume: 6, pool: 7 };
+export const PRIORITY = { halving: 0, 'halving-soon': 1, release: 2, milestone: 3, hashrate: 4, pool: 4, week: 5, summary: 5, stall: 6, resume: 6, 'hashrate-jump': 7, miner: 8, node: 8, digest: 8 };
+
+/** Telegram at most this many messages an hour; small events above it are merged into one digest. */
+export const TELEGRAM_PER_HOUR = 5;
+export const MERGEABLE = new Set(['miner', 'node', 'hashrate-jump']);

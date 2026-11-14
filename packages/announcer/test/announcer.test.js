@@ -68,7 +68,7 @@ test('a new release and a new pool are announced; the first known release is not
   const s = initialState(snap(), T0);
   const r = detect(s, snap({ release: { tag: 'v2.15.0', name: 'Quinvium 2.15.0', url: 'https://example.org/r' }, pools: [{ address: '0xAB', name: 'Pool A' }] }), T0 + 60);
   assert.deepEqual(kinds(r), ['pool', 'release']);
-  assert.deepEqual(r.events.find((e) => e.kind === 'pool').channels, ['telegram']);
+  assert.deepEqual(r.events.find((e) => e.kind === 'pool').channels, ['telegram', 'x']);
 });
 
 test('hashrate record: +20 % and at most once a week', () => {
@@ -98,6 +98,8 @@ test('every X post fits into 280 characters (a link counts 23) and has the hasht
     e('release', { tag: 'v12.34.56', name: 'Quinvium 12.34.56', url: 'https://github.com/Lakylife/quinvium/releases/tag/v12.34.56' }),
     e('stall', { height: 12_345_678, minutes: 120 }), e('resume', { height: 12_345_678, minutes: 120 }),
     e('pool', { address: '0x' + 'ab'.repeat(20), name: 'A pool with a rather long name', feeBps: 150 }),
+    e('miner', { address: '0x' + 'ab'.repeat(20), block: 12_345_678 }), e('node', { id: 'ab'.repeat(16), agent: 'quintium-node/12.34.56' }),
+    e('hashrate-jump', { hashrate: 1.2e12, base: 4e11 }), e('week', { miners: 12_345 }), e('digest', { items: [{ kind: 'miner' }, { kind: 'node' }, { kind: 'hashrate-jump' }] }),
   ];
   for (const ev of all) {
     const t = xMessage(ev).text;
@@ -146,4 +148,35 @@ test('without keys the channels only print; with keys they call the right API', 
   assert.match(calls[1].init.headers.Authorization, /^OAuth /);
   const failing = async () => ({ ok: false, status: 403, json: async () => ({ ok: false, description: 'Forbidden' }) });
   await assert.rejects(telegram({ token: 'SECRET', chat: '@Quinvium', fetch: failing }).send({ text: 'x' }), (e) => !e.message.includes('SECRET'));
+});
+
+test('new miner, new node and a sharp hashrate rise go to Telegram only; nodes are known by ID, never by IP', () => {
+  const s = initialState(snap({ nodes: [{ id: 'aa'.repeat(16), agent: 'quintium-node/2.15.0' }] }), T0);
+  const r = detect(s, snap({
+    height: 2_410, headTime: T0 + 50, hashrate: 4_000_000,
+    recentMiners: [{ address: '0x' + '12'.repeat(20), first: 2_405 }, { address: '0x' + '34'.repeat(20), first: 100 }],
+    nodes: [{ id: 'aa'.repeat(16), agent: 'x' }, { id: 'bb'.repeat(16), agent: 'quintium-node/2.15.0' }],
+  }), T0 + 60);
+  assert.deepEqual(kinds(r), ['hashrate', 'hashrate-jump', 'miner', 'node'], 'the record itself is a separate event');
+  for (const e of r.events.filter((x) => x.kind !== 'hashrate')) assert.deepEqual(e.channels, ['telegram']);
+  assert.ok(!JSON.stringify(r.events).match(/\d+\.\d+\.\d+\.\d+/), 'no IP address');
+  assert.equal(r.state.weekMiners, 1);
+  const again = detect(r.state, snap({ height: 2_411, headTime: T0 + 110, hashrate: 4_000_000, recentMiners: [{ address: '0x' + '12'.repeat(20), first: 2_405 }], nodes: [{ id: 'bb'.repeat(16) }] }), T0 + 120);
+  assert.deepEqual(again.events, [], 'nothing twice, no second jump within 6 hours');
+});
+
+test('weekly summary of new miners on Monday goes to Telegram and X', () => {
+  const s = { ...initialState(snap(), T0), weekMiners: 3 };
+  const monday = Date.UTC(2026, 10, 16, 13, 0, 0) / 1000;
+  const r = detect(s, snap({ headTime: monday - 10 }), monday);
+  const week = r.events.find((e) => e.kind === 'week');
+  assert.deepEqual(week.channels, ['telegram', 'x']);
+  assert.match(xMessage(week).text, /3 new miners this week/);
+  assert.equal(r.state.weekMiners, 0);
+});
+
+test('a digest merges small events into one Telegram message', () => {
+  const m = telegramMessage({ kind: 'digest', data: { items: [{ kind: 'miner' }, { kind: 'miner' }, { kind: 'node' }] } });
+  assert.match(m.text, /New miners: 2/);
+  assert.match(m.text, /New nodes: 1/);
 });
