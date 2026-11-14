@@ -43,7 +43,7 @@ A QIP that fails at any stage goes back to Draft or becomes Withdrawn. Nobody ca
 
 ### Miner signalling
 
-Miners can show support for an accepted QIP by putting `QIP-<n>` into the extra data of the blocks they mine. The Explorer can count it. Signalling is **informative only**: it does not activate anything. What decides is which release people run.
+Miners can show support for an accepted QIP by putting `QIP-<n>` into the extra data of the blocks they mine, for example a solo miner's node started with `--extra "Quinvium QIP-7"` (at most 32 bytes). The node counts the signals of the last day with the RPC method `quinvium_signals`, and the Explorer shows them on the Network page. Signalling is **informative only**: it does not activate anything. What decides is which release people run.
 
 ## Security fixes
 
@@ -62,6 +62,9 @@ Vulnerabilities are reported privately, see [SECURITY.md](../SECURITY.md).
 | --- | --- |
 | Protected `main` branch | No direct pushes and no force pushes, also for administrators. Every change goes through a pull request |
 | Required CI | Node, contracts, bridge, Explorer and announcer tests on Linux and Windows must pass before merging |
+| Release tags | Tags `v*` can be created, moved or deleted only by administrators |
+| CodeQL and Dependabot | Static security analysis on every pull request and weekly; Dependabot opens security fixes (routine version updates only for GitHub Actions, because a library update can be a hard fork) |
+| Secret scanning | Pushes that contain a known key format are blocked |
 | Consensus guard | [`scripts/consensus-guard.mjs`](../scripts/consensus-guard.mjs) runs on every pull request: a change of consensus paths needs either an accepted QIP or the statement "No consensus change" |
 | CODEOWNERS | Consensus paths need a review by a code owner (enforced as soon as the project has a second maintainer; GitHub does not let anyone approve their own pull request) |
 | Golden tests | Any unintended rule change breaks pinned hashes |

@@ -78,6 +78,10 @@ const HASHRATE_WINDOW_S = 900n;
 const MIN_CHART_BUCKET_S = 60;    // a shorter interval has only a few blocks and the hashrate from it would be just random noise
 
 /** Methods that hand out and accept work. On a public node they are switched off with --no-mining-rpc. */
+/** Fork signalling window: about one day of blocks by default, at most about three and a half days. */
+const SIGNAL_WINDOW = 5760;
+const SIGNAL_MAX_WINDOW = 20160;
+
 export const MINING_METHODS = ['eth_getWork', 'aether_getWork', 'eth_submitWork', 'aether_submitWork', 'eth_submitHashrate'];
 
 export function createMethods(node) {
@@ -85,6 +89,7 @@ export function createMethods(node) {
   const receiptsCache = new Map();
   const filters = new Map();
   const tokenCache = new Map();
+  const signalCache = { key: null, value: null };
 
   const resolve = (tag = 'latest') => {
     if (typeof tag === 'object' && tag !== null) {
@@ -519,6 +524,40 @@ export function createMethods(node) {
       const out = [];
       for (let n = chain.head.number - BigInt(offset); n >= 0n && out.length < take; n--) out.push(summary(chain.getHeaderByNumber(n)));
       return out;
+    },
+    /**
+     * Fork signalling (docs/GOVERNANCE.md): miners write "QIP-<n>" into the extra data of their blocks.
+     * Counts the signals in the last `blocks` blocks (default about one day). Informative only; nothing activates from it.
+     */
+    aether_signals: ([f = {}] = []) => {
+      const window = Math.min(SIGNAL_MAX_WINDOW, Math.max(1, count(f.blocks) ?? SIGNAL_WINDOW));
+      const headHash = toHex(chain.head.hash());
+      const key = `${headHash}:${window}`;
+      if (signalCache.key === key) return signalCache.value;
+      const to = chain.head.number;
+      const from = to - BigInt(window) + 1n > 0n ? to - BigInt(window) + 1n : 0n;
+      const qips = new Map();
+      let total = 0;
+      for (let n = from; n <= to; n++) {
+        const h = chain.getHeaderByNumber(n);
+        if (!h) continue;
+        total += 1;
+        const text = Buffer.from(h.extraData).toString('latin1');
+        for (const q of new Set([...text.matchAll(/QIP-(\d{1,5})/gi)].map((m) => Number(m[1])))) {
+          const e = qips.get(q) ?? { qip: q, blocks: 0, miners: new Set() };
+          e.blocks += 1;
+          e.miners.add(new Address(h.miner).toString());
+          qips.set(q, e);
+        }
+      }
+      const value = {
+        from: Number(from), to: Number(to), blocks: total,
+        signals: [...qips.values()].sort((a, b) => b.blocks - a.blocks || a.qip - b.qip)
+          .map((e) => ({ qip: e.qip, blocks: e.blocks, share: total ? e.blocks / total : 0, miners: e.miners.size })),
+      };
+      signalCache.key = key;
+      signalCache.value = value;
+      return value;
     },
     aether_recentTxs: ([limit = 20] = []) => {
       // From the index: a chain without transactions must not be walked from the tip to genesis.

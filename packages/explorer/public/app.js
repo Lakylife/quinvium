@@ -24,7 +24,7 @@
       'home.sub': 'Stav sítě Quinvium v reálném čase.', 'home.tip': 'Poslední blok', 'home.health': 'Stav sítě', 'home.ok': 'V pořádku', 'home.sync': 'Synchronizace',
       'm.height': 'Výška', 'm.supply': 'V oběhu', 'm.fees': 'Poplatky těžařům', 'm.reward': 'Odměna za blok', 'm.hashrate': 'Výkon sítě', 'm.difficulty': 'Obtížnost',
       'm.ofMax': 'z 64 mil.', 'm.feesSub': 'odměna navíc k emisi', 'f.age': 'Stáří', 'f.tx': 'Transakce', 'f.gas': 'Gas', 'f.size': 'Velikost',
-      'nh.peers': 'Připojené uzly', 'nh.time': 'Průměrný čas bloku', 'nh.accounts': 'Účty', 'nh.mempool': 'Čekající transakce', 'nh.basefee': 'Základní poplatek', 'nh.tips': 'Dýško pomalu · běžně · rychle', 'nh.halving': 'Další půlení',
+      'sig.title': 'Signalizace forků', 'sig.sub': 'Těžaři mohou do bloku napsat QIP-n a vyjádřit tak podporu návrhu. Je to jen informace, nic se tím nezapíná. Posledních {n} bloků.', 'sig.none': 'Žádný blok v tomto období nesignalizuje žádný návrh.', 'sig.proposal': 'Návrh', 'sig.miners': 'Těžaři', 'sig.how': 'Jak signalizovat a jak se síť mění', 'nh.peers': 'Připojené uzly', 'nh.time': 'Průměrný čas bloku', 'nh.accounts': 'Účty', 'nh.mempool': 'Čekající transakce', 'nh.basefee': 'Základní poplatek', 'nh.tips': 'Dýško pomalu · běžně · rychle', 'nh.halving': 'Další půlení',
       'sec.viewAll': 'Zobrazit vše →', 't.block': 'Blok', 't.hash': 'Hash', 't.miner': 'Těžař', 't.tx': 'Tx', 't.age': 'Stáří', 't.gas': 'Gas', 't.from': 'Od', 't.to': 'Komu', 't.value': 'Částka',
       't.status': 'Stav', 't.balance': 'Zůstatek', 't.share': 'Podíl', 't.address': 'Adresa', 't.blocks': 'Bloky', 't.last': 'Poslední blok', 't.fee': 'Poplatek', 't.type': 'Typ',
       'x.noBlocks': 'Žádné bloky', 'x.noTxs': 'Zatím žádné transakce', 'x.empty': 'Žádné čekající transakce', 'x.newer': '← Novější', 'x.older': 'Starší →',
@@ -68,7 +68,7 @@
       'home.sub': 'Real-time state of the Quinvium network.', 'home.tip': 'Latest block', 'home.health': 'Network status', 'home.ok': 'Healthy', 'home.sync': 'Syncing',
       'm.height': 'Height', 'm.supply': 'Supply', 'm.fees': 'Fees to miners', 'm.reward': 'Block reward', 'm.hashrate': 'Hashrate', 'm.difficulty': 'Difficulty',
       'm.ofMax': 'of 64M', 'm.feesSub': 'on top of block rewards', 'f.age': 'Age', 'f.tx': 'Transactions', 'f.gas': 'Gas', 'f.size': 'Size',
-      'nh.peers': 'Connected peers', 'nh.time': 'Average block time', 'nh.accounts': 'Accounts', 'nh.mempool': 'Pending', 'nh.basefee': 'Base fee', 'nh.tips': 'Tip slow · normal · fast', 'nh.halving': 'Next halving',
+      'sig.title': 'Fork signalling', 'sig.sub': 'Miners can write QIP-n into a block to show support for a proposal. It is informative only and activates nothing. Last {n} blocks.', 'sig.none': 'No block in this period signals a proposal.', 'sig.proposal': 'Proposal', 'sig.miners': 'Miners', 'sig.how': 'How to signal and how the network changes', 'nh.peers': 'Connected peers', 'nh.time': 'Average block time', 'nh.accounts': 'Accounts', 'nh.mempool': 'Pending', 'nh.basefee': 'Base fee', 'nh.tips': 'Tip slow · normal · fast', 'nh.halving': 'Next halving',
       'sec.viewAll': 'View all →', 't.block': 'Block', 't.hash': 'Hash', 't.miner': 'Miner', 't.tx': 'Tx', 't.age': 'Age', 't.gas': 'Gas', 't.from': 'From', 't.to': 'To', 't.value': 'Value',
       't.status': 'Status', 't.balance': 'Balance', 't.share': 'Share', 't.address': 'Address', 't.blocks': 'Blocks', 't.last': 'Last block', 't.fee': 'Fee', 't.type': 'Type',
       'x.noBlocks': 'No blocks', 'x.noTxs': 'No transactions yet', 'x.empty': 'No pending transactions', 'x.newer': '← Newer', 'x.older': 'Older →',
@@ -2592,6 +2592,13 @@
       <div class="card"><div class="table-wrap"><table><thead><tr><th>${peers.some((p) => p.address) ? t('t.address') : 'ID'}</th><th>Agent</th><th>${t('m.height')}</th></tr></thead><tbody>
       ${peers.map((p) => `<tr><td class="hash">${esc(p.address ?? short(p.id ?? '', 16))}</td><td>${esc(p.agent)}</td><td>${num(p.height)}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">—</td></tr>'}</tbody></table></div></div>`;
     $('add-net').onclick = () => addNetwork().catch((e) => toast(esc(e.message)));
+    // Fork signalling (docs/GOVERNANCE.md). An older node does not know the method; the card then stays hidden.
+    const sig = await rpc('aether_signals').catch(() => null);
+    if (sig && route().name === 'network') {
+      const rows = sig.signals.map((x) => `<tr><td><b>QIP-${num(x.qip)}</b></td><td class="num">${num(x.blocks)}</td><td class="num">${(x.share * 100).toFixed(1)} %</td><td class="num">${num(x.miners)}</td></tr>`).join('');
+      app.insertAdjacentHTML('beforeend', `<div class="card"><div class="card-header"><h2>${t('sig.title')}</h2></div><p class="muted">${fill('sig.sub', { n: num(sig.blocks) })} <a href="https://github.com/Lakylife/quinvium/blob/main/docs/GOVERNANCE.md" rel="noopener">${t('sig.how')}</a></p>
+        ${rows ? `<div class="table-wrap"><table><thead><tr><th>${t('sig.proposal')}</th><th class="num">${t('t.blocks')}</th><th class="num">${t('t.share')}</th><th class="num">${t('sig.miners')}</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<p class="empty">${t('sig.none')}</p>`}</div>`);
+    }
   }
 
   // ------------------------------------------------------------- tokeny a most

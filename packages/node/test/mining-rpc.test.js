@@ -41,3 +41,18 @@ test('peer IP addresses are visible only to this computer and the local network'
   assert.equal(methods.aether_peers([], { ip: '192.168.1.5', local: true })[0].address, peer.address);
   assert.equal(methods.aether_peers([])[0].address, peer.address, 'the node itself (the app) sees addresses');
 });
+
+test('fork signalling: QIP-<n> in the extra data of blocks is counted per QIP and miner', () => {
+  const enc = (s) => new TextEncoder().encode(s);
+  const miners = [new Uint8Array(20).fill(1), new Uint8Array(20).fill(2)];
+  const extras = ['Quinvium QIP-2', 'QIP-2 QIP-3', 'Quinvium', 'qip-2', 'QIP-2 QIP-2'];
+  const headers = extras.map((e, i) => ({ number: BigInt(i), extraData: enc(e), miner: miners[i % 2] }));
+  const { node } = fakeNode(undefined);
+  const chain = { ...node.chain, head: { number: 4n, hash: () => new Uint8Array(32).fill(9) }, getHeaderByNumber: (n) => headers[Number(n)] };
+  const { methods } = createMethods({ ...node, chain });
+  const r = methods.aether_signals([{ blocks: 5 }]);
+  assert.equal(r.blocks, 5);
+  assert.deepEqual(r.signals.map((s) => [s.qip, s.blocks, s.miners]), [[2, 4, 2], [3, 1, 1]], 'one block counts once per QIP');
+  assert.equal(r.signals[0].share, 0.8);
+  assert.equal(methods.quinvium_signals([{ blocks: 2 }]).blocks, 2, 'window from the tip');
+});
