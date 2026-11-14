@@ -470,7 +470,7 @@ function createTray() {
   // On Windows a click opens the window, the menu is on the right button. On macOS a click opens the menu.
   if (isWin) tray.on('click', showWindow);
   refreshTray();
-  globalThis.quinviumTray = { labels: () => trayMenu().items.map((i) => i.label).filter(Boolean) };   // read by test/tray.mjs
+  globalThis.quinviumTray = { labels: () => trayMenu().items.map((i) => i.label).filter(Boolean), iconEmpty: () => trayIcon().isEmpty() };   // read by test/tray.mjs
 }
 
 setInterval(async () => {

@@ -23,6 +23,7 @@
     "files": [
       "src/**/*",
       "assets/icon.png",
+      "assets/tray*.png",
       "package.json"
     ],
     "extraResources": [

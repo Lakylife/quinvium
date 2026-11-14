@@ -25,7 +25,8 @@ const rpcAlive = () => fetch(`http://127.0.0.1:${RPC_PORT}`, { method: 'POST', h
 
 const userData = mkdtempSync(join(tmpdir(), 'aether-tray-'));
 const app = await electron.launch({
-  executablePath: electronPath, args: [join(here, '..')],
+  // QUINVIUM_APP=<path to the built app binary> checks the packaged app instead of the sources.
+  executablePath: process.env.QUINVIUM_APP ?? electronPath, args: process.env.QUINVIUM_APP ? [] : [join(here, '..')],
   env: { ...process.env, AETHER_NO_SEEDS: '1', AETHER_USER_DATA: userData, AETHER_SHELL_PROFILE: join(userData, 'zshrc'), AETHER_LAN_PORT: '30690', AETHER_P2P_PORT: '30691', AETHER_RPC_PORT: String(RPC_PORT), AETHER_STRATUM_PORT: '13396' },
 });
 try {
@@ -44,6 +45,7 @@ try {
   });
 
   await step('the tray menu shows the state and controls the app', async () => {
+    assert.equal(await app.evaluate(() => globalThis.quinviumTray.iconEmpty()), false, 'the tray icon file is packaged');
     const labels = await app.evaluate(() => globalThis.quinviumTray.labels());
     for (const want of [/^(Network|Síť): Testnet · (block|blok) /, /^(Mining is off|Těžba je vypnutá)$/, /^(Start mining|Spustit těžbu)$/, /^(Open Quinvium|Otevřít Quinvium)$/, /^(Start at login|Spouštět po přihlášení)$/, /^(Quit Quinvium|Ukončit Quinvium)$/]) {
       assert.ok(labels.some((l) => want.test(l)), `${want} in ${labels.join(' | ')}`);
