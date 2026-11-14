@@ -75,3 +75,16 @@ Disallow: /
 		reverse_proxy 127.0.0.1:8546
 	}
 }
+
+# Mining pool server (service quinvium-pool, docs/POOLS.md): JSON-RPC for miners. Stratum listens on port 4444 directly.
+pool.quinvium.com {
+	encode zstd gzip
+	handle /robots.txt {
+		respond `User-agent: *
+Disallow: /
+` 200
+	}
+	handle {
+		reverse_proxy 127.0.0.1:8555
+	}
+}
