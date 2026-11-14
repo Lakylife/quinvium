@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.15.1 (14 November 2026)
+
+- Miner: JSON-RPC over `https://`, so the app and the miner can mine into pools behind HTTPS such as the official pool `https://pool.quinvium.com`. Before, mining into a pool stopped with "address must start with http://".
+- Pools guide (`docs/POOLS.md`), official pool details, clearer solo miners on the Explorer Pools page.
+
 ## 2.15.0 (14 November 2026)
 
 - Desktop app runs in the background: closing the window keeps the node and mining running. A Q icon in the macOS menu bar or next to the Windows clock shows the network, block height and hashrate, starts or stops mining, opens the window, sets "Start at login" and quits the app.
