@@ -4,7 +4,7 @@
 // Keys come only from environment variables (see packages/announcer/README.md); without them the channel only prints.
 import { readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { PRIORITY, allowed, count, detect, initialState } from './events.js';
-import { format } from './format.js';
+import { telegramMessage, xMessage } from './format.js';
 import { telegram, x } from './channels.js';
 
 const env = process.env;
@@ -46,8 +46,8 @@ export async function snapshot() {
   return {
     height: stats.height, headTime: Number(BigInt(head.timestamp)), hashrate: Number(stats.hashrate), reward: stats.reward,
     halvingInterval: stats.halvingInterval, blockTime: stats.blockTimeTarget, supply: stats.supply,
-    day: { blocks: activity.blocks, txs: activity.txs, miners: miners.active },
-    release, pools: pools ? pools.items.map((p) => ({ address: p.address, name: p.name })) : null,
+    day: { blocks: activity.blocks, txs: activity.txs, miners: miners.active, avgBlockTime: activity.avgBlockTime },
+    release, pools: pools ? pools.items.map((p) => ({ address: p.address, name: p.name, feeBps: p.feeBps })) : null,
   };
 }
 
@@ -81,7 +81,7 @@ export async function tick() {
       if (!q.channels.includes(ch.name) || q.done.includes(ch.name)) continue;
       if (!allowed(state, ch.name, now)) { log(`${ch.name}: limit reached, ${q.key} skipped`); q.done.push(ch.name); continue; }
       try {
-        await ch.send(format(q));
+        await ch.send(ch.name === 'telegram' ? telegramMessage(q) : xMessage(q));
         if (!ch.dry) count(state, ch.name, now);
         q.done.push(ch.name);
         log(`${ch.name}${ch.dry ? ' (dry run)' : ''}: ${q.key}`);

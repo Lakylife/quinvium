@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 2.14.2 (14 November 2026)
 
+- Desktop app: the built-in wallet uses the app's own node again. In 2.14.1 it tried the public RPC, which the app's security policy blocks, and showed "Node https://rpc.quinvium.com is not reachable".
+- Explorer `/pools`: the largest share and the majority warning are computed from the last hour, not from the selected period.
+- Explorer: fork signalling card on the Network page (`quinvium_signals`).
+- Public RPC no longer returns the IP addresses of connected peers to foreign callers.
 - New logo: the letter Q as a hexagon in Quinvium yellow `#FFCD02`, drawn from the glyph in `assets/brand/Quinvium-Symbol.ttf`. App, wallet, Explorer and website icons are regenerated.
 - Currency identity: name Quinvium, ticker QU, symbol in the `Quinvium Symbol` font (U+E000), shown on the website's Tokenomics page.
 

@@ -54,7 +54,7 @@ export function detect(state, snap, now, { stallAfter = 600, summaryHour = 12 } 
   }
 
   // (b) Height milestones.
-  for (const m of milestonesUpTo(snap.height)) add(`milestone:${m}`, 'milestone', { height: m }, ['telegram', 'x']);
+  for (const m of milestonesUpTo(snap.height)) add(`milestone:${m}`, 'milestone', { height: m, supply: QU(snap.supply), hashrate: snap.hashrate }, ['telegram', 'x']);
 
   // (b) Hashrate record: at least 20 % above the last record and at most once a week.
   if (snap.hashrate > s.hashrateRecord) {
@@ -73,7 +73,7 @@ export function detect(state, snap, now, { stallAfter = 600, summaryHour = 12 } 
   const nextAt = (era + 1) * snap.halvingInterval;
   const daysLeft = ((nextAt - snap.height) * snap.blockTime) / DAY;
   for (const d of [30, 7, 1]) {
-    if (daysLeft <= d && daysLeft > (d === 1 ? 0 : d === 7 ? 1 : 7)) add(`halving:${era + 1}:${d}d`, 'halving-soon', { number: era + 1, block: nextAt, days: d, blocksLeft: nextAt - snap.height }, ['telegram', 'x']);
+    if (daysLeft <= d && daysLeft > (d === 1 ? 0 : d === 7 ? 1 : 7)) add(`halving:${era + 1}:${d}d`, 'halving-soon', { number: era + 1, block: nextAt, days: d, blocksLeft: nextAt - snap.height, reward: QU(snap.reward), eta: Math.round(now + (nextAt - snap.height) * snap.blockTime) }, ['telegram', 'x']);
   }
   if (era >= 1) add(`halving:${era}:done`, 'halving', { number: era, block: era * snap.halvingInterval, reward: QU(snap.reward) }, ['telegram', 'x']);
 
@@ -81,7 +81,7 @@ export function detect(state, snap, now, { stallAfter = 600, summaryHour = 12 } 
   const today = Math.floor(now / DAY);
   if (today > s.lastSummaryDay && (now % DAY) >= summaryHour * 3600 && snap.day) {
     add(`summary:${today}`, 'summary', {
-      height: snap.height, blocks: snap.day.blocks, minted: QU(BigInt(snap.reward) * BigInt(snap.day.blocks)),
+      time: now - DAY, height: snap.height, blocks: snap.day.blocks, avgBlockTime: snap.day.avgBlockTime, minted: QU(BigInt(snap.reward) * BigInt(snap.day.blocks)),
       hashrate: snap.hashrate, miners: snap.day.miners, txs: snap.day.txs, supply: QU(snap.supply),
     }, ['telegram', 'x']);
     s.lastSummaryDay = today;
