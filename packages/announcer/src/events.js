@@ -119,6 +119,8 @@ export function detect(state, snap, now, { stallAfter = 600, summaryHour = 12 } 
   }
 
   // New node: identified by its node ID only, never by IP address. Telegram only.
+  // A state from an older version has no node list yet: today's nodes are remembered, not announced.
+  if (Array.isArray(snap.nodes) && !Array.isArray(s.nodes)) s.nodes = snap.nodes.map((n) => n.id).filter(Boolean);
   if (Array.isArray(snap.nodes)) {
     const known = new Set(s.nodes ?? []);
     for (const n of snap.nodes) if (n.id && !known.has(n.id)) { add(`node:${n.id}`, 'node', { id: n.id, agent: n.agent }, ['telegram']); known.add(n.id); }
