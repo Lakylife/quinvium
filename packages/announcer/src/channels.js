@@ -3,13 +3,17 @@ import { createHmac, randomBytes } from 'node:crypto';
 
 /** Telegram Bot API: the bot must be an administrator of the channel. */
 export function telegram({ token, chat, fetch: f = fetch, log = console.log }) {
-  if (!token || !chat) return { name: 'telegram', dry: true, send: async (text) => log(`[dry-run telegram]\n${text}\n`) };
+  if (!token || !chat) return { name: 'telegram', dry: true, send: async (msg) => log(`[dry-run telegram]\n${msg.text}\n`) };
   return {
     name: 'telegram', dry: false,
-    async send(text) {
+    /** @param {{text: string, link?: string}} msg HTML text; the link is shown as a preview card above the text. */
+    async send(msg) {
       const r = await f(`https://api.telegram.org/bot${token}/sendMessage`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chat, text, disable_web_page_preview: true }),
+        body: JSON.stringify({
+          chat_id: chat, text: msg.text, parse_mode: 'HTML',
+          link_preview_options: msg.link ? { url: msg.link, prefer_large_media: true, show_above_text: false } : { is_disabled: true },
+        }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) throw new Error(`telegram ${r.status}: ${j.description ?? 'error'}`);   // the token is never printed
@@ -34,15 +38,16 @@ export function oauthHeader({ method, url, consumerKey, consumerSecret, token, t
 
 /** X API v2, POST /2/tweets with the keys of an app on the free tier (Read and Write). */
 export function x({ apiKey, apiSecret, accessToken, accessSecret, fetch: f = fetch, log = console.log }) {
-  if (!apiKey || !apiSecret || !accessToken || !accessSecret) return { name: 'x', dry: true, send: async (text) => log(`[dry-run x]\n${text}\n`) };
+  if (!apiKey || !apiSecret || !accessToken || !accessSecret) return { name: 'x', dry: true, send: async (msg) => log(`[dry-run x]\n${msg.text}\n`) };
   const url = 'https://api.x.com/2/tweets';
   return {
     name: 'x', dry: false,
-    async send(text) {
+    /** @param {{text: string}} msg */
+    async send(msg) {
       const r = await f(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: oauthHeader({ method: 'POST', url, consumerKey: apiKey, consumerSecret: apiSecret, token: accessToken, tokenSecret: accessSecret }) },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text: msg.text }),
       });
       if (!r.ok) {
         const j = await r.json().catch(() => ({}));

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DAY, LIMITS, allowed, count, detect, initialState, milestonesUpTo } from '../src/events.js';
-import { format } from '../src/format.js';
+import { format, telegramMessage, xMessage } from '../src/format.js';
 import { oauthHeader, telegram, x } from '../src/channels.js';
 
 const T0 = Date.UTC(2026, 10, 14, 13, 0, 0) / 1000;   // 14 Nov 2026 13:00 UTC
@@ -47,7 +47,7 @@ test('halving: 30, 7 and 1 day notices, then the halving itself', () => {
   assert.deepEqual(detect(s, at(5_000), T0 + 60).events.map((e) => e.key), ['halving:1:1d']);
   const done = detect(s, snap({ height: 8_000_001, reward: '2000000000000000000' }), T0 + 60);
   assert.ok(done.events.some((e) => e.key === 'halving:1:done'));
-  assert.match(format(done.events.find((e) => e.kind === 'halving')), /now 2 QU/);
+  assert.match(format(done.events.find((e) => e.kind === 'halving')), /dropped to 2 QU/);
 });
 
 test('daily summary once per UTC day after noon', () => {
@@ -85,17 +85,32 @@ test('X: at most 2 posts a day and 50 a month', () => {
   assert.equal(allowed(m, 'telegram', T0), true);
 });
 
-test('every text fits into one X post', () => {
+test('every X post fits into 280 characters (a link counts 23) and has the hashtags', () => {
   const e = (kind, data) => ({ kind, data });
-  const texts = [
-    format(e('milestone', { height: 1_000_000 })), format(e('hashrate', { hashrate: 1.234e12, previous: 9.9e11 })),
-    format(e('halving-soon', { number: 3, block: 24_000_000, days: 30, blocksLeft: 172_800 })), format(e('halving', { number: 3, block: 24_000_000, reward: 0.5 })),
-    format(e('summary', { height: 12_345_678, blocks: 5_760, minted: 23_040, hashrate: 1.2e12, miners: 12_345, txs: 1_234_567, supply: 63_999_999.99 })),
-    format(e('release', { tag: 'v12.34.56', name: 'Quinvium 12.34.56', url: 'https://github.com/Lakylife/quinvium/releases/tag/v12.34.56' })),
-    format(e('stall', { height: 12_345_678, minutes: 120 })), format(e('resume', { height: 12_345_678, minutes: 120 })),
-    format(e('pool', { address: '0x' + 'ab'.repeat(20), name: 'A pool with a rather long name' })),
+  const all = [
+    e('milestone', { height: 1_000_000, supply: 4_000_000, hashrate: 1.234e12 }), e('hashrate', { hashrate: 1.234e12, previous: 9.9e11 }),
+    e('halving-soon', { number: 3, block: 24_000_000, days: 30, blocksLeft: 172_800, reward: 1, eta: 1_900_000_000 }), e('halving', { number: 3, block: 24_000_000, reward: 0.5 }),
+    e('summary', { time: 1_794_614_400, height: 12_345_678, blocks: 5_760, avgBlockTime: 15.02, minted: 23_040, hashrate: 1.2e12, miners: 12_345, txs: 1_234_567, supply: 63_999_999.99 }),
+    e('release', { tag: 'v12.34.56', name: 'Quinvium 12.34.56', url: 'https://github.com/Lakylife/quinvium/releases/tag/v12.34.56' }),
+    e('stall', { height: 12_345_678, minutes: 120 }), e('resume', { height: 12_345_678, minutes: 120 }),
+    e('pool', { address: '0x' + 'ab'.repeat(20), name: 'A pool with a rather long name', feeBps: 150 }),
   ];
-  for (const t of texts) assert.ok(t.length <= 280, `${t.length}: ${t}`);
+  for (const ev of all) {
+    const t = xMessage(ev).text;
+    assert.ok(t.replace(/https:\/\/\S+/g, 'x'.repeat(23)).length <= 280, `${ev.kind}: ${t}`);
+    assert.match(t, /#Quinvium #PoW$/);
+    assert.match(telegramMessage(ev).text, /^\S+ <b>.+<\/b>\n\n/);
+  }
+  const s = xMessage(all[4]).text;
+  assert.match(s, /Blocks: 5,760 \(avg 15\.0 s\)/);
+  assert.match(s, /Hashrate: 1\.2 TH\/s/);
+  assert.match(xMessage(all[2]).text, /from 1 QU to 0\.5 QU/);
+});
+
+test('Telegram text is escaped HTML with a link preview', () => {
+  const m = telegramMessage({ kind: 'pool', data: { address: '0xab', name: '<script>&Pool', feeBps: 100 } });
+  assert.match(m.text, /<b>New mining pool: &lt;script&gt;&amp;Pool<\/b>/);
+  assert.equal(m.link, 'https://explorer.quinvium.com/pool/0xab');
 });
 
 test('OAuth 1.0a signature matches the example from the X documentation', () => {
@@ -112,17 +127,19 @@ test('OAuth 1.0a signature matches the example from the X documentation', () => 
 
 test('without keys the channels only print; with keys they call the right API', async () => {
   const printed = [];
-  await telegram({ log: (t) => printed.push(t) }).send('hi');
-  await x({ log: (t) => printed.push(t) }).send('hi');
+  await telegram({ log: (t) => printed.push(t) }).send({ text: 'hi' });
+  await x({ log: (t) => printed.push(t) }).send({ text: 'hi' });
   assert.equal(printed.length, 2);
   const calls = [];
   const fake = async (url, init) => { calls.push({ url, init }); return { ok: true, status: 200, json: async () => ({ ok: true }) }; };
-  await telegram({ token: 'T', chat: '@Quinvium', fetch: fake }).send('hello');
-  await x({ apiKey: 'a', apiSecret: 'b', accessToken: 'c', accessSecret: 'd', fetch: fake }).send('hello');
+  await telegram({ token: 'T', chat: '@Quinvium', fetch: fake }).send({ text: '<b>hello</b>', link: 'https://quinvium.com' });
+  await x({ apiKey: 'a', apiSecret: 'b', accessToken: 'c', accessSecret: 'd', fetch: fake }).send({ text: 'hello' });
+  assert.equal(JSON.parse(calls[0].init.body).parse_mode, 'HTML');
+  assert.equal(JSON.parse(calls[0].init.body).link_preview_options.url, 'https://quinvium.com');
   assert.equal(calls[0].url, 'https://api.telegram.org/botT/sendMessage');
   assert.equal(JSON.parse(calls[0].init.body).chat_id, '@Quinvium');
   assert.equal(calls[1].url, 'https://api.x.com/2/tweets');
   assert.match(calls[1].init.headers.Authorization, /^OAuth /);
   const failing = async () => ({ ok: false, status: 403, json: async () => ({ ok: false, description: 'Forbidden' }) });
-  await assert.rejects(telegram({ token: 'SECRET', chat: '@Quinvium', fetch: failing }).send('x'), (e) => !e.message.includes('SECRET'));
+  await assert.rejects(telegram({ token: 'SECRET', chat: '@Quinvium', fetch: failing }).send({ text: 'x' }), (e) => !e.message.includes('SECRET'));
 });
