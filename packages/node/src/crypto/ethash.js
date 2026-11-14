@@ -1,6 +1,6 @@
-// Ethash: paměťově náročný Proof of Work pro grafické karty.
-// Implementace odpovídá specifikaci Ethash, takže síť mohou těžit běžné GPU minery.
-// Ověřování používá pouze lehkou cache (16 MB a více), plný DAG (1 GB a více) drží jen miner.
+// Ethash: a memory-hard proof of work for graphics cards.
+// The implementation follows the Ethash specification, so common GPU miners can mine the network.
+// Verification uses only the light cache (16 MB and more); only the miner holds the full DAG (1 GB and more).
 import { keccak_256, keccak_512 } from '@noble/hashes/sha3.js';
 
 export const EPOCH_LENGTH = 30000;
@@ -49,8 +49,8 @@ export function seedHash(epoch) {
 }
 
 /**
- * Vygeneruje lehkou cache. Průběžně uvolňuje event loop, takže uzel během
- * přechodu na novou epochu dál odpovídá.
+ * Generates the light cache. Continuously yields to the event loop, so the node during
+ * keeps responding while moving to a new epoch.
  * @returns {Promise<Uint8Array>}
  */
 export async function generateCache(size, seed) {
@@ -83,7 +83,7 @@ export async function generateCache(size, seed) {
 const itemBytes = new Uint8Array(HASH_BYTES);
 const itemWords = new Uint32Array(itemBytes.buffer);
 
-/** Spočítá jednu 64bajtovou položku DAG z lehké cache a zapíše ji do out[outOffset..]. */
+/** Computes one 64-byte DAG item from the light cache and writes it to out[outOffset..]. */
 function datasetItem(cacheWords, rows, index, out, outOffset) {
   const start = (index % rows) * 16;
   for (let k = 0; k < 16; k++) itemWords[k] = cacheWords[start + k];
@@ -106,7 +106,7 @@ const concat = (a, b) => {
   return r;
 };
 
-/** Seed výpočtu: keccak512(hlavička || nonce v pořadí little-endian). */
+/** Seed of the computation: keccak512(header || nonce in little-endian order). */
 function mixSeed(headerHash, nonce) {
   const data = new Uint8Array(40);
   data.set(headerHash);
@@ -115,11 +115,11 @@ function mixSeed(headerHash, nonce) {
 }
 
 /**
- * Lehký výpočet hashimoto.
- * @param {Uint8Array} cache lehká cache dané epochy
+ * Light hashimoto computation.
+ * @param {Uint8Array} cache light cache of the given epoch
  * @param {number} fullSize velikost DAG v bajtech
- * @param {Uint8Array} headerHash 32bajtový seal hash hlavičky
- * @param {Uint8Array} nonce 8 bajtů big-endian
+ * @param {Uint8Array} headerHash 32-byte seal hash of the header
+ * @param {Uint8Array} nonce 8 bytes big-endian
  * @returns {{mixDigest: Uint8Array, result: Uint8Array}}
  */
 export function hashimotoLight(cache, fullSize, headerHash, nonce) {
@@ -150,7 +150,7 @@ export function hashimotoLight(cache, fullSize, headerHash, nonce) {
   return { mixDigest, result: keccak_256(concat(seed, mixDigest)) };
 }
 
-/** Rychlá kontrola bez cache: zahodí nesmyslné bloky dřív, než se počítá plné ověření. */
+/** Quick check without the cache: discards nonsensical blocks before full verification is computed. */
 export function quickResult(headerHash, nonce, mixHash) {
   return keccak_256(concat(mixSeed(headerHash, nonce), mixHash));
 }
@@ -161,5 +161,5 @@ export const bytesToBigInt = (bytes) => {
   return v;
 };
 
-/** 2^256 / obtížnost: hash musí být menší nebo roven tomuto cíli. */
+/** 2^256 / difficulty: the hash must be less than or equal to this target. */
 export const targetForDifficulty = (difficulty) => (2n ** 256n) / BigInt(difficulty);

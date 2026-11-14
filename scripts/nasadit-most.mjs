@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Testovací most Quinvium testnet ↔ Ethereum Sepolia: brány na obou sítích, qETH krytý uzamčeným Sepolia ETH,
-// trasy oběma směry, plyn pro validátory a jejich nastavení. Jen pro testnet: tři validátoři na jednom počítači
-// nejsou nezávislí, most slouží k vyzkoušení.
+// Test bridge Quinvium testnet ↔ Ethereum Sepolia: gateways on both networks, qETH backed by locked Sepolia ETH,
+// routes in both directions, gas for the validators and their configuration. Testnet only: three validators on one computer
+// are not independent; the bridge is for trying things out.
 //
-// Klíče správce, strážce a validátorů jsou v ~/.aether/most-testnet (práva 600). Skript je nikam nevypisuje.
-// Postup se ukládá do nasazeni.json, takže přerušené nasazení pokračuje tam, kde skončilo.
-// Použití: node scripts/nasadit-most.mjs [RPC Quinvia] [RPC Sepolie]
+// The administrator, guardian and validator keys are in a private folder of the operator (mode 600). The script never prints them.
+// Progress is saved to nasazeni.json, so an interrupted deployment continues where it stopped.
+// Usage: node scripts/nasadit-most.mjs [Quinvium RPC] [Sepolia RPC]
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -16,20 +16,20 @@ const [qRpc = 'http://127.0.0.1:8546', sRpc = 'https://ethereum-sepolia-rpc.publ
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dir = join(homedir(), '.aether', 'most-testnet');
 const artifacts = JSON.parse(readFileSync(join(root, 'packages/contracts/dist/artifacts.json')));
-// Test nasazení zapisuje do vlastní kopie, skutečný soubor Exploreru se nemění.
+// The deployment test writes to its own copy; the real Explorer file does not change.
 const output = process.env.MOST_DEPLOYMENTS ?? join(root, 'packages/explorer/public/deployments.json');
 const statePath = join(dir, 'nasazeni.json');
 const QU = 52402n;
 const SEPOLIA = 11155111n;
 const VALIDATORS = ['validator-1', 'validator-2', 'validator-3'];
 const THRESHOLD = 2;
-const CONFIRMATIONS = 12;                     // asi 3 minuty na Quinviu, 2,5 minuty na Sepolii
+const CONFIRMATIONS = 12;                     // about 3 minutes on Quinvium, 2.5 minutes on Sepolia
 const ETH = (v) => ethers.parseEther(v);
-const DAILY = ETH('5');                       // denní strop trasy
-const LARGE = ETH('1');                       // větší převod čeká 24 hodin a strážce ho může zastavit
-const MIN = ETH('0.001');                     // nejmenší převod
-const GAS_QU = ETH('0.05');                   // plyn pro každého validátora na Quinviu
-const GAS_SEPOLIA = ETH('0.005');             // a na Sepolii, kde je plyn skoro zdarma
+const DAILY = ETH('5');                       // daily cap of the route
+const LARGE = ETH('1');                       // a larger transfer waits 24 hours and the guardian can stop it
+const MIN = ETH('0.001');                     // smallest transfer
+const GAS_QU = ETH('0.05');                   // gas for each validator on Quinvium
+const GAS_SEPOLIA = ETH('0.005');             // and on Sepolia, where gas is almost free
 
 const key = (name) => {
   const file = join(dir, `${name}.key`);
@@ -81,7 +81,7 @@ console.log(`Brána na Sepolii: ${state.gatewayS}`);
 const gateQ = new ethers.Contract(state.gatewayQ, artifacts.BridgeGateway.abi, adminQ);
 const gateS = new ethers.Contract(state.gatewayS, artifacts.BridgeGateway.abi, adminS);
 
-// qETH na Quinviu vzniká jen doručením ze Sepolie a cestou zpět se pálí. Trasu ze Sepolie zakládá createWrapped.
+// qETH on Quinvium is created only by delivery from Sepolia and burned on the way back. createWrapped creates the route from Sepolia.
 if (!state.qETH) {
   const receipt = await done(gateQ.createWrapped('Ether (Sepolia)', 'qETH', 18, SEPOLIA, ethers.ZeroHash, DAILY, LARGE));
   const created = receipt.logs.map((l) => { try { return gateQ.interface.parseLog(l); } catch { return null; } }).find((e) => e?.name === 'WrappedCreated');
@@ -91,7 +91,7 @@ if (!state.qETH) {
 console.log(`qETH: ${state.qETH}`);
 if (!state.routes) {
   await done(gateS.setOutbound(ethers.ZeroAddress, QU, true, false, MIN));        // Sepolia ETH se uzamkne
-  await done(gateQ.setOutbound(state.qETH, SEPOLIA, true, true, MIN));            // qETH se spálí
+  await done(gateQ.setOutbound(state.qETH, SEPOLIA, true, true, MIN));            // qETH is burned
   await done(gateS.setRoute(QU, ethers.zeroPadValue(state.qETH, 32), ethers.ZeroAddress, false, true, DAILY, LARGE));
   state.routes = true;
   save();
@@ -114,7 +114,7 @@ state.funded = true;
 save();
 console.log(`Validátoři mají plyn a nastavení v ${dir}.`);
 
-// Explorer: adresa brány, Sepolia jako druhá síť a trasa ETH.
+// Explorer: gateway address, Sepolia as the second network and the ETH route.
 const all = JSON.parse(readFileSync(output, 'utf8'));
 const here = all[QU.toString()] ?? {};
 here.gateway = state.gatewayQ;

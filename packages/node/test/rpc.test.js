@@ -1,4 +1,4 @@
-// Ověření kompatibility: skutečná knihovna ethers, skutečný Solidity kompilátor a nasazení kontraktu.
+// Compatibility check: the real ethers library, the real Solidity compiler and a contract deployment.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import net from 'node:net';
@@ -78,7 +78,7 @@ test.before(async () => {
 });
 test.after(async () => { provider.destroy(); await node.stop(); });
 
-test('základní dotazy jako MetaMask', async () => {
+test('basic queries like MetaMask', async () => {
   assert.equal((await provider.getNetwork()).chainId, 52403n);
   assert.equal(await provider.getBlockNumber(), 0);
   assert.equal(await provider.getBalance(alice.address), 1000n * WEI);
@@ -88,7 +88,7 @@ test('základní dotazy jako MetaMask', async () => {
   assert.equal(block.number, 0);
 });
 
-test('podepsaný převod přes ethers projde a má účtenku', async () => {
+test('a signed transfer through ethers passes and has a receipt', async () => {
   const signer = alice.connect(provider);
   const tx = await signer.sendTransaction({ to: bob.address, value: 5n * WEI });
   await sleep(20);
@@ -103,7 +103,7 @@ test('podepsaný převod přes ethers projde a má účtenku', async () => {
   assert.equal(full.blockNumber, r.blockNumber);
 });
 
-test('Solidity kontrakt: nasazení, volání, události, chyby, gas', async () => {
+test('Solidity contract: deployment, calls, events, errors, gas', async () => {
   const { abi, bytecode } = compile();
   const signer = alice.connect(provider);
   const deploy = await new ethers.ContractFactory(abi, bytecode, signer).deploy();
@@ -142,7 +142,7 @@ test('Solidity kontrakt: nasazení, volání, události, chyby, gas', async () =
   assert.equal(await c.hash(prev.number), prev.hash, 'BLOCKHASH vrací hash bloku Quinvium');
 });
 
-test('nonce včetně čekajících, náhrada a odmítnutí', async () => {
+test('nonce including pending, replacement and rejection', async () => {
   const signer = alice.connect(provider);
   const start = await provider.getTransactionCount(alice.address, 'pending');
   await signer.sendTransaction({ to: bob.address, value: 1n, nonce: start });
@@ -155,7 +155,7 @@ test('nonce včetně čekajících, náhrada a odmítnutí', async () => {
   await assert.rejects(provider.send('eth_sendRawTransaction', [raw]), /nedostatek/);
 });
 
-test('filtry a odběry přes WebSocket', async () => {
+test('filters and subscriptions over WebSocket', async () => {
   const ws = new WebSocket(`ws://127.0.0.1:${node.rpc.port}`);
   await new Promise((r) => ws.once('open', r));
   const msgs = [];
@@ -171,7 +171,7 @@ test('filtry a odběry přes WebSocket', async () => {
   ws.close();
 });
 
-test('getwork: miner zvolí adresu výplaty bez účtu, špatný výsledek se odmítne', async () => {
+test('getwork: the miner chooses a payout address without an account; a wrong result is rejected', async () => {
   const addr = '0x' + 'cd'.repeat(20);
   const [seal0, seedHash, target, number] = await provider.send('aether_getWork', [addr]);
   assert.equal(seedHash, '0x' + '00'.repeat(32));
@@ -183,7 +183,7 @@ test('getwork: miner zvolí adresu výplaty bez účtu, špatný výsledek se od
   await assert.rejects(provider.send('eth_getWork', []), /adresu výplaty/);
 });
 
-test('statistiky a data pro explorer', async () => {
+test('statistics and data for the Explorer', async () => {
   const s = await provider.send('aether_stats', []);
   assert.equal(s.currency, 'dQU');
   assert.deepEqual(s.forks, [{ name: 'pools', block: 1 }]);
@@ -202,7 +202,7 @@ test('statistiky a data pro explorer', async () => {
   assert.equal(miners[0].address, miner);
 });
 
-test('Stratum: přihlášení adresou, práce, řešení a nový blok', async () => {
+test('Stratum: login with an address, work, solution and a new block', async () => {
   const s = net.connect({ host: '127.0.0.1', port: node.stratum.port });
   await new Promise((r) => s.once('connect', r));
   let buf = '';
@@ -237,7 +237,7 @@ test('Stratum: přihlášení adresou, práce, řešení a nový blok', async ()
   const push = await next((m) => m.id === 0 && Array.isArray(m.result));
   assert.notEqual(push.result[0], job[0], 'miner dostal novou práci sám od sebe');
 
-  // Režim EthereumStratum/1.0.0
+  // EthereumStratum/1.0.0 mode
   const n = net.connect({ host: '127.0.0.1', port: node.stratum.port });
   await new Promise((r) => n.once('connect', r));
   const box = [];
@@ -280,7 +280,7 @@ test('Stratum: přihlášení adresou, práce, řešení a nový blok', async ()
 });
 
 
-test('kontrola zdraví /health: výška, stáří bloku a 503 u zastaralého bloku', async () => {
+test('health check /health: height, block age and 503 for a stale block', async () => {
   const base = `http://127.0.0.1:${node.rpc.port}`;
   const r = await fetch(`${base}/health`);
   assert.equal(r.status, 200);

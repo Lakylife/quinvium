@@ -1,10 +1,10 @@
-// Bitcoinová strana mostu. Na Bitcoinu nejde spustit kontrakt, mince proto drží vícepodpisová adresa validátorů:
-// utratit je může jen `threshold` z nich. Tenhle kód je část, kterou spouští každý validátor zvlášť.
+// The Bitcoin side of the bridge. Bitcoin cannot run a contract, so coins are held by a multisig address of the validators:
+// only `threshold` of them can spend them. This code is the part each validator runs separately.
 //
-// Vklad: každý příjemce má vlastní adresu, ve které je jeho adresa na Quinviu zapsaná. Po potvrzení validátoři
-// podepíší zprávu pro bránu a ta vyrazí přemostěný token.
-// Výběr: brána token spálí, navrhovatel zveřejní transakci a ostatní ji podepíší, jen když sami ověří, že úschova
-// přijde přesně o spálenou částku a peníze jdou uživateli. Navrhovatel tak nemůže nic ukrást, jen zdržet.
+// Deposit: each recipient has their own address in which their Quinvium address is encoded. After confirmation the validators
+// sign the message for the gateway, which mints the bridged token.
+// Withdrawal: the gateway burns the token, the proposer publishes a transaction and the others sign it only when they have verified themselves that the custody
+// loses exactly the burned amount and the money goes to the user. A proposer thus cannot steal anything, only delay.
 import { ethers } from 'ethers';
 import {
   addressScript, custodyScript, dataOutput, multisigWitness, parseTx, publicKey, scriptAddress, scriptOutput, serializeTx, sha256, signInput, txidOf,
@@ -28,20 +28,20 @@ const nonceOf = (text) => BigInt(`0x${sha256(Buffer.from(text)).subarray(0, 8).t
 export class BitcoinBridge {
   /**
    * @param {object} o
-   * @param {(method: string, params?: any[]) => Promise<any>} o.rpc volání vlastního uzlu Bitcoinu
+   * @param {(method: string, params?: any[]) => Promise<any>} o.rpc calls to the validator's own Bitcoin node
    * @param {'mainnet'|'testnet'|'regtest'} o.network
-   * @param {import('./relayer.js').Relayer} o.relayer validátor pro stranu Quinvia
-   * @param {bigint} o.chainId řetězec Quinvia
-   * @param {string} o.token přemostěný token na Quinviu
-   * @param {string} o.btcKey soukromý klíč pro úschovu, jiný než klíč validátora v bráně
-   * @param {{ address: string, btcKey: string }[]} o.validators všichni validátoři: adresa v bráně a veřejný klíč úschovy
+   * @param {import('./relayer.js').Relayer} o.relayer validator for the Quinvium side
+   * @param {bigint} o.chainId the Quinvium chain
+   * @param {string} o.token bridged token on Quinvium
+   * @param {string} o.btcKey private key for custody, different from the validator's key in the gateway
+   * @param {{ address: string, btcKey: string }[]} o.validators all validators: address in the gateway and custody public key
    * @param {number} o.threshold
-   * @param {number} [o.confirmations] potvrzení na Bitcoinu před připsáním
-   * @param {bigint} [o.minDeposit] menší vklad se nepřipíše, jeho utracení by stálo víc, než má hodnotu
-   * @param {number} [o.maxFeeRate] nejvyšší poplatek v sat/vB, nad něj validátor nepodepíše
-   * @param {number} [o.fallbackFeeRate] když uzel odhad nezná
-   * @param {bigint} [o.dailyLimit] kolik smí za den odejít v satoshi
-   * @param {number} [o.proposeTimeoutMs] po této době se role navrhovatele posune na dalšího
+   * @param {number} [o.confirmations] confirmations on Bitcoin before crediting
+   * @param {bigint} [o.minDeposit] a smaller deposit is not credited; spending it would cost more than it is worth
+   * @param {number} [o.maxFeeRate] highest fee in sat/vB; the validator does not sign above it
+   * @param {number} [o.fallbackFeeRate] when the node has no estimate
+   * @param {bigint} [o.dailyLimit] how much may leave per day, in satoshi
+   * @param {number} [o.proposeTimeoutMs] after this time the proposer role moves to the next validator
    */
   constructor(o) {
     Object.assign(this, { confirmations: 6, minDeposit: 10_000n, maxFeeRate: 200, fallbackFeeRate: 5, dailyLimit: 1_000_000_000n, proposeTimeoutMs: 600_000, log: () => {}, now: Date.now }, o);
@@ -67,7 +67,7 @@ export class BitcoinBridge {
     this.sent = new Set();
   }
 
-  /** Adresa úschovy, kterou lze dobít mimo vklady. */
+  /** Custody address that can be topped up outside deposits. */
   get mainAddress() { return scriptAddress(this.mainScript, this.network); }
 
   depositAddress(recipient) { return scriptAddress(custodyScript(this.pubkeys, this.threshold, ethers.getAddress(recipient)), this.network); }
@@ -83,7 +83,7 @@ export class BitcoinBridge {
     this.state.save();
   }
 
-  // ---- co se děje na Quinviu ---------------------------------------------------------------------
+  // ---- what happens on Quinvium ---------------------------------------------------------------------
 
   async syncAether() {
     const d = this.state.data;
@@ -99,7 +99,7 @@ export class BitcoinBridge {
     }
   }
 
-  /** Od registrace se adresa sleduje. Registrace stojí jen gas, takže sama nesmí spouštět drahé prohledávání. */
+  /** The address is watched from registration. Registration costs only gas, so it must not trigger an expensive scan by itself. */
   watch(recipient) {
     const d = this.state.data;
     const script = custodyScript(this.pubkeys, this.threshold, recipient);
@@ -109,7 +109,7 @@ export class BitcoinBridge {
     d.unscanned.push(output);
   }
 
-  /** Platbu odeslanou před registrací najde prohledání aktuálních mincí, jedna dávka na průchod. */
+  /** A payment sent before registration is found by scanning the current coins, one batch per pass. */
   async scanRegistered() {
     const d = this.state.data;
     const batch = d.unscanned.slice(0, SCAN_BATCH);
@@ -131,7 +131,7 @@ export class BitcoinBridge {
       address = ethers.toUtf8String(recipient);
       addressScript(address, this.network);
     } catch {
-      // Token je spálený a adresa nejde zaplatit. Uživatel dostane token zpět stejnou cestou jako vklad.
+      // The token is burned and the address cannot be paid. The user gets the token back the same way as a deposit.
       this.relayer.enqueue({ srcChain: BITCOIN, dstChain: this.chainId, nonce: nonceOf(`refund:${id}`), srcToken: ethers.ZeroHash, recipient: sender, amount });
       d.withdrawals[id] = { nonce, sender, amount, status: 'refunded' };
       this.log(`výběr ${id.slice(0, 10)}: neplatná adresa, vracím token`);
@@ -140,7 +140,7 @@ export class BitcoinBridge {
     d.withdrawals[id] = { nonce, sender, address, amount, status: 'open', seenAt: this.now(), block: log.blockNumber };
   }
 
-  // ---- co se děje na Bitcoinu --------------------------------------------------------------------
+  // ---- what happens on Bitcoin --------------------------------------------------------------------
 
   async scanBlocks() {
     const d = this.state.data;
@@ -185,7 +185,7 @@ export class BitcoinBridge {
     this.log(`vklad ${value} sat pro ${recipient}`);
   }
 
-  // ---- výběr ----------------------------------------------------------------------------------------
+  // ---- withdrawal ----------------------------------------------------------------------------------------
 
   proposer(w) {
     const turns = BigInt(Math.floor((this.now() - w.seenAt) / this.proposeTimeoutMs));
@@ -193,8 +193,8 @@ export class BitcoinBridge {
   }
 
   /**
-   * Výběr je vyplacený, když se potvrdila transakce utrácející úschovu a nese jeho značku. Samotnou značku může
-   * napodobit kdokoli, utratit úschovu ne. Pozná to i validátor, který transakci nepodepsal.
+   * A withdrawal is paid when a transaction spending the custody and carrying its marker is confirmed. The marker alone can
+   * anyone can imitate, but not spend the custody. Even a validator that did not sign the transaction notices it.
    */
   settled(id, w, posts) {
     for (const post of posts) {
@@ -208,7 +208,7 @@ export class BitcoinBridge {
           this.log(`výběr ${id.slice(0, 10)}: vyplaceno v ${txid.slice(0, 12)}`);
           return true;
         }
-      } catch { /* neplatný návrh se tady jen přeskočí */ }
+      } catch { /* an invalid proposal is simply skipped here */ }
     }
     return false;
   }
@@ -227,7 +227,7 @@ export class BitcoinBridge {
     if (!signatures.has(this.ownKey) && !d.signed[id]) {
       await this.rejectUnspent(tx);
       this.spend(w.amount);
-      // Zápis před zveřejněním: po pádu validátor nepodepíše jinou transakci pro stejný výběr.
+      // Record before publishing: after a crash the validator will not sign another transaction for the same withdrawal.
       d.signed[id] = { txid, inputs: tx.inputs.map((i) => `${i.txid}:${i.vout}`) };
       this.state.save();
       const list = tx.inputs.map((input, i) => signInput(tx, i, this.scriptOf(input), d.utxos[`${input.txid}:${input.vout}`].value, this.btcKey).toString('hex'));
@@ -255,7 +255,7 @@ export class BitcoinBridge {
     await this.gateway.post(id, ethers.toUtf8Bytes(JSON.stringify(body)));
   }
 
-  /** Celá kontrola návrhu vychází z toho, co validátor viděl sám. Návrh nic nedokazuje, jen se porovná. */
+  /** The whole check of the proposal is based on what the validator has seen itself. The proposal proves nothing; it is only compared. */
   parseProposal(id, w, post) {
     if (!post.tx) return null;
     try {
@@ -296,7 +296,7 @@ export class BitcoinBridge {
     if (w.amount - pay.value > BigInt(this.maxFeeRate) * BigInt(this.sizeWithWitness(tx))) refuse('poplatek je nad limitem');
   }
 
-  /** Mince, které už jsou slíbené jiným výběrům, ať se dvě platby navzájem nezablokují. */
+  /** Coins already promised to other withdrawals, so two payments do not block each other. */
   reserved(except) {
     const out = new Set();
     for (const [id, s] of Object.entries(this.state.data.signed)) if (id !== except) s.inputs.forEach((k) => out.add(k));
@@ -352,7 +352,7 @@ export class BitcoinBridge {
     this.log(`výběr ${id.slice(0, 10)}: navrhuji platbu ${outputs[0].value} sat, poplatek ${fee}`);
   }
 
-  /** Jen podpisy, které opravdu patří validátorům a této transakci. */
+  /** Only signatures that really belong to validators and to this transaction. */
   collect(posts, tx, txid) {
     const d = this.state.data;
     const found = new Map();
@@ -388,7 +388,7 @@ export class BitcoinBridge {
   }
 }
 
-/** Volání uzlu Bitcoin Core přes JSON-RPC. */
+/** Calls to a Bitcoin Core node over JSON-RPC. */
 export function bitcoinRpc(url, { user, password } = {}) {
   const auth = user ? { Authorization: `Basic ${Buffer.from(`${user}:${password}`).toString('base64')}` } : {};
   return async (method, params = []) => {

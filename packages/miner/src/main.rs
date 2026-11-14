@@ -1,4 +1,4 @@
-//! Quinvium Miner: těžba Ethash na grafických kartách.
+//! Quinvium Miner: Ethash mining on graphics cards.
 mod cl;
 mod ethash;
 mod gpu;
@@ -39,19 +39,19 @@ pub struct SearchResult {
     pub nonces: Vec<u64>,
 }
 
-/// Jedna grafická karta bez ohledu na to, přes co se s ní mluví.
+/// One graphics card regardless of what is used to talk to it.
 pub trait Card: Send {
     fn name(&self) -> String;
     fn backend(&self) -> String;
-    /// Spočítá a ověří DAG epochy. `report` dostává procenta.
+    /// Computes and verifies the epoch's DAG. `report` receives percentages.
     fn prepare(&mut self, epoch: u64, report: &dyn Fn(u32)) -> Result<(), String>;
     fn cache(&self) -> &[u32];
     fn full_size(&self) -> u64;
-    /// Prohledá dávku nonce od `start`. `target` je horních 64 bitů cíle.
+    /// Searches a batch of nonces from `start`. `target` is the upper 64 bits of the target.
     fn search(&mut self, header: &[u8; 32], start: u64, target: (u32, u32)) -> SearchResult;
 }
 
-/// Karta nalezená v počítači. U OpenCL je připravená náhrada, kdyby ovladač výpočet nezvládl.
+/// A card found in the computer. For OpenCL a fallback is prepared in case the driver cannot handle the computation.
 enum Source {
     OpenCl(cl::Gpu, Option<wgpu::Adapter>),
     Wgpu(wgpu::Adapter),
@@ -149,7 +149,7 @@ fn parse_job(v: &Value) -> Result<Job, String> {
     })
 }
 
-/// Položky seznamu RLP. Hlavička bloku žádné vnořené seznamy nemá.
+/// RLP list items. A block header has no nested lists.
 fn rlp_items(data: &[u8]) -> Option<Vec<&[u8]>> {
     let number = |bytes: &[u8]| bytes.iter().fold(0usize, |v, b| (v << 8) | *b as usize);
     let (mut p, end) = match *data.first()? {
@@ -181,8 +181,8 @@ fn rlp_items(data: &[u8]) -> Option<Vec<&[u8]>> {
     Some(out)
 }
 
-/// Server poolu nesmí podstrčit cizí práci: hlavička musí platit do kontraktu poolu a nést adresu těžaře.
-/// Díky tomu těžař vidí, že jeho výkon nejde někomu jinému, a nemusí serveru věřit.
+/// The pool server must not slip in foreign work: the header must pay to the pool contract and carry the miner's address.
+/// Thanks to this the miner sees that their hashrate does not go to someone else and does not have to trust the server.
 fn check_pool_job(v: &Value, seal: &[u8; 32], pool: &[u8], miner: &[u8]) -> Result<(), String> {
     let fields = v.get(4).and_then(Value::as_str).ok_or("server neposlal hlavičku práce")?;
     let bytes = parse_hex(fields)?;
@@ -268,7 +268,7 @@ fn gpu_worker(index: usize, source: Source, shared: Arc<Shared>, node: String, i
         );
         let batch_started = Instant::now();
         let result = card.search(&job.seal, nonce, target);
-        // Nižší výkon je přestávka mezi dávkami: karta se méně hřeje a počítač zůstává svižný.
+        // Lower intensity is a pause between batches: the card runs cooler and the computer stays responsive.
         if intensity < 100 {
             thread::sleep(batch_started.elapsed().mul_f64((100 - intensity) as f64 / intensity as f64));
         }
@@ -277,7 +277,7 @@ fn gpu_worker(index: usize, source: Source, shared: Arc<Shared>, node: String, i
         for n in result.nonces {
             let (mix, res) = ethash::hashimoto_light(card.cache(), card.full_size(), &job.seal, n);
             if res > job.target {
-                continue; // shoda jen v horních 64 bitech
+                continue; // match only in the upper 64 bits
             }
             let method = if shared.pool { "aether_poolSubmit" } else { "aether_submitWork" };
             let reply = rpc.call(method, json!([hex(&n.to_be_bytes()), hex(&job.seal), hex(&mix)]));
@@ -333,7 +333,7 @@ fn benchmark(backend: &str) -> Result<(), String> {
     println!("DAG ověřen proti procesoru za {:.1} s.", started.elapsed().as_secs_f32());
     let header = [7u8; 32];
 
-    // Nízká obtížnost: každé řešení z karty se přepočítá na procesoru a musí souhlasit.
+    // Low difficulty: every solution from the card is recomputed on the CPU and must match.
     let (mut checked, mut nonce) = (0, 1u64);
     let easy = (0x0100_0000u32, 0xffff_ffffu32);
     let mut full = [0xffu8; 32];
@@ -501,7 +501,7 @@ fn console_utf8() {
     extern "system" {
         fn SetConsoleOutputCP(id: u32) -> i32;
     }
-    // Jinak by konzole Windows zobrazila česká písmena špatně.
+    // Otherwise the Windows console would show Czech characters incorrectly.
     unsafe {
         SetConsoleOutputCP(65001);
     }

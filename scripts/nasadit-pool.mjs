@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Založí pool na síti a dobije účet, který platí gas za podíly. Jen pro testnet.
-// Použití: node scripts/nasadit-pool.mjs <rpc> <soubor s frází> <adresa serveru poolu> <účet na gas>
+// Creates a pool on the network and tops up the account that pays gas for shares. Testnet only.
+// Usage: node scripts/nasadit-pool.mjs <rpc> <phrase file> <pool server address> <gas account>
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';

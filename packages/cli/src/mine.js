@@ -1,4 +1,4 @@
-// Těžba: spustí quintium-miner stejně jako aplikace. Odměna jde na zvolenou adresu, klíč peněženky těžba nepotřebuje.
+// Mining: starts quintium-miner the same way as the app. The reward goes to the chosen address; mining does not need the wallet key.
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -10,7 +10,7 @@ import { walletAddress } from './wallets.js';
 
 const NAME = process.platform === 'win32' ? 'quintium-miner.exe' : 'quintium-miner';
 
-/** Vedle nástroje v balíčku, vedle Electronu v aplikaci, ve zdrojích po sestavení, nebo v PATH. */
+/** Next to the tool in the package, next to Electron in the app, in the resources after a build, or in PATH. */
 export function findMiner() {
   if (process.env.AETHER_MINER) return process.env.AETHER_MINER;
   const here = typeof __dirname === 'string' ? __dirname : dirname(fileURLToPath(import.meta.url));

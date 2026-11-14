@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Nasadí seznam ověřených tokenů (TokenRegistry). Testovací tokeny se nevytvářejí: tokeny si zakládají jejich autoři.
-// Použití: node scripts/nasadit-tokeny.mjs <rpc> <soubor s frází>
-// Fráze se nikam nevypisuje. Adresa seznamu se zapíše do packages/explorer/public/deployments.json.
+// Deploys the verified token list (TokenRegistry). No test tokens are created: tokens are created by their authors.
+// Usage: node scripts/nasadit-tokeny.mjs <rpc> <phrase file>
+// The phrase is never printed. The list address is written to packages/explorer/public/deployments.json.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';

@@ -1,5 +1,5 @@
-// Přístup k uzlu z internetu: router otevře porty přes UPnP a uzel zjistí svou veřejnou adresu.
-// Bez UPnP zůstane jen veřejná adresa a návod na ruční přesměrování portů.
+// Access to the node from the internet: the router opens ports through UPnP and the node finds out its public address.
+// Without UPnP only the public address and instructions for manual port forwarding remain.
 import dgram from 'node:dgram';
 import { BlockList, isIP } from 'node:net';
 import { networkInterfaces } from 'node:os';
@@ -19,7 +19,7 @@ const nonPublic = new BlockList();
 for (const [net, prefix] of [['0.0.0.0', 8], ['10.0.0.0', 8], ['100.64.0.0', 10], ['127.0.0.0', 8], ['169.254.0.0', 16], ['172.16.0.0', 12], ['192.0.0.0', 24], ['192.168.0.0', 16], ['198.18.0.0', 15], ['224.0.0.0', 3]]) {
   nonPublic.addSubnet(net, prefix, 'ipv4');
 }
-/** Adresa, na kterou se dá připojit z internetu. Sdílená adresa operátora (100.64/10) mezi ně nepatří. */
+/** An address reachable from the internet. A shared operator address (100.64/10) is not one of them. */
 export const isPublicIPv4 = (ip) => isIP(String(ip ?? '')) === 4 && !nonPublic.check(ip, 'ipv4');
 const localV6 = new BlockList();
 localV6.addAddress('::1', 'ipv6');
@@ -28,8 +28,8 @@ localV6.addSubnet('fc00::', 7, 'ipv6');
 const localV4 = new BlockList();
 for (const [net, prefix] of [['10.0.0.0', 8], ['127.0.0.0', 8], ['169.254.0.0', 16], ['172.16.0.0', 12], ['192.168.0.0', 16]]) localV4.addSubnet(net, prefix, 'ipv4');
 /**
- * Volající z tohoto počítače nebo z místní sítě. Sdílená adresa operátora (100.64/10) místní není: jsou za ní cizí lidé.
- * Neznámá adresa se bere jako cizí.
+ * A caller from this computer or the local network. A shared operator address (100.64/10) is not local: strangers are behind it.
+ * An unknown address is treated as foreign.
  */
 export function isLocalCaller(ip) {
   let a = String(ip ?? '');
@@ -41,16 +41,16 @@ export function isLocalCaller(ip) {
 }
 const shared = new BlockList();
 shared.addSubnet('100.64.0.0', 10, 'ipv4');
-/** Druh překladu adres před routerem: 'cgnat' u sdílené adresy operátora, 'double' u dalšího routeru nebo modemu, jinak null. */
+/** Kind of address translation in front of the router: 'cgnat' for a shared operator address, 'double' for another router or modem, otherwise null. */
 export const natKind = (ip) => (isIP(String(ip ?? '')) !== 4 || isPublicIPv4(ip) ? null : shared.check(ip, 'ipv4') ? 'cgnat' : 'double');
 
 const xmlText = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const tag = (xml, name) => new RegExp(`<(?:[\\w-]+:)?${name}\\s*>([^<]*)</(?:[\\w-]+:)?${name}\\s*>`, 'i').exec(xml)?.[1]?.trim();
 
 /**
- * Najde router v místní síti. Odpověď se bere jen tehdy, když popis zařízení leží na stejné adrese, ze které přišla.
- * Dotaz jde z každého síťového rozhraní zvlášť a dvakrát po sobě: počítač s kabelem i Wi-Fi by se jinak ptal jen jedním
- * z nich a ztracený paket UDP by znamenal, že router jakoby UPnP neuměl.
+ * Finds the router on the local network. The answer is accepted only when the device description is at the same address it came from.
+ * The query goes out on each network interface separately and twice in a row: a computer with both cable and Wi-Fi would otherwise ask on only one
+ * of them, and a lost UDP packet would mean the router seemingly does not support UPnP.
  */
 export function discover({ timeout = 3000, addresses } = {}) {
   const locals = addresses ?? Object.values(networkInterfaces()).flat().filter((a) => a.family === 'IPv4' && !a.internal && !a.address.startsWith('169.254.')).map((a) => a.address);
@@ -63,7 +63,7 @@ export function discover({ timeout = 3000, addresses } = {}) {
       if (done) return;
       done = true;
       timers.forEach(clearTimeout);
-      for (const sock of socks) { try { sock.close(); } catch { /* už zavřený */ } }
+      for (const sock of socks) { try { sock.close(); } catch { /* already closed */ } }
       resolve(v);
     };
     timers.push(setTimeout(() => finish(null), timeout));
@@ -77,13 +77,13 @@ export function discover({ timeout = 3000, addresses } = {}) {
         try {
           const u = new URL(location);
           if ((u.protocol === 'http:' || u.protocol === 'https:') && u.hostname === rinfo.address) finish(u.href);
-        } catch { /* neplatná adresa, čeká se na další odpověď */ }
+        } catch { /* invalid address, waiting for the next answer */ }
       });
       const ask = () => {
         if (done) return;
         for (const st of TARGETS) {
           const m = Buffer.from(`M-SEARCH * HTTP/1.1\r\nHOST: ${SSDP_HOST}:${SSDP_PORT}\r\nMAN: "ssdp:discover"\r\nMX: 2\r\nST: ${st}\r\n\r\n`);
-          try { sock.send(m, SSDP_PORT, SSDP_HOST, () => {}); } catch { /* rozhraní mezitím zmizelo */ }
+          try { sock.send(m, SSDP_PORT, SSDP_HOST, () => {}); } catch { /* the interface disappeared in the meantime */ }
         }
       };
       sock.bind(0, address, () => {
@@ -94,7 +94,7 @@ export function discover({ timeout = 3000, addresses } = {}) {
   });
 }
 
-/** Ze seznamu služeb routeru vybere tu, která umí přesměrovat porty. */
+/** Picks the service from the router's list that can forward ports. */
 export function parseDescription(xml, location) {
   const base = tag(xml, 'URLBase') || location;
   for (const service of SERVICES) {
@@ -103,7 +103,7 @@ export function parseDescription(xml, location) {
       const control = tag(block, 'controlURL');
       if (!control) continue;
       const url = new URL(control, base);
-      // Řízení musí jít na tentýž router, ne na jiný počítač, který by si popis vymyslel.
+      // Control must go to the same router, not to another computer that would invent a description.
       if (url.hostname !== new URL(location).hostname) continue;
       return { service, control: url.href, host: url.hostname };
     }
@@ -111,7 +111,7 @@ export function parseDescription(xml, location) {
   return null;
 }
 
-/** Odpověď se čte po kouscích a po dosažení limitu se spojení zahodí: cizí zařízení v síti nesmí zaplnit paměť uzlu. */
+/** The response is read in pieces and the connection is dropped at the limit: a foreign device on the network must not fill the node's memory. */
 export async function readText(res, max = MAX_XML) {
   if (!res.body?.getReader) {
     const text = await res.text();
@@ -150,7 +150,7 @@ export async function soap(gateway, action, args = {}, fetchImpl = globalThis.fe
   return text;
 }
 
-/** Adresa tohoto počítače, přes kterou vede cesta k routeru. Tu router potřebuje jako cíl přesměrování. */
+/** The address of this computer through which the route to the router goes. The router needs it as the forwarding target. */
 function localAddressTowards(host) {
   return new Promise((resolve) => {
     const sock = dgram.createSocket('udp4');
@@ -164,8 +164,8 @@ function localAddressTowards(host) {
 }
 
 /**
- * Udržuje porty otevřené v routeru a zná veřejnou adresu uzlu.
- * `host` je ruční veřejná adresa nebo doména, `lookup` zjistí adresu přes službu na internetu, když ji router neprozradí.
+ * Keeps ports open in the router and knows the node's public address.
+ * `host` is a manual public address or domain; `lookup` finds the address through an internet service when the router does not reveal it.
  */
 export class PublicAccess {
   constructor({ ports, host = null, lookup = true, log = () => {}, fetch: fetchImpl = globalThis.fetch, discover: find = discover, localAddress = localAddressTowards } = {}) {
@@ -221,7 +221,7 @@ export class PublicAccess {
           await this._map(gateway, internal, p, LEASE_S);
         } catch (e) {
           if (e.code !== 725) throw e;
-          await this._map(gateway, internal, p, 0);   // router umí jen trvalé přesměrování
+          await this._map(gateway, internal, p, 0);   // the router supports only permanent forwarding
         }
         mapped.push(p.port);
       }
@@ -234,12 +234,12 @@ export class PublicAccess {
       error = e.message;
     }
     this.state.behindNat = !!routerIp && !isPublicIPv4(routerIp);
-    // Za dalším routerem má síť veřejnou adresu, jen se k ní nedá připojit, dokud ten router porty nepřesměruje. Za CGNAT veřejná adresa není.
+    // Behind another router the network has a public address, it just cannot be reached until that router forwards the ports. Behind CGNAT there is no public address.
     this.state.nat = routerIp ? natKind(routerIp) : null;
     let host = this.manualHost;
     let method = host ? 'manual' : null;
     if (!host && routerIp && isPublicIPv4(routerIp)) { host = routerIp; method = 'upnp'; }
-    // Adresu z routeru může podvrhnout jiné zařízení v místní síti, proto se porovná s tím, co vidí internet.
+    // Another device on the local network can forge the address from the router, so it is compared with what the internet sees.
     if (method !== 'manual' && this.lookup && this.state.nat !== 'cgnat') {
       try {
         const res = await this.fetch(IP_LOOKUP, { redirect: 'error', signal: AbortSignal.timeout(REQUEST_MS) });
@@ -252,7 +252,7 @@ export class PublicAccess {
           if (host !== ip) method = 'lookup';
           host = ip;
         }
-      } catch { /* bez internetu zůstane adresa z routeru, případně neznámá */ }
+      } catch { /* without the internet the router's address stays, or unknown */ }
     }
     if (this.state.host !== host && host) {
       const rpc = this.ports.find((p) => p.name === 'RPC')?.port;

@@ -1,5 +1,5 @@
-// Peněženka aplikace pro okno Exploreru. Stránka smí jen posílat žádosti, klíče zůstávají v hlavním okně
-// a vše citlivé schvaluje uživatel tam. Původ žádosti určuje hlavní proces, ne stránka.
+// The app's wallet for the Explorer window. The page may only send requests; keys stay in the main window
+// and the user approves everything sensitive there. The main process determines where a request comes from, not the page.
 const { contextBridge, ipcRenderer } = require('electron');
 
 const listeners = new Map();
@@ -13,7 +13,7 @@ const wallet = {
   isMetaMask: false,
   async request({ method, params }) {
     const answer = await ipcRenderer.invoke('wallet:request', { method, params });
-    // Prostý objekt: přes hranici okna by chyba ztratila kód, podle kterého stránka reaguje.
+    // A plain object: across the window boundary an error would lose the code the page reacts to.
     if (answer.error) throw answer.error;
     return answer.result;
   },
@@ -23,12 +23,12 @@ const wallet = {
   },
   removeListener(event, fn) { listeners.get(event)?.delete(fn); },
 };
-// Stejná peněženka pod novým i dřívějším názvem, Explorer i starší stránky ji najdou.
+// The same wallet under the new and the earlier name; the Explorer and older pages both find it.
 contextBridge.exposeInMainWorld('quinvium', wallet);
-contextBridge.exposeInMainWorld('quintium', wallet);   // dřívější jméno, stránky ho mohou dál používat
+contextBridge.exposeInMainWorld('quintium', wallet);   // earlier name; pages may keep using it
 contextBridge.exposeInMainWorld('aether', wallet);
 
-// Práce ve vloženém Exploreru se počítá jako aktivita, aplikace se během ní nezamkne.
+// Working in the embedded Explorer counts as activity; the app does not lock meanwhile.
 const ACTIVITY_MS = 30_000;
 let reported = 0;
 const activity = () => {

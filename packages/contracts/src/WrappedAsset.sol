@@ -4,13 +4,13 @@ pragma solidity ^0.8.28;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
-/// @title Přemostěné aktivum
-/// @notice Každý token je krytý 1:1 originálem uzamčeným v bráně na původním řetězci.
-/// Razit a pálit smí jen brána, nikdo jiný k tomu klíč nemá.
+/// @title Bridged asset
+/// @notice Each token is backed 1:1 by the original locked in the gateway on the original chain.
+/// Only the gateway may mint and burn; nobody else has a key for it.
 contract WrappedAsset is ERC20, ERC20Permit {
     address public immutable gateway;
     uint8 private immutable _decimals;
-    /// @notice Řetězec a adresa originálu, u Bitcoinu nula.
+    /// @notice Chain and address of the original, zero for Bitcoin.
     uint64 public immutable originChain;
     bytes32 public immutable originToken;
 

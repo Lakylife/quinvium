@@ -1,4 +1,4 @@
-// Tisíce těžařů na jednom uzlu přes Stratum: připojení, rozeslání nové práce a ověřování podílů.
+// Thousands of miners on one node over Stratum: connecting, broadcasting new work and verifying shares.
 import net from 'node:net';
 import { execSync } from 'node:child_process';
 import { call, root, startNode } from './spolecne.mjs';

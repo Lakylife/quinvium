@@ -1,5 +1,5 @@
-// Nezávislá kontrola celého řetězce. Nevěří ničemu, co uzel dřív spočítal: každý blok provede znovu od genesis,
-// ověří práci i podpisy, přepočítá stav a sečte všechny mince. Databázi jen čte, může tedy běžet vedle uzlu.
+// Independent check of the whole chain. It trusts nothing the node computed before: re-executes every block from genesis,
+// verifies work and signatures, recomputes the state and sums all coins. It only reads the database, so it can run next to the node.
 import { DatabaseSync } from 'node:sqlite';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -14,13 +14,13 @@ import { loadAlloc } from './node.js';
 import { L } from './lang.js';
 
 const HASH_BYTES = 32;
-const CODE_PREFIX_BYTES = 1;      // kód kontraktu je uložený pod hashem s jednobajtovou předponou
+const CODE_PREFIX_BYTES = 1;      // contract code is stored under its hash with a one-byte prefix
 const MAX_PROBLEMS = 50;
 const PROGRESS_EVERY = 1000;
 
 const u8 = (b) => new Uint8Array(b);
 
-/** Databáze uzlu jen pro čtení. */
+/** The node database, read-only. */
 class Source {
   constructor(path) {
     if (!existsSync(path)) throw new Error(L(`Databáze ${path} neexistuje.`, `The database ${path} does not exist.`));
@@ -38,7 +38,7 @@ class Source {
   close() { this.db.close(); }
 }
 
-/** Stavové uzly jsou adresované obsahem: klíč je hash hodnoty. Změna jediného bajtu se tím prozradí bez spuštění čehokoli. */
+/** State nodes are content-addressed: the key is the hash of the value. A change of a single byte is revealed without running anything. */
 function checkStateNodes(source, problems) {
   let nodes = 0;
   for (const { k, v } of source.stateNodes()) {
@@ -50,7 +50,7 @@ function checkStateNodes(source, problems) {
   return nodes;
 }
 
-/** Sečte zůstatky přímo ze stromu účtů, ne z pomocného rejstříku. */
+/** Sums balances directly from the account trie, not from the auxiliary index. */
 async function sumBalances(store, common, root) {
   const { trie } = await openState(store, common, root);
   let accounts = 0;
@@ -65,11 +65,11 @@ async function sumBalances(store, common, root) {
 
 /**
  * @param {object} o
- * @param {object} o.network parametry sítě
- * @param {string} o.dataDir složka dat uzlu
- * @param {string} [o.powDir] cache Ethash, výchozí je ta vedle dat
- * @param {object} [o.alloc] genesis, výchozí systémové kontrakty
- * @param {boolean} [o.quick] jen rychlé kontroly bez nového provedení bloků
+ * @param {object} o.network network parameters
+ * @param {string} o.dataDir node data folder
+ * @param {string} [o.powDir] Ethash cache, by default next to the data
+ * @param {object} [o.alloc] genesis, default system contracts
+ * @param {boolean} [o.quick] quick checks only, without re-executing blocks
  * @param {(done: bigint, total: bigint) => void} [o.onProgress]
  * @returns {Promise<{ok: boolean, height: string, blocks: number, transactions: number, stateNodes: number, accounts?: number, supply?: bigint, emitted: bigint, burned?: bigint, problems: string[]}>}
  */
@@ -130,9 +130,9 @@ export async function auditChain({ network, dataDir, powDir, alloc = loadAlloc()
       report.supply = total;
       const limit = report.emitted + opening;
       report.burned = limit - total;
-      // Mince smí zaniknout (SELFDESTRUCT na sebe sama), vzniknout mimo odměnu za blok nikdy.
+      // Coins may disappear (SELFDESTRUCT to itself) but never appear outside the block reward.
       if (total > limit) problems.push(L(`v řetězci je ${total} jednotek, smělo jich vzniknout jen ${limit}`, `the chain holds ${total} units, only ${limit} were allowed to exist`));
-      // Běžící uzel mezitím mohl přidat blok. Rejstřík pak odpovídá novější výšce a porovnání by nic neříkalo.
+      // The running node may have added a block in the meantime. The index then matches a newer height and the comparison would say nothing.
       const state = await fresh.stateAt(fresh.head.stateRoot);
       const wrong = [];
       for (const { addr, balance_hex: hex } of source.accounts()) {

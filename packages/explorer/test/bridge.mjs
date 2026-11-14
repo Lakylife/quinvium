@@ -1,4 +1,4 @@
-// Stránky Tokeny a Most ve skutečném Chromiu: dva skutečné uzly, běžící validátoři a peněženka se skutečnými podpisy.
+// The Tokens and Bridge pages in real Chromium: two real nodes, running validators and a wallet with real signatures.
 import { chromium } from 'playwright';
 import crypto from 'node:crypto';
 import assert from 'node:assert/strict';
@@ -88,7 +88,7 @@ try {
     },
   };
 
-  // Síť žije sama: bloky přibývají a validátoři pracují, jako by běželi jinde.
+  // The network lives by itself: blocks keep coming and validators work, as if they ran elsewhere.
   const life = async () => {
     while (!stopping) {
       await A.mine().catch(() => {});
@@ -140,7 +140,7 @@ try {
   });
   const url = `http://127.0.0.1:${A.node.rpc.port}`;
 
-  await step('bez nasazení stránky poctivě řeknou, že most ještě neběží', async () => {
+  await step('without a deployment the pages honestly say the bridge is not running yet', async () => {
     await page.goto(`${url}/#/bridge`);
     await page.getByText('Most na této síti ještě neběží').waitFor();
     await page.goto(`${url}/#/tokens`);
@@ -150,7 +150,7 @@ try {
   await page.route('**/deployments.json', (r) => r.fulfill({ json: deployments }));
   await page.reload();
 
-  await step('seznam tokenů ukáže vydaný i přemostěný token', async () => {
+  await step('the token list shows an issued and a bridged token', async () => {
     await page.locator('#token-table tbody tr').nth(2).waitFor();
     const text = await page.locator('#app').innerText();
     assert.match(text, /tUSD/);
@@ -161,7 +161,7 @@ try {
     assert.ok(await page.locator('a[data-nav=\"tokens\"].active').count());
   });
 
-  await step('kontrola tokenu pozná ověřený i neznámý', async () => {
+  await step('the token check recognises a verified and an unknown one', async () => {
     await page.fill('#token-form input[name=address]', usdt.target);
     await page.click('#token-form button');
     await page.getByText('Ověřený token: Testovací vydavatel').waitFor();
@@ -173,10 +173,10 @@ try {
     await page.getByText('Neplatná adresa').waitFor();
   });
 
-  await step('stránka mostu říká, na kom bezpečnost stojí', async () => {
+  await step('the bridge page says whom security rests on', async () => {
     await page.goto(`${url}/#/bridge`);
     await page.getByText('Převod potvrzuje 2 z 3').waitFor();
-    // Jak most funguje: tři kroky a čtyři krátké dlaždice místo odstavců, u formuláře poplatek.
+    // How the bridge works: three steps and four short tiles instead of paragraphs, the fee next to the form.
     assert.equal(await page.locator('.how-flow li').count(), 3);
     assert.equal(await page.locator('.how-fact').count(), 4);
     assert.match(await page.locator('.how-facts').innerText(), /Žádný, kurz 1 : 1/);
@@ -184,7 +184,7 @@ try {
     assert.match(await page.locator('#bridge-fields .swap-info').innerText(), /Poplatek\s*(žádný, jen poplatek sítě|poplatek sítě Bitcoin se odečte z částky)/);
   });
 
-  await step('převod hlavní mince doručí validátoři a historie to ukáže', async () => {
+  await step('validators deliver a main-coin transfer and history shows it', async () => {
     await page.fill('#bridge-form input[name=amount]', '3,5');
     await page.click('#bridge-go');
     await page.getByText('Validátoři ho potvrdí').waitFor({ timeout: 30000 });
@@ -196,7 +196,7 @@ try {
     assert.match(await page.locator('#bridge-history').innerText(), /3,5 QU/);
   });
 
-  await step('cesta zpět na Quinvium přepne peněženku a pak ji vrátí', async () => {
+  await step('the way back to Quinvium switches the wallet and then returns it', async () => {
     await page.goto(`${url}/#/bridge?dir=in`);
     await page.locator('#bridge-to', { hasText: 'Quinvium' }).waitFor();
     await page.fill('#bridge-form input[name=amount]', '1');
@@ -209,7 +209,7 @@ try {
     assert.equal(await gateA.locked(ethers.ZeroAddress), ethers.parseEther('2.5'));
   });
 
-  await step('zrušený převod se vrátí odesílateli a historie to ukáže', async () => {
+  await step('a cancelled transfer is refunded to the sender and history shows it', async () => {
     const lockedBefore = await gateA.locked(ethers.ZeroAddress);
     const before = await A.provider.getBalance(user.address);
     await page.goto(`${url}/#/bridge`);
@@ -218,14 +218,14 @@ try {
     await page.fill('#bridge-form input[name=amount]', '60');
     await page.click('#bridge-go');
     await page.getByText('Validátoři ho potvrdí').waitFor({ timeout: 30000 });
-    // Nad 50 QU jde převod na cílové síti do fronty. Správce ho tam zruší.
+    // Above 50 QU a transfer goes into the queue on the target network. The administrator cancels it there.
     const sent = (await gateA.queryFilter('Sent')).filter((l) => l.args.sender === user.address).at(-1);
     const m = { srcChain: A.id, dstChain: sent.args.dstChain, nonce: sent.args.nonce, srcToken: pad(sent.args.token), recipient: ethers.getAddress(sent.args.recipient), amount: sent.args.amount };
     const id = await gateB.messageId(m);
     for (let i = 0; i < 200 && (await gateB.queued(id)).readyAt === 0n; i++) await new Promise((r) => { setTimeout(r, 200); });
     assert.notEqual((await gateB.queued(id)).readyAt, 0n, 'převod čeká ve frontě');
     await (await gateB.connect(B.connect(admin)).cancelQueued(id)).wait();
-    // Vrácení jde stejnou cestou jako převod opačným směrem. Nad 50 QU proto i ono čeká den ve frontě.
+    // A refund takes the same path as a transfer in the opposite direction. Above 50 QU it therefore also waits a day in the queue.
     const back = refundMessage({ ...m, sender: user.address, sendId: sent.args.id }, aetB);
     const backId = messageId(gateA.target, back);
     for (let i = 0; i < 300 && (await gateA.queued(backId)).readyAt === 0n; i++) await new Promise((r) => { setTimeout(r, 200); });
@@ -242,7 +242,7 @@ try {
     await page.locator('#bridge-history .badge.ok', { hasText: 'Vráceno odesílateli' }).waitFor({ timeout: 15000 });
   });
 
-  await step('vkladová adresa Bitcoinu je stejná jako u validátorů a vklad dorazí', async () => {
+  await step("the Bitcoin deposit address is the same as the validators' and the deposit arrives", async () => {
     await page.goto(`${url}/#/bridge?dir=in`);
     await page.locator('#bridge-to', { hasText: 'Quinvium' }).waitFor();
     await page.click('#bridge-asset');
@@ -259,7 +259,7 @@ try {
     assert.equal(await token.balanceOf(user.address), 3_000_000n);
   });
 
-  await step('výběr do Bitcoinu: špatná adresa neprojde, dobrá se vyplatí', async () => {
+  await step('withdrawal to Bitcoin: a wrong address does not pass, a good one is paid', async () => {
     await page.goto(`${url}/#/bridge?dir=out`);
     await page.locator('#bridge-from', { hasText: 'Quinvium' }).waitFor();
     await page.click('#bridge-asset');
@@ -299,7 +299,7 @@ try {
     await page.setViewportSize({ width: 1280, height: 900 });
   }
 
-  await step('všechny jazyky a úzká obrazovka', async () => {
+  await step('all languages and a narrow screen', async () => {
     for (const [lang, word] of [['en', 'Bridge'], ['de', 'Brücke'], ['es', 'Puente'], ['fr', 'Pont']]) {
       await page.evaluate((l) => localStorage.setItem('aether.lang', l), lang);
       await page.reload();
@@ -315,7 +315,7 @@ try {
     }
   });
 
-  await step('stránka nehlásí žádnou chybu', async () => assert.deepEqual(errors, []));
+  await step('the page reports no error', async () => assert.deepEqual(errors, []));
 } finally {
   stopping = true;
   await beat?.catch(() => {});

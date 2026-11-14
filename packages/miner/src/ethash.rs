@@ -1,4 +1,4 @@
-//! Ethash na procesoru: lehká cache a ověření každého řešení před odesláním uzlu.
+//! Ethash on the CPU: light cache and verification of every solution before it is sent to the node.
 use tiny_keccak::{Hasher, Keccak};
 
 pub const EPOCH_LENGTH: u64 = 30000;
@@ -84,7 +84,7 @@ fn bytes_of(words: &[u32; 16]) -> [u8; 64] {
     b
 }
 
-/// Lehká cache epochy jako 32bitová slova little-endian.
+/// Light cache of the epoch as 32-bit little-endian words.
 pub fn generate_cache(size: u64, seed: &[u8; 32]) -> Vec<u32> {
     let rows = (size / 64) as usize;
     let mut cache = vec![[0u32; 16]; rows];
@@ -108,7 +108,7 @@ pub fn generate_cache(size: u64, seed: &[u8; 32]) -> Vec<u32> {
     cache.into_iter().flatten().collect()
 }
 
-/// Jedna 64bajtová položka DAG spočítaná z lehké cache.
+/// One 64-byte DAG item computed from the light cache.
 pub fn dataset_item(cache: &[u32], index: u32) -> [u32; 16] {
     let rows = (cache.len() / 16) as u32;
     let mut mix = [0u32; 16];
@@ -124,7 +124,7 @@ pub fn dataset_item(cache: &[u32], index: u32) -> [u32; 16] {
     words_of(&keccak512(&bytes_of(&mix)))
 }
 
-/// Výpočet hashimoto nad lehkou cache. Vrací mix digest a výsledek.
+/// Hashimoto computation over the light cache. Returns the mix digest and the result.
 pub fn hashimoto_light(cache: &[u32], full_size: u64, header: &[u8; 32], nonce: u64) -> ([u8; 32], [u8; 32]) {
     let pages = (full_size / 128) as u32;
     let mut input = [0u8; 40];
@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     fn skutecne_bloky_etherea_napric_epochami() {
-        // Stejné bloky jako v testu uzlu, miner s uzlem se musí shodnout bajt po bajtu.
+        // The same blocks as in the node test; the miner and the node must agree byte for byte.
         let vektory = [
             (30000u64, "76a35fb221d2f471375c7db942b0513b9d0e2589711988cfb2ecdfaf5e171ba3", "a8e9c2db86671707", "dc0b2bc9e4f3fd8ce5d0d971a78d035fa964cf5714ae772990fe4d4562902dba"),
             (59999u64, "1aeb7bf2c3b1f3a89f7d319bc546711d6f7876dcf3691479ab3b03461f73a5c3", "0d14080598b6cb24", "f12fe4060d0077ddd44643927a723a1eeec138b9c1e88b29df53f36c3e69a78b"),

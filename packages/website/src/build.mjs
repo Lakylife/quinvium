@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Sestaví statický web quinvium.com do packages/website/public: angličtina v kořeni, čeština pod /cs/.
-// Spuštění: node packages/website/src/build.mjs
+// Builds the static quinvium.com website into packages/website/public.
+// Run: node packages/website/src/build.mjs
 import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,14 +10,14 @@ import { markdown } from './markdown.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, '..', 'public');
-const LANGS = { en: '' };   // web je jen anglicky (přání uživatele 13. 11. 2026), obsah v pages.mjs má i češtinu pro případ návratu
+const LANGS = { en: '' };   // the site is English only (user's request, 13 Nov 2026); the content in pages.mjs also has Czech in case it comes back
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
 
 const urls = [];
-// Hlavní nabídka: skupiny s rozbalovacím panelem, každá položka má ikonu a krátký popis.
+// Main menu: groups with a dropdown panel; each item has an icon and a short description.
 const NAV = [
   ['Learn', [['about', 'globe', 'What Quinvium is and how it launched'], ['whitepaper', 'file', 'Design, consensus and monetary policy'], ['tokenomics', 'coins', 'Supply, rewards and fees'], ['security', 'shield', 'Status, reviews and risks'], ['roadmap', 'layers', 'What is done and what is next'], ['faq', 'vote', 'Short answers to common questions']]],
   ['Use', [['wallets', 'wallet', 'Wallets and adding the network'], ['ecosystem', 'cube', 'Built-in apps, Swap and tools'], ['download', 'arrowdown', 'Apps for macOS, Windows and Chrome']]],
@@ -135,7 +135,7 @@ ${p.body}
     writeFileSync(join(dir, 'index.html'), html);
   }
 
-  // 404 v obou jazycích na jedné stránce (Caddy ji vrací pro neznámé adresy)
+  // 404 in both languages on one page (Caddy returns it for unknown paths)
   if (lang === 'en') {
     writeFileSync(join(out, '404.html'), `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">

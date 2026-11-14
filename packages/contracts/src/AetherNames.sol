@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-/// @title Jména v síti: lidsky čitelné adresy (jan.aet) pro platby a identitu
-/// @notice Poplatek se pálí. Jméno se platí na roky, po ochranné lhůtě ho může získat kdokoli.
-///         Registrace má dva kroky: nejdřív se zveřejní jen otisk, až potom jméno.
-///         Kdo by jméno opsal z čekajících transakcí, nestihne ho zaregistrovat dřív.
+/// @title Names on the network: human-readable addresses (jan.qu) for payments and identity
+/// @notice The fee is burned. A name is paid for in years; after a grace period anyone can take it.
+///         Registration has two steps: first only the fingerprint is published, then the name.
+///         Whoever copies a name from pending transactions cannot register it first.
 contract AetherNames {
     struct Entry {
         address owner;
@@ -38,7 +38,7 @@ contract AetherNames {
     error CommitmentMissing();
     error CommitmentTooNew();
 
-    /// Krátká jména jsou dražší, aby se nedala hromadně zabírat.
+    /// Short names are more expensive so they cannot be grabbed in bulk.
     function pricePerYear(string memory name) public pure returns (uint256) {
         uint256 len = bytes(name).length;
         if (len == 3) return 50 ether;
@@ -66,7 +66,7 @@ contract AetherNames {
         return valid(name) && block.timestamp > entries[nodeOf(name)].expires + GRACE;
     }
 
-    /// Otisk záměru: nic neprozradí, dokud se nezveřejní `secret`.
+    /// Commitment hash: reveals nothing until `secret` is published.
     function commitment(string memory name, address owner, address target, bytes32 secret) public pure returns (bytes32) {
         return keccak256(abi.encode(nodeOf(name), owner, target, secret));
     }
@@ -124,7 +124,7 @@ contract AetherNames {
         emit Transferred(node, to);
     }
 
-    /// Hlavní jméno adresy pro zobrazení v peněženkách a exploreru.
+    /// Primary name of an address for display in wallets and the Explorer.
     function setPrimary(string calldata name) external {
         Entry storage e = entries[nodeOf(name)];
         if (e.target != msg.sender || block.timestamp > e.expires) revert NotOwner();

@@ -1,4 +1,4 @@
-// Vlastní chyby kontraktů sítě srozumitelně, česky a anglicky. Stejné texty ukazuje Explorer.
+// The network contracts' custom errors in plain words, in Czech and English. The Explorer shows the same texts.
 export const ERRORS = {
   InvalidSettings: ['Neplatné nastavení. Poplatek smí být nejvýše 5 %, kolo 16 až 5760 bloků a okno 1 až 256 kol.', 'Invalid settings. The fee can be at most 5%, a round 16 to 5760 blocks and the window 1 to 256 rounds.'],
   NothingToPay: ['Není co vybrat.', 'Nothing to withdraw.'],

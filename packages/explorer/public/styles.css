@@ -1,6 +1,6 @@
-/* Quinvium Explorer. Sekce jsou bílé plochy na jemně šedé stránce, bez rámečků. Hranici dělá tón plochy, ne čára.
-   Mezi řádky seznamů je jen tenká linka, aby šlo sledovat řádek přes celou šířku.
-   Co není potřeba hned, je o klik dál: stav sítě v patičce, filtry pod tlačítkem, detaily na vlastní stránce. */
+/* Quinvium Explorer. Sections are white surfaces on a light grey page, without frames. The surface tone forms the boundary, not a line.
+   List rows are separated only by a thin line so a row can be followed across the full width.
+   What is not needed right away is one click away: network status in the footer, filters behind a button, details on their own page. */
 
 :root {
   --bg: #f2f4f7;
@@ -98,7 +98,7 @@ a:hover { color: var(--accent-hover); }
 h1, h2, h3, h4 { font-weight: 600; }
 .hidden { display: none !important; }
 
-/* Pole mají jen výplň. Přes :where nemají váhu, takže je každá komponenta snadno upraví. */
+/* Fields only have a fill. Through :where they have no specificity, so every component can easily adjust them. */
 :where(input:not([type="checkbox"], [type="radio"], [type="range"]), select, textarea) {
   min-width: 0; border: 0; border-radius: var(--radius-s); outline: none;
   background: var(--surface-2); color: var(--text); font: inherit; font-size: 13.5px;
@@ -107,7 +107,7 @@ h1, h2, h3, h4 { font-weight: 600; }
 :where(input, select, textarea)::placeholder { color: var(--text-3); }
 a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* =============== Hlavička =============== */
+/* =============== Header =============== */
 .app-header { position: sticky; z-index: 1030; top: 0; background: var(--surface); box-shadow: var(--shadow-sm); }
 .header-inner { display: flex; max-width: var(--page); min-height: var(--header-height); align-items: center; gap: 24px; margin: 0 auto; padding: 0 var(--gutter); }
 .app-brand { display: inline-flex; flex: none; align-items: center; gap: 10px; color: var(--text); }
@@ -131,7 +131,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
   position: absolute; z-index: 1100; top: calc(100% + 6px); left: 0; display: none; min-width: 200px; padding: 6px;
   border-radius: var(--radius); background: var(--float); box-shadow: var(--shadow-lg);
 }
-/* Most přes mezeru mezi položkou a nabídkou: při přejetí myší nesmí nabídka zmizet. */
+/* A bridge over the gap between the item and the menu: the menu must not disappear when the mouse moves across. */
 .nav-menu::before { content: ""; position: absolute; top: -8px; right: 0; left: 0; height: 8px; }
 .nav-group.open .nav-menu { display: block; }
 @media (hover: hover) { body:not(.compact-nav) .nav-group:not(.dismissed):hover .nav-menu { display: block; } }
@@ -178,8 +178,8 @@ body.home .header-search { visibility: hidden; }
 .pop .pop-head small { color: var(--text-3); font-size: 12px; }
 .account-pop { min-width: 250px; }
 
-/* =============== Patička: mapa stránek, stav sítě a volby, které nejsou potřeba každý den =============== */
-/* Bílý pás na šedé stránce jako sekce: hranici dělá tón plochy. Tenká linka odděluje jen spodní řádek. */
+/* =============== Footer: site map, network status and options not needed every day =============== */
+/* A white band on a grey page like a section: the surface tone forms the boundary. A thin line separates only the bottom row. */
 .app-footer { margin-top: 8px; background: var(--surface); color: var(--text-3); font-size: 13px; }
 .footer-inner { max-width: var(--page); margin: 0 auto; padding: 0 var(--gutter); }
 .footer-main { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 32px 48px; padding: 40px 0 32px; border-bottom: 1px solid var(--line); }
@@ -223,7 +223,7 @@ body.home .header-search { visibility: hidden; }
 .theme-switch button[aria-pressed="true"] { color: var(--text); opacity: 1; }
 .theme-switch svg { width: 14px; height: 14px; }
 
-/* =============== Rozvržení stránky =============== */
+/* =============== Page layout =============== */
 .app-main { flex: 1 0 auto; padding: 28px var(--gutter) 40px; overflow-x: clip; }
 .page-inner { max-width: calc(var(--page) - var(--gutter) * 2); margin: 0 auto; }
 .page-head { display: flex; align-items: center; justify-content: space-between; gap: 16px 32px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -233,7 +233,7 @@ body.home .header-search { visibility: hidden; }
 .page-head-right { display: flex; align-items: center; gap: 8px; }
 .sync-state { display: inline-flex; align-items: center; gap: 7px; color: var(--text-2); font-size: 13px; }
 
-/* =============== Úvodní pás =============== */
+/* =============== Intro band =============== */
 .hero { margin: -28px calc(50% - 50vw) 0; padding: 56px var(--gutter) 64px; background: var(--hero); color: var(--hero-text); }
 .hero + #home-live { position: relative; margin-top: -40px; }
 .hero-inner { max-width: calc(var(--page) - var(--gutter) * 2); margin: 0 auto; }
@@ -247,7 +247,7 @@ body.home .header-search { visibility: hidden; }
 .hero-search svg { width: 19px; height: 19px; }
 .hero .notice { margin: 16px 0 0; padding: 0; border-radius: 0; background: none; color: var(--brand); font-size: 13.5px; }
 
-/* Stuha bloků: plné dlaždice přímo v úvodním pásu */
+/* Block ribbon: solid tiles right in the intro band */
 .ribbon { display: flex; gap: 8px; margin-top: 40px; overflow-x: auto; scrollbar-width: none; }
 .ribbon::-webkit-scrollbar { display: none; }
 .ribbon-item {
@@ -258,7 +258,7 @@ body.home .header-search { visibility: hidden; }
 .ribbon-item strong { color: #fff; font-size: 15px; font-weight: 600; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
 .ribbon-item span { overflow: hidden; color: var(--hero-dim); text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-/* =============== Čísla: popisek a velká hodnota =============== */
+/* =============== Numbers: label and large value =============== */
 .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px 32px; margin-bottom: var(--gap); padding: 20px var(--pad); border-radius: var(--radius-l); background: var(--surface); box-shadow: var(--shadow-sm); }
 .metric-card { min-width: 0; }
 .metric-card > span { display: block; color: var(--text-3); font-size: 13px; }
@@ -284,7 +284,7 @@ body.home .header-search { visibility: hidden; }
 .section-head { margin-bottom: 8px; }
 .section-head h2 { margin: 0; font-size: 16px; letter-spacing: -.01em; }
 
-/* Řádky na přehledu: jeden řádek, jedna věc */
+/* Rows on the overview: one row, one thing */
 .activity-list { display: flex; flex-direction: column; margin: 0 calc(var(--bleed) * -1); }
 .activity-row {
   display: grid; grid-template-columns: 30px minmax(84px, 1fr) minmax(0, 1fr) 108px 50px; gap: 12px; min-height: 50px; align-items: center;
@@ -301,7 +301,7 @@ body.home .header-search { visibility: hidden; }
 .row-age { color: var(--text-3); text-align: right; white-space: nowrap; }
 @media (max-width: 520px) { .activity-row { grid-template-columns: 30px minmax(0, 1fr) 96px 44px; } .row-who { display: none; } }
 
-/* =============== Seznamy: bez mřížky, řádek se zvýrazní až pod myší =============== */
+/* =============== Lists: no grid, a row is highlighted only on hover =============== */
 .table-wrap { margin: 0 calc(var(--bleed) * -1); overflow-x: auto; }
 table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13.5px; }
 th { padding: 8px var(--bleed); border-bottom: 1px solid var(--line); background: var(--surface); color: var(--text-3); font-size: 12.5px; font-weight: 500; text-align: left; white-space: nowrap; }
@@ -329,7 +329,7 @@ td:not(:first-child) a.hash:hover { color: var(--accent); }
 .badge.pending { background: var(--warning-soft); color: var(--warning); }
 .badge.coinbase { background: var(--accent-soft); color: var(--accent); }
 
-/* =============== Výpis klíč a hodnota =============== */
+/* =============== Key and value listing =============== */
 .kv { font-size: 14px; }
 .kv-row { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
 .kv-row:last-child { border-bottom: 0; }
@@ -352,7 +352,7 @@ td.empty { padding: 14px var(--bleed); }
 .skel { border-radius: 6px; background: var(--surface-2); }
 .skel-row { height: 16px; margin: 18px 0; }
 
-/* =============== Tlačítka a formuláře =============== */
+/* =============== Buttons and forms =============== */
 .primary-btn, .ghost-btn {
   display: inline-flex; height: 38px; align-items: center; justify-content: center; padding: 0 16px; border: 0; border-radius: var(--radius-s);
   font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap;
@@ -363,7 +363,7 @@ td.empty { padding: 14px var(--bleed); }
 .ghost-btn { background: var(--surface-3); color: var(--text); font-weight: 500; }
 .ghost-btn:hover { background: var(--surface-4); color: var(--text); }
 
-/* Filtry čekají pod jedním tlačítkem */
+/* Filters wait behind one button */
 .filter-box { margin-bottom: 12px; }
 .filter-box summary { display: inline-flex; align-items: center; gap: 5px; color: var(--text-3); font-size: 13.5px; font-weight: 500; list-style: none; cursor: pointer; }
 .filter-box summary::-webkit-details-marker { display: none; }
@@ -380,7 +380,7 @@ td.empty { padding: 14px var(--bleed); }
 .result-count { margin: 0 0 8px; color: var(--text-3); font-size: 13px; }
 .filter-error { align-self: center; color: var(--danger); font-size: 13px; }
 
-/* Přepínače a záložky: vybraná položka má plochu, aby bylo hned vidět, kde jste. */
+/* Switches and tabs: the selected item has a surface so you can see right away where you are. */
 .seg { display: inline-flex; flex-wrap: wrap; gap: 2px; }
 .seg a, .seg button { padding: 5px 11px; border: 0; border-radius: var(--radius-s); background: none; color: var(--text-3); font: inherit; font-size: 13px; cursor: pointer; }
 .seg a:hover, .seg button:hover { color: var(--text); }
@@ -413,7 +413,7 @@ td.empty { padding: 14px var(--bleed); }
 .tool-output { padding: 10px 12px; border-radius: var(--radius-s); background: var(--surface-2); color: var(--text-2); font-family: var(--mono); font-size: 12.5px; white-space: pre-wrap; word-break: break-all; }
 .tool-output.bad { color: var(--danger); }
 .tool-output.good { color: var(--success); }
-/* Aplikace: přepínač úkolů, nápověda k úkolu a čitelný výsledek místo surových dat. */
+/* Apps: task switch, help for the task and a readable result instead of raw data. */
 .tool-card .tool-tag { color: var(--text-3); font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
 .tool-card .tool-tasks { margin-top: 14px; }
 .tool-card .tool-hint { margin-top: 10px; color: var(--text-2); font-size: 13px; line-height: 1.5; }
@@ -551,22 +551,22 @@ details.tool-card .tool-output { margin-top: 12px; }
 .wc-qr { display: grid; justify-items: center; gap: 10px; margin-top: 12px; }
 .wc-qr img, .wc-qr canvas { width: 240px; height: 240px; padding: 10px; border-radius: var(--radius); background: #fff; }
 
-/* =============== Oznámení =============== */
+/* =============== Notifications =============== */
 .toasts { position: fixed; z-index: 1200; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
 .toast { max-width: 320px; padding: 10px 14px; border-radius: var(--radius); background: var(--float); box-shadow: var(--shadow-lg); font-size: 13px; cursor: pointer; }
 .toast b { font-variant-numeric: tabular-nums; }
 .toast .sub { margin-top: 1px; color: var(--text-3); font-family: var(--mono); font-size: 12px; }
 
-/* =============== Swap, Likvidita a Most: formulář vpravo, trh a seznamy vedle něj =============== */
+/* =============== Swap, Liquidity and Bridge: form on the right, market and lists next to it =============== */
 .trade-page { --trade: 400px; --trade-wide: 760px; }
-/* Nadpis je jen pro čtečky, stránku pojmenuje položka nabídky a záložky. */
+/* The heading is only for screen readers; the menu item and tab name the page. */
 .trade-page > .page-head { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip-path: inset(50%); }
 .trade-page > .tabs { width: 100%; max-width: var(--trade); margin: 0 auto 12px; overflow: visible; }
 .trade-layout { display: flex; flex-direction: column; align-items: center; gap: var(--gap); }
 .trade-main { display: flex; width: 100%; max-width: var(--trade-wide); min-width: 0; flex-direction: column; gap: var(--gap); }
 .trade-main > * { margin: 0; }
 .trade-side { order: -1; width: 100%; max-width: var(--trade); min-width: 0; }
-/* Od této šířky jsou formulář a data vedle sebe, i v okně aplikace. Formulář se při posouvání drží na místě. */
+/* From this width the form and data sit side by side, also in the app window. The form stays in place while scrolling. */
 @media (min-width: 880px) {
   .trade-page > .tabs { max-width: 1160px; }
   .trade-layout { display: grid; max-width: 1160px; margin: 0 auto; grid-template-columns: minmax(0, 1fr) var(--trade); align-items: start; }
@@ -601,7 +601,7 @@ details.tool-card .tool-output { margin-top: 12px; }
 .trade-parts { display: flex; justify-content: flex-end; gap: 6px; }
 .trade-parts button { height: 26px; padding: 0 10px; border: 0; border-radius: 13px; background: var(--surface); color: var(--text-2); font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer; }
 .trade-parts button:hover { background: var(--surface-3); color: var(--accent); }
-/* Mezi poli vkladu je kurz poolu: částky jsou svázané, nejde o dvě nezávislé položky. */
+/* The pool rate sits between the deposit fields: the amounts are linked, not two independent items. */
 .trade-link { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 2px 0; padding: 6px 12px; color: var(--text-3); font-size: 12.5px; text-align: center; font-variant-numeric: tabular-nums; }
 .trade-link svg { width: 15px; height: 15px; flex: none; color: var(--accent); }
 .trade-input { display: flex; flex-direction: column; gap: 4px; color: var(--text-3); font-size: 13px; }
@@ -627,7 +627,7 @@ details.tool-card .tool-output { margin-top: 12px; }
 [data-theme="dark"] .tint-4 { background: #362a10; color: #eec36a; }
 [data-theme="dark"] .tint-5 { background: #3b1c2a; color: #f0a0bf; }
 
-/* Tlačítko obrácení prostřihne obě pole: prstenec má barvu stránky. */
+/* The swap-direction button cuts into both fields: its ring has the page colour. */
 .swap-flip { position: relative; z-index: 1; display: grid; width: 36px; height: 36px; margin: -16px auto; padding: 0; place-items: center; border: 0; border-radius: var(--radius); background: var(--surface-2); box-shadow: 0 0 0 4px var(--surface); color: var(--text-3); cursor: pointer; }
 .swap-flip:hover { color: var(--accent); }
 .swap-flip svg { width: 16px; height: 16px; }
@@ -638,7 +638,7 @@ details.tool-card .tool-output { margin-top: 12px; }
 .swap-go { width: 100%; min-height: 52px; padding: 8px 14px; border-radius: var(--radius-l); font-size: 15px; font-weight: 600; line-height: 1.25; white-space: normal; }
 .swap-note { margin: 12px 2px 0; text-align: center; }
 
-/* Trh nad jednou dvojicí */
+/* Market of one pair */
 .market { gap: 0; }
 .market-head { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
 .pair-icons { display: flex; flex: none; }
@@ -663,7 +663,7 @@ details.tool-card .tool-output { margin-top: 12px; }
 .market-chart .plot { height: 180px; }
 @media (max-width: 640px) { .market-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
-/* Výběr tokenu */
+/* Token choice */
 .picker { display: flex; max-height: min(560px, calc(100dvh - 80px)); flex-direction: column; overflow: hidden; }
 .picker-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 12px; }
 .picker-head h2 { margin: 0; font-size: 18px; letter-spacing: -.012em; }
@@ -679,7 +679,7 @@ details.tool-card .tool-output { margin-top: 12px; }
 .picker-row small { display: block; color: var(--text-3); font-size: 12.5px; }
 .picker-row em { color: var(--text-2); font-size: 13px; font-style: normal; font-variant-numeric: tabular-nums; }
 
-/* Pooly: podíly na výkonu */
+/* Pools: shares of hashrate */
 .share-bar { display: flex; height: 10px; gap: 2px; margin: 8px 0 14px; overflow: hidden; border-radius: 5px; }
 .share-bar i { display: block; min-width: 2px; height: 100%; }
 .series-0 { background: var(--series-0); } .series-1 { background: var(--series-1); } .series-2 { background: var(--series-2); }
@@ -694,8 +694,8 @@ details.tool-card .tool-output { margin-top: 12px; }
 .share-track { display: inline-block; width: 90px; height: 4px; margin-right: 10px; overflow: hidden; border-radius: 2px; background: var(--surface-3); vertical-align: 3px; }
 .share-track i { display: block; height: 100%; background: var(--chart); }
 
-/* Poslední bloky a transakce na úvodu: řádky obou seznamů sdílí jednu mřížku (subgrid), takže řádek bloku
-   a řádek transakce na stejném místě mají vždy stejnou výšku a oba seznamy končí na stejné úrovni. */
+/* Latest blocks and transactions on the home page: rows of both lists share one grid (subgrid), so a block row
+   and a transaction row at the same position always has the same height and both lists end at the same level. */
 .home-lists { align-items: stretch; row-gap: 0; grid-template-rows: auto repeat(6, auto); }
 .home-lists > .card { display: grid; grid-row: span 7; grid-template-rows: subgrid; row-gap: 0; }
 .home-lists .latest-list { display: contents; }
@@ -707,7 +707,7 @@ details.tool-card .tool-output { margin-top: 12px; }
 .fail-note p { margin: 0 0 6px; }
 .fail-note p:last-child { margin-bottom: 0; }
 
-/* Detail poolu: vlevo připojení a těžaři, vpravo stav těžaře a hospodaření. */
+/* Pool details: connection and miners on the left, miner status and accounts on the right. */
 .pool-columns { display: grid; gap: var(--gap); align-items: start; }
 .pool-main, .pool-side { display: flex; min-width: 0; flex-direction: column; gap: var(--gap); }
 .pool-main > .card, .pool-side > .card { margin: 0; }
@@ -748,7 +748,7 @@ a.bridge-arrow:hover { color: var(--accent); }
 .route-btn b { display: block; font-weight: 600; line-height: 1.25; }
 .route-btn small { display: block; color: var(--text-3); font-size: 12.5px; }
 .route-btn .chev { width: 10px; height: 10px; color: var(--text-3); }
-/* Jak most funguje: tři kroky jako plochy s ikonou, pod nimi odpovědi na nejčastější otázky. */
+/* How the bridge works: three steps as surfaces with icons, below them answers to the most common questions. */
 .how-card { container-type: inline-size; }
 .how-flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
 .how-flow li { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--radius-l); background: var(--surface-2); }
@@ -756,7 +756,7 @@ a.bridge-arrow:hover { color: var(--accent); }
 .how-icon svg { width: 18px; height: 18px; }
 .how-flow b { font-size: 14px; font-weight: 600; }
 .how-flow p { margin: 3px 0 0; color: var(--text-2); font-size: 13.5px; line-height: 1.5; }
-/* Fakta o mostu: krátké dlaždice s jedním údajem, ne odstavce textu. */
+/* Bridge facts: short tiles with one item each, not paragraphs of text. */
 .how-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 12px 0 0; }
 .how-fact { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: var(--radius-l); background: var(--surface-2); }
 .how-fact .how-icon { flex: none; }
@@ -766,14 +766,14 @@ a.bridge-arrow:hover { color: var(--accent); }
 .how-fact-text span { display: block; color: var(--text-2); font-size: 13px; line-height: 1.4; }
 @container (max-width: 860px) { .how-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @container (max-width: 420px) { .how-facts { grid-template-columns: minmax(0, 1fr); } }
-/* V užším sloupci (aplikace, telefon) jsou kroky pod sebou jako řádky s ikonou vlevo, tři vedle sebe by se nevešly. */
+/* In a narrower column (app, phone) the steps are stacked as rows with an icon on the left; three side by side would not fit. */
 @container (max-width: 600px) {
   .how-flow { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .how-flow li { flex-direction: row; align-items: flex-start; gap: 14px; padding: 14px 16px; }
   .how-icon { flex: none; }
 }
 #bridge-deposit h2 { margin: 6px 0; font-size: 15px; }
-/* Moje vklady v poolech likvidity a výběr jejich části. */
+/* My deposits in liquidity pools and withdrawing part of them. */
 .positions { display: flex; flex-direction: column; gap: 10px; }
 .position { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: var(--radius-l); background: var(--surface-2); }
 .position-head { display: flex; align-items: center; gap: 12px; }
@@ -817,12 +817,12 @@ details.fold[open] > summary .chev { transform: rotate(180deg); }
 .log-arg > div { min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 640px) { .log-arg { grid-template-columns: minmax(0, 1fr); gap: 0; } }
 
-/* =============== Těžaři a fronta =============== */
+/* =============== Miners and the queue =============== */
 .inline-search { display: flex; max-width: 560px; gap: 8px; margin-bottom: var(--gap); }
 .inline-search input { flex: 1; height: 38px; padding: 0 12px; background: var(--surface); font-family: var(--mono); font-size: 12.5px; }
 .miner-found { flex-direction: row; align-items: baseline; gap: 8px 16px; flex-wrap: wrap; }
 
-/* =============== Swap: velký dopad na cenu chce potvrzení =============== */
+/* =============== Swap: a large price impact needs confirmation =============== */
 .impact-warn { margin: 4px 0 12px; padding: 12px 14px; border-radius: var(--radius); background: var(--danger-soft); color: var(--text); font-size: 13px; }
 .impact-warn p { margin: 0 0 8px; }
 .impact-warn p:last-child { margin-bottom: 0; }
@@ -832,13 +832,13 @@ details.fold[open] > summary .chev { transform: rotate(180deg); }
 .text-btn:hover { color: var(--accent-hover); }
 
 /* =============== Aplikace Quinvium =============== */
-/* V aplikaci zůstává patička s mapou stránek. Síť, jazyk a vzhled řídí aplikace sama. */
+/* In the app the footer keeps the site map. The app itself controls network, language and theme. */
 body.embedded .embedded-hide { display: none !important; }
 body.solo { --header-height: 0px; }
 body.solo .app-header, body.solo .app-footer { display: none !important; }
 
-/* =============== Úzká obrazovka =============== */
-/* Třídu compact-nav nastavuje app.js: v aplikaci je Explorer užší a značku tam ukazuje její boční panel. */
+/* =============== Narrow screen =============== */
+/* The compact-nav class is set by app.js: in the app the Explorer is narrower and the app's sidebar shows the brand. */
 body.embedded .brand-copy { display: none; }
 body.compact-nav .header-inner { flex-wrap: wrap; gap: 10px 12px; padding: 12px var(--gutter); }
 body.compact-nav .menu-toggle { display: grid; margin-left: 0; }
@@ -864,7 +864,7 @@ body.compact-nav.home .header-search { display: none; }
   .metric-card > strong { font-size: 20px; }
 }
 
-/* Typ transakce a směr vůči prohlížené adrese. Bez rámečku, jen podbarvení jako ostatní štítky. */
+/* Transaction type and direction relative to the viewed address. Without a frame, only a tint like other labels. */
 .tx-type { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 .dir { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 500; }
 .dir-out { background: var(--warning-soft); color: var(--warning); }
@@ -873,11 +873,11 @@ body.compact-nav.home .header-search { display: none; }
 .tx-summary { display: block; margin-top: 4px; color: var(--text-2); }
 .tx-summary .hash { font-size: inherit; }
 
-/* Vysvětlení u kontraktu poolu: co v transakcích vidět není a kde je přehled. */
+/* Explanation for a pool contract: what is not visible in transactions and where the overview is. */
 .pool-note p { margin: 0 0 6px; }
 .pool-note .text-link { display: inline-block; margin-top: 4px; }
 
-/* Přehled jako v Etherscanu: souhrn, poslední bloky a transakce. Bílé plochy bez rámečků, jen linky mezi řádky. */
+/* Overview as on Etherscan: summary, latest blocks and transactions. White surfaces without frames, only lines between rows. */
 .home-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
 .home-stat { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .home-stat > span { color: var(--text-2); font-size: 13px; }
@@ -886,7 +886,7 @@ body.compact-nav.home .header-search { display: none; }
 .plot-small { height: 92px; }
 .latest-list { display: flex; flex-direction: column; }
 .latest-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) minmax(0, 1.6fr) minmax(112px, auto); align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
-/* Částka má pevně širokou kolonu, prostřední sloupce pak lícují v každém řádku. */
+/* The amount has a fixed-width column, so the middle columns line up in every row. */
 .latest-row > .latest-value, .latest-row > .latest-end { justify-self: end; }
 .latest-row:last-child { border-bottom: 0; }
 .latest-main, .latest-mid, .latest-end { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -899,7 +899,7 @@ body.compact-nav.home .header-search { display: none; }
 .eye-btn { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: 0; border-radius: 6px; background: var(--surface-2); color: var(--text-2); cursor: pointer; padding: 0; }
 .eye-btn svg { width: 15px; height: 15px; }
 .eye-btn:hover, .eye-btn:focus-visible { color: var(--accent); }
-/* Náhled pod okem musí být nad stránkou zřetelně vidět: prstenec v barvě zvýraznění, výrazný stín a podbarvené záhlaví. */
+/* The preview under the eye must be clearly visible above the page: an accent-coloured ring, a strong shadow and a tinted header. */
 .tx-preview { position: absolute; z-index: 60; overflow: hidden; padding: 0 16px 14px; background: var(--float); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 60%, transparent), 0 18px 44px rgba(15, 23, 42, .30); }
 [data-theme="dark"] .tx-preview { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 70%, transparent), 0 18px 44px rgba(0, 0, 0, .65); }
 .tx-preview .preview-head { display: flex; justify-content: space-between; align-items: center; margin: 0 -16px 6px; padding: 12px 16px; background: var(--accent-soft); }

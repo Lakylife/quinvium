@@ -1,4 +1,4 @@
-// Most mezi stránkou a jádrem rozšíření. Původ požadavku určuje prohlížeč, ne stránka.
+// Bridge between the page and the extension core. The browser determines where a request comes from, not the page.
 let port = null;
 
 function connect() {

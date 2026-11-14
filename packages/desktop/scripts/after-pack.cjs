@@ -1,5 +1,5 @@
-// Po sestavení pro Windows: Aether.exe dostane vlastní ikonu a údaje. Bez toho ho systém ukazuje jako Electron.
-// Soubor se upravuje přímo v Node.js, takže sestavení z macOS nepotřebuje Wine.
+// After building for Windows: Aether.exe gets its own icon and metadata. Without it the system shows it as Electron.
+// The file is edited directly in Node.js, so building from macOS does not need Wine.
 const fs = require('node:fs');
 const path = require('node:path');
 const ResEdit = require('resedit');
@@ -11,7 +11,7 @@ exports.default = async function afterPack(context) {
   if (context.electronPlatformName !== 'win32') return;
   const { productName, buildVersion } = context.packager.appInfo;
   const version = context.packager.appInfo.version ?? buildVersion;
-  const file = `${context.packager.platformSpecificBuildOptions.executableName ?? productName}.exe`;     // spouštěč si drží původní název kvůli aktualizacím
+  const file = `${context.packager.platformSpecificBuildOptions.executableName ?? productName}.exe`;     // the launcher keeps its original name because of updates
   const exePath = path.join(context.appOutDir, file);
   const exe = ResEdit.NtExecutable.from(fs.readFileSync(exePath), { ignoreCert: true });
   const res = ResEdit.NtExecutableResource.from(exe);

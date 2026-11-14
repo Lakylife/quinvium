@@ -1,4 +1,4 @@
-// Příkazová řádka proti skutečným uzlům: každý příkaz běží jako samostatný proces, tak jak ho spustí uživatel.
+// The command line against real nodes: each command runs as a separate process, exactly as the user runs it.
 import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -40,10 +40,10 @@ let stopping = false;
 let beat;
 let team = [];
 
-/** Spustí nástroj a vrátí výstup, chyba se vrací jako hodnota, aby ji test mohl číst. */
+/** Runs the tool and returns its output; an error is returned as a value so the test can read it. */
 function run(args, { input, env = {} } = {}) {
   return new Promise((resolve) => {
-    // Texty testů jsou česky. Jazyk systému by jinak na jiném počítači přepnul výpis do angličtiny.
+    // Test texts are in Czech. The system language would otherwise switch the output to English on another computer.
     const child = execFile(process.execPath, ['--no-warnings', CLI, ...args], { env: { ...process.env, AETHER_HOME: home, QUINTIUM_LANG: 'cs', ...env }, timeout: 120_000 }, (error, stdout, stderr) => {
       resolve({ code: error ? error.code ?? 1 : 0, stdout, stderr });
     });
@@ -138,7 +138,7 @@ after(async () => {
   await B.stop();
 });
 
-test('nápověda a verze fungují bez uzlu i peněženky', async () => {
+test('help and version work without a node or a wallet', async () => {
   const help = await run(['--help']);
   assert.equal(help.code, 0);
   for (const word of ['wallet create', 'swap quote', 'bridge out', 'mine', 'pool claim', 'node']) assert.ok(help.stdout.includes(word), word);
@@ -147,7 +147,7 @@ test('nápověda a verze fungují bez uzlu i peněženky', async () => {
   assert.match((await run(['status', '--nesmysl'])).stderr, /nesmysl/);
 });
 
-test('nedostupný uzel: srozumitelná rada, ne výpis chyby', async () => {
+test('an unavailable node: understandable advice, not an error dump', async () => {
   const r = await run(['status', '--network', 'dev', '--rpc', 'http://127.0.0.1:9']);
   assert.notEqual(r.code, 0);
   assert.match(r.stderr, /neodpovídá/);
@@ -155,7 +155,7 @@ test('nedostupný uzel: srozumitelná rada, ne výpis chyby', async () => {
   assert.ok(!r.stderr.includes(' at '), 'bez výpisu zásobníku');
 });
 
-test('peněženka: založení, šifrování na disku a práva souborů', async () => {
+test('wallet: creation, encryption on disk and file permissions', async () => {
   const w = await ok('wallet', 'create', 'hlavni');
   me = w.address;
   assert.ok(ethers.isAddress(me));
@@ -178,7 +178,7 @@ test('peněženka: založení, šifrování na disku a práva souborů', async (
   assert.equal(list[0].default, true);
 });
 
-test('peněženka: stejné heslo nestačí, chybné se odmítne a název nejde přepsat', async () => {
+test('wallet: the same password is not enough, a wrong one is rejected and the name cannot be overwritten', async () => {
   const wrong = join(home, 'spatne.txt');
   writeFileSync(wrong, 'tohle-neni-spravne-heslo', { mode: 0o600 });
   const r = await run(['wallet', 'key', 'hlavni', '--password-file', wrong, '--show-secret']);
@@ -192,7 +192,7 @@ test('peněženka: stejné heslo nestačí, chybné se odmítne a název nejde p
   assert.match(weak.stderr, /nejméně 10/);
 });
 
-test('peněženka: obnova z fráze dá stejnou adresu jako aplikace, klíč jde vložit jen vstupem', async () => {
+test('wallet: restoring from the phrase gives the same address as the app; a key can be entered only through input', async () => {
   const phrase = 'test test test test test test test test test test test junk';
   const r = await run(['wallet', 'import', 'obnovena', '--password-file', passwordFile, '--json'], { input: `${phrase}\n` });
   assert.equal(r.code, 0, r.stderr);
@@ -209,7 +209,7 @@ test('peněženka: obnova z fráze dá stejnou adresu jako aplikace, klíč jde 
   assert.match(bad.stderr, /Neplatná fráze/);
 });
 
-test('peněženka: výchozí, smazání a nic jiného se nesmaže', async () => {
+test('wallet: default, deletion, and nothing else gets deleted', async () => {
   assert.equal((await ok('wallet', 'default', 'zklice')).default, 'zklice');
   assert.equal((await ok('wallet', 'show')).name, 'zklice');
   await ok('wallet', 'default', 'hlavni');
@@ -218,7 +218,7 @@ test('peněženka: výchozí, smazání a nic jiného se nesmaže', async () => 
   await fails(['wallet', 'show', 'druhy-ucet'], /neexistuje/);
 });
 
-test('výchozí zůstává první založená peněženka, ne první podle abecedy', async () => {
+test('the default stays the first created wallet, not the first alphabetically', async () => {
   const place = mkdtempSync(join(tmpdir(), 'aether-cli-vychozi-'));
   const env = { AETHER_HOME: place };
   const zeta = JSON.parse((await run(['wallet', 'create', 'zeta', '--password-file', passwordFile, '--json'], { env })).stdout);
@@ -230,7 +230,7 @@ test('výchozí zůstává první založená peněženka, ne první podle abeced
   assert.equal(JSON.parse((await run(['wallet', 'show', '--json'], { env })).stdout).name, 'alfa', 'po smazání výchozí zbyde další');
 });
 
-test('přehled sítě: status, blok, gas a přímý dotaz', async () => {
+test('network overview: status, block, gas and a direct query', async () => {
   const s = await ok('status');
   assert.equal(s.chainId, Number(A.id));
   assert.ok(s.height > 0);
@@ -243,14 +243,14 @@ test('přehled sítě: status, blok, gas a přímý dotaz', async () => {
   assert.equal(BigInt(JSON.parse(r.stdout)), A.id);
 });
 
-test('uzel z jiné sítě se odmítne dřív, než se cokoli podepíše', async () => {
+test('a node from another network is rejected before anything is signed', async () => {
   await A.ok(A.connect(admin).sendTransaction({ to: me, value: 500n * WEI }));
   const r = await run(['send', ethers.ZeroAddress, '1', '--network', 'testnet', '--rpc', url, '--password-file', passwordFile, '--yes']);
   assert.notEqual(r.code, 0);
   assert.match(r.stderr, /je na síti 52403/);
 });
 
-test('převod mince: částka dorazí a zůstatek sedí na řetězci', async () => {
+test('coin transfer: the amount arrives and the balance matches on chain', async () => {
   const to = ethers.Wallet.createRandom().address;
   const sent = await ok('send', to, '1.5');
   assert.equal(await A.provider.getBalance(to), 3n * WEI / 2n);
@@ -261,7 +261,7 @@ test('převod mince: částka dorazí a zůstatek sedí na řetězci', async () 
   assert.equal(b.dQU, '1.5');
 });
 
-test('převod: chyby se chytí před podpisem', async () => {
+test('transfer: errors are caught before signing', async () => {
   await fails(['send', 'nesmysl', '1'], /Neplatná adresa/);
   await fails(['send', ethers.ZeroAddress, 'abc'], /Neplatná částka/);
   await fails(['send', ethers.ZeroAddress, '999999'], /Nedostatek/);
@@ -271,7 +271,7 @@ test('převod: chyby se chytí před podpisem', async () => {
   assert.match(r.stderr, /--yes/, 'bez terminálu a bez --yes se nic neodešle');
 });
 
-test('tokeny: seznam a detail odpovídají kontraktu', async () => {
+test('tokens: the list and details match the contract', async () => {
   const list = await ok('tokens');
   const row = list.find((t) => t.symbol === 'tUSD');
   assert.equal(row.verified, true);
@@ -285,7 +285,7 @@ test('tokeny: seznam a detail odpovídají kontraktu', async () => {
   assert.equal((await ok('token', foreign.target)).verified, false, 'stejná zkratka nedělá token ověřeným');
 });
 
-test('swap: odhad se shoduje s kontraktem a směna tam i zpět projde', async () => {
+test('swap: the estimate matches the contract and a swap there and back passes', async () => {
   const q = await ok('swap', 'quote', '10', 'dQU', 'tUSD');
   const [, out] = await router.getAmountsOut(10n * WEI, [artifacts.WAET.address, usd.target]);
   assert.equal(BigInt(q.amountOut), out);
@@ -299,7 +299,7 @@ test('swap: odhad se shoduje s kontraktem a směna tam i zpět projde', async ()
   assert.ok(await A.provider.getBalance(me) > before, 'mince se vrátily');
   assert.equal(await usd.allowance(me, router.target), 0n, 'povolení přesně na částku, nic nezbývá');
   await ok('swap', '1', 'tUSD', 'tBTC');
-  // Uzel vrací adresy v kontrolním tvaru, contracts.json malými písmeny: mince sítě se přesto ukáže zkratkou.
+  // The node returns addresses in checksum form, contracts.json in lower case: the network coin is still shown by its symbol.
   const pools = await ok('swap', 'pools');
   assert.ok(pools.length >= 2);
   for (const p of pools) assert.doesNotMatch(p.pair, /0x/, `pool ${p.pair} ukazuje adresu místo zkratky`);
@@ -309,10 +309,10 @@ test('swap: odhad se shoduje s kontraktem a směna tam i zpět projde', async ()
   await fails(['swap', '10000000', 'dQU', 'tUSD', '--slippage', '0.1'], /Nedostatek|selhala/);
 });
 
-test('transakce: metoda z ABI a důvod selhání přehraný uzlem', async () => {
+test('transactions: the method from the ABI and the failure reason replayed by the node', async () => {
   const sent = await ok('send', ethers.Wallet.createRandom().address, '0.1');
   assert.equal((await ok('tx', sent.hash)).method, 'převod');
-  // Směna s nesplnitelným minimem a pevným limitem gasu: projde do bloku a tam selže.
+  // A swap with an unachievable minimum and a fixed gas limit: it gets into a block and fails there.
   const signer = A.connect(admin);
   const bad = await router.connect(signer).swapExactNativeForTokens(10n ** 30n, [artifacts.WAET.address, usd.target], admin.address, FAR, { value: WEI, gasLimit: 300_000n });
   await bad.wait().catch(() => {});
@@ -325,7 +325,7 @@ test('transakce: metoda z ABI a důvod selhání přehraný uzlem', async () => 
   assert.match(text.stdout, /Důvod:\s+Kurz se mezi odhadem a vytěžením změnil.*\(SlippageExceeded\)/);
 });
 
-test('žebříček bez prázdných adres a přehled adresy česky', async () => {
+test('rich list without empty addresses and the address overview in Czech', async () => {
   const r = await ok('rich');
   assert.ok(r.items.length > 0);
   for (const x of r.items) assert.ok(BigInt(x.balance) > 0n, `${x.address} nemá mince`);
@@ -334,7 +334,7 @@ test('žebříček bez prázdných adres a přehled adresy česky', async () => 
   assert.doesNotMatch(text, /\b[234] transakcí/, '2 až 4 transakce, ne transakcí');
 });
 
-test('quinvium node vedle běžícího uzlu poradí místo chyby EADDRINUSE', async () => {
+test('quinvium node next to a running node gives advice instead of an EADDRINUSE error', async () => {
   const r = await run(['node', '--network', 'dev', '--rpc-port', String(A.node.rpc.port)]);
   assert.notEqual(r.code, 0);
   assert.match(r.stderr, /už běží uzel/);
@@ -342,13 +342,13 @@ test('quinvium node vedle běžícího uzlu poradí místo chyby EADDRINUSE', as
   assert.doesNotMatch(r.stderr, /EADDRINUSE/);
 });
 
-test('swap: skluz chrání před horším kurzem', async () => {
+test('swap: slippage protects against a worse rate', async () => {
   const q = await ok('swap', 'quote', '1', 'dQU', 'tUSD', '--slippage', '1');
   assert.equal(BigInt(q.minimum), BigInt(q.amountOut) - (BigInt(q.amountOut) * 100n) / 10000n);
   await fails(['swap', '1', 'dQU', 'tUSD', '--slippage', '99'], /Skluz/);
 });
 
-test('likvidita: vklad, podíl a výběr', async () => {
+test('liquidity: deposit, share and withdrawal', async () => {
   await ok('liquidity', 'add', '1', 'dQU', '2', 'tUSD');
   const list = await ok('liquidity', 'list');
   assert.equal(list.length, 1);
@@ -361,7 +361,7 @@ test('likvidita: vklad, podíl a výběr', async () => {
   await fails(['liquidity', 'remove', 'dQU', 'tUSD'], /nemáte žádnou likviditu/);
 });
 
-test('pool: založení, přehled a ochrana před cizí adresou', async () => {
+test('pool: creation, overview and protection against a foreign address', async () => {
   const made = await ok('pool', 'create', '--name', 'Pool z příkazové řádky', '--url', 'http://127.0.0.1:1', '--fee-percent', '2');
   assert.ok(ethers.isAddress(made.pool));
   const list = await ok('pool', 'list');
@@ -373,7 +373,7 @@ test('pool: založení, přehled a ochrana před cizí adresou', async () => {
   await fails(['pool', 'create', '--name', 'X', '--fee-percent', '50'], /nejvýše 5/);
 });
 
-test('těžba: miner dostane správnou adresu, uzel i pool', async () => {
+test('mining: the miner gets the right address, node and pool', async () => {
   const fake = join(home, 'falesny-miner.sh');
   writeFileSync(fake, '#!/bin/sh\necho "ARGUMENTY $*"\n');
   chmodSync(fake, 0o755);
@@ -396,7 +396,7 @@ test('těžba: miner dostane správnou adresu, uzel i pool', async () => {
   assert.ok(!bad.stdout.includes('ARGUMENTY'));
 });
 
-test('most: trasy, převod na jinou síť a doručení validátory', async () => {
+test('bridge: routes, transfer to another network and delivery by validators', async () => {
   const routes = await ok('bridge', 'routes');
   assert.equal(routes.open, true);
   assert.equal(routes.routes.length, 2);
@@ -417,7 +417,7 @@ test('most: trasy, převod na jinou síť a doručení validátory', async () =>
   assert.fail('stav převodu se nezměnil na doručeno');
 });
 
-test('most: cesta zpět na Quinvium podepisuje stejný klíč na zdrojové síti', async () => {
+test('bridge: the way back to Quinvium is signed by the same key on the source network', async () => {
   await B.ok(B.connect(admin).sendTransaction({ to: me, value: 5n * WEI }));
   const token = (JSON.parse(readFileSync(deploymentsFile, 'utf8'))[A.id]).assets[0].remoteToken;
   const remote = B.at('WrappedAsset', token);
@@ -430,7 +430,7 @@ test('most: cesta zpět na Quinvium podepisuje stejný klíč na zdrojové síti
   assert.equal(await A.provider.getBalance(me), before + 2n * WEI);
 });
 
-test('most: vkladová adresa pro Bitcoin je stejná, jakou spočítají validátoři', async () => {
+test('bridge: the Bitcoin deposit address is the same as the validators compute', async () => {
   const r = await ok('bridge', 'deposit-btc');
   assert.match(r.deposit, /^bcrt1/);
   const expected = team[0].bridge.depositAddress(me);
@@ -438,21 +438,21 @@ test('most: vkladová adresa pro Bitcoin je stejná, jakou spočítají validát
   await fails(['bridge', 'out', '1', 'aBTC', 'bc1qneplatna'], /Nedostatek|nepatří síti/);
 });
 
-test('podpis zprávy a jeho ověření', async () => {
+test('message signature and its verification', async () => {
   const s = await ok('sign', 'jsem majitel adresy');
   assert.equal(s.address, me);
   assert.equal((await ok('verify', 'jsem majitel adresy', s.signature)).address, me);
   await fails(['verify', 'jiný text', s.signature, me], /patří adrese/);
 });
 
-test('quinvium node spustí plný uzel s nápovědou uzlu', async () => {
+test("quinvium node starts a full node with the node's help", async () => {
   const r = await run(['node', '--help']);
   assert.equal(r.code, 0, r.stderr);
   assert.match(r.stdout, /--data-dir/);
   assert.match(r.stdout, /--stratum-port/);
 });
 
-test('výstup bez --json je čitelný a výpis zůstatku ukáže tokeny', async () => {
+test('output without --json is readable and the balance listing shows tokens', async () => {
   const r = await run(['balance', ...common()]);
   assert.match(r.stdout, /dQU/);
   assert.match(r.stdout, /tUSD/);
@@ -463,7 +463,7 @@ test('výstup bez --json je čitelný a výpis zůstatku ukáže tokeny', async 
   assert.match(text, /quinvium wallet create/);
 });
 
-test('čísla: malá cena zůstane vidět, nenulová částka nevypadá jako nula, čeština skloňuje', async () => {
+test('numbers: a small price stays visible, a non-zero amount does not look like zero, Czech declines nouns', async () => {
   const { amountText, plural, significant } = await import('../src/context.js');
   assert.equal(significant(8_017_647_058n, 18, 6), '0.00000000801764', 'cena pod miliontinou: šest platných číslic');
   assert.equal(significant(3_770_849_507_980_000_000_000n, 18, 6), '3770.849507');
@@ -474,7 +474,7 @@ test('čísla: malá cena zůstane vidět, nenulová částka nevypadá jako nul
   assert.deepEqual([0, 1, 2, 4, 5, 28].map((n) => plural(n, 'transakce', 'transakce', 'transakcí')), ['0 transakcí', '1 transakce', '2 transakce', '4 transakce', '5 transakcí', '28 transakcí']);
 });
 
-// ------------------------------------------------------------------- aplikace sítě
+// ------------------------------------------------------------------- network apps
 const walletOf = async (name) => (await ok('wallet', 'show', name)).address;
 const fund = async (name) => {
   const address = await walletOf(name);
@@ -482,7 +482,7 @@ const fund = async (name) => {
   return address;
 };
 
-test('aplikace: notář zapíše otisk souboru i textu, ověří ho a odvolá', async () => {
+test('apps: the notary records the fingerprint of a file and of text, verifies and revokes it', async () => {
   const file = join(home, 'smlouva.txt');
   writeFileSync(file, 'Smlouva o dílo, verze 1');
   const sha = `0x${crypto.createHash('sha256').update(readFileSync(file)).digest('hex')}`;
@@ -505,7 +505,7 @@ test('aplikace: notář zapíše otisk souboru i textu, ověří ho a odvolá', 
   await fails(['notary', 'stamp', join(home, 'neni.txt')], /neexistuje/);
 });
 
-test('aplikace: certifikáty od registrace vydavatele po odvolání', async () => {
+test('apps: credentials from issuer registration to revocation', async () => {
   const holder = ethers.Wallet.createRandom().address;
   await fails(['credential', 'issue', 'DIPLOM-1', holder], /zaregistrujte jako vydavatel/);
   await ok('credential', 'register', 'Testovací univerzita', '--website', 'https://example.edu');
@@ -523,7 +523,7 @@ test('aplikace: certifikáty od registrace vydavatele po odvolání', async () =
   assert.equal((await ok('credential', 'verify', 'NIKDY-NEVYDANO', me)).issued, false);
 });
 
-test('aplikace: dodavatelský řetězec s předáním mezi dvěma peněženkami', async () => {
+test('apps: supply chain with a hand-over between two wallets', async () => {
   const other = await fund('obnovena');
   const evidence = join(home, 'dodaci-list.txt');
   writeFileSync(evidence, 'dodací list 42');
@@ -546,7 +546,7 @@ test('aplikace: dodavatelský řetězec s předáním mezi dvěma peněženkami'
   await fails(['supply', 'show', 'abc'], /celé číslo/);
 });
 
-test('aplikace: úschova od zaplacení po výběr, spor rozhodne rozhodce', async () => {
+test('apps: escrow from payment to withdrawal, the arbiter decides a dispute', async () => {
   const seller = await fund('obnovena');
   const arbiter = await fund('zklice');
   const deal = await ok('escrow', 'create', seller, arbiter, '2', '--days', '3');
@@ -569,7 +569,7 @@ test('aplikace: úschova od zaplacení po výběr, spor rozhodne rozhodce', asyn
   await fails(['escrow', 'create', me, arbiter, '1'], /tři různé adresy/);
 });
 
-test('aplikace: hlasování, každá adresa má jeden hlas', async () => {
+test('apps: polls, each address has one vote', async () => {
   await fund('obnovena');
   await fund('zklice');
   const poll = await ok('poll', 'create', 'Kam na výlet?', 'Hory', 'Moře', 'Doma', '--days', '1');
@@ -587,7 +587,7 @@ test('aplikace: hlasování, každá adresa má jeden hlas', async () => {
   await fails(['poll', 'create', 'Jen jedna?', 'Ano'], /aspoň dvě možnosti/);
 });
 
-test('aplikace: jméno .qu na dva kroky, převod na jméno a jeho správa', async () => {
+test('apps: a .qu name in two steps, a transfer to the name and its management', async () => {
   const other = await fund('obnovena');
   assert.equal((await ok('name', 'info', 'testcli')).available, true);
   const reg = await ok('name', 'register', 'testcli');
@@ -612,7 +612,7 @@ test('aplikace: jméno .qu na dva kroky, převod na jméno a jeho správa', asyn
   await fails(['name', 'primary', 'nikdo-nevlastni'], /nikdo nevlastní/);
 });
 
-test('aplikace: vlastní token, převod přes --token a seznam vytvořených', async () => {
+test('apps: custom token, transfer with --token and the list of created ones', async () => {
   const made = await ok('token', 'create', 'Body věrnosti', 'BODY', '1000');
   assert.ok(ethers.isAddress(made.token));
   const to = ethers.Wallet.createRandom().address;
@@ -626,7 +626,7 @@ test('aplikace: vlastní token, převod přes --token a seznam vytvořených', a
   assert.match((await run(['token', 'help', ...common()])).stdout, /token create/);
 });
 
-test('aplikace: sbírka NFT, ražba jen tvůrcem a bezpečný převod', async () => {
+test('apps: NFT collection, minting only by the creator and a safe transfer', async () => {
   const other = await fund('obnovena');
   const col = await ok('nft', 'create', 'Vstupenky', 'VST');
   assert.ok(ethers.isAddress(col.collection));
@@ -644,7 +644,7 @@ test('aplikace: sbírka NFT, ražba jen tvůrcem a bezpečný převod', async ()
   await fails(['nft', 'show', ethers.Wallet.createRandom().address], /není sbírka/);
 });
 
-test('aplikace: peněženka se dvěma podpisy ze tří', async () => {
+test('apps: a wallet with two signatures out of three', async () => {
   const b = await fund('obnovena');
   const c = await fund('zklice');
   const made = await ok('multisig', 'create', `${me},${b},${c}`, '2');
@@ -665,7 +665,7 @@ test('aplikace: peněženka se dvěma podpisy ze tří', async () => {
   await fails(['multisig', 'create', `${me},${b}`, '3'], /1 až 2/);
 });
 
-test('aplikace bez podpříkazu ukážou nápovědu, neznámý podpříkaz je chyba', async () => {
+test('apps without a subcommand show help; an unknown subcommand is an error', async () => {
   for (const app of ['notary', 'credential', 'supply', 'escrow', 'poll', 'name', 'nft', 'multisig']) {
     const r = await run([app, ...common()]);
     assert.equal(r.code, 0, `${app}: ${r.stderr}`);
@@ -677,7 +677,7 @@ test('aplikace bez podpříkazu ukážou nápovědu, neznámý podpříkaz je ch
   assert.match(bad.stderr, /Neznámý příkaz notary smazat/);
 });
 
-test('angličtina: --lang, uložená volba a jazyk systému', async () => {
+test('English: --lang, the saved choice and the system language', async () => {
   const en = await run(['status', ...common(), '--lang', 'en']);
   assert.equal(en.code, 0, en.stderr);
   assert.match(en.stdout, /Network:/);
@@ -702,8 +702,8 @@ test('angličtina: --lang, uložená volba a jazyk systému', async () => {
   assert.notEqual((await run(['lang', 'xx'], { env: system('en_US.UTF-8') })).code, 0);
 });
 
-// ------------------------------------------------------------------- hledání, přihlášení a peněženka z aplikace
-/** Trezor jako v aplikaci (background.js): WebCrypto, PBKDF2-SHA256 a AES-GCM. Méně iterací kvůli rychlosti testu. */
+// ------------------------------------------------------------------- search, sign-in and the app's wallet
+/** A vault as in the app (background.js): WebCrypto, PBKDF2-SHA256 and AES-GCM. Fewer iterations for test speed. */
 async function appVault(text, secret, iterations = 1000) {
   const { subtle, getRandomValues } = crypto.webcrypto;
   const salt = getRandomValues.call(crypto.webcrypto, new Uint8Array(16));
@@ -715,7 +715,7 @@ async function appVault(text, secret, iterations = 1000) {
   return { v: 1, kdf: 'PBKDF2-SHA256', iterations, salt: b64(salt), iv: b64(iv), data: b64(new Uint8Array(data)) };
 }
 
-test('peněženka z aplikace: stejná adresa jen heslem, u MetaMasku a špatného hesla rada', async () => {
+test('wallet from the app: the same address with just the password; advice for MetaMask and a wrong password', async () => {
   const phrase = 'test test test test test test test test test test test junk';
   const appData = mkdtempSync(join(tmpdir(), 'aether-cli-aplikace-'));
   const place = mkdtempSync(join(tmpdir(), 'aether-cli-zaplikace-'));
@@ -740,7 +740,7 @@ test('peněženka z aplikace: stejná adresa jen heslem, u MetaMasku a špatnéh
   assert.match((await run(['wallet', 'import-app', 'z', '--password-file', passwordFile], { env: { AETHER_HOME: place, AETHER_APP_DATA: join(place, 'zadna') } })).stderr, /se nenašla/);
 });
 
-test('login ukáže, se kterou peněženkou se pracuje, a přepne ji', async () => {
+test('login shows which wallet is used and switches it', async () => {
   const shown = await ok('login');
   assert.equal(shown.wallet, 'hlavni');
   assert.equal(shown.address, me);
@@ -753,7 +753,7 @@ test('login ukáže, se kterou peněženkou se pracuje, a přepne ji', async () 
   assert.match(empty.stdout, /wallet import-app/);
 });
 
-test('hledání jako v Exploreru: blok, transakce, adresa, token a jméno', async () => {
+test('search as in the Explorer: block, transaction, address, token and name', async () => {
   const sent = await ok('send', ethers.Wallet.createRandom().address, '0.01');
   assert.equal(BigInt((await ok('search', '1')).number), 1n, 'číslo bloku');
   const b = await ok('block', '2');

@@ -1,4 +1,4 @@
-// Most mezi Quinviem a jinými sítěmi. Mince hlídají validátoři mostu, ne tento nástroj.
+// Bridge between Quinvium and other networks. The bridge validators guard the coins, not this tool.
 import { ethers } from 'ethers';
 import { custodyScript, scriptAddress } from '../../bridge/src/bitcoin.js';
 import { CliError, TX_WAIT_MS, pairs, parseAmount, reason, short, table, units } from './context.js';
@@ -6,7 +6,7 @@ import { L } from './i18n.js';
 import { approve, confirm, encode, signer, submit } from './tx.js';
 import { walletAddress } from './wallets.js';
 
-const HISTORY_BLOCKS = 9000;     // uzel vrací logy z nejvýše 10 000 bloků najednou
+const HISTORY_BLOCKS = 9000;     // the node returns logs from at most 10,000 blocks at a time
 const BTC_PREFIX = { mainnet: 'bc', testnet: 'tb', regtest: 'bcrt' };
 const DOMAIN = ethers.id('AetherBridge.v1');
 const coder = ethers.AbiCoder.defaultAbiCoder();
@@ -70,7 +70,7 @@ async function out(ctx, [amountText, assetText, recipient]) {
   ctx.print(await submit(ctx, { to: d.gateway, data, value: native ? amount : 0n }, [], { confirmed: true, label: L('Převod', 'Transfer') }), L('Převod je odeslaný. Validátoři ho potvrdí a mince dorazí na cílovou síť.', 'The transfer is sent. The validators confirm it and the coins arrive on the target network.'));
 }
 
-/** Cesta na Quinvium: transakci podepisuje stejný klíč na zdrojové síti, platí se tam i její poplatek. */
+/** The way to Quinvium: the same key signs the transaction on the source network, and its fee is paid there. */
 async function into(ctx, [amountText, assetText, recipient]) {
   if (!assetText) throw new CliError(L('Použití: quinvium bridge in <částka> <mince> [příjemce na Quinviu]', 'Usage: quinvium bridge in <amount> <coin> [recipient on Quinvium]'));
   const d = await setup(ctx);
@@ -104,7 +104,7 @@ async function into(ctx, [amountText, assetText, recipient]) {
   }
 }
 
-/** Stejný výpočet adresy, jaký dělají validátoři: skript s příjemcem a klíči úschovy. */
+/** The same address computation the validators do: the script with the recipient and the custody keys. */
 function depositAddress(net, recipient) {
   return scriptAddress(custodyScript(net.keys.map((k) => Buffer.from(k, 'hex')), net.threshold, recipient), net.bitcoin);
 }

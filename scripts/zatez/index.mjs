@@ -1,4 +1,4 @@
-// Filtry Exploreru nad velkou databází: kolik trvá dotaz, když má řetězec miliony transakcí.
+// Explorer filters on a large database: how long a query takes when the chain has millions of transactions.
 import { rmSync, statSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -22,7 +22,7 @@ const next = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return see
 for (let i = 0; i < TXS; i++) {
   const number = Math.floor(i / PER_BLOCK);
   if (i % PER_BLOCK === 0) insertBlock.run(number, 1_700_000_000 + number * 15, address(number % 500), 9e7, 15, PER_BLOCK, 2_100_000, 4e18);
-  // Část adres je velmi aktivní, jako burzy a pooly.
+  // Some addresses are very active, like exchanges and pools.
   const from = next() % 8 === 0 ? next() % 50 : next() % ADDRESSES;
   insertTx.run(number, i % PER_BLOCK, 1_700_000_000 + number * 15, address(from), address(next() % ADDRESSES), next() % 3, next() % 50 ? 1 : 0, (next() % 1000) * 1e15, 21000e9);
   if (i % 500_000 === 499_999) { db.exec('COMMIT'); db.exec('BEGIN'); }

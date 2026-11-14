@@ -1,22 +1,22 @@
-// Ověřování Proof of Work. Cache epoch se ukládá na disk, protože výpočet trvá sekundy.
+// Proof-of-work verification. The epoch cache is stored on disk because computing it takes seconds.
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { cacheSize, datasetSize, epochOf, generateCache, hashimotoLight, quickResult, seedHash, targetForDifficulty, bytesToBigInt } from '../crypto/ethash.js';
 import { equal, keccak } from '../util/bytes.js';
 
 const SUM_BYTES = 32;
-// Cache další epochy se začne počítat tolik bloků předem (asi 4 hodiny). Jinak by ji všechny uzly počítaly naráz
-// s prvním blokem nové epochy a ověření bloků by se v celé síti na několik sekund zastavilo.
+// The cache of the next epoch starts being computed this many blocks ahead (about 4 hours). Otherwise all nodes would compute it at once
+// with the first block of a new epoch, and block verification would stop across the whole network for several seconds.
 export const PREPARE_AHEAD = 1000;
-// Jak daleko nad špičkou smí ležet ověřovaná hlavička. Cache epochy se počítá úměrně jejímu číslu, takže výšku z cizí
-// hlavičky je nutné omezit dřív, než se na ni sáhne. Rezerva pokryje hlubokou větev (50 000 hlaviček) i s přesahem.
+// How far above the tip a verified header may lie. The epoch cache is computed in proportion to its number, so a height from a foreign
+// must be limited before it is touched. The margin covers a deep branch (50,000 headers) with room to spare.
 export const VERIFY_HORIZON = 100_000n;
 
 export class Pow {
   constructor(dir) {
     this.dir = dir;
     this.caches = new Map();  // epocha -> Promise<Uint8Array>
-    this.maxNumber = null;    // nejvyšší výška, kterou verify připustí; nastavuje řetězec podle špičky
+    this.maxNumber = null;    // highest height verify allows; set by the chain according to the tip
     if (dir) mkdirSync(dir, { recursive: true });
   }
 
@@ -25,9 +25,9 @@ export class Pow {
     if (!c) {
       c = this._load(epoch);
       this.caches.set(epoch, c);
-      // Selhání nesmí zůstat v paměti, jinak by uzel do restartu odmítal všechny bloky.
+      // A failure must not stay in memory, otherwise the node would reject all blocks until restart.
       c.catch(() => this.caches.delete(epoch));
-      // V paměti držíme jen nejnovější epochy.
+      // Only the newest epochs are kept in memory.
       if (this.caches.size > 3) this.caches.delete(Math.min(...this.caches.keys()));
     }
     return c;
@@ -37,7 +37,7 @@ export class Pow {
     const size = cacheSize(epoch);
     const file = this.dir ? join(this.dir, `cache-${epoch}.bin`) : null;
     if (file && existsSync(file)) {
-      // Na konci souboru je kontrolní součet. Poškozený soubor by vedl k odmítání platných bloků.
+      // A checksum is at the end of the file. A corrupted file would lead to rejecting valid blocks.
       const b = readFileSync(file);
       if (b.length === size + SUM_BYTES) {
         const body = new Uint8Array(b.buffer.slice(b.byteOffset, b.byteOffset + size));
@@ -49,17 +49,17 @@ export class Pow {
       try {
         writeFileSync(file + '.tmp', Buffer.concat([c, keccak(c)]));
         renameSync(file + '.tmp', file);
-      } catch { /* plný disk nevadí, cache se příště spočítá znovu */ }
+      } catch { /* a full disk does not matter; the cache is computed again next time */ }
     }
     return c;
   }
 
-  /** Nastaví strop výšky pro verify podle špičky řetězce. */
+  /** Sets the height cap for verify according to the chain tip. */
   setHorizon(headNumber) {
     this.maxNumber = BigInt(headNumber) + VERIFY_HORIZON;
   }
 
-  /** Volá se s každou novou špičkou. Výpočet běží na pozadí po kouscích a ověřování bloků nebrzdí. */
+  /** Called with every new tip. The computation runs in the background in pieces and does not slow block verification. */
   prepareFor(number) {
     this.setHorizon(number);
     const epoch = epochOf(number);
@@ -67,7 +67,7 @@ export class Pow {
     this.cache(epoch + 1).catch(() => {});
   }
 
-  /** Levná kontrola bez cache. */
+  /** Cheap check without the cache. */
   quickCheck(header) {
     const r = bytesToBigInt(quickResult(header.sealHash(), header.nonce, header.mixHash));
     return r <= targetForDifficulty(header.difficulty);

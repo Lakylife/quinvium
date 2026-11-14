@@ -1,4 +1,4 @@
-// eth_call a eth_estimateGas: běží nad kopií stavu a nikdy nic nezapisují.
+// eth_call and eth_estimateGas: run on a copy of the state and never write anything.
 import { createBlock } from '@ethereumjs/block';
 import { createLegacyTx } from '@ethereumjs/tx';
 import { Address, createAddressFromString, createZeroAddress } from '@ethereumjs/util';
@@ -51,7 +51,7 @@ function revertError(res) {
     try {
       const len = Number(BigInt(`0x${data.slice(74, 138)}`));
       reason = `execution reverted: ${Buffer.from(data.slice(138, 138 + len * 2), 'hex').toString('utf8')}`;
-    } catch { /* necháme obecnou zprávu */ }
+    } catch { /* we keep the generic message */ }
   }
   return new RpcCallError(reason, data);
 }

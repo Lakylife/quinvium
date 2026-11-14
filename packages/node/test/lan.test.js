@@ -1,4 +1,4 @@
-// Hledání uzlů v místní síti: nové PC se má připojit bez ručního zadávání, cizí zprávy nesmí nic způsobit.
+// Finding nodes on the local network: a new PC should connect without manual input; foreign messages must not cause anything.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -34,13 +34,13 @@ const packet = (over = {}) => {
   return Buffer.from(`aether-lan1 ${m.chainId} ${m.genesis} ${m.port} ${m.nodeId} ${m.kind}`);
 };
 
-test('adresa pro všesměrové zprávy se počítá podle masky sítě', () => {
+test('the broadcast address is computed from the network mask', () => {
   assert.equal(broadcastAddress('192.168.1.235', '255.255.255.0'), '192.168.1.255');
   assert.equal(broadcastAddress('10.20.30.40', '255.255.0.0'), '10.20.255.255');
   assert.equal(broadcastAddress('172.16.5.9', '255.255.255.252'), '172.16.5.11');
 });
 
-test('uzel z místní sítě se ohlásí a dostane odpověď přímo', () => {
+test('a node on the local network announces itself and gets a direct reply', () => {
   const { d, heard, sent } = harness();
   d._onMessage(packet(), LOCAL);
   assert.deepEqual(heard, [['192.168.1.20', 30525, OTHER]]);
@@ -49,14 +49,14 @@ test('uzel z místní sítě se ohlásí a dostane odpověď přímo', () => {
   assert.deepEqual(sent[0].slice(1), [LOCAL.address, LOCAL.port]);
 });
 
-test('na odpověď se znovu neodpovídá, zprávy se nemohou honit dokola', () => {
+test('a reply is not answered again; messages cannot chase each other in a loop', () => {
   const { d, heard, sent } = harness();
   d._onMessage(packet({ kind: 'reply' }), LOCAL);
   assert.equal(heard.length, 1);
   assert.equal(sent.length, 0);
 });
 
-test('cizí síť, jiný genesis, vlastní zpráva, smetí a zdroj mimo místní síť se ignorují', () => {
+test('a foreign network, another genesis, its own message, garbage and a source outside the local network are ignored', () => {
   const { d, heard, sent } = harness();
   d._onMessage(packet({ chainId: 52401 }), LOCAL);
   d._onMessage(packet({ genesis: 'cd'.repeat(32) }), LOCAL);
@@ -70,7 +70,7 @@ test('cizí síť, jiný genesis, vlastní zpráva, smetí a zdroj mimo místní
   assert.deepEqual(sent, []);
 });
 
-test('bez volby lan uzel žádný UDP port neotevírá', async () => {
+test('without the lan option the node opens no UDP port', async () => {
   const chain = await newChain();
   const n = new Network({ chain, mempool: chain.mempool, port: 0, host: '127.0.0.1' });
   await n.start();
@@ -78,15 +78,15 @@ test('bez volby lan uzel žádný UDP port neotevírá', async () => {
   await n.stop();
 });
 
-test('počet uzlů ohlášených v místní síti má strop', async () => {
+test('the number of nodes announced on the local network has a cap', async () => {
   const chain = await newChain();
   const n = new Network({ chain, mempool: chain.mempool, port: 0, host: '127.0.0.1' });
-  n.connect = () => {};   // bez vytáčení, jde jen o evidenci
+  n.connect = () => {};   // no dialling, only bookkeeping
   for (let i = 0; i < 1000; i++) n._onLanPeer(`192.168.${i >> 8}.${i & 255}`, 30525, OTHER);
   assert.equal(n.lanPeers.size, 64);
 });
 
-test('dva uzly se najdou bez adresy a předají si řetězec', async () => {
+test('two nodes find each other without an address and hand over the chain', async () => {
   const [a, b] = await Promise.all([newChain(), newChain()]);
   await mineMany(a, 5);
   b.setClock(a.now() + 15);

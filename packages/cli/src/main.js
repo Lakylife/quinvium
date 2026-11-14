@@ -1,4 +1,4 @@
-// Příkazová řádka Quinvium. Vše, co umí aplikace, jde dělat i bez okna, stejně jako u Bitcoinu a Etherea.
+// Quinvium command line. Everything the app can do also works without a window, as with Bitcoin and Ethereum.
 import { parseArgs } from 'node:util';
 import pkg from '../package.json' with { type: 'json' };
 import { APPS, appCommands } from './apps.js';
@@ -181,7 +181,7 @@ const OPTIONS = {
   days: { type: 'string' }, years: { type: 'string' }, target: { type: 'string' }, evidence: { type: 'string' },
 };
 
-/** quinvium lang: ukáže jazyk, quinvium lang cs ho uloží pro další spuštění. */
+/** quinvium lang: shows the language; quinvium lang cs saves it for later runs. */
 async function language(ctx, [choice]) {
   if (!choice) {
     ctx.print({ lang: lang(), saved: savedLanguage() }, L(`Jazyk: čeština. Změní ho: quinvium lang en`, 'Language: English. Change it with: quinvium lang cs'));
@@ -204,20 +204,20 @@ const optionOf = (args, name) => {
   if (i < 0) return undefined;
   return args[i].includes('=') ? args[i].slice(name.length + 1) : args[i + 1];
 };
-/** --lang patří nástroji, uzel by ho jako neznámou volbu odmítl. */
+/** --lang belongs to the tool; the node would reject it as an unknown option. */
 const withoutLang = (args) => args.filter((a, i) => !(a === '--lang' || a.startsWith('--lang=') || (args[i - 1] === '--lang' && !a.startsWith('-'))));
 
-/** Uzel, který už na portu běží (třeba v aplikaci), odpoví na web3_clientVersion. */
+/** A node already running on the port (for example in the app) answers web3_clientVersion. */
 const runningNode = (port) => fetch(`http://127.0.0.1:${port}`, {
   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'web3_clientVersion', params: [] }), signal: AbortSignal.timeout(2000),
 }).then((r) => r.json()).then((b) => b.result ?? null).catch(() => null);
 
-/** Plný uzel běží v tomto procesu. V balíčku tak stačí jeden soubor na všechno. */
+/** The full node runs in this process. One file in the package is enough for everything. */
 async function runNode(all) {
   const args = withoutLang(all);
   const hasNetwork = args.some((a) => a === '--network' || a.startsWith('--network='));
   const network = optionOf(args, '--network') ?? DEFAULT_NETWORK;
-  // Druhý uzel na stejných portech by skončil chybou EADDRINUSE. Běžící uzel ostatním příkazům stačí.
+  // A second node on the same ports would fail with EADDRINUSE. The running node is enough for the other commands.
   if (!args.includes('--help') && !args.includes('-h') && NETWORKS[network]) {
     const port = optionOf(args, '--rpc-port') ?? NETWORKS[network].ports.rpc;
     const version = await runningNode(port);
@@ -238,7 +238,7 @@ ${second}`));
   await import('../../node/src/cli.js');
 }
 
-/** Hlášení parseArgs jsou anglicky a dlouhá. Uživatel potřebuje vědět, kterou volbu nástroj nezná. */
+/** parseArgs messages are in English and long. The user needs to know which option the tool does not recognise. */
 function parseError(e) {
   const option = /'([^']+)'/.exec(e.message)?.[1];
   if (e.code === 'ERR_PARSE_ARGS_UNKNOWN_OPTION' && option) return L(`Neznámá volba ${option}. Přehled zobrazí: quinvium --help`, `Unknown option ${option}. See: quinvium --help`);

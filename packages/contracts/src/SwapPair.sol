@@ -6,13 +6,13 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-/// @title Pool likvidity dvou tokenů
-/// @notice Směnný kurz určuje konstantní součin zásob. Žádný správce, žádné klíče: mince drží kontrakt a vybrat si je může
-/// jen poskytovatel likvidity podle svého podílu. Poplatek 0,3 % zůstává v poolu a zvyšuje hodnotu podílů.
+/// @title Liquidity pool of two tokens
+/// @notice The exchange rate is set by the constant product of reserves. No administrator, no keys: the contract holds the coins and they can be withdrawn by
+/// only the liquidity provider according to its share. The 0.3 % fee stays in the pool and raises the value of shares.
 contract SwapPair is ERC20, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    /// @notice Trvale uzamčená likvidita. Zabrání první vkladatelce zdražit podíl tak, že by menší vklady dostaly nulu.
+    /// @notice Permanently locked liquidity. Prevents the first depositor from inflating the share price so that smaller deposits would get zero.
     uint256 public constant MINIMUM_LIQUIDITY = 1000;
     uint256 private constant FEE_DENOMINATOR = 1000;
     uint256 private constant FEE_NUMERATOR = 3;
@@ -55,7 +55,7 @@ contract SwapPair is ERC20, ReentrancyGuard {
         emit Sync(balance0, balance1);
     }
 
-    /// @notice Vydá podíly za tokeny, které volající právě poslal do poolu.
+    /// @notice Issues shares for the tokens the caller has just sent to the pool.
     function mint(address to) external nonReentrant returns (uint256 liquidity) {
         (uint256 r0, uint256 r1) = getReserves();
         (uint256 balance0, uint256 balance1) = _balances();
@@ -76,7 +76,7 @@ contract SwapPair is ERC20, ReentrancyGuard {
         emit Mint(msg.sender, amount0, amount1);
     }
 
-    /// @notice Spálí podíly poslané do poolu a vyplatí odpovídající díl obou tokenů.
+    /// @notice Burns shares sent to the pool and pays out the corresponding part of both tokens.
     function burn(address to) external nonReentrant returns (uint256 amount0, uint256 amount1) {
         (uint256 balance0, uint256 balance1) = _balances();
         uint256 liquidity = balanceOf(address(this));
@@ -92,7 +92,7 @@ contract SwapPair is ERC20, ReentrancyGuard {
         emit Burn(msg.sender, amount0, amount1, to);
     }
 
-    /// @notice Vyplatí výstup. Vstup už musí být v poolu, jinak kontrola součinu transakci vrátí.
+    /// @notice Pays out the output. The input must already be in the pool, otherwise the product check reverts the transaction.
     function swap(uint256 amount0Out, uint256 amount1Out, address to) external nonReentrant {
         if (amount0Out == 0 && amount1Out == 0) revert InsufficientOutput();
         (uint256 r0, uint256 r1) = getReserves();
@@ -111,7 +111,7 @@ contract SwapPair is ERC20, ReentrancyGuard {
         emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
     }
 
-    /// @notice Srovná zásoby se skutečným zůstatkem, když někdo poslal tokeny přímo do poolu.
+    /// @notice Aligns reserves with the actual balance when someone sent tokens directly to the pool.
     function sync() external nonReentrant {
         (uint256 balance0, uint256 balance1) = _balances();
         _update(balance0, balance1);

@@ -1,5 +1,5 @@
-// Trvalé úložiště. SQLite je součástí Node, takže uzel nemá nativní závislosti
-// a běží stejně na Windows, macOS i Linuxu.
+// Persistent storage. SQLite is part of Node, so the node has no native dependencies
+// and runs the same on Windows, macOS and Linux.
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -81,10 +81,10 @@ CREATE TRIGGER IF NOT EXISTS txs_remove AFTER DELETE ON tx_index BEGIN
 END;
 `;
 
-// Součty těžařů a účtů drží spouštěče při každém zápisu. Bez nich by souhrn sítě při milionech účtů
-// při každém dotazu procházel celou tabulku. REPLACE spouští i mazací spouštěč díky recursive_triggers.
+// Triggers maintain miner and account totals on every write. Without them the network summary with millions of accounts
+// walked the whole table on every query. REPLACE also fires the delete trigger thanks to recursive_triggers.
 
-const MAX_COUNT = 100_000;     // počítání výsledků se zastaví, stránkování přesný součet nepotřebuje
+const MAX_COUNT = 100_000;     // counting results stops; pagination does not need an exact total
 const MAX_TOKENS = 200;
 
 const buf = (b) => (b instanceof Uint8Array && !Buffer.isBuffer(b) ? Buffer.from(b.buffer, b.byteOffset, b.length) : b);
@@ -144,8 +144,8 @@ export class Store {
   }
 
   /**
-   * Průběžné součty po starší verzi uzlu nebo po ruční změně rejstříku neodpovídají. Při startu se proto ověří
-   * a v takovém případě jednou spočítají celé znovu, dál je drží spouštěče.
+   * Running totals do not match after an older node version or a manual change of the index. On start they are therefore verified
+   * and in that case they are recomputed once in full; afterwards triggers maintain them.
    */
   _heal() {
     const one = (sql) => this.db.prepare(sql).get();
@@ -184,7 +184,7 @@ export class Store {
   }
 
   kvGet(k) { return u8(this.q.kvGet.get(k)?.v); }
-  /** @param {Map<string, Uint8Array>} entries klíče v hex */
+  /** @param {Map<string, Uint8Array>} entries keys in hex */
   kvPutMany(entries) {
     this.transaction(() => {
       for (const [k, v] of entries) this.q.kvPut.run(Buffer.from(k, 'hex'), buf(v));
@@ -220,7 +220,7 @@ export class Store {
   addressTxs(addr, limit, offset) { return this.q.addrList.all(buf(addr), limit, offset); }
   addressTxCount(addr) { return this.q.addrCount.get(buf(addr)).c; }
 
-  /** Filtr logů přes indexy, bez procházení bloomů celého řetězce. */
+  /** Log filter through indexes, without walking the blooms of the whole chain. */
   queryLogs({ fromBlock, toBlock, addresses, topics }, limit = 10000) {
     const where = ['number>=?', 'number<=?'];
     const args = [Number(fromBlock), Number(toBlock)];
@@ -247,11 +247,11 @@ export class Store {
   accountPut(addr, balance, isContract) {
     this.q.accountPut.run(buf(addr), balance.toString(16), Number(balance), isContract ? 1 : 0);
   }
-  /** Součet všech poplatků vyplacených těžařům do dané výšky. */
+  /** Sum of all fees paid to miners up to the given height. */
   feesAt(number) { return BigInt(this.q.feesGet.get(Number(number))?.total ?? 0); }
-  /** Spojení navázané námi: adresa je ověřená. */
+  /** A connection we established: the address is verified. */
   peerConnected(addr) { this.q.peerConnected.run(addr, Date.now()); }
-  /** Adresa od cizího uzlu: nic se o ní neví, nesmí změnit záznam ověřeného uzlu. */
+  /** An address from a foreign node: nothing is known about it; it must not change the record of a verified node. */
   peerLearned(addr) { this.q.peerLearned.run(addr, Date.now()); }
   peerFailed(addr) { this.q.peerFail.run(addr); this.q.peerPrune.run(); }
   peerCount() { return this.q.peerCount.get().c; }
@@ -262,7 +262,7 @@ export class Store {
   indexedTip() { return BigInt(this.q.blockIndexTip.get().n ?? 0); }
 
   /**
-   * Bloky podle filtru pro Explorer. Podmínky jsou jen z tohoto seznamu a hodnoty jdou přes parametry dotazu.
+   * Blocks by filter for the Explorer. Conditions come only from this list and values go through query parameters.
    * @returns {{total: number, numbers: number[]}}
    */
   findBlocks({ miner, minTxs, onlyEmpty, fromTime, toTime, fromBlock, toBlock, limit, offset, ascending }) {
@@ -283,7 +283,7 @@ export class Store {
   }
 
   /**
-   * Transakce podle filtru. Adresa používá index, ostatní podmínky se k ní přidávají.
+   * Transactions by filter. The address uses an index; other conditions are added to it.
    * @returns {{total: number, rows: {number: number, idx: number}[]}}
    */
   findTxs({ address, direction, kind, ok, fromTime, toTime, fromBlock, toBlock, minValue, limit, offset, ascending }) {
@@ -310,23 +310,23 @@ export class Store {
     return { total, capped: total >= MAX_COUNT, rows };
   }
 
-  /** Souhrn adresy. Součty jsou desetinná čísla, pro zobrazení to stačí a přes celou historii se nepočítá s velkými čísly. */
+  /** Address summary. Totals are floating-point numbers; that is enough for display and avoids big numbers over the whole history. */
   addressSummary(address) {
     const a = buf(address);
     const get = (sql, ...args) => this.db.prepare(sql).get(...args);
     const out = get('SELECT COUNT(*) AS n, COALESCE(SUM(value),0) AS value, COALESCE(SUM(fee),0) AS fee, COALESCE(SUM(ok=0),0) AS failed, MIN(number) AS first, MAX(number) AS last FROM tx_index WHERE sender=?', a);
     const received = get('SELECT COUNT(*) AS n, COALESCE(SUM(value),0) AS value, MIN(number) AS first, MAX(number) AS last FROM tx_index WHERE recipient=? AND ok=1', a);
     const mined = get('SELECT COUNT(*) AS n, COALESCE(SUM(income),0) AS income, MIN(number) AS first, MAX(number) AS last FROM block_index WHERE miner=?', a);
-    // První a poslední odeslaná transakce a odkud přišly první mince, jako „Funded by“ v Etherscanu.
+    // First and last sent transaction and where the first coins came from, like "Funded by" on Etherscan.
     const firstSent = get('SELECT number, idx FROM tx_index WHERE sender=? ORDER BY number ASC, idx ASC LIMIT 1', a) ?? null;
     const lastSent = get('SELECT number, idx FROM tx_index WHERE sender=? ORDER BY number DESC, idx DESC LIMIT 1', a) ?? null;
     const funding = get('SELECT number, idx FROM tx_index WHERE recipient=? AND ok=1 AND value>0 ORDER BY number ASC, idx ASC LIMIT 1', a) ?? null;
-    // Převod sám sobě je odchozí i příchozí. V počtu transakcí adresy má být jednou.
+    // A transfer to oneself is both outgoing and incoming. It should count once in the address's transaction count.
     const self = get('SELECT COUNT(*) AS n FROM tx_index WHERE sender=? AND recipient=? AND ok=1', a, a).n;
     return { out, received, mined, firstSent, lastSent, funding, self };
   }
 
-  /** Kontrakty tokenů, které adrese někdy poslaly nebo vzaly převod (událost Transfer). */
+  /** Token contracts that ever sent the address a transfer or took one from it (Transfer event). */
   tokensOf(address, transferTopic) {
     const pad = Buffer.alloc(32);
     pad.set(buf(address), 12);
@@ -335,8 +335,8 @@ export class Store {
       .all(pad, topic, pad, topic).map((r) => u8(r.address));
   }
 
-  /** Logy s adresou v prvním indexovaném parametru, od nejnovějšího. */
-  /** Události jednoho druhu z kontraktu tokenu, nejnovější první. */
+  /** Logs with the address in the first indexed parameter, newest first. */
+  /** Events of one kind from a token contract, newest first. */
   tokenEvents(token, topic, limit, offset) {
     const where = 'WHERE address=? AND t0=?';
     const [a, t0] = [buf(token), buf(topic)];
@@ -345,20 +345,20 @@ export class Store {
     return { total, capped: total >= MAX_COUNT, rows: rows.map((r) => ({ ...r, t1: u8(r.t1), t2: u8(r.t2) })) };
   }
 
-  /** Kolik bloků a práce má za období každý těžař nebo pool. Pool je adresa příjemce odměny v bloku. */
+  /** How many blocks and how much work each miner or pool has over the period. A pool is the reward recipient address in the block. */
   minerShares(from, to, limit) {
     const rows = this.db.prepare('SELECT miner, COUNT(*) AS blocks, SUM(difficulty) AS work, MAX(number) AS last FROM block_index WHERE number>0 AND time BETWEEN ? AND ? GROUP BY miner ORDER BY work DESC LIMIT ?').all(from, to, limit);
     return rows.map((r) => ({ ...r, miner: u8(r.miner) }));
   }
 
-  /** Totéž za celou historii z průběžných součtů, bez procházení všech bloků. */
+  /** The same over the whole history from running totals, without walking all blocks. */
   minerTotals(limit) {
     return this.db.prepare('SELECT miner, blocks, work, last FROM miner_index ORDER BY work DESC LIMIT ?').all(limit).map((r) => ({ ...r, miner: u8(r.miner) }));
   }
 
   /**
-   * Žebříček všech těžařů po stránkách. Počet těžařů roste s historií, proto se řadí podle indexu
-   * a nikdy se nenačítají všichni najednou.
+   * Ranking of all miners by page. The number of miners grows with history, so sorting goes by an index
+   * and they are never all loaded at once.
    */
   minerList({ order, limit, offset }) {
     const sort = order === 'last' ? 'last DESC' : 'blocks DESC, last DESC';
@@ -367,7 +367,7 @@ export class Store {
     return { total, rows: rows.map((r) => ({ ...r, miner: u8(r.miner) })) };
   }
 
-  /** Jeden těžař a jeho pořadí podle počtu bloků. */
+  /** One miner and its rank by number of blocks. */
   minerRank(miner) {
     const r = this.db.prepare('SELECT miner, blocks, work, income, first, last FROM miner_index WHERE miner=?').get(buf(miner));
     if (!r) return null;
@@ -376,22 +376,22 @@ export class Store {
   }
 
   /**
-   * Kolik různých těžařů našlo blok od daného času. Index podle času je nutný: bez něj SQLite pro DISTINCT
-   * zvolí index těžařů a projde celou historii (milion bloků = 6 s místo milisekund).
+   * How many different miners found a block since the given time. An index by time is required: without it SQLite would for DISTINCT
+   * chooses the miner index and walks the whole history (a million blocks = 6 s instead of milliseconds).
    */
   activeMiners(fromTime) {
     return this.db.prepare('SELECT COUNT(DISTINCT miner) AS c FROM block_index INDEXED BY block_index_time WHERE time>=? AND number>0').get(fromTime).c;
   }
 
-  /** Adresy, které token někdy dostaly. Aktuální zůstatek zná jen kontrakt. */
+  /** Addresses that have ever received the token. Only the contract knows the current balance. */
   tokenRecipients(token, topic, cap) {
     const rows = this.db.prepare('SELECT DISTINCT t2 FROM logs WHERE address=? AND t0=? AND t2 IS NOT NULL LIMIT ?').all(buf(token), buf(topic), cap);
     return rows.map((r) => u8(r.t2));
   }
 
   /**
-   * Převody tokenů, ve kterých adresa posílala nebo dostávala, od nejnovějšího. Převod sám sobě je jednou.
-   * Obě poloviny jdou po indexu seřazené podle bloku, SQLite je slévá a nečte víc, než stránka potřebuje.
+   * Token transfers in which the address sent or received, newest first. A transfer to oneself counts once.
+   * Both halves go through an index sorted by block; SQLite merges them and reads no more than the page needs.
    */
   holderTransfers(holder, topic, limit, offset) {
     const pad = Buffer.alloc(32);
@@ -404,8 +404,8 @@ export class Store {
   }
 
   /**
-   * Kdo v událostech jednoho kontraktu od daného bloku vystupuje v prvním indexovaném poli, kolikrát a naposledy kdy.
-   * Pro těžaře poolu: čte se jen okno poolu po indexu adresy a bloku, ne celá historie.
+   * Who appears in the first indexed field in events of one contract since the given block, how often and when last.
+   * For pool miners: only the pool window is read through the address and block index, not the whole history.
    */
   topicSummary(address, topic, fromNumber, limit) {
     return this.db.prepare('SELECT t1, COUNT(*) AS c, MAX(number) AS last FROM logs WHERE address=? AND number>=? AND t0=? GROUP BY t1 ORDER BY c DESC, last DESC LIMIT ?')
@@ -413,8 +413,8 @@ export class Store {
   }
 
   /**
-   * Těžaři jednoho poolu od daného bloku po stránkách: kolik podílů poslali a kdy naposledy. U poolu
-   * s tisíci těžaři se nikdy nenačítají všichni, celkový počet se spočítá zvlášť.
+   * Miners of one pool since the given block by page: how many shares they submitted and when last. For a pool
+   * with thousands of miners they are never all loaded; the total count is computed separately.
    */
   poolMiners(address, topic, fromNumber, limit, offset) {
     const where = 'WHERE address=? AND number>=? AND t0=?';
@@ -424,7 +424,7 @@ export class Store {
     return { total, rows: rows.map((r) => ({ who: u8(r.t1), count: r.c, last: r.last })) };
   }
 
-  /** Jeden těžař poolu i s pořadím, aby šel najít i mezi tisíci ostatních. */
+  /** One pool miner including its rank, so it can be found among thousands of others. */
   poolMinerRank(address, topic, fromNumber, who) {
     const pad = Buffer.alloc(32);
     pad.set(buf(who), 12);
@@ -435,17 +435,17 @@ export class Store {
     return { who: u8(pad), count: me.c, last: me.last, rank: ahead + 1 };
   }
 
-  /** Bloky jednoho těžaře od daného času, nejnovější první. Peněženka z nich skládá odměny po dnech. */
+  /** Blocks of one miner since the given time, newest first. The wallet builds daily rewards from them. */
   minedSince(miner, fromTime, limit) {
     return this.db.prepare('SELECT number, time FROM block_index WHERE miner=? AND time>=? ORDER BY number DESC LIMIT ?').all(buf(miner), fromTime, limit);
   }
 
-  /** Kolik různých těžařů poslalo poolu podíl od daného bloku. */
+  /** How many different miners submitted a share to the pool since the given block. */
   poolMinerCount(address, topic, fromNumber) {
     return this.db.prepare('SELECT COUNT(DISTINCT t1) AS n FROM logs WHERE address=? AND number>=? AND t0=?').get(buf(address), fromNumber, buf(topic)).n;
   }
 
-  /** Události jednoho kontraktu s danou adresou ve druhém indexovaném poli, nejnovější první. Třeba pooly jednoho provozovatele. */
+  /** Events of one contract with the given address in the second indexed field, newest first. For example the pools of one operator. */
   eventsBySecond(address, topic, second, limit) {
     const pad = Buffer.alloc(32);
     pad.set(buf(second), 12);
@@ -463,12 +463,12 @@ export class Store {
     return { total, rows: rows.map((r) => ({ ...r, address: u8(r.address) })) };
   }
 
-  /** Všechny transakce v řetězci, z průběžného součtu. */
+  /** All transactions in the chain, from the running total. */
   txCount() { return this.q.counterGet.get('txs')?.v ?? 0; }
 
   /**
-   * Souhrn provozu od daného času: transakce, poplatky, aktivní adresy, bloky, vytížení a bloky poolů.
-   * Pool je kontrakt, který dostává odměnu za blok. Všechno jde po indexu času, ne přes celou historii.
+   * Traffic summary since the given time: transactions, fees, active addresses, blocks, utilisation and pool blocks.
+   * A pool is a contract that receives the block reward. Everything goes through the time index, not the whole history.
    */
   activity(fromTime) {
     const tx = this.db.prepare('SELECT COUNT(*) AS txs, COALESCE(SUM(fee),0) AS fees, COUNT(DISTINCT sender) AS senders, COALESCE(SUM(ok=0),0) AS failed FROM tx_index INDEXED BY tx_index_time WHERE time>=?').get(fromTime);
@@ -477,7 +477,7 @@ export class Store {
     return { ...tx, ...blocks, poolBlocks: pools };
   }
 
-  /** Doplňkové řady pro grafy po stejných úsecích jako chartSeries: aktivní adresy, poplatky, nové kontrakty, převody tokenů. */
+  /** Additional chart series over the same intervals as chartSeries: active addresses, fees, new contracts, token transfers. */
   chartExtra(from, to, bucket, transferTopic) {
     const tx = this.db.prepare(`SELECT CAST((time - ?) / ? AS INTEGER) AS b, COUNT(DISTINCT sender) AS senders, COALESCE(SUM(fee),0) AS fees, COALESCE(SUM(kind=2),0) AS created, COALESCE(SUM(ok=0),0) AS failed
       FROM tx_index INDEXED BY tx_index_time WHERE time BETWEEN ? AND ? GROUP BY b`).all(from, bucket, from, to);
@@ -486,18 +486,18 @@ export class Store {
     return { tx, transfers };
   }
 
-  /** Historie sítě po stejně dlouhých úsecích. Počet bodů neroste s délkou řetězce. První blok se do časů nepočítá: genesis má pevný čas. */
+  /** Network history over equally long intervals. The number of points does not grow with the chain length. The first block is not counted in times: genesis has a fixed time. */
   chartSeries(from, to, bucket) {
     return this.db.prepare(`SELECT CAST((time - ?) / ? AS INTEGER) AS b, MIN(time) AS time, MIN(number) AS first, MAX(number) AS last, COUNT(*) AS blocks,
       AVG(CASE WHEN number>1 THEN solve END) AS solve, MAX(CASE WHEN number>1 THEN solve END) AS slowest, AVG(difficulty) AS difficulty, SUM(difficulty) AS work, SUM(txs) AS txs, SUM(gas) AS gas
       FROM block_index WHERE time BETWEEN ? AND ? GROUP BY b ORDER BY b`).all(from, bucket, from, to);
   }
 
-  /** Nejstarší a nejnovější čas v rejstříku. */
+  /** Oldest and newest time in the index. */
   indexRange() { return this.db.prepare('SELECT MIN(time) AS first, MAX(time) AS last FROM block_index WHERE number>0').get(); }
 }
 
-/** Jen čtení stavu z jiného vlákna. WAL dovoluje číst souběžně se zápisem uzlu. */
+/** Read-only state access from another thread. WAL allows reading concurrently with the node writing. */
 export class StateReader {
   constructor(path) {
     this.db = new DatabaseSync(path, { readOnly: true });
@@ -509,7 +509,7 @@ export class StateReader {
   close() { this.db.close(); }
 }
 
-// Dotazy Exploreru běží ve vláknech, aby náročný filtr nezdržel bloky ani síť.
+// Explorer queries run in threads so a heavy filter does not delay blocks or the network.
 export const INDEX_QUERIES = ['findBlocks', 'findTxs', 'addressSummary', 'tokensOf', 'tokenEvents', 'tokenRecipients', 'minerShares', 'minerTotals', 'minerList', 'minerRank', 'activeMiners', 'logsForAddress', 'holderTransfers', 'topicSummary', 'poolMiners', 'poolMinerRank', 'poolMinerCount', 'minedSince', 'eventsBySecond', 'activity', 'chartExtra', 'chartSeries', 'indexRange'];
 for (const name of INDEX_QUERIES) StateReader.prototype[name] = Store.prototype[name];
 

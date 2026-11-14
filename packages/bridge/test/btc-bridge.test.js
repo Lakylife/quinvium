@@ -1,5 +1,5 @@
-// Most k Bitcoinu od vkladu po výběr: tři validátoři, skutečný uzel Quinvium a simulovaný uzel Bitcoinu, který přijme
-// jen transakce s platnými podpisy podle nezávislého kódu. Hlavní otázka: může někdo odnést mince z úschovy?
+// The bridge to Bitcoin from deposit to withdrawal: three validators, a real Quinvium node and a simulated Bitcoin node that accepts
+// only transactions with valid signatures according to independent code. The main question: can anyone take coins out of custody?
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -72,14 +72,14 @@ test.before(async () => {
 
 test.after(async () => { await A.stop(); });
 
-test('všichni validátoři spočítají stejnou vkladovou adresu', () => {
+test('all validators compute the same deposit address', () => {
   const addresses = team.map((m) => m.bridge.depositAddress(alice.address));
   assert.equal(new Set(addresses).size, 1);
   assert.match(addresses[0], /^bcrt1q/);
   assert.notEqual(addresses[0], team[0].bridge.depositAddress(mallory.address));
 });
 
-test('vklad se připíše až po potvrzení a jen jednou', async () => {
+test('a deposit is credited only after confirmation and only once', async () => {
   await A.ok(gate.requestBitcoinDeposit(alice.address));
   await run(team, 2);
   btc.pay(team[0].bridge.depositAddress(alice.address), 50_000_000n);
@@ -94,7 +94,7 @@ test('vklad se připíše až po potvrzení a jen jednou', async () => {
   assert.equal(custodyTotal(), 50_000_000n);
 });
 
-test('platba odeslaná před registrací se najde', async () => {
+test('a payment sent before registration is found', async () => {
   const before = await aBtc.balanceOf(mallory.address);
   btc.pay(team[0].bridge.depositAddress(mallory.address), 2_000_000n);
   btc.mine(CONFIRMATIONS + 2);
@@ -104,7 +104,7 @@ test('platba odeslaná před registrací se najde', async () => {
   assert.equal(await aBtc.balanceOf(mallory.address), before + 2_000_000n);
 });
 
-test('záplava registrací nespustí prohledávání pro každou zvlášť', async () => {
+test('a flood of registrations does not start a scan for each one', async () => {
   const before = btc.scans ?? 0;
   const sender = gate.connect(A.connect(mallory));
   for (let i = 0; i < 40; i++) await sender.requestBitcoinDeposit(ethers.Wallet.createRandom().address);
@@ -115,7 +115,7 @@ test('záplava registrací nespustí prohledávání pro každou zvlášť', asy
   assert.equal(team[0].bridge.state.data.unscanned.length, 0);
 });
 
-test('vklad zmizelý při přeskupení řetězce se nepřipíše', async () => {
+test('a deposit that disappeared in a chain reorganisation is not credited', async () => {
   const before = await aBtc.totalSupply();
   btc.pay(team[0].bridge.depositAddress(alice.address), 7_000_000n);
   btc.mine(CONFIRMATIONS - 1);
@@ -126,7 +126,7 @@ test('vklad zmizelý při přeskupení řetězce se nepřipíše', async () => {
   assert.equal(await aBtc.totalSupply(), before);
 });
 
-test('vklad pod minimem se nepřipíše, ale mince zůstanou v úschově', async () => {
+test('a deposit below the minimum is not credited, but the coins stay in custody', async () => {
   const before = await aBtc.totalSupply();
   btc.pay(team[0].bridge.depositAddress(alice.address), 5_000n);
   btc.mine(CONFIRMATIONS);
@@ -135,7 +135,7 @@ test('vklad pod minimem se nepřipíše, ale mince zůstanou v úschově', async
   assert.ok(Object.values(custody()).some((u) => u.value === 5_000n));
 });
 
-test('výběr: úschova přijde přesně o spálenou částku', async () => {
+test('withdrawal: the custody loses exactly the burned amount', async () => {
   const address = payee();
   const before = custodyTotal();
   const supply = await aBtc.totalSupply();
@@ -151,7 +151,7 @@ test('výběr: úschova přijde přesně o spálenou částku', async () => {
   for (const m of team) assert.ok(Object.values(m.bridge.state.data.withdrawals).every((w) => w.status === 'paid'));
 });
 
-test('výpadek jednoho validátora nezastaví výběr ani s rolí navrhovatele', async () => {
+test("one validator's outage does not stop a withdrawal, even with the proposer role", async () => {
   const address = payee();
   const r = await withdraw(1_000_000n, address);
   const id = openId(r);
@@ -168,23 +168,23 @@ test('výpadek jednoho validátora nezastaví výběr ani s rolí navrhovatele',
   await run(team, 2);
 });
 
-test('nepoctivý navrhovatel neodnese nic', async () => {
+test('a dishonest proposer takes nothing', async () => {
   const address = payee();
   const thief = payee();
   const r = await withdraw(1_000_000n, address);
   const id = openId(r);
-  await run(team.map((m) => ({ ...m, bridge: { tick: () => m.bridge.syncAether() } })), 2);   // validátoři výběr vidí, ale ještě nejednají
+  await run(team.map((m) => ({ ...m, bridge: { tick: () => m.bridge.syncAether() } })), 2);   // validators see the withdrawal but do not act yet
   const [key, utxo] = Object.entries(custody()).find(([, u]) => u.value > 1_000_000n);
   const [txid, vout] = key.split(':');
   const evil = (outputs) => serializeTx({ version: 2, locktime: 0, inputs: [{ txid, vout: Number(vout) }], outputs }).toString('hex');
   const note = { value: 0n, script: dataOutput(Buffer.from(id.slice(2), 'hex')) };
   const compromised = gate.connect(A.connect(validators[0].wallet));
   const attempts = [
-    evil([{ value: 990_000n, script: addressScript(thief, 'regtest') }, note, { value: utxo.value - 1_000_000n, script: Buffer.from(team[0].bridge.mainOutput, 'hex') }]),   // peníze zloději
-    evil([{ value: 990_000n, script: addressScript(address, 'regtest') }, note, { value: utxo.value - 2_000_000n, script: Buffer.from(team[0].bridge.mainOutput, 'hex') }]),   // úschova přijde o víc
-    evil([{ value: 990_000n, script: addressScript(address, 'regtest') }, note, { value: utxo.value - 1_000_000n, script: addressScript(thief, 'regtest') }]),                 // zbytek zloději
-    evil([{ value: 10_000n, script: addressScript(address, 'regtest') }, note, { value: utxo.value - 1_000_000n, script: Buffer.from(team[0].bridge.mainOutput, 'hex') }]),    // poplatek místo platby
-    evil([{ value: 990_000n, script: addressScript(address, 'regtest') }, { value: 0n, script: dataOutput(Buffer.alloc(32)) }, { value: utxo.value - 1_000_000n, script: Buffer.from(team[0].bridge.mainOutput, 'hex') }]),   // jiná značka
+    evil([{ value: 990_000n, script: addressScript(thief, 'regtest') }, note, { value: utxo.value - 1_000_000n, script: Buffer.from(team[0].bridge.mainOutput, 'hex') }]),   // money to the thief
+    evil([{ value: 990_000n, script: addressScript(address, 'regtest') }, note, { value: utxo.value - 2_000_000n, script: Buffer.from(team[0].bridge.mainOutput, 'hex') }]),   // the custody loses more
+    evil([{ value: 990_000n, script: addressScript(address, 'regtest') }, note, { value: utxo.value - 1_000_000n, script: addressScript(thief, 'regtest') }]),                 // the rest to the thief
+    evil([{ value: 10_000n, script: addressScript(address, 'regtest') }, note, { value: utxo.value - 1_000_000n, script: Buffer.from(team[0].bridge.mainOutput, 'hex') }]),    // fee instead of payment
+    evil([{ value: 990_000n, script: addressScript(address, 'regtest') }, { value: 0n, script: dataOutput(Buffer.alloc(32)) }, { value: utxo.value - 1_000_000n, script: Buffer.from(team[0].bridge.mainOutput, 'hex') }]),   // another tag
   ];
   for (const tx of attempts) await A.ok(compromised.post(id, ethers.toUtf8Bytes(JSON.stringify({ tx }))));
   await run(team.slice(1), 1);
@@ -198,7 +198,7 @@ test('nepoctivý navrhovatel neodnese nic', async () => {
   assert.ok(received(address) > 900_000n, 'uživatel dostal své');
 });
 
-test('podvržený podpis platbu nezablokuje', async () => {
+test('a forged signature does not block the payment', async () => {
   const address = payee();
   const r = await withdraw(1_000_000n, address);
   const id = openId(r);
@@ -210,7 +210,7 @@ test('podvržený podpis platbu nezablokuje', async () => {
   assert.ok(received(address) > 0n);
 });
 
-test('cizí transakce se značkou výběru ho neoznačí za vyplacený', async () => {
+test('a foreign transaction with the withdrawal marker does not mark it as paid', async () => {
   const address = payee();
   const id = openId(await withdraw(1_000_000n, address));
   btc.fakeMarker(dataOutput(Buffer.from(id.slice(2), 'hex')).toString('hex'));
@@ -221,7 +221,7 @@ test('cizí transakce se značkou výběru ho neoznačí za vyplacený', async (
   assert.ok(received(address) > 0n);
 });
 
-test('neplatná adresa: uživatel dostane token zpět', async () => {
+test('invalid address: the user gets the token back', async () => {
   const before = await aBtc.balanceOf(alice.address);
   await withdraw(1_000_000n, 'tohle-neni-adresa');
   assert.equal(await aBtc.balanceOf(alice.address), before - 1_000_000n);
@@ -229,14 +229,14 @@ test('neplatná adresa: uživatel dostane token zpět', async () => {
   assert.equal(await aBtc.balanceOf(alice.address), before);
 });
 
-test('adresa z jiné sítě Bitcoinu se taky vrátí', async () => {
+test('an address from another Bitcoin network is also returned', async () => {
   const before = await aBtc.balanceOf(alice.address);
   await withdraw(1_000_000n, bitcoinjs.address.toBech32(crypto.randomBytes(20), 0, 'bc'));
   await run();
   assert.equal(await aBtc.balanceOf(alice.address), before);
 });
 
-test('dva výběry naráz nesáhnou na stejnou minci', async () => {
+test('two simultaneous withdrawals do not touch the same coin', async () => {
   await A.ok(gate.requestBitcoinDeposit(alice.address));
   btc.pay(team[0].bridge.depositAddress(alice.address), 3_000_000n);
   btc.pay(team[0].bridge.depositAddress(alice.address), 3_000_000n);
@@ -254,7 +254,7 @@ test('dva výběry naráz nesáhnou na stejnou minci', async () => {
   assert.ok(custodyTotal() >= await aBtc.totalSupply());
 });
 
-test('denní limit validátor nepřekročí', async () => {
+test('the validator does not exceed the daily limit', async () => {
   const strict = team.map((m, i) => member(validators[i], { dailyLimit: 1n }));
   for (const [i, m] of strict.entries()) m.bridge.state.data = team[i].bridge.state.data;
   const address = payee();
@@ -269,7 +269,7 @@ test('denní limit validátor nepřekročí', async () => {
   assert.ok(received(address) > 0n, 'po uvolnění limitu výběr doběhne');
 });
 
-test('přemrštěný poplatek validátor nepodepíše', async () => {
+test('the validator does not sign an exorbitant fee', async () => {
   const stingy = team.map((m, i) => member(validators[i], { maxFeeRate: 1 }));
   for (const [i, m] of stingy.entries()) m.bridge.state.data = team[i].bridge.state.data;
   btc.feerate = 0.001;     // 100 sat/vB
@@ -291,7 +291,7 @@ test('přemrštěný poplatek validátor nepodepíše', async () => {
   assert.ok(received(address) > 0n, 'validátoři s běžným limitem platbu dokončí');
 });
 
-test('po restartu validátor nepodepíše jinou transakci pro stejný výběr', async () => {
+test('after a restart the validator does not sign another transaction for the same withdrawal', async () => {
   const statePath = join(folder, 'bitcoin.json');
   const first = member(validators[1], { statePath });
   first.bridge.state.data = { ...team[1].bridge.state.data };
@@ -305,7 +305,7 @@ test('po restartu validátor nepodepíše jinou transakci pro stejný výběr', 
   assert.deepEqual(Object.keys(again.bridge.state.data.utxos).sort(), Object.keys(team[1].bridge.state.data.utxos).sort());
 });
 
-test('nakonec: úschova kryje všechny vydané tokeny', async () => {
+test('finally: the custody backs all issued tokens', async () => {
   await run(team, 3);
   assert.ok(custodyTotal() >= await aBtc.totalSupply());
   for (const m of team) assert.equal(Object.values(m.bridge.state.data.withdrawals).filter((w) => w.status === 'open').length, 0);

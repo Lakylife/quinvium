@@ -1,4 +1,4 @@
-// Datové struktury bloku. Formát na drátě i v databázi je RLP.
+// Block data structures. The wire and database format is RLP.
 import { RLP } from '@ethereumjs/rlp';
 import { createTxFromRLP } from '@ethereumjs/tx';
 import { keccak, toHex, quantity, intToBytes, bytesToInt, fixed } from '../util/bytes.js';
@@ -37,7 +37,7 @@ export class Header {
   fields() { return [...this.sealFields(), this.mixHash, this.nonce]; }
   encode() { return RLP.encode(this.fields()); }
 
-  /** Hash hlavičky bez mixHash a nonce: tohle dostává miner jako práci. */
+  /** Header hash without mixHash and nonce: this is what the miner gets as work. */
   sealHash() { return (this._sealHash ??= keccak(RLP.encode(this.sealFields()))); }
   hash() { return (this._hash ??= keccak(this.encode())); }
 
@@ -78,7 +78,7 @@ export class Block {
   encodeBody() { return RLP.encode(this.bodyFields()); }
   encode() { return RLP.encode([this.header.fields(), this.bodyFields()]); }
 
-  /** @param {object|((number: bigint) => object)} common konfigurace, nebo funkce vracející ji podle výšky */
+  /** @param {object|((number: bigint) => object)} common configuration, or a function returning it by height */
   static fromParts(header, rawTxs, common) {
     if (!Array.isArray(rawTxs)) throw new Error('tělo bloku není seznam');
     const c = typeof common === 'function' ? common(header.number) : common;

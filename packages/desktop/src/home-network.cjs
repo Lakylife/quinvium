@@ -1,14 +1,14 @@
-// Adresa počítače v domácí síti se může změnit, třeba při přechodu z kabelu na Wi-Fi. Spojení mezi uzly to přežije,
-// protože se najdou samy, ale uložená adresa poolu nebo aktualizací by dál mířila do prázdna a těžba by tiše stála.
+// A computer's address on the home network can change, for example when switching from cable to Wi-Fi. Connections between nodes survive it,
+// because they find each other, but a stored pool or update address would keep pointing into the void and mining would silently stop.
 const PRIVATE = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/;
 
 /**
- * Když služba na uložené adrese neodpovídá, zkusí stejný port u spojených uzlů v soukromé síti.
- * Cizí stroj tím nic nezíská: aktualizace musí mít podpis a podíly do poolu ověřuje kontrakt.
- * @param {string} url uložená adresa
- * @param {{ address: string }[]} peers spojené uzly
- * @param {(url: string) => Promise<boolean>} alive běží tam ta služba?
- * @returns {Promise<string>} funkční adresa, nebo původní, když žádná neodpověděla
+ * If the service at the stored address does not answer, it tries the same port on connected nodes in the private network.
+ * A foreign machine gains nothing from it: updates must be signed and the contract verifies shares submitted to the pool.
+ * @param {string} url stored address
+ * @param {{ address: string }[]} peers connected nodes
+ * @param {(url: string) => Promise<boolean>} alive is the service running there?
+ * @returns {Promise<string>} a working address, or the original one when none answered
  */
 async function followHost(url, peers, alive) {
   const original = new URL(url);

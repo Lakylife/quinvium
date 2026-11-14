@@ -1,6 +1,6 @@
-// Stratum server pro běžné Windows minery (lolMiner, T-Rex, TeamRedMiner a další).
-// Podporuje režim ETHPROXY i EthereumStratum/1.0.0. Přihlašovací jméno je adresa výplaty,
-// volitelně s názvem zařízení: 0xADRESA.rig1. Účet ani registrace nejsou potřeba.
+// Stratum server for common Windows miners (lolMiner, T-Rex, TeamRedMiner and others).
+// Supports ETHPROXY and EthereumStratum/1.0.0 modes. The login name is the payout address,
+// optionally with a device name: 0xADDRESS.rig1. No account or registration is needed.
 import { isLocalCaller } from '../p2p/upnp.js';
 import net from 'node:net';
 import { randomBytes } from 'node:crypto';
@@ -9,7 +9,7 @@ import { WorkError } from './work.js';
 
 const MAX_LINE = 4096;
 const STALE_JOBS = 8;
-const MAX_SUBMITS_PER_SECOND = 8;      // výsledky přicházejí jen v obtížnosti sítě, poctivě jsou vzácné
+const MAX_SUBMITS_PER_SECOND = 8;      // results come only at network difficulty; honestly they are rare
 const MAX_SESSIONS = 1024;
 const MAX_SESSIONS_PER_IP = 128;
 const unprefixed = (h) => h.replace(/^0x/, '');
@@ -59,7 +59,7 @@ class Session {
     return true;
   }
 
-  /** Ověření výsledku stojí procesor, proto má každé spojení limit odeslání. */
+  /** Verifying a result costs CPU, so each connection has a submission limit. */
   _allowSubmit() {
     const now = Date.now();
     if (now - this.rate.start >= 1000) this.rate = { start: now, n: 0 };
@@ -117,7 +117,7 @@ class Session {
     else this.server.stats.rejected += 1;
   }
 
-  /** V poolu dostane každé zařízení vlastní hlavičku a výsledky se počítají jako podíly. */
+  /** In a pool each device gets its own header and results count as shares. */
   _submit(nonce, sealHash, mixDigest) {
     const { pool, work } = this.server;
     return pool ? pool.submit(nonce, sealHash, mixDigest) : work.submit(nonce, sealHash, mixDigest);
@@ -148,7 +148,7 @@ class Session {
     if (this.mode === 'nicehash') {
       if (this.lastTarget !== w.target) {
         this.lastTarget = w.target;
-        // Jednotka mining.set_difficulty je 2^32 hashů.
+        // The unit of mining.set_difficulty is 2^32 hashes.
         this.send({ id: null, method: 'mining.set_difficulty', params: [Number(w.difficulty) / 4294967296] });
       }
       const jobId = randomBytes(4).toString('hex');
@@ -173,8 +173,8 @@ class Session {
 
 export class StratumServer {
   /**
-   * @param {number} [o.maxSessions] kolik zařízení obslouží uzel, velký pool si limit zvýší
-   * @param {number} [o.maxSessionsPerIp] farma za jednou veřejnou adresou potřebuje víc než domácí těžař
+   * @param {number} [o.maxSessions] how many devices the node serves; a large pool raises the limit
+   * @param {number} [o.maxSessionsPerIp] a farm behind one public address needs more than a home miner
    */
   constructor({ chain, work, host = '127.0.0.1', port = 3333, maxSessions = MAX_SESSIONS, maxSessionsPerIp = MAX_SESSIONS_PER_IP, localOnlyWithoutPool = false, log = () => {} }) {
     Object.assign(this, { chain, work, host, port, maxSessions, maxSessionsPerIp, localOnlyWithoutPool, log });
@@ -187,7 +187,7 @@ export class StratumServer {
   async start() {
     this.server = net.createServer((socket) => {
       const ip = socket.remoteAddress;
-      // Uzel otevřený do internetu bez poolu slouží jen těžařům z místní sítě. Cizí těžaře obsluhuje až pool.
+      // A node open to the internet without a pool serves only miners from the local network. Foreign miners are served only by a pool.
       if (this.localOnlyWithoutPool && !this.pool && !isLocalCaller(ip)) { socket.destroy(); return; }
       const fromIp = this.perIp.get(ip) ?? 0;
       if (this.sessions.size >= this.maxSessions || fromIp >= this.maxSessionsPerIp) {

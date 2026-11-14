@@ -8,15 +8,15 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {WrappedAsset} from "./WrappedAsset.sol";
 
-/// @title Brána mezi řetězci
-/// @notice Stejný kontrakt běží na Aetheru i na druhém řetězci. Odeslání na jedné straně zamkne originál nebo spálí
-/// přemostěný token, doručení na druhé uvolní originál nebo vyrazí přemostěný token. Doručení potvrzuje `threshold`
-/// z validátorů. Most je tak bezpečný přesně tak, jak nezávislí jsou validátoři: nad jejich shodou stojí jen limity,
-/// zpoždění velkých převodů a nouzové zastavení, které omezí škodu, ale nezabrání jí úplně.
+/// @title Gateway between chains
+/// @notice The same contract runs on Quinvium and on the other chain. A send on one side locks the original or burns
+/// bridged token; delivery on the other side releases the original or mints the bridged token. Delivery is confirmed by `threshold`
+/// of the validators. The bridge is thus exactly as secure as the validators are independent: above their agreement there are only limits,
+/// delays for large transfers and an emergency stop, which limit the damage but do not prevent it entirely.
 contract BridgeGateway is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    /// @notice Přenos mezi řetězci. U Bitcoinu je `srcChain` nebo `dstChain` rovno BITCOIN.
+    /// @notice Transfer between chains. For Bitcoin `srcChain` or `dstChain` equals BITCOIN.
     struct Message {
         uint64 srcChain;
         uint64 dstChain;
@@ -26,18 +26,18 @@ contract BridgeGateway is ReentrancyGuard {
         uint256 amount;
     }
 
-    /// @notice Kam přijatý převod patří a kolik smí projít bez zpoždění.
+    /// @notice Where an accepted transfer belongs and how much may pass without delay.
     struct Route {
-        address local;          // místní token, nula znamená hlavní minci sítě
-        bool wrapped;           // vyrazit přemostěný token místo uvolnění originálu
+        address local;          // local token, zero means the network's main coin
+        bool wrapped;           // mint a bridged token instead of releasing the original
         bool enabled;
-        uint256 dailyLimit;     // nad limit jde převod do fronty se zpožděním
-        uint256 largeAmount;    // jednotlivý převod nad touto částkou jde do fronty vždy
+        uint256 dailyLimit;     // above the limit the transfer goes to the queue with a delay
+        uint256 largeAmount;    // a single transfer above this amount always goes to the queue
         uint256 usedToday;
         uint64 day;
     }
 
-    /// @notice Co smí odejít kam.
+    /// @notice What may leave and where to.
     struct Outbound {
         bool enabled;
         bool burn;
@@ -59,8 +59,8 @@ contract BridgeGateway is ReentrancyGuard {
     address public guardian;
     bool public paused;
     uint256 public threshold;
-    /// @notice Číslo příštího odeslání. Horní polovina je odvozená z adresy brány, dolní počítá od jedné. Nová brána na
-    /// stejném řetězci tak nikdy nevydá číslo, které už vydala stará, a jejich zprávy se v cílové bráně nesrazí.
+    /// @notice Number of the next send. The upper half is derived from the gateway address, the lower half counts from one. A new gateway on
+    /// the same chain thus never issues a number the old one already issued, and their messages do not collide in the target gateway.
     uint64 public nextNonce;
     address[] private validatorList;
     mapping(address validator => bool) public isValidator;
@@ -68,7 +68,7 @@ contract BridgeGateway is ReentrancyGuard {
     mapping(address token => mapping(uint64 chain => Outbound)) public outbound;
     mapping(bytes32 id => bool) public delivered;
     mapping(bytes32 id => Queued) public queued;
-    /// @notice Kolik originálu je uzamčeno, tedy kolik smí být uvolněno zpět.
+    /// @notice How much of the original is locked, i.e. how much may be released back.
     mapping(address token => uint256) public locked;
 
     address[] private pendingValidators;
@@ -119,15 +119,15 @@ contract BridgeGateway is ReentrancyGuard {
         _setValidators(validators_, threshold_);
     }
 
-    // ---- odeslání --------------------------------------------------------------------
+    // ---- sending --------------------------------------------------------------------
 
-    /// @param token místní token, nula pro hlavní minci
-    /// @param recipient adresa na cílovém řetězci: 20 bajtů u EVM, text adresy u Bitcoinu
+    /// @param token local token, zero for the main coin
+    /// @param recipient address on the target chain: 20 bytes for EVM, the address text for Bitcoin
     function send(address token, uint256 amount, uint64 dstChain, bytes calldata recipient) external payable whenRunning nonReentrant returns (bytes32 id) {
         Outbound memory rule = outbound[token][dstChain];
         if (!rule.enabled) revert RouteClosed();
         if (amount == 0 || amount < rule.minAmount) revert BelowMinimum();
-        // Na řetězcích EVM je příjemce vždy adresa, jinak by mince uvízly bez možnosti doručení.
+        // On EVM chains the recipient is always an address, otherwise coins would get stuck with no way to deliver them.
         if (recipient.length == 0 || recipient.length > 128 || (dstChain != BITCOIN && recipient.length != 20)) revert BadSettings();
         if (token == address(0)) {
             if (msg.value != amount) revert BadValue();
@@ -140,7 +140,7 @@ contract BridgeGateway is ReentrancyGuard {
                 IERC20 asset = IERC20(token);
                 uint256 before = asset.balanceOf(address(this));
                 asset.safeTransferFrom(msg.sender, address(this), amount);
-                // Token s poplatkem z převodu by jinak zůstal krytý méně, než co brána potvrdí.
+                // A token with a transfer fee would otherwise stay backed by less than the gateway confirms.
                 if (asset.balanceOf(address(this)) - before != amount) revert BadValue();
                 locked[token] += amount;
             }
@@ -150,34 +150,34 @@ contract BridgeGateway is ReentrancyGuard {
         emit Sent(id, dstChain, token, msg.sender, recipient, amount, nonce);
     }
 
-    // ---- doručení --------------------------------------------------------------------
+    // ---- delivery --------------------------------------------------------------------
 
-    /// @notice Podepisuje se pro konkrétní cílovou bránu, podpis jinde neplatí.
+    /// @notice Signed for a specific target gateway; the signature is not valid elsewhere.
     function messageId(Message calldata m) public view returns (bytes32) {
         return keccak256(abi.encode(DOMAIN, address(this), m.srcChain, m.dstChain, m.nonce, m.srcToken, m.recipient, m.amount));
     }
 
-    /// @notice Validátor zveřejní svůj podpis. Doručení pak může odeslat kdokoli, kdo jich sebere dost.
-    /// Podepisuje se zpráva s předponou EIP-191, ne holý hash: klíč validátora tak nikdy nepodepíše nic, co by šlo
-    /// vydávat za transakci nebo za podpis pro jiný účel.
+    /// @notice A validator publishes its signature. Anyone who collects enough of them can then submit the delivery.
+    /// A message with the EIP-191 prefix is signed, not a bare hash: the validator key thus never signs anything that could
+    /// pass for a transaction or for a signature for another purpose.
     function attest(bytes32 id, bytes calldata signature) external {
         address signer = ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(id), signature);
         if (!isValidator[signer]) revert BadSignature();
         emit Attested(id, signer, signature);
     }
 
-    /// @notice Schránka validátorů pro platby v Bitcoinu: návrh transakce a podpisy jsou veřejné a nikdo jimi nehýbe s mincemi.
+    /// @notice The validators' mailbox for Bitcoin payments: the proposed transaction and the signatures are public and nobody moves coins with them.
     function post(bytes32 id, bytes calldata data) external {
         if (!isValidator[msg.sender]) revert BadSignature();
         emit Posted(id, msg.sender, data);
     }
 
-    /// @notice Řekne validátorům, ať sledují vkladovou adresu příjemce. Sama o sobě nic nepřipisuje.
+    /// @notice Tells validators to watch the recipient's deposit address. By itself it credits nothing.
     function requestBitcoinDeposit(address recipient) external {
         emit BitcoinDepositRequested(recipient);
     }
 
-    /// @param signatures podpisy `messageId` seřazené podle adresy validátora vzestupně, každý nejvýš jednou
+    /// @param signatures `messageId` signatures sorted by validator address ascending, each at most once
     function deliver(Message calldata m, bytes[] calldata signatures) external whenRunning nonReentrant {
         if (m.dstChain != block.chainid) revert WrongChain();
         bytes32 id = messageId(m);
@@ -202,7 +202,7 @@ contract BridgeGateway is ReentrancyGuard {
         _pay(id, route, m);
     }
 
-    /// @notice Dokončí zpožděný převod, pokud ho strážce mezitím nezrušil.
+    /// @notice Completes a delayed transfer unless the guardian cancelled it in the meantime.
     function executeQueued(Message calldata m) external whenRunning nonReentrant {
         bytes32 id = messageId(m);
         Queued storage q = queued[id];
@@ -242,9 +242,9 @@ contract BridgeGateway is ReentrancyGuard {
         }
     }
 
-    // ---- správa ----------------------------------------------------------------------
+    // ---- administration ----------------------------------------------------------------------
 
-    /// @notice Strážce umí jen zastavit a zrušit čekající převod, nikdy nic neuvolní.
+    /// @notice The guardian can only pause and cancel a pending transfer, never release anything.
     function pause() external {
         if (msg.sender != guardian && msg.sender != admin) revert NotGuardian();
         paused = true;
@@ -263,25 +263,25 @@ contract BridgeGateway is ReentrancyGuard {
         emit QueueCancelled(id);
     }
 
-    /// @notice Natrvalo zruší převod, který nejde nebo nemá být doručen, třeba když příjemce mince nepřijme.
-    /// Zrušený převod už nikdy neprojde, a validátoři proto smějí vrátit mince odesílateli na zdrojové síti
-    /// stejnou cestou jako převod opačným směrem. Zrušit smí strážce, správce nebo sám příjemce.
+    /// @notice Permanently cancels a transfer that cannot or should not be delivered, for example when the recipient does not accept coins.
+    /// A cancelled transfer will never go through, so validators may return the coins to the sender on the source network
+    /// the same way as a transfer in the opposite direction. The guardian, the administrator or the recipient itself may cancel.
     function cancelDelivery(Message calldata m) external {
         if (msg.sender != guardian && msg.sender != admin && msg.sender != m.recipient) revert NotGuardian();
         if (m.dstChain != block.chainid) revert WrongChain();
         bytes32 id = messageId(m);
         if (delivered[id] || queued[id].done) revert AlreadyDelivered();
-        // Nenulové readyAt zablokuje doručení, done zablokuje dokončení z fronty.
+        // A non-zero readyAt blocks delivery, done blocks completion from the queue.
         queued[id] = Queued(uint64(block.timestamp), true);
         emit QueueCancelled(id);
     }
 
-    /// @notice Zrušený převod: nikdy nebyl doručen a už nebude. Jen u takového smí přijít vrácení.
+    /// @notice A cancelled transfer: it was never delivered and never will be. Only such a transfer may be refunded.
     function cancelled(bytes32 id) external view returns (bool) {
         return queued[id].done && !delivered[id];
     }
 
-    /// @notice Vytvoří přemostěný token pro aktivum z jiného řetězce a otevře trasu.
+    /// @notice Creates a bridged token for an asset from another chain and opens the route.
     function createWrapped(string calldata name, string calldata symbol, uint8 decimals, uint64 originChain, bytes32 originToken, uint256 dailyLimit, uint256 largeAmount)
         external
         onlyAdmin
@@ -316,7 +316,7 @@ contract BridgeGateway is ReentrancyGuard {
         guardian = guardian_;
     }
 
-    /// @notice Změna validátorů platí až po prodlevě, aby si ji uživatelé stihli všimnout.
+    /// @notice A validator change takes effect only after a delay, so users have time to notice it.
     function proposeValidators(address[] calldata validators_, uint256 threshold_) external onlyAdmin {
         _check(validators_, threshold_);
         pendingValidators = validators_;
@@ -337,7 +337,7 @@ contract BridgeGateway is ReentrancyGuard {
     }
 
     function _check(address[] memory list, uint256 threshold_) private pure {
-        // Většina a aspoň dva: jeden ukradený klíč nesmí stačit.
+        // A majority and at least two: one stolen key must not be enough.
         if (list.length > MAX_VALIDATORS || threshold_ < 2 || threshold_ > list.length || threshold_ * 2 <= list.length) revert BadSettings();
     }
 

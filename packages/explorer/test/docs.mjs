@@ -1,5 +1,5 @@
-// Dokumentace nesmí lhát: metody a volby se porovnají s kódem uzlu, příklady se opravdu spustí
-// proti skutečnému uzlu a stránka se projde ve skutečném prohlížeči.
+// Documentation must not lie: methods and options are compared with the node code, examples are actually run
+// against a real node and the page is walked through in a real browser.
 import { chromium } from 'playwright';
 import { spawn, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -39,11 +39,11 @@ const step = async (name, fn) => {
 
 const documented = new Set(RPC_GROUPS.flatMap((g) => g.rows.map((r) => r[0])));
 
-await step('každá metoda RPC je zdokumentovaná a žádná není vymyšlená', async () => {
+await step('every RPC method is documented and none is invented', async () => {
   const { createMethods } = await import(join(nodePkg, 'src', 'rpc', 'methods.js'));
   const fake = { on() {} };
   const { methods } = createMethods({ chain: fake, mempool: fake, network: null, work: null, version: 'x' });
-  // Dokumentace ukazuje názvy quinvium_*. Dřívější aether_* a quintium_* jsou jen jejich dvojčata, každé musí mít svůj nový název.
+  // The documentation shows quinvium_* names. The earlier aether_* and quintium_* are only their twins; each must have its new name.
   const names = Object.keys(methods);
   assert.deepEqual(names.filter((m) => m.startsWith('aether_') && methods[`quinvium_${m.slice(7)}`] !== methods[m]), [], 'starý název bez nového');
   assert.deepEqual(names.filter((m) => m.startsWith('quintium_') && methods[`quinvium_${m.slice(9)}`] !== methods[m]), [], 'quintium_ bez quinvium_');
@@ -53,7 +53,7 @@ await step('každá metoda RPC je zdokumentovaná a žádná není vymyšlená',
   return `${real.size} metod`;
 });
 
-await step('každá volba uzlu je zdokumentovaná a žádná není vymyšlená', () => {
+await step('every node option is documented and none is invented', () => {
   const cli = readFileSync(join(nodePkg, 'src', 'cli.js'), 'utf8');
   const help = cli.slice(cli.indexOf('const HELP'), cli.indexOf('`;'));
   const real = new Set(help.match(/^ {2}--[a-z0-9-]+/gm).map((x) => x.trim()));
@@ -63,13 +63,13 @@ await step('každá volba uzlu je zdokumentovaná a žádná není vymyšlená',
   return `${real.size} voleb`;
 });
 
-await step('každý příklad je použitý v textu a každý odkaz na příklad existuje', () => {
+await step('every example is used in the text and every reference to an example exists', () => {
   const used = SECTIONS.flatMap((s) => s.blocks.filter((b) => b.code).map((b) => b.code));
   assert.equal(Object.keys(EXAMPLES).filter((k) => !used.includes(k)).join(' '), '', 'nepoužité příklady');
   assert.equal(used.filter((k) => !EXAMPLES[k]).join(' '), '', 'neexistující příklady');
 });
 
-// ---- skutečný uzel ------------------------------------------------------------------
+// ---- real node ------------------------------------------------------------------
 const owner = ethers.Wallet.createRandom();
 const data = mkdtempSync(join(tmpdir(), 'aether-docs-'));
 const node = spawn(process.execPath, ['--no-warnings', join(nodePkg, 'src', 'cli.js'), '--network', 'dev', '--data-dir', data, '--dev-mine', '--miner-address', owner.address,
@@ -116,10 +116,10 @@ try {
     });
   });
 
-  // Paralelně by si příklady z jedné adresy braly stejné nonce, proto jeden po druhém.
+  // In parallel the examples from one address would take the same nonce, so one after another.
   for (const [id, ex] of Object.entries(EXAMPLES)) {
     if (!ex.run) continue;
-    await step(`příklad ${id}`, async () => {
+    await step(`example ${id}`, async () => {
       const code = ex.code(values);
       if (ex.lang === 'bash') {
         const r = spawnSync('bash', ['-c', fillIn(code, id)], { encoding: 'utf8' });
@@ -134,7 +134,7 @@ try {
     });
   }
 
-  await step('Hardhat: nasazení a volání kontraktu podle konfigurace z dokumentace', async () => {
+  await step('Hardhat: deploying and calling a contract with the configuration from the docs', async () => {
     const project = process.env.AETHER_HARDHAT_DIR;
     if (!project) return 'přeskočeno, chybí AETHER_HARDHAT_DIR';
     writeFileSync(join(project, 'hardhat.config.cjs'), EXAMPLES.hardhat.code(values));
@@ -143,14 +143,14 @@ try {
     return r.stdout.trim().split('\n').at(-1).slice(0, 70);
   });
 
-  // ---- prohlížeč ---------------------------------------------------------------------
+  // ---- browser ---------------------------------------------------------------------
   browser = await chromium.launch();
   const page = await (await browser.newContext({ locale: 'cs-CZ', viewport: { width: 1400, height: 900 } })).newPage();
   await page.addInitScript(() => { try { localStorage.setItem('aether.lang', 'cs'); } catch { /* jen pro test */ } });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
 
-  await step('dokumentace se zobrazí se všemi kapitolami', async () => {
+  await step('the documentation shows all chapters', async () => {
     await page.goto(`${RPC}/#/api`);
     await page.waitForSelector('.doc-section');
     assert.equal(await page.locator('.doc-section').count(), SECTIONS.length);
@@ -160,14 +160,14 @@ try {
     return `${SECTIONS.length} kapitol`;
   });
 
-  await step('příklady jsou doplněné pro připojenou síť', async () => {
+  await step('examples are filled in for the connected network', async () => {
     const text = await page.locator('#doc-wallets').innerText();
     assert.match(text, new RegExp(RPC.replace(/[/.:]/g, '\\$&')));
     assert.match(text, /0xccb3/);
     assert.match(text, /dQU/);
   });
 
-  await step('obsah vede na správnou kapitolu i přes přímý odkaz', async () => {
+  await step('the table of contents leads to the right chapter, also through a direct link', async () => {
     await page.locator('.docs-toc a[data-doc="rpc"]').click();
     await page.waitForFunction(() => location.pathname === '/api/rpc' && document.querySelector('.docs-toc a.active')?.dataset.doc === 'rpc');
     await page.waitForFunction(() => { const r = document.querySelector('#doc-rpc').getBoundingClientRect(); return r.top >= 0 && r.top < 300; }, null, { timeout: 5000 });
@@ -177,7 +177,7 @@ try {
     await page.waitForFunction(() => { const r = document.querySelector('#doc-limits').getBoundingClientRect(); return r.top >= 0 && r.top < 300; });
   });
 
-  await step('konzole volá skutečný uzel a ukáže chybu', async () => {
+  await step('the console calls the real node and shows an error', async () => {
     await page.goto(`${RPC}/#/api/rpc`);
     await page.waitForSelector('#doc-console');
     await page.locator('#doc-console button').click();
@@ -191,7 +191,7 @@ try {
     await page.waitForFunction(() => document.querySelector('#doc-output').classList.contains('bad'));
   });
 
-  await step('reference obsahuje všechny kontrakty s funkcemi z ABI', async () => {
+  await step('the reference contains all contracts with functions from the ABI', async () => {
     assert.equal(await page.locator('.doc-contract').count(), Object.keys(contracts).length);
     const notary = page.locator('.doc-contract', { hasText: 'Notary' }).first();
     await notary.locator('summary').click();
@@ -201,14 +201,14 @@ try {
     assert.match(text, /0xae00000000000000000000000000000000000001/);
   });
 
-  await step('kopírování kódu dostane přesně ukázaný text', async () => {
+  await step('copying code gets exactly the text shown', async () => {
     const block = page.locator('.doc-code', { hasText: 'createRandom' }).first();
     const shown = await block.locator('pre').innerText();
     const copied = await block.locator('.copy-btn').getAttribute('data-copy');
     assert.equal(copied.trim(), shown.trim());
   });
 
-  await step('anglická verze', async () => {
+  await step('English version', async () => {
     await page.click('#lang-btn');
     await page.click('[data-lang=en]');
     await page.waitForFunction(() => /Quick start/.test(document.querySelector('#doc-start')?.textContent ?? ''));
@@ -218,7 +218,7 @@ try {
     await page.click('[data-lang=cs]');
   });
 
-  await step('úzká obrazovka: stránka se nerozjede do šířky', async () => {
+  await step('narrow screen: the page does not overflow sideways', async () => {
     await page.setViewportSize({ width: 390, height: 800 });
     await page.goto(`${RPC}/#/api/rpc`);
     await page.reload();
@@ -227,7 +227,7 @@ try {
     assert.ok(overflow <= 1, `přetéká o ${overflow} px`);
   });
 
-  await step('stránka nehlásí žádnou chybu JavaScriptu', async () => assert.deepEqual(errors, []));
+  await step('the page reports no JavaScript error', async () => assert.deepEqual(errors, []));
 } finally {
   await browser?.close();
   node.kill('SIGKILL');

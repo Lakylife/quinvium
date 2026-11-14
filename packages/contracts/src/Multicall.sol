@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-/// @title Hromadné čtení z kontraktů pro aplikace a peněženky
+/// @title Batched reads from contracts for apps and wallets
 contract Multicall {
     struct Call {
         address target;

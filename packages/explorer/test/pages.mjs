@@ -1,4 +1,4 @@
-// Prochází úplně každou stránku Exploreru ve všech jazycích. Stránka se může rozbít i tak, že ji jiný test vůbec neotevře.
+// Walks every single Explorer page in all languages. A page can break even in a way no other test ever opens.
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
@@ -30,17 +30,17 @@ try {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`${RPC}/`);
   await page.waitForSelector('.metric-grid');
-  // Poslední bloky a poslední transakce jsou dva stejně vysoké boxy, i když je transakcí méně.
+  // Latest blocks and latest transactions are two equally tall boxes, even when there are fewer transactions.
   await page.waitForSelector('.home-lists .latest-row');
   const boxes = await page.$$eval('.home-lists > .card', (cards) => cards.map((c) => Math.round(c.getBoundingClientRect().height)));
   if (boxes.length !== 2 || boxes[0] !== boxes[1]) { failed += 1; console.log(`[FAIL] boxy na úvodu mají různou výšku: ${boxes.join(' a ')}`); }
-  // Řádky obou seznamů jsou po dvojicích stejně vysoké, takže seznamy končí na stejné úrovni.
+  // Rows of both lists are equally tall in pairs, so the lists end at the same level.
   const rows = await page.$$eval('.home-lists > .card', (cards) => cards.map((c) => [...c.querySelectorAll('.latest-row')].map((r) => Math.round(r.getBoundingClientRect().bottom))));
   if (rows[0].length && rows[1].length && rows[0].at(-1) !== rows[1].at(-1)) { failed += 1; console.log(`[FAIL] seznamy na úvodu končí jinde: ${rows.map((r) => r.at(-1)).join(' a ')}`); }
-  // Cena gasu řekne, jestli je na minimu kvůli prázdným blokům, aby nevypadala pevná.
+  // The gas price says whether it is at the minimum because of empty blocks, so it does not look fixed.
   const gas = await page.$$eval('.home-stats .home-stat:nth-child(2) small', (x) => x.length);
   if (gas !== 2) { failed += 1; console.log(`[FAIL] u ceny gasu chybí stav sítě (${gas} řádků)`); }
-  // Router: každá větev a každá položka menu.
+  // Router: every branch and every menu item.
   const links = await page.$$eval('a[data-nav]', (list) => list.map((a) => a.getAttribute('href')));
   assert.ok(links.length >= 14, `položek menu ${links.length}`);
   const extra = ['/', '/block/1', `/address/${ADDRESS}`, '/pools/new', '/swap?view=pools', '/bridge?dir=in', '/api', '/blocks?txs=empty', `/txs?address=${ADDRESS}`, '/charts?view=table&range=all', `/token/${ADDRESS}`, '/miners?order=last', `/miners?address=${ADDRESS}`, '/mempool?order=time', '/block/1?page=2', `/tx/0x${'ab'.repeat(32)}`, `/address/${ADDRESS}?tab=transfers`];
@@ -60,7 +60,7 @@ try {
     await page.waitForSelector('#app *');
     for (const route of routes) {
       await page.goto(`${RPC}${route}`);
-      // Stránka je hotová, až má obsah a žádnou kostru. Při velké zátěži počítače může první vykreslení chvíli trvat.
+      // A page is done when it has content and no skeleton. Under heavy load the first render may take a while.
       await page.waitForFunction(() => document.getElementById('app').innerText.trim().length > 0 && !document.querySelector('#app .skel'), null, { timeout: 15000 }).catch(() => {});
       await page.waitForTimeout(120);
       const problem = await page.evaluate(() => document.querySelector('#app .error-box')?.textContent ?? null);
@@ -69,7 +69,7 @@ try {
         failed += 1;
         console.log(`[FAIL] ${lang} ${route}: ${problem ?? 'prázdná stránka'}`);
       }
-      // Rámeček nesmí přijít ani z výchozích stylů prohlížeče. Tenká linka pod řádkem je v pořádku, proto se spodní strana nepočítá.
+      // A frame must not come even from the browser's default styles. A thin line under a row is fine, so the bottom side is not counted.
       if (lang === 'en') {
         const framed = await page.evaluate(() => [...document.querySelectorAll('body *')].filter((el) => {
           const s = getComputedStyle(el);

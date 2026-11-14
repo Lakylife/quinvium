@@ -1,4 +1,4 @@
-// Server poolu na skutečném uzlu: těžaři přes RPC i Stratum, dávky podílů a automatická výplata.
+// Pool server on a real node: miners over RPC and Stratum, batches of shares and automatic payout.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import net from 'node:net';
@@ -52,7 +52,7 @@ async function ok(pending) {
   assert.equal((await provider.getTransactionReceipt(tx.hash)).status, 1);
 }
 
-/** Hledá nonce pro cíl jako skutečný miner. */
+/** Searches a nonce for the target like a real miner. */
 async function solve(seal_, number, target, filter = () => true) {
   const hash = ethers.getBytes(seal_);
   for (let n = 1n; ; n++) {
@@ -80,7 +80,7 @@ test.after(async () => {
   await node.stop();
 });
 
-test('kódování dávek je stejné jako ABI', () => {
+test('batch encoding is the same as ABI', () => {
   const coder = ethers.AbiCoder.defaultAbiCoder();
   const items = [new Uint8Array(0), new Uint8Array(31).fill(1), new Uint8Array(32).fill(2), new Uint8Array(33).fill(3), new Uint8Array(620).fill(4)];
   assert.equal(ethers.hexlify(encodeBytesArray(new Uint8Array(0), items)), coder.encode(['bytes[]'], [items]));
@@ -88,7 +88,7 @@ test('kódování dávek je stejné jako ABI', () => {
   assert.equal(ethers.hexlify(encodeAddressArray(new Uint8Array(0), addresses.map((a) => ethers.getBytes(a)))), coder.encode(['address[]'], [addresses]));
 });
 
-test('bez poolu těžba poolu nefunguje a cizí kontrakt pool nespustí', async () => {
+test('without a pool, pool mining does not work and a foreign contract does not start a pool', async () => {
   assert.equal(await rpc('aether_poolInfo'), null);
   await assert.rejects(rpc('aether_poolWork', [alice.address]), /nevede pool/);
   await assert.rejects(node.startPool(ethers.getBytes(alice.address), payerKey), /není pool z továrny/);
@@ -96,7 +96,7 @@ test('bez poolu těžba poolu nefunguje a cizí kontrakt pool nespustí', async 
   assert.equal(node.pool, undefined);
 });
 
-test('každý těžař hashuje vlastní hlavičku a podíly jdou do kontraktu', async () => {
+test('each miner hashes its own header and shares go to the contract', async () => {
   await node.startPool(ethers.getBytes(poolAddress), payerKey, { minShareDifficulty: 4n });
   const [sealA, seed, target, number, fieldsA, address] = await rpc('aether_poolWork', [alice.address, 'rig1']);
   const [sealB] = await rpc('aether_poolWork', [bob.address]);
@@ -142,7 +142,7 @@ test('každý těžař hashuje vlastní hlavičku a podíly jdou do kontraktu', 
   assert.deepEqual([...(await pool.windowWork(alice.address))], [8n, 4n]);
 });
 
-test('podíl splňující obtížnost sítě vytěží blok pro kontrakt', async () => {
+test('a share meeting the network difficulty mines a block for the contract', async () => {
   const [sealA, , target, number] = await rpc('aether_poolWork', [alice.address, 'rig1']);
   const balance = await provider.getBalance(poolAddress);
   const difficulty = node.chain.head.difficulty;
@@ -187,7 +187,7 @@ function client() {
   return { socket, send, wait };
 }
 
-test('těžař přes ETHPROXY dostane podíl připsaný na svou adresu', async () => {
+test('a miner over ETHPROXY gets a share credited to its address', async () => {
   const c = client();
   c.send({ id: 1, method: 'eth_submitLogin', params: [`${carol.address}.asic1`] });
   assert.equal((await c.wait((m) => m.id === 1)).result, true);
@@ -204,7 +204,7 @@ test('těžař přes ETHPROXY dostane podíl připsaný na svou adresu', async (
   assert.equal((await pool.windowWork(carol.address)).own, 4n);
 });
 
-test('těžař přes EthereumStratum dostane obtížnost podílu a podíl projde', async () => {
+test('a miner over EthereumStratum gets the share difficulty and the share passes', async () => {
   const c = client();
   c.send({ id: 1, method: 'mining.subscribe', params: ['test/1.0', 'EthereumStratum/1.0.0'] });
   const sub = await c.wait((m) => m.id === 1);
@@ -238,8 +238,8 @@ test('těžař přes EthereumStratum dostane obtížnost podílu a podíl projde
   assert.ok((await pool.windowWork(bob.address)).own >= 8n);
 });
 
-test('server sám spustí výplatu a mince jdou přímo těžařům', async () => {
-  // Odměna z bloků poolu a uzavření všech kol.
+test('the server triggers the payout itself and coins go directly to miners', async () => {
+  // Reward from the pool's blocks and closing all rounds.
   await mineBlock(poolAddress);
   const last = (await pool.stepCount()) - 1n;
   const step = await pool.steps(last);
@@ -260,7 +260,7 @@ test('server sám spustí výplatu a mince jdou přímo těžařům', async () =
   assert.equal(await node.pool.payout(), null, 'bez čekajících výplat se nic neodešle');
 });
 
-test('tichý pool uzavře kola sám a po restartu serveru zná své těžaře', async () => {
+test('a quiet pool closes rounds itself and knows its miners after a server restart', async () => {
   const [sealA, , target, number] = await rpc('aether_poolWork', [alice.address, 'rig1']);
   const networkTarget = targetForDifficulty(node.chain.head.difficulty);
   const a = await solve(sealA, BigInt(number), target, (v) => v > networkTarget);
@@ -284,31 +284,31 @@ test('tichý pool uzavře kola sám a po restartu serveru zná své těžaře', 
   assert.ok(saved.includes(alice.address.toLowerCase()));
 });
 
-test('obtížnost podílu se přizpůsobí výkonu zařízení a velikosti poolu', () => {
+test("share difficulty adapts to the device's hashrate and the pool size", () => {
   const p = node.pool;
   const network = 1n << 40n;
   const s = { difficulty: null, shares: 0, since: Date.now() };
   p._retarget(s, network);
   assert.equal(s.difficulty, network / 64n);
-  // Rychlé zařízení posílá podíly moc často.
+  // A fast device sends shares too often.
   s.shares = 6;
   s.since = Date.now() - 6000;
   const start = s.difficulty;
   p._retarget(s, network);
   assert.equal(s.difficulty, start * 4n);
-  // Pomalé zařízení nic nenašlo.
+  // A slow device found nothing.
   s.shares = 0;
   s.since = Date.now() - 400_000;
   p._retarget(s, network);
   assert.equal(s.difficulty, start * 2n);
   assert.equal(s.shares, 0);
-  // Nikdy nad obtížnost sítě ani pod spodní mez.
+  // Never above the network difficulty or below the floor.
   s.difficulty = network;
   s.shares = 6;
   s.since = Date.now() - 1000;
   p._retarget(s, network);
   assert.equal(s.difficulty, network);
-  // Podíl se musí vyplatit: nikdy levnější než 1/4096 práce sítě, jinak by účet na gas vysával i malý těžař.
+  // A share must pay off: never cheaper than 1/4096 of the network's work, otherwise even a small miner would drain the gas account.
   const floor = network / 4096n;
   s.difficulty = floor;
   s.shares = 0;

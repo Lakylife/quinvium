@@ -1,4 +1,4 @@
-// Připraví soubory pro sestavení: uzel v jednom souboru, miner a sdílený kód peněženky.
+// Prepares files for the build: the node in one file, the miner and the shared wallet code.
 import { copyFileSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,14 +15,14 @@ const target = process.argv[2] ?? 'mac';
 const miner = target === 'win'
   ? join(root, 'miner', 'target', 'x86_64-pc-windows-gnu', 'release', 'quintium-miner.exe')
   : join(root, 'miner', 'target', 'release', 'quintium-miner');
-if (target === 'mac') copyFileSync(miner, join(build, 'quintium-miner'));   // spuštění bez sestavení
-// Složka, kterou si sestavená aplikace bere do resources/bin.
+if (target === 'mac') copyFileSync(miner, join(build, 'quintium-miner'));   // running without a build
+// The folder the built app takes into resources/bin.
 const bin = join(build, target);
-rmSync(bin, { recursive: true, force: true });     // ve složce nesmí zůstat soubory ze starších sestavení
+rmSync(bin, { recursive: true, force: true });     // files from older builds must not remain in the folder
 mkdirSync(bin, { recursive: true });
 copyFileSync(miner, join(bin, target === 'win' ? 'quintium-miner.exe' : 'quintium-miner'));
 for (const f of ['quintium-node.cjs', 'vm-worker.cjs']) copyFileSync(join(build, f), join(bin, f));
-// Příkazová řádka: běží na Node zabudovaném v aplikaci, uživatel nemusí nic instalovat.
-// Příkaz quinvium je nové jméno, quintium zůstává. Oba spouštějí totéž.
+// Command line: runs on the Node built into the app; the user does not need to install anything.
+// quinvium is the new command name; quintium stays. Both run the same thing.
 for (const name of target === 'win' ? ['quintium.cmd', 'quinvium.cmd'] : ['quintium', 'quinvium']) copyFileSync(join(here, 'bin', target === 'win' ? 'quintium.cmd' : 'quintium'), join(bin, name));
 console.log('Připraveno pro', target);

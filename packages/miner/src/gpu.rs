@@ -1,4 +1,4 @@
-//! Těžba na grafické kartě přes wgpu: DAG se počítá přímo na kartě, hledání běží v dávkách.
+//! GPU mining through wgpu: the DAG is computed directly on the card, the search runs in batches.
 use crate::{ethash, shader, Card, SearchResult};
 use std::time::Instant;
 
@@ -19,7 +19,7 @@ pub fn list_adapters() -> Vec<wgpu::Adapter> {
         ..wgpu::InstanceDescriptor::new_without_display_handle()
     });
     let mut list = pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all()));
-    // Na Windows bývá stejná karta vidět přes Vulkan i DX12. Vulkan má přednost.
+    // On Windows the same card is often visible through both Vulkan and DX12. Vulkan takes precedence.
     list.sort_by_key(|a| match a.get_info().backend {
         wgpu::Backend::Vulkan | wgpu::Backend::Metal => 0,
         _ => 1,
@@ -66,8 +66,8 @@ impl Device {
     }
 
     fn pipeline(&self, source: String) -> wgpu::ComputePipeline {
-        // Všechny indexy v shaderech jsou omezené modulem nebo rozsahem smyčky,
-        // takže běhové kontroly hranic jen zpomalují. Na těžbě je to znát.
+        // All indexes in the shaders are bounded by a modulus or the loop range,
+        // so runtime bounds checks only slow things down. It shows in mining.
         let module = unsafe {
             self.device.create_shader_module_trusted(
                 wgpu::ShaderModuleDescriptor { label: None, source: wgpu::ShaderSource::Wgsl(source.into()) },
@@ -110,7 +110,7 @@ pub struct Dag {
     chunk_bytes: u64,
 }
 
-/// Spočítá DAG na kartě a ověří vzorek položek proti procesoru.
+/// Computes the DAG on the card and checks a sample of items against the CPU.
 pub fn build_dag(d: &Device, epoch: u64, report: &dyn Fn(u32)) -> Result<Dag, String> {
     let cache = ethash::generate_cache(ethash::cache_size(epoch), &ethash::seed_hash(epoch));
     let full_size = ethash::dataset_size(epoch);
@@ -172,7 +172,7 @@ pub fn build_dag(d: &Device, epoch: u64, report: &dyn Fn(u32)) -> Result<Dag, St
     }
     eprintln!("[{}] DAG hotový za {:.1} s", d.name, started.elapsed().as_secs_f32());
 
-    // Kontrola náhodně rozložených položek: chyba karty se odhalí dřív, než se těží naprázdno.
+    // A check of randomly spread items: a card error is revealed before mining in vain.
     for k in 0..16u64 {
         let item = (items_total as u64 / 17) * (k + 1);
         let chunk = (item * 64 / chunk_bytes) as usize;
@@ -217,7 +217,7 @@ pub fn searcher(d: &Device, dag: &Dag) -> Searcher {
 }
 
 impl Searcher {
-    /// Prohledá dávku nonce od `start`. `target` je horních 64 bitů cíle.
+    /// Searches a batch of nonces from `start`. `target` is the upper 64 bits of the target.
     pub fn run(&mut self, d: &Device, dag: &Dag, header: &[u8; 32], start: u64, target: (u32, u32)) -> SearchResult {
         let mut p = [0u32; 16];
         for i in 0..8 {
@@ -247,7 +247,7 @@ impl Searcher {
         let nonces = (0..found).map(|i| words[1 + i * 2] as u64 | ((words[2 + i * 2] as u64) << 32)).collect();
         let hashes = groups as u64 * shader::WORKGROUP_SIZE as u64;
 
-        // Dávka okolo 150 ms: karta nezamrzne a nová práce se projeví rychle.
+        // A batch of about 150 ms: the card does not freeze and new work takes effect quickly.
         let ms = t.elapsed().as_millis();
         if ms < 100 {
             self.batch = self.batch.saturating_mul(2).min(1 << 24);
@@ -258,7 +258,7 @@ impl Searcher {
     }
 }
 
-/// Karta obsluhovaná přes Vulkan, DirectX 12 nebo Metal.
+/// A card driven through Vulkan, DirectX 12 or Metal.
 pub struct WgpuCard {
     device: Device,
     dag: Option<Dag>,
@@ -281,7 +281,7 @@ impl Card for WgpuCard {
     }
 
     fn prepare(&mut self, epoch: u64, report: &dyn Fn(u32)) -> Result<(), String> {
-        // Starý DAG uvolníme dřív, než se začne počítat nový.
+        // The old DAG is freed before the new one starts being computed.
         drop(self.searcher.take());
         drop(self.dag.take());
         let dag = build_dag(&self.device, epoch, report)?;

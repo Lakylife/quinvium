@@ -5,7 +5,7 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-/// Sbírka jedinečných položek: vstupenky, tituly vlastnictví, umění, záruční listy.
+/// A collection of unique items: tickets, ownership titles, art, warranty cards.
 contract AetherCollection is ERC721URIStorage, Ownable {
     uint256 public totalMinted;
 
@@ -18,7 +18,7 @@ contract AetherCollection is ERC721URIStorage, Ownable {
     }
 }
 
-/// @title Továrna na sbírky NFT
+/// @title Factory for NFT collections
 contract CollectionFactory {
     address[] public collections;
     mapping(address => address[]) private byCreator;

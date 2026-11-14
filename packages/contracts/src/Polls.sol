@@ -3,8 +3,8 @@ pragma solidity ^0.8.28;
 
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
-/// @title Hlasování: obce, spolky, družstva, akcionáři, SVJ
-/// @notice Seznam oprávněných hlasujících je Merkle strom: na řetězci je jen kořen, ne celý seznam.
+/// @title Polls: municipalities, associations, cooperatives, shareholders, owners' associations
+/// @notice The list of eligible voters is a Merkle tree: only the root is on chain, not the whole list.
 contract Polls {
     struct Poll {
         address creator;
@@ -30,7 +30,7 @@ contract Polls {
     error NotEligible();
     error InvalidOption();
 
-    /// @param voters kořen stromu oprávněných adres, nula znamená hlasování pro všechny
+    /// @param voters root of the tree of eligible addresses, zero means a poll open to everyone
     function create(string calldata title, string[] calldata choices, bytes32 voters, uint64 endsAt) external returns (uint256 id) {
         if (choices.length < 2 || choices.length > 64 || endsAt <= block.timestamp) revert InvalidPoll();
         id = ++pollCount;

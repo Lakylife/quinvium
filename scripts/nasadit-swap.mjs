@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Nasadí Swap: factory a router. Tokeny ani pooly nezakládá, ty vytvářejí autoři tokenů a poskytovatelé likvidity.
-// Použití: node scripts/nasadit-swap.mjs <rpc> <soubor s frází> [nonce factory]
-// Fráze se nikam nevypisuje. Nejdřív spusťte nasadit-tokeny.mjs.
-// Adresa kontraktu závisí jen na nonce. Na testnetu byla factory na nonce 15 a router na 16 (0xfee4…1E95, natvrdo v aplikacích
-// jako Wpayin): s argumentem 15 skript doplní chybějící nonce prázdnými převody sama sobě a adresy zůstanou stejné.
+// Deploys Swap: factory and router. It creates no tokens or pools; those are created by token authors and liquidity providers.
+// Usage: node scripts/nasadit-swap.mjs <rpc> <phrase file> [factory nonce]
+// The phrase is never printed. Run nasadit-tokeny.mjs first.
+// The contract address depends only on the nonce. On testnet the factory was at nonce 15 and the router at 16 (0xfee4…1E95, hardcoded in apps
+// like Wpayin): with argument 15 the script fills missing nonces with empty transfers to itself and the addresses stay the same.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';

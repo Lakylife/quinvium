@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-/// @title Dodavatelský řetězec: původ a cesta zboží (potraviny, léky, logistika, luxusní zboží)
+/// @title Supply chain: origin and route of goods (food, medicine, logistics, luxury goods)
 contract SupplyChain {
     struct Item {
         address creator;
@@ -55,7 +55,7 @@ contract SupplyChain {
         emit StepAdded(id, index, msg.sender, location, status, evidence);
     }
 
-    /// Předání má dva kroky, zboží se tak nedá nikomu vnutit ani omylem poslat do prázdna.
+    /// A hand-over has two steps, so goods cannot be forced on anyone or sent into the void by mistake.
     function offerTransfer(uint256 id, address to) external {
         Item storage it = _open(id);
         if (it.custodian != msg.sender) revert NotCustodian();

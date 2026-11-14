@@ -1,10 +1,10 @@
-// Spojení aplikace s peněženkou v běžném prohlížeči. MetaMask je rozšíření prohlížeče a do aplikace se nedostane,
-// proto aplikace otevře místní stránku a ta peněžence předává žádosti o podpis. Klíče zůstávají v peněžence.
-// Server poslouchá jen na 127.0.0.1 a každý požadavek musí znát náhodný token z adresy stránky.
+// Connecting the app to a wallet in a regular browser. MetaMask is a browser extension and cannot get into the app,
+// so the app opens a local page that relays signature requests to the wallet. The keys stay in the wallet.
+// The server listens only on 127.0.0.1 and every request must know the random token from the page address.
 const crypto = require('node:crypto');
 const http = require('node:http');
 
-const PREFERRED_PORT = 18546;    // stálý port: MetaMask si povolení pamatuje podle adresy stránky
+const PREFERRED_PORT = 18546;    // fixed port: MetaMask remembers the permission by the page address
 const POLL_MS = 20_000;
 const ALIVE_MS = 30_000;
 const ANSWER_MS = 300_000;
@@ -18,7 +18,7 @@ const TEXTS = {
   fr: { title: 'Connectez votre portefeuille à Quinvium', pick: 'Choisissez un portefeuille dans ce navigateur.', none: 'Aucun portefeuille dans ce navigateur. Installez MetaMask et rechargez la page.', asking: 'Confirmez la demande dans votre portefeuille.', ready: 'Connecté. Laissez cet onglet ouvert, l’app Quinvium y envoie les demandes de signature.', closed: 'L’app Quinvium est fermée.', failed: 'Cela n’a pas fonctionné' },
 };
 
-// Stránka běží v prohlížeči. Nic z internetu nenačítá, mluví jen s aplikací a s peněženkou.
+// The page runs in the browser. It loads nothing from the internet and talks only to the app and the wallet.
 const PAGE_SCRIPT = String.raw`
 const T = JSON.parse(document.getElementById('texts').textContent);
 const base = location.pathname;
@@ -122,8 +122,8 @@ const page = (lang, nonce) => {
 class WalletLink {
   /**
    * @param {object} o
-   * @param {(url: string) => void} o.open otevře adresu v prohlížeči
-   * @param {(hello: object) => void} o.onHello peněženka se přihlásila
+   * @param {(url: string) => void} o.open opens an address in the browser
+   * @param {(hello: object) => void} o.onHello the wallet has signed in
    */
   constructor({ open, onHello }) {
     this.open = open;
@@ -145,7 +145,7 @@ class WalletLink {
     await new Promise((resolve, reject) => {
       server.once('error', (e) => {
         if (e.code !== 'EADDRINUSE') { reject(e); return; }
-        server.listen(0, '127.0.0.1', resolve);    // stálý port je obsazený, povolení se pak v peněžence jen zopakuje
+        server.listen(0, '127.0.0.1', resolve);    // the fixed port is taken; the wallet then just repeats the permission
       });
       server.listen(PREFERRED_PORT, '127.0.0.1', resolve);
     });
@@ -156,7 +156,7 @@ class WalletLink {
 
   get url() { return `http://127.0.0.1:${this.port}/${this.token}/`; }
 
-  /** Otevře stránku pro přihlášení nebo pro další podpisy. */
+  /** Opens the page for signing in or for further signatures. */
   async show({ lang, chain, signedIn = false, rdns = null }) {
     await this.listen();
     this.lang = lang ?? this.lang;
@@ -165,7 +165,7 @@ class WalletLink {
     return this.config.message;
   }
 
-  /** Předá žádost peněžence. Když stránka není otevřená, otevře ji znovu. */
+  /** Hands the request to the wallet. If the page is not open, it opens it again. */
   async request(method, params, config) {
     await this.listen();
     if (config) Object.assign(this.config, config);
@@ -200,7 +200,7 @@ class WalletLink {
   async handle(req, res) {
     const self = `127.0.0.1:${this.port}`;
     const [, token, action] = (req.url ?? '').split('?')[0].split('/');
-    // Hlavička Host brání útoku přes cizí doménu mířící na 127.0.0.1, token cizím stránkám na stejném počítači.
+    // The Host header prevents an attack through a foreign domain pointing at 127.0.0.1; the token stops foreign pages on the same computer.
     if (req.headers.host !== self || token !== this.token) { res.writeHead(404); res.end(); return; }
     if (req.method === 'POST' && req.headers.origin !== `http://${self}`) { res.writeHead(403); res.end(); return; }
     if (req.method === 'GET' && !action) {

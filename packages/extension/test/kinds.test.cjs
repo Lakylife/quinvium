@@ -1,4 +1,4 @@
-// Druhy transakcí v historii peněženky: každý podpis funkce musí existovat v kontraktech sítě, jinak by popis lhal.
+// Transaction kinds in the wallet history: every function selector must exist in the network's contracts, otherwise the description would lie.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -9,7 +9,7 @@ const artifacts = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'c
 const type = (i) => (i.type.startsWith('tuple') ? `(${i.components.map(type).join(',')})${i.type.slice(5)}` : i.type);
 const signatures = new Set(Object.values(artifacts).flatMap((c) => (c.abi ?? []).filter((f) => f.type === 'function').map((f) => `${f.name}(${f.inputs.map(type).join(',')})`)));
 
-test('každý podpis v druzích transakcí patří skutečné funkci kontraktu', () => {
+test('every selector in the transaction kinds belongs to a real contract function', () => {
   const block = popup.slice(popup.indexOf('const CALL_KINDS'), popup.indexOf('];', popup.indexOf('const CALL_KINDS')));
   const used = [...block.matchAll(/\['([^']+\([^']*\))', '(\w+)'\]/g)].map((m) => m[1]);
   assert.ok(used.length >= 10, 'seznam se našel');

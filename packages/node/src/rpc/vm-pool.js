@@ -1,5 +1,5 @@
-// eth_call a eth_estimateGas běží v oddělených vláknech s časovým limitem.
-// Kód volání si volí kdokoli, takže nesmí blokovat zpracování bloků, síť ani další dotazy.
+// eth_call and eth_estimateGas run in separate threads with a time limit.
+// Anyone chooses the call code, so it must not block block processing, the network or other queries.
 import { Worker } from 'node:worker_threads';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -14,7 +14,7 @@ const ASSET = 'vm-worker.cjs';
 
 export class VmBusyError extends Error {}
 
-/** Vlákno vznikne z jednoho ze tří zdrojů podle toho, jak je uzel zabalený. */
+/** The thread is created from one of three sources depending on how the node is packaged. */
 function createWorker(workerData) {
   const sea = process.getBuiltinModule?.('node:sea');
   if (sea?.isSea()) return new Worker(sea.getAsset(ASSET, 'utf8'), { eval: true, workerData });
@@ -44,9 +44,9 @@ export class VmPool {
 
   /**
    * @param {'call'|'estimate'|'index'} kind
-   * @param {Header|null} header stav, nad kterým se počítá, u dotazů do indexu žádný
-   * @param {object} params parametry volání z RPC
-   * @returns {Promise<any>} hex výsledek, u indexu řádky dotazu
+   * @param {Header|null} header state to compute on, none for index queries
+   * @param {object} params call parameters from RPC
+   * @returns {Promise<any>} hex result, rows of the query for the index
    */
   run(kind, header, params) {
     if (this.queue.length >= MAX_QUEUE) return Promise.reject(new VmBusyError('uzel je přetížený, zkuste to za chvíli'));
@@ -75,7 +75,7 @@ export class VmPool {
       if (m.error !== undefined) job.reject(new RpcCallError(m.error, m.data));
       else job.resolve(m.result);
     };
-    // Běžící EVM nejde přerušit jinak než ukončením vlákna, náhradní vznikne hned.
+    // A running EVM can only be interrupted by terminating the thread; a replacement is created immediately.
     timer = setTimeout(() => {
       worker.terminate();
       release(this.stopped ? worker : this._spawn());

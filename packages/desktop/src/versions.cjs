@@ -1,9 +1,9 @@
-// Verze aplikace ve vlastních složkách. Aktualizace nic nepřepisuje: nová verze se rozbalí vedle a spustí se po restartu.
-// Běžící soubory tak nikdo nezamyká, není potřeba žádný vnější skript a návrat na předchozí verzi je jen změna záznamu.
+// App versions in their own folders. An update overwrites nothing: the new version is unpacked next to it and starts after a restart.
+// Nobody locks the running files, no external script is needed and rolling back to the previous version is just a change of record.
 const path = require('node:path');
 const zlib = require('node:zlib');
 
-// Elektron čte soubory .asar jako složky, pro práci se soubory verzí je potřeba obyčejný přístup.
+// Electron reads .asar files as folders; working with version files needs plain access.
 const fs = (() => { try { return require('original-fs'); } catch { return require('node:fs'); } })();
 
 const STATE = 'current.json';
@@ -13,7 +13,7 @@ const ZIP_ENTRY = 0x02014b50;
 const STORED = 0;
 const DEFLATED = 8;
 
-/** @returns {boolean} je `candidate` novější než `current`, verze ve tvaru 1.2.3 */
+/** @returns {boolean} whether `candidate` is newer than `current`, versions in the form 1.2.3 */
 function isNewer(candidate, current) {
   const parts = (v) => v.split('.').map(Number);
   const [a, b] = [parts(candidate), parts(current)];
@@ -35,11 +35,11 @@ function writeState(dir, state) {
 const usable = (dir, version, builtin) => !!version && isNewer(version, builtin) && fs.existsSync(path.join(dir, version, 'app.asar'));
 
 /**
- * Vybere verzi ke spuštění a započítá pokus. Potvrzení zdravého běhu počítadlo vynuluje, takže verze,
- * která se dvakrát nerozběhla, se opustí a uloží se jako vadná, aby se nestáhla znovu.
- * @param {string} dir složka s verzemi
- * @param {string} builtin verze nainstalované aplikace
- * @returns {{ version: string, folder: string }|null} null znamená spustit nainstalovanou verzi
+ * Chooses the version to start and counts an attempt. Confirming a healthy run resets the counter, so a version
+ * that failed to start twice is abandoned and recorded as faulty so it is not downloaded again.
+ * @param {string} dir folder with versions
+ * @param {string} builtin version of the installed app
+ * @returns {{ version: string, folder: string }|null} null means start the installed version
  */
 function pickVersion(dir, builtin) {
   const state = readState(dir);
@@ -55,13 +55,13 @@ function pickVersion(dir, builtin) {
 
 const isBad = (dir, version) => readState(dir).bad === version;
 
-/** Verzi nejde spustit: zapíše se jako vadná a příště se vybere předchozí. */
+/** The version cannot start: it is recorded as faulty and the previous one is chosen next time. */
 function rejectVersion(dir, version) {
   const state = readState(dir);
   writeState(dir, { version: state.previous ?? null, previous: null, tries: 0, bad: version });
 }
 
-/** Verze běží zdravě: vynuluje pokusy a smaže staré složky kromě předchozí, na kterou se dá vrátit. */
+/** The version runs healthily: resets attempts and deletes old folders except the previous one, which can be rolled back to. */
 function confirmVersion(dir, version) {
   const state = readState(dir);
   if (state.version !== version) return;
@@ -71,7 +71,7 @@ function confirmVersion(dir, version) {
   }
 }
 
-/** Soubory z archivu ZIP, který vytvořil publikační skript. Balíček je v tu chvíli ověřený podpisem. */
+/** Files from the ZIP archive created by the publishing script. At this point the package has been verified by its signature. */
 function readZip(zip) {
   let end = zip.length - 22;
   while (end >= 0 && zip.readUInt32LE(end) !== ZIP_END) end -= 1;
@@ -97,8 +97,8 @@ function readZip(zip) {
 }
 
 /**
- * Rozbalí ověřený balíček do složky verze a nastaví ji jako další ke spuštění.
- * Rozepsaná složka se nikdy nevybere, přejmenuje se až celá hotová.
+ * Unpacks a verified package into a version folder and sets it as the next to start.
+ * A folder being written is never chosen; it is renamed only when complete.
  */
 function installVersion(zipFile, dir, version) {
   const target = path.join(dir, version);
@@ -106,8 +106,8 @@ function installVersion(zipFile, dir, version) {
   fs.rmSync(temp, { recursive: true, force: true });
   let complete = false;
   for (const { name, data } of readZip(fs.readFileSync(zipFile))) {
-    if (name === 'Aether.exe') continue;     // spouštěč se mění jen instalací
-    // Zpětné lomítko je na Windows oddělovač cesty, `resources\..\..` by jinak vedlo mimo složku verze.
+    if (name === 'Aether.exe') continue;     // the launcher changes only with installation
+    // A backslash is a path separator on Windows; `resources\..\..` would otherwise lead outside the version folder.
     if (!name.startsWith('resources/') || /[\\:\0]/.test(name) || name.split('/').some((part) => part === '..' || part === '')) throw new Error(`Neplatná cesta v balíčku: ${name}`);
     const relative = name.slice('resources/'.length);
     const out = path.join(temp, relative);

@@ -1,5 +1,5 @@
-// Most proti skutečnému Bitcoin Core v izolované síti regtest. Bez programu bitcoind se test přeskočí.
-// Spuštění: BITCOIND=/cesta/k/bitcoind node --test packages/bridge/test/btc-regtest.test.js
+// The bridge against a real Bitcoin Core in an isolated regtest network. Without bitcoind the test is skipped.
+// Run: BITCOIND=/path/to/bitcoind node --test packages/bridge/test/btc-regtest.test.js
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -17,7 +17,7 @@ const { BITCOIND } = process.env;
 const RPC_PORT = 18998;
 const LOGIN = { user: 'aether', password: 'test' };
 
-test('skutečný Bitcoin Core: vklad, výběr a platné podpisy podle sítě', { skip: BITCOIND ? false : 'nastavte BITCOIND=/cesta/k/bitcoind' }, async () => {
+test('real Bitcoin Core: deposit, withdrawal and valid signatures according to the network', { skip: BITCOIND ? false : 'nastavte BITCOIND=/cesta/k/bitcoind' }, async () => {
   const proc = spawn(BITCOIND, ['-regtest', `-datadir=${mkdtempSync(join(tmpdir(), 'aether-regtest-'))}`, `-rpcport=${RPC_PORT}`, '-port=18999', '-listen=0', `-rpcuser=${LOGIN.user}`, `-rpcpassword=${LOGIN.password}`, '-fallbackfee=0.0002'], { stdio: 'ignore' });
   const people = Array.from({ length: 3 }, () => ethers.Wallet.createRandom());
   const [admin, guardian, alice] = people;

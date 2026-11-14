@@ -1,4 +1,4 @@
-// Společný základ příkazů: spojení s uzlem, kontrakty, dotazy na uživatele a výstup pro lidi i skripty.
+// Common base of commands: connection to the node, contracts, user prompts and output for people and scripts.
 import { readFileSync } from 'node:fs';
 import { ethers } from 'ethers';
 import { NETWORKS } from '../../node/src/params.js';
@@ -7,7 +7,7 @@ import bundled from '../../explorer/public/deployments.json' with { type: 'json'
 import { ERRORS } from './errors.js';
 import { L } from './i18n.js';
 
-/** Chyba, kterou uživatel opraví sám. Vypíše se bez výpisu zásobníku. */
+/** An error the user fixes themselves. Printed without a stack trace. */
 export class CliError extends Error {}
 
 export const DEFAULT_NETWORK = 'testnet';
@@ -17,13 +17,13 @@ export const SWAP_DEADLINE_S = 1200;
 
 export const toJson = (value) => JSON.stringify(value, (_, v) => (typeof v === 'bigint' ? v.toString() : v), 2);
 
-/** Uzel vrací adresy v kontrolním tvaru, contracts.json je má malými písmeny. */
+/** The node returns addresses in checksum form; contracts.json has them in lower case. */
 export const sameAddress = (a, b) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
 
 const coder = ethers.AbiCoder.defaultAbiCoder();
 const interfaces = Object.values(contracts).filter((c) => c.abi).map((c) => new ethers.Interface(c.abi));
 
-/** Název volané funkce podle ABI kontraktů sítě, jako sloupec Metoda v Exploreru. */
+/** Name of the called function according to the network contracts' ABI, like the Method column in the Explorer. */
 export function methodOf(x) {
   if (!x.to) return L('nasazení kontraktu', 'contract creation');
   const input = x.input ?? x.data ?? '0x';
@@ -32,28 +32,28 @@ export function methodOf(x) {
     try {
       const f = i.getFunction(input.slice(0, 10));
       if (f) return f.name;
-    } catch { /* jiný kontrakt */ }
+    } catch { /* another contract */ }
   }
   return input.slice(0, 10);
 }
 
-/** Co kontrakt vrátil při odmítnutí: vlastní chyba podle ABI ({name, args}), text z require nebo kód Panic ({text}). */
+/** What the contract returned on rejection: a custom error by ABI ({name, args}), text from require or a Panic code ({text}). */
 export function revertInfo(data) {
   if (typeof data !== 'string' || !data.startsWith('0x') || data.length < 10) return null;
   try {
     if (data.startsWith('0x08c379a0')) return { name: 'Error', text: coder.decode(['string'], `0x${data.slice(10)}`)[0] };
     if (data.startsWith('0x4e487b71')) return { name: 'Panic', text: `Panic 0x${coder.decode(['uint256'], `0x${data.slice(10)}`)[0].toString(16)}` };
-  } catch { /* poškozená data */ }
+  } catch { /* corrupted data */ }
   for (const i of interfaces) {
     try {
       const e = i.parseError(data);
       if (e) return { name: e.name, args: [...e.args] };
-    } catch { /* jiný kontrakt */ }
+    } catch { /* another contract */ }
   }
   return null;
 }
 
-/** Důvod odmítnutí jako věta. Známá chyba dostane vysvětlení a v závorce svůj kód. */
+/** The reason for rejection as a sentence. A known error gets an explanation and its code in brackets. */
 export function revertReason(data) {
   const info = revertInfo(data);
   if (!info) return null;
@@ -63,7 +63,7 @@ export function revertReason(data) {
   return info.args.length ? `${info.name}(${info.args.map(String).join(', ')})` : info.name;
 }
 
-/** Text z ethers obsahuje celý požadavek. Uživatele zajímá jen důvod. */
+/** The text from ethers contains the whole request. The user only cares about the reason. */
 export function reason(e) {
   const decoded = revertReason(e?.data ?? e?.info?.error?.data ?? e?.error?.data);
   if (decoded) return decoded;
@@ -81,13 +81,13 @@ export const parseAmount = (text, decimals = 18) => {
   }
 };
 
-/** Kladné celé číslo: číslo položky, obchodu, hlasování nebo návrhu. */
+/** A positive integer: the number of an item, deal, poll or proposal. */
 export const parseId = (text, what) => {
   if (!/^\d+$/.test(String(text ?? '').trim())) throw new CliError(L(`Zadejte ${what.cs}, celé číslo.`, `Give the ${what.en} as a whole number.`));
   return BigInt(String(text).trim());
 };
 
-/** Otisk jako v Exploreru: hodnotu 0x a 64 znaků bere tak, jak je, jiný text převede přes keccak256. */
+/** Fingerprint as in the Explorer: a value of 0x and 64 characters is taken as is, other text goes through keccak256. */
 export const hashOf = (text) => (/^0x[0-9a-fA-F]{64}$/.test(String(text)) ? String(text).toLowerCase() : ethers.id(String(text)));
 
 export const units = (value, decimals = 18, digits = 8) => {
@@ -97,13 +97,13 @@ export const units = (value, decimals = 18, digits = 8) => {
 };
 export const gwei = (wei) => units(wei, 9, 3);
 
-/** Nenulová částka nesmí vypadat jako nula: místo 0 se ukáže „< 0.0001“. */
+/** A non-zero amount must not look like zero: "< 0.0001" is shown instead of 0. */
 export const amountText = (value, decimals = 18, digits = 8) => {
   const text = units(value, decimals, digits);
   return text === '0' && BigInt(value) > 0n ? `< 0.${'0'.repeat(digits - 1)}1` : text;
 };
 
-/** Cena s platnými číslicemi jako v Exploreru: 0.000000008 zůstane vidět, větší čísla mají nejvýše `digits` desetinných míst. */
+/** Price with significant digits as in the Explorer: 0.000000008 stays visible, larger numbers have at most `digits` decimals. */
 export const significant = (value, decimals = 18, digits = 6) => {
   const [whole, frac = ''] = ethers.formatUnits(value, decimals).split('.');
   if (whole !== '0') return units(value, decimals, digits);
@@ -111,13 +111,13 @@ export const significant = (value, decimals = 18, digits = 6) => {
   return first < 0 ? '0' : `0.${frac.slice(0, first + digits).replace(/0+$/, '')}`;
 };
 
-/** Čeština: 1 transakce, 2 až 4 transakce, 0 a 5 a víc transakcí. */
+/** Czech: 1 transakce, 2 to 4 transakce, 0 and 5 or more transakcí. */
 export const plural = (n, one, few, many) => {
   const v = Math.abs(Number(n));
   return `${n} ${v === 1 ? one : v >= 2 && v <= 4 ? few : many}`;
 };
 
-/** Počet s podstatným jménem v obou jazycích: count(3, ['transakce', 'transakce', 'transakcí'], ['transaction', 'transactions']). */
+/** A count with a noun in both languages: count(3, ['transakce', 'transakce', 'transakcí'], ['transaction', 'transactions']). */
 export const count = (n, cs, en) => L(plural(n, ...cs), `${n} ${Math.abs(Number(n)) === 1 ? en[0] : en[1]}`);
 
 export function rate(h) {
@@ -135,13 +135,13 @@ export function ago(seconds) {
   return L(`před ${n} ${unit}`, `${n} ${unit} ago`);
 }
 
-/** Datum a čas z časové značky bloku. */
+/** Date and time from the block timestamp. */
 export const dateText = (seconds) => new Date(Number(seconds) * 1000).toLocaleString(L('cs-CZ', 'en-GB'), { dateStyle: 'medium', timeStyle: 'medium' });
 
 export const short = (a) => (a && a.length > 16 ? `${a.slice(0, 8)}…${a.slice(-6)}` : a ?? '—');
 export const yesNo = (v) => (v ? L('ano', 'yes') : L('ne', 'no'));
 
-/** Sloupce zarovnané podle nejdelší hodnoty. Čísla jdou doprava. */
+/** Columns aligned to the longest value. Numbers go to the right. */
 export function table(head, rows, right = []) {
   const width = head.map((h, i) => Math.max(String(h).length, ...rows.map((r) => String(r[i] ?? '').length)));
   const line = (r) => r.map((c, i) => (right.includes(i) ? String(c ?? '').padStart(width[i]) : String(c ?? '').padEnd(width[i]))).join('  ').trimEnd();
@@ -154,10 +154,10 @@ export const pairs = (rows) => {
   return shown.map(([k, v]) => `${`${k}:`.padEnd(width + 2)}${v}`).join('\n');
 };
 
-// ------------------------------------------------------------------- dotazy na uživatele
+// ------------------------------------------------------------------- questions to the user
 const isTerminal = () => !!process.stdin.isTTY;
 
-/** Bez terminálu se čte jeden řádek ze vstupu, aby šlo tajemství poslat skriptem přes rouru, ne přes argument. */
+/** Without a terminal one line is read from input, so a secret can be passed by a script through a pipe, not an argument. */
 let piped = null;
 async function readLine() {
   if (piped === null) {
@@ -178,7 +178,7 @@ export function ask(prompt) {
   });
 }
 
-/** Skrytý vstup: znaky se neopisují na obrazovku a nezůstanou v historii příkazů. */
+/** Hidden input: characters are not echoed to the screen and do not stay in the command history. */
 export function askHidden(prompt) {
   if (!isTerminal()) return readLine();
   const { stdin, stderr } = process;
@@ -207,9 +207,9 @@ export function askHidden(prompt) {
   });
 }
 
-// ------------------------------------------------------------------- spojení
+// ------------------------------------------------------------------- connection
 export class Context {
-  /** @param {object} opts volby z příkazové řádky */
+  /** @param {object} opts command-line options */
   constructor(opts) {
     this.opts = opts;
     this.networkName = opts.network ?? DEFAULT_NETWORK;
@@ -221,7 +221,7 @@ export class Context {
     this.contracts = contracts;
   }
 
-  /** Výstup pro člověka, nebo s --json pro skript. */
+  /** Output for a person, or with --json for a script. */
   print(data, text) {
     console.log(this.opts.json ? toJson(data) : text ?? toJson(data));
   }
@@ -241,7 +241,7 @@ export class Context {
     return body.result;
   }
 
-  /** Před podpisem se ověří síť. Podpis pro jinou síť by na ní byl platný, jen by šel jinam, než si uživatel myslí. */
+  /** The network is checked before signing. A signature for another network would be valid there, it would just go somewhere the user does not expect. */
   async connect() {
     if (this.provider) return this.provider;
     const chainId = Number(await this.rpc('eth_chainId'));
@@ -259,14 +259,14 @@ export class Context {
     return new ethers.Contract(address ?? c.address, c.abi, runner ?? this.provider);
   }
 
-  /** Adresy mostu a Swapu: vlastní soubor, nebo ty, se kterými byl nástroj vydán, doplněné o nové z uzlu. */
+  /** Bridge and Swap addresses: an own file, or those the tool was released with, supplemented by new ones from the node. */
   async deployment() {
     if (this.deployed !== undefined) return this.deployed;
     if (this.opts.deployments) {
       this.deployed = JSON.parse(readFileSync(this.opts.deployments, 'utf8'))[this.chainId] ?? null;
       return this.deployed;
     }
-    // Adresy z vydání mají přednost: cizí uzel by jinak mohl podstrčit falešný router a nechat si schválit tokeny.
+    // Addresses from the release take precedence: a foreign node could otherwise plant a fake router and get tokens approved for it.
     const remote = await fetch(`${this.url}/deployments.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
     const merged = { ...remote?.[this.chainId], ...bundled[this.chainId] };
     this.deployed = Object.keys(merged).length ? merged : null;
@@ -281,7 +281,7 @@ export class Context {
     return /^(native|quinvium|quintium|[dt]?qu)$/i.test(text) || text.toLowerCase() === this.symbol.toLowerCase();
   }
 
-  /** Ověřený seznam ze sítě. Token mimo něj jde použít jen přes adresu a výstup na to upozorní. */
+  /** The verified list from the network. A token outside it can be used only by address, and the output warns about it. */
   async tokens() {
     if (this.tokenList) return this.tokenList;
     await this.connect();
@@ -298,7 +298,7 @@ export class Context {
       await Promise.all(entries.map((e) => add(e.token, true, { kind: Number(e.kind), issuer: e.issuer }).catch(() => {})));
     }
     await Promise.all((d?.swap?.tokens ?? []).map((t) => add(t.address, !d?.registry).catch(() => {})));
-    // Tokeny s poolem proti QU ze Swap factory: autoři si je zakládají sami, pevný seznam je nezná. Bere se nejvýš 200 nejnovějších poolů.
+    // Tokens with a pool against QU from the Swap factory: authors create them themselves; a fixed list does not know them. At most the 200 newest pools are taken.
     if (d?.swap?.factory) {
       const hub = this.contracts.WAET.address.toLowerCase();
       const factory = this.at('SwapFactory', d.swap.factory);
@@ -331,7 +331,7 @@ export class Context {
     return hits[0];
   }
 
-  /** Adresa, nebo jméno .qu z registru jmen. */
+  /** An address, or a .qu name from the name registry. */
   async address(text) {
     if (ethers.isAddress(text ?? '')) return ethers.getAddress(text);
     if (/\.qu$/i.test(text ?? '')) {

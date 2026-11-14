@@ -1,12 +1,12 @@
-// Oficiální testy EVM z repozitáře ethereum/tests (GeneralStateTests) nad skutečným kódem uzlu:
-// stejný stavový strom, cache, kryptografie i obcházení chyb knihovny jako při ověřování bloků.
+// Official EVM tests from the ethereum/tests repository (GeneralStateTests) over the real node code:
+// the same state trie, cache, cryptography and library bug workarounds as when verifying blocks.
 //
-//   node test/statetests.mjs <složka s testy> [Shanghai|Cancun|Osaka] [filtr]
+//   node test/statetests.mjs <test folder> [Shanghai|Cancun|Osaka] [filter]
 //
-// Shanghai se pouští s čistým ceníkem Shanghai. Cancun s pravidly Quinvia bez cen z Fusaky, protože
-// sada Cancun očekává původní cenu MODEXP. Osaka přidává EIP-7823 a EIP-7883 a slouží pro testy MODEXP
-// z ethereum/execution-spec-tests. Sada Osaka očekává i EIP-7623, který Quinvium nemá, proto pro ni
-// AETHER_EXTRA_EIPS=7623. Rozdíly oproti Ethereu popisuje docs/SPECIFICATION.md.
+// Shanghai runs with the plain Shanghai price list. Cancun with Quinvium's rules without the Fusaka prices, because
+// the Cancun suite expects the original MODEXP price. Osaka adds EIP-7823 and EIP-7883 and is used for MODEXP tests
+// from ethereum/execution-spec-tests. The Osaka suite also expects EIP-7623, which Quinvium does not have, so for it
+// AETHER_EXTRA_EIPS=7623. Differences from Ethereum are described in docs/SPECIFICATION.md.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { createBlock } from '@ethereumjs/block';
@@ -25,15 +25,15 @@ if (!dir) {
   process.exit(2);
 }
 
-/** Produkční konfigurace EVM, jen s čistým ceníkem Etherea. */
+/** Production EVM configuration, only with Ethereum's plain price list. */
 const commonFor = (name) => makeCommon({ name: 'statetest', chainId: 1n }, {
   eips: [...({ Cancun: [1153, 5656, 6780], Osaka: [1153, 5656, 6780, 7823, 7883] }[name] ?? []), ...(process.env.AETHER_EXTRA_EIPS?.split(',').map(Number) ?? [])],
   blake2RoundGas: 1,
 });
 
-// Quinvium nemá bloby, Cancun je ale v testech počítá: adresa 0x0a je předkompilovaný kontrakt a stojí méně gasu,
-// 0x49 a 0x4a jsou platné instrukce. Bez bloby v transakci se chovají předvídatelně, proto je tady
-// nahrazují náhradní verze. Zbylé rozdíly tak nemůžou být způsobené blobami a jde o skutečné chyby.
+// Quinvium has no blobs, but Cancun tests count on them: address 0x0a is a precompile and costs less gas,
+// 0x49 and 0x4a are valid opcodes. Without blobs in the transaction they behave predictably, so here
+// are replaced by substitute versions. The remaining differences therefore cannot be caused by blobs and are real bugs.
 const BLOB_STUBS = {
   customPrecompiles: [{
     address: new Address(hexToBytes('0x000000000000000000000000000000000000000a')),
@@ -45,7 +45,7 @@ const BLOB_STUBS = {
   ],
 };
 
-/** Čistá knihovna bez cache a bez našich úprav, pro porovnání při hledání příčiny rozdílu. */
+/** The plain library without the cache and without our changes, for comparison when looking for the cause of a difference. */
 function plainState(store, common) {
   const trie = new MerklePatriciaTrie({ db: new Overlay(store), useKeyHashing: true, valueEncoding: ValueEncoding.Bytes, common, cacheSize: 0 });
   return { stateManager: new MerkleStateManager({ common, trie, prefixCodeHashes: true }) };
@@ -57,7 +57,7 @@ class MemoryStore {
   kvPutMany(entries) { for (const [k, v] of entries) this.map.set(k, v); }
 }
 
-// Testy počítají BLOCKHASH jako keccak čísla bloku zapsaného desítkově.
+// Tests compute BLOCKHASH as keccak of the block number written in decimal.
 const blockchain = {
   getBlock: async (n) => ({ hash: () => keccak(new TextEncoder().encode(BigInt(n).toString())) }),
   shallowCopy() { return this; },
@@ -108,7 +108,7 @@ async function runCase(test, post, common, logsSeen) {
     },
   }, { common, setHardfork: false, skipConsensusFormatValidation: true });
 
-  // Stejně jako v referenčních nástrojích: coinbase se dotkne vždy a prázdné účty nakonec zmizí.
+  // As in the reference tools: the coinbase is always touched and empty accounts disappear at the end.
   const coinbase = createAddressFromString(e.currentCoinbase);
   await vm.evm.journal.putAccount(coinbase, (await stateManager.getAccount(coinbase)) ?? new Account());
 
@@ -137,7 +137,7 @@ function collect(path, out) {
   return out;
 }
 
-const SKIP = /stEIP4844|blob|BLOB/i;  // bloby síť záměrně nemá
+const SKIP = /stEIP4844|blob|BLOB/i;  // the network intentionally has no blobs
 const files = collect(dir, []).filter((f) => !SKIP.test(f) && (!filter || f.includes(filter)));
 const common = commonFor(fork);
 const started = Date.now();

@@ -12,13 +12,13 @@ interface IWrapped {
     function transfer(address to, uint256 value) external returns (bool);
 }
 
-/// @title Směrovač směn a likvidity
-/// @notice Nedrží žádné mince mezi transakcemi. Hlídá skluz a platnost, aby uživatel nedostal méně, než potvrdil.
-/// Hlavní mince AET se uvnitř mění na WAET, uživatel s ní pracuje přímo.
+/// @title Router for swaps and liquidity
+/// @notice Holds no coins between transactions. Guards slippage and deadline so the user never gets less than confirmed.
+/// The main coin is converted to WAET internally; the user works with it directly.
 contract SwapRouter {
     using SafeERC20 for IERC20;
 
-    /// @notice Co chce poskytovatel vložit a nejméně kolik musí pool přijmout.
+    /// @notice What the provider wants to deposit and the minimum the pool must accept.
     struct LiquidityOrder {
         address tokenA;
         address tokenB;
@@ -76,7 +76,7 @@ contract SwapRouter {
         return (withFee * reserveOut) / (reserveIn * FEE_DENOMINATOR + withFee);
     }
 
-    /// @notice Co dostanete za `amountIn` po cestě `path`, včetně poplatků všech poolů.
+    /// @notice What you get for `amountIn` along `path`, including the fees of all pools.
     function getAmountsOut(uint256 amountIn, address[] memory path) public view returns (uint256[] memory amounts) {
         if (path.length < 2) revert InvalidPath();
         amounts = new uint256[](path.length);
@@ -87,9 +87,9 @@ contract SwapRouter {
         }
     }
 
-    // ---- směna -----------------------------------------------------------------------
+    // ---- swap -----------------------------------------------------------------------
 
-    /// @dev Vstup už je v prvním poolu. Každý pool pošle výstup rovnou do dalšího.
+    /// @dev The input is already in the first pool. Each pool sends its output straight to the next one.
     function _swap(uint256[] memory amounts, address[] memory path, address to) private {
         for (uint256 i; i < path.length - 1; ++i) {
             (address input, address output) = (path[i], path[i + 1]);
@@ -159,7 +159,7 @@ contract SwapRouter {
         return (optimalA, desiredB, pair);
     }
 
-    /// @notice Vklad do poolu. Pool, který ještě neexistuje, se založí a poměr vkladu určí jeho první kurz.
+    /// @notice Deposit into a pool. A pool that does not exist yet is created and the deposit ratio sets its first rate.
     function addLiquidity(LiquidityOrder calldata o, address to, uint256 deadline)
         external
         ensure(deadline)

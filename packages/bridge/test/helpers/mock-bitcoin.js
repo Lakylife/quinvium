@@ -1,6 +1,6 @@
-// Simulace uzlu Bitcoin Core pro testy mostu. Mluví stejnými odpověďmi jako jeho JSON-RPC a transakce přijme, jen když
-// by je přijala síť: vstupy existují a nejsou utracené, svědek odpovídá skriptu a podpisy sedí v pořadí klíčů.
-// Podpisy ověřuje nezávislým kódem (bitcoinjs-lib a tiny-secp256k1), ne kódem mostu.
+// Simulation of a Bitcoin Core node for bridge tests. It answers with the same responses as its JSON-RPC and accepts transactions only when
+// the network would accept them: inputs exist and are unspent, the witness matches the script and signatures follow the key order.
+// Verifies signatures with independent code (bitcoinjs-lib and tiny-secp256k1), not the bridge code.
 import crypto from 'node:crypto';
 import { createRequire } from 'node:module';
 import * as bitcoinjs from 'bitcoinjs-lib';
@@ -14,7 +14,7 @@ const OP_CHECKMULTISIG = 0xae;
 const hex = (b) => Buffer.from(b).toString('hex');
 const sha = (b) => crypto.createHash('sha256').update(b).digest();
 
-/** Klíče a počet podpisů ze skriptu úschovy, s adresou příjemce i bez ní. */
+/** Keys and number of signatures from the custody script, with and without the recipient address. */
 function parseMultisig(script) {
   let at = 0;
   if (script[0] === 0x14 && script[21] === OP_DROP) at = 22;
@@ -33,7 +33,7 @@ export class MockBitcoin {
   constructor(network = bitcoinjs.networks.regtest) {
     this.network = network;
     this.blocks = [{ hash: hex(sha(Buffer.from('genesis'))), tx: [] }];
-    this.coins = new Map();     // potvrzené mince
+    this.coins = new Map();     // confirmed coins
     this.mempool = [];
     this.feerate = null;
     this.counter = 0;
@@ -76,7 +76,7 @@ export class MockBitcoin {
     return { success: true, unspents };
   }
 
-  /** Platba z cizí peněženky na adresu. */
+  /** A payment from a foreign wallet to an address. */
   pay(address, sats, extra = []) {
     this.counter += 1;
     const txid = hex(sha(Buffer.from(`platba-${this.counter}`)));
@@ -89,13 +89,13 @@ export class MockBitcoin {
     return txid;
   }
 
-  /** Cizí transakce se stejnou značkou OP_RETURN jako výběr, ale bez jediné mince z úschovy. */
+  /** A foreign transaction with the same OP_RETURN marker as a withdrawal, but without a single coin from the custody. */
   fakeMarker(script) {
     this.counter += 1;
     this.mempool.push({ txid: hex(sha(Buffer.from(`falesna-${this.counter}`))), vin: [{ txid: hex(sha(Buffer.from(`f-${this.counter}`))), vout: 0 }], vout: [{ value: 0, n: 0, scriptPubKey: { hex: script } }] });
   }
 
-  /** Stejná kontrola jako při přijetí do bloku, pro vstupy úschovy. */
+  /** The same check as when accepting into a block, for custody inputs. */
   accept(raw) {
     const tx = bitcoinjs.Transaction.fromHex(raw);
     const txid = tx.getId();
@@ -130,12 +130,12 @@ export class MockBitcoin {
     const digest = tx.hashForWitnessV0(index, script, Number(coin.value), SIGHASH_ALL);
     let key = 0;
     for (const signature of signatures) {
-      // Přísné čtení DER podle BIP66, jinak uzly podpis odmítnou.
+      // Strict DER parsing per BIP66, otherwise nodes reject the signature.
       const { signature: compact, hashType } = bitcoinjs.script.signature.decode(signature);
       if (hashType !== SIGHASH_ALL) this.fail('mandatory-script-verify-flag-failed (Invalid sighash type)');
       let found = false;
       while (key < keys.length && !found) {
-        found = ecc.verify(digest, keys[key], compact, true);   // true: nízké s je povinné
+        found = ecc.verify(digest, keys[key], compact, true);   // true: low s is mandatory
         key += 1;
       }
       if (!found) this.fail('mandatory-script-verify-flag-failed (Script evaluated without error but finished with a false/empty top stack element)');
@@ -156,7 +156,7 @@ export class MockBitcoin {
     }
   }
 
-  /** Přeskupení řetězce: poslední bloky zmizí i s transakcemi, jako kdyby je nikdy nikdo nezařadil. */
+  /** Chain reorganisation: the latest blocks disappear along with their transactions, as if nobody had ever included them. */
   reorg(n) {
     for (const block of this.blocks.splice(-n)) {
       for (const t of block.tx) for (const o of t.vout) this.coins.delete(`${t.txid}:${o.n}`);

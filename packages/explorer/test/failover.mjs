@@ -1,5 +1,5 @@
-// Explorer na doméně s více uzly: nedostupný uzel přeskočí, vezme ten s nejvyšším blokem a po pádu
-// vybraného uzlu přejde na druhý. Dva oddělené uzly sítě dev, stránka se načte z prvního.
+// An Explorer on a domain with several nodes: skips an unavailable node, takes the one with the highest block and after a failure
+// of the selected node switches to the second one. Two separate dev network nodes; the page loads from the first.
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
@@ -44,10 +44,10 @@ try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  // Nastavení provozovatele: nedostupný uzel a oba běžící. Stránka sama se načte z uzlu A.
+  // Operator settings: an unavailable node and two running ones. The page itself loads from node A.
   await page.route('**/config.js', (route) => route.fulfill({ contentType: 'application/javascript', body: `window.AETHER_CONFIG = { walletConnectProjectId: '', rpc: ['${DEAD}', '${b.url}', '${a.url}'] };` }));
   let chosen;
-  await step('nedostupný uzel se přeskočí a vybere se uzel s nejvyšším blokem', async () => {
+  await step('an unavailable node is skipped and the node with the highest block is chosen', async () => {
     const [ha, hb] = [await height(a.url), await height(b.url)];
     await page.goto(`${a.url}/blocks`);
     await page.waitForFunction(() => /#\d/.test(document.getElementById('footer-status')?.textContent ?? ''), null, { timeout: 20000 });
@@ -57,11 +57,11 @@ try {
     if (higher) assert.equal(chosen, higher, `výšky ${ha} a ${hb}`);
     else assert.ok([a.url, b.url].includes(chosen));
   });
-  await step('po pádu vybraného uzlu Explorer přejde na druhý a dál ukazuje bloky', async () => {
+  await step('after the selected node fails the Explorer switches to the second and keeps showing blocks', async () => {
     const [down, other] = chosen === a.url ? [a, b] : [b, a];
     down.proc.kill('SIGKILL');
     await waitFor(async () => !(await height(down.url).then(() => true, () => false)), 10000);
-    // Stránku teď podává druhý uzel. Uložený vybraný uzel neodpovídá, první dotaz proto přepne na živý.
+    // The second node now serves the page. The stored selected node does not answer, so the first query switches to a live one.
     await page.goto(`${other.url}/blocks`);
     await page.waitForFunction((url) => localStorage.getItem('aether.rpc') === url, other.url, { timeout: 20000 });
     await page.waitForFunction(() => /#\d/.test(document.getElementById('footer-status')?.textContent ?? ''), null, { timeout: 20000 });

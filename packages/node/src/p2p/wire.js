@@ -1,20 +1,20 @@
-// Přenosová vrstva mezi uzly: TCP, výměna klíčů X25519 a rámce AES-256-GCM.
-// Každé spojení má vlastní klíče, takže provoz nejde číst ani nenápadně měnit po cestě. Proti útočníkovi, který by
-// spojení přeposílal mezi dvěma uzly, chrání podpis trvalým klíčem uzlu v HELLO (viz identity.js): podepisuje se
-// otisk obou dočasných klíčů, a ty má útočník s každou stranou jiné.
-// Šifra musí existovat v OpenSSL i BoringSSL: uzel v desktopové aplikaci běží v Node z Electronu a ChaCha20 tam není.
+// Transport layer between nodes: TCP, X25519 key exchange and AES-256-GCM frames.
+// Each connection has its own keys, so traffic cannot be read or subtly modified on the way. Against an attacker who would
+// relayed connections between two nodes, the signature with the node's persistent key in HELLO protects (see identity.js): what is signed is
+// hash of both ephemeral keys, and an attacker has different ones with each side.
+// The cipher must exist in both OpenSSL and BoringSSL: the node in the desktop app runs on Electron's Node, which lacks ChaCha20.
 import { EventEmitter } from 'node:events';
 import crypto from 'node:crypto';
 
 export const MSG = Object.freeze({
   HELLO: 0, PING: 1, PONG: 2, GET_HEADERS: 3, HEADERS: 4, GET_BLOCKS: 5, BLOCKS: 6,
   NEW_BLOCK: 7, NEW_TXS: 8, GET_PEERS: 9, PEERS: 10, STATUS: 11,
-  // Ohlášení hashem. Posílají se jen uzlům, které v HELLO uvedou schopnost FEATURE_ANNOUNCE.
+  // Announcement by hash. Sent only to peers that list the FEATURE_ANNOUNCE capability in HELLO.
   NEW_TX_HASHES: 12, GET_TXS: 13, TXS: 14, NEW_BLOCK_HASH: 15,
 });
 
 export const MAX_FRAME = 12 * 1024 * 1024;
-export const MAX_QUEUED = 32 * 1024 * 1024;   // uzel, který nečte, nesmí plnit naši paměť
+export const MAX_QUEUED = 32 * 1024 * 1024;   // a peer that does not read must not fill our memory
 const MAX_HELLO_FRAME = 16 * 1024;
 const PUB_LEN = 32;
 const TAG_LEN = 16;
@@ -25,7 +25,7 @@ const CIPHER = 'aes-256-gcm';
 export class SecureChannel extends EventEmitter {
   /**
    * @param {import('node:net').Socket} socket
-   * @param {boolean} initiator true u odchozího spojení
+   * @param {boolean} initiator true for an outbound connection
    */
   constructor(socket, initiator) {
     super();
@@ -33,7 +33,7 @@ export class SecureChannel extends EventEmitter {
     this.initiator = initiator;
     this.chunks = [];
     this.have = 0;
-    this.maxFrame = MAX_HELLO_FRAME;  // před handshakem se nic velkého nečeká
+    this.maxFrame = MAX_HELLO_FRAME;  // nothing large is expected before the handshake
     this.sendCounter = 0n;
     this.recvCounter = 0n;
     this.sendKey = null;
@@ -50,10 +50,10 @@ export class SecureChannel extends EventEmitter {
     socket.on('close', () => this.close('spojení ukončeno'));
   }
 
-  /** Povolí velké rámce po dokončeném handshaku. */
+  /** Allows large frames after the handshake is complete. */
   unlock() { this.maxFrame = MAX_FRAME; }
 
-  /** Otisk spojení: oba dočasné klíče v pořadí iniciátor, příjemce. Pro útočníka uprostřed je na každé straně jiný. */
+  /** Connection fingerprint: both ephemeral keys in initiator, responder order. For an attacker in the middle it differs on each side. */
   transcript() {
     const [a, b] = this.initiator ? [this.localPub, this.remotePub] : [this.remotePub, this.localPub];
     return crypto.createHash('sha256').update(SALT).update(a).update(b).digest();
@@ -77,7 +77,7 @@ export class SecureChannel extends EventEmitter {
     return n;
   }
 
-  /** Kousky se spojí jednou, až je celý rámec, ne při každém příchozím paketu. */
+  /** Pieces are joined once the whole frame is there, not on every incoming packet. */
   _flat(n) {
     if (this.chunks[0].length < n) this.chunks = [Buffer.concat(this.chunks)];
     return this.chunks[0];
@@ -118,7 +118,7 @@ export class SecureChannel extends EventEmitter {
     }
   }
 
-  /** Bajty čekající na odeslání: uzel, který nečte, se pozná podle jejich růstu. */
+  /** Bytes waiting to be sent: a peer that does not read is recognised by their growth. */
   get queued() { return this.socket.writableLength; }
 
   send(type, payload) {

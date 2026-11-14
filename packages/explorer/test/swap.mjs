@@ -1,4 +1,4 @@
-// Stránka Swap ve skutečném Chromiu: skutečný uzel, skutečné kontrakty a peněženka se skutečnými podpisy.
+// The Swap page in real Chromium: a real node, real contracts and a wallet with real signatures.
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { dirname, join } from 'node:path';
@@ -45,16 +45,16 @@ try {
   const usd = await make('Test USD', 'tUSD', 6);
   const btc = await make('Test BTC', 'tBTC', 8);
   const lonely = await make('Bez poolu', 'tNIC', 18);
-  const fresh = await make('Novy token', 'tNEW', 18);    // není v seznamu ani v poolu, vybírá se adresou
+  const fresh = await make('Novy token', 'tNEW', 18);    // neither in the list nor in a pool; selected by address
   const asAdmin = router.connect(A.connect(admin));
   await A.ok(asAdmin.addLiquidityNative(usd.target, 2000n * 10n ** 6n, 0n, 0n, admin.address, FAR, { value: 1000n * WEI }));
   await A.ok(asAdmin.addLiquidityNative(btc.target, 10n ** 8n, 0n, 0n, admin.address, FAR, { value: 1000n * WEI }));
   const tokens = [usd, btc, lonely];
   const meta = await Promise.all(tokens.map(async (t) => ({ address: t.target, symbol: await t.symbol(), name: await t.name(), decimals: Number(await t.decimals()) })));
-  // tBTC v pevném seznamu chybí: Swap ho najde ve factory podle poolu s QU, jako token, který si autor založí sám.
+  // tBTC is missing from the fixed list: Swap finds it in the factory by its pool with QU, like a token its author created.
   const deployments = { [A.id]: { swap: { factory: factory.target, router: router.target, tokens: [meta[0], meta[2]] } } };
 
-  let paused = false;     // krok s čekající transakcí na chvíli zastaví těžbu
+  let paused = false;     // a step with a pending transaction briefly stops mining
   const life = async () => {
     while (!stopping) {
       if (!paused) await A.mine().catch(() => {});
@@ -107,7 +107,7 @@ try {
     await page.waitForTimeout(300);
   };
 
-  await step('bez nasazení stránka řekne, že swap ještě neběží', async () => {
+  await step('without a deployment the page says swap is not running yet', async () => {
     await page.goto(`${url}/#/swap`);
     await page.getByText('Swap na této síti ještě neběží').waitFor();
     assert.ok(await page.locator('a[data-nav=\"swap\"].active').count());
@@ -116,7 +116,7 @@ try {
   await page.route('**/deployments.json', (r) => r.fulfill({ json: deployments }));
   await page.reload();
 
-  await step('odhad ukáže kurz, dopad na cenu a minimum po skluzu', async () => {
+  await step('the estimate shows the rate, the price impact and the minimum after slippage', async () => {
     await page.locator('#swap-in').waitFor();
     await page.waitForTimeout(300);
     assert.equal(await page.isDisabled('#swap-go'), true);
@@ -136,20 +136,20 @@ try {
     await page.click('[data-slip="50"]');
   });
 
-  await step('směna hlavní mince za token', async () => {
+  await step('swapping the main coin for a token', async () => {
     const before = await usd.balanceOf(user.address);
     await page.click('#swap-go');
     await page.getByText('Směna proběhla').waitFor({ timeout: 30000 });
     assert.ok(await usd.balanceOf(user.address) > before + 19_000_000n);
   });
 
-  await step('po směně jde získaný token jedním kliknutím přidat do peněženky', async () => {
+  await step('after a swap the received token can be added to the wallet with one click', async () => {
     await page.locator('#swap-msg .text-btn', { hasText: 'Přidat tUSD do peněženky' }).click();
     await page.getByText('tUSD je v peněžence.').waitFor();
     assert.deepEqual(watched.at(-1), { type: 'ERC20', options: { address: usd.target, symbol: 'tUSD', decimals: 6 } });
   });
 
-  await step('zpětná směna tokenu schválí útratu a vrátí hlavní minci', async () => {
+  await step('swapping a token back approves spending and returns the main coin', async () => {
     await page.click('#swap-flip');
     await page.waitForTimeout(300);
     await page.fill('#swap-in', '5');
@@ -161,7 +161,7 @@ try {
     assert.equal(await usd.allowance(user.address, router.target) < 10n ** 7n, true, 'schváleno jen tolik, kolik bylo potřeba');
   });
 
-  await step('trh ukáže cenu z poolu, graf a poslední směny', async () => {
+  await step('the market shows the price from the pool, a chart and the latest swaps', async () => {
     await page.reload();
     await page.locator('.market-name h2', { hasText: 'dQU / tUSD' }).waitFor();
     const pair = new ethers.Contract(await factory.getPair(WAET, usd.target), artifacts.SwapPair.abi, A.provider);
@@ -177,13 +177,13 @@ try {
     assert.equal(await page.locator('.market ~ .card tbody tr').count(), 2, 'obě směny jsou v seznamu');
     await page.click('[data-span="24h"]');
     await page.locator('[data-span="24h"].active').waitFor();
-    // Trh a poslední směny jsou vedle formuláře, ne pod ním. Formulář je vpravo nahoře.
+    // The market and latest swaps are next to the form, not below it. The form is at the top right.
     const [market, form] = await Promise.all([page.locator('#market').boundingBox(), page.locator('.trade-side').boundingBox()]);
     assert.ok(form.x >= market.x + market.width - 1 && Math.abs(form.y - market.y) < 40, `formulář ${JSON.stringify(form)}, trh ${JSON.stringify(market)}`);
     assert.ok(await page.locator('.trades-card a.text-link', { hasText: 'Všechny směny' }).count(), 'odkaz na všechny směny');
   });
 
-  await step('výběr tokenu má hledání a zůstatky a Escape ho zavře', async () => {
+  await step('the token picker has search and balances and Escape closes it', async () => {
     await page.click('#swap-to');
     await page.fill('.picker-search', 'btc');
     assert.equal(await page.locator('.picker-row:visible').count(), 1);
@@ -193,10 +193,10 @@ try {
     assert.equal(await page.locator('.picker').count(), 0);
   });
 
-  await step('část zůstatku jedním kliknutím a varování před nedostatkem mincí', async () => {
+  await step('part of the balance with one click and a warning about insufficient coins', async () => {
     await page.click('[data-part="50"]');
     await page.waitForFunction(() => Number(document.getElementById('swap-in').value) > 1000);
-    // Polovina zůstatku do poolu s tisícovkou mincí má dopad nad 15 %: tlačítko čeká na potvrzení.
+    // Half the balance into a pool with a thousand coins has an impact above 15 %: the button waits for confirmation.
     await page.locator('#swap-ack').waitFor();
     assert.equal(await page.isDisabled('#swap-go'), true);
     await page.check('#swap-ack');
@@ -222,7 +222,7 @@ try {
     assert.equal(await page.locator('.modal-backdrop').count(), 0);
   });
 
-  await step('dvojice bez přímého poolu jde přes QU', async () => {
+  await step('a pair without a direct pool goes through QU', async () => {
     await go('#/swap');
     await pick('#swap-from', 'tUSD');
     await pick('#swap-to', 'tBTC');
@@ -234,7 +234,7 @@ try {
     assert.ok(await btc.balanceOf(user.address) > before);
   });
 
-  await step('bez poolu a se stejným tokenem nejde nic odeslat', async () => {
+  await step('without a pool and with the same token nothing can be sent', async () => {
     await pick('#swap-to', 'tNIC');
     await page.fill('#swap-in', '1');
     await page.locator('#swap-go', { hasText: 'zatím není pool' }).waitFor();
@@ -243,14 +243,14 @@ try {
     await page.locator('#swap-go', { hasText: 'dva různé tokeny' }).waitFor();
   });
 
-  await step('velká částka varuje před dopadem na cenu a bez potvrzení neodejde', async () => {
+  await step('a large amount warns about the price impact and does not go out without confirmation', async () => {
     await pick('#swap-to', 'dQU');
     await pick('#swap-from', 'tBTC');
-    // Pool má 1 tBTC: 0,1 tBTC dá dopad asi 9 %, tedy varování bez potvrzení.
+    // The pool has 1 tBTC: 0.1 tBTC gives an impact of about 9 %, i.e. a warning without confirmation.
     await page.fill('#swap-in', '0,1');
     await page.locator('#swap-go', { hasText: 'Velký dopad' }).waitFor();
     assert.equal(await page.isDisabled('#swap-go'), false, 'do 15 % stačí varování');
-    // Na tlačítku je jen krátký nápis, vysvětlení je ve varování nad ním.
+    // The button has only a short label; the explanation is in the warning above it.
     assert.match(await page.locator('.impact-warn').innerText(), /pool je pro tuto částku malý/);
     const fits = await page.$eval('#swap-go', (b) => ({ text: b.textContent, wide: b.scrollWidth <= b.clientWidth, tall: b.getBoundingClientRect().height }));
     assert.ok(fits.wide && fits.tall <= 54 && !fits.text.includes('pool'), `nápis se vejde na jeden řádek: ${JSON.stringify(fits)}`);
@@ -267,7 +267,7 @@ try {
     assert.equal(await page.isDisabled('#swap-go'), true, 'nová částka chce nové potvrzení');
   });
 
-  await step('swap s velkým dopadem po potvrzení projde a vezme přesně zadanou částku', async () => {
+  await step('a swap with a large impact passes after confirmation and takes exactly the entered amount', async () => {
     const before = await btc.balanceOf(user.address);
     await page.fill('#swap-in', '0,5');
     await page.locator('#swap-ack').waitFor();
@@ -277,7 +277,7 @@ try {
     assert.equal(before - await btc.balanceOf(user.address), 5n * 10n ** 7n, 'odešlo přesně 0,5 tBTC');
   });
 
-  await step('likvidita: pooly vedle formuláře, kurz místo plusu a rychlé částky', async () => {
+  await step('liquidity: pools next to the form, the rate instead of a plus and quick amounts', async () => {
     await go('#/swap?view=pools');
     await page.getByText('dQU / tUSD').or(page.getByText('tUSD / dQU')).first().waitFor();
     assert.equal(await page.locator('[data-remove]').count(), 0, 'uživatel zatím nemá podíl');
@@ -288,14 +288,14 @@ try {
     await pick('#add-b', 'tUSD');
     await page.locator('#add-rate', { hasText: /Svázáno kurzem poolu: 1 dQU = [\d\s,]+ tUSD/ }).waitFor();
     assert.deepEqual(await page.locator('#add-form .trade-field').first().locator('[data-part]').allInnerTexts(), ['20 %', '50 %', 'Max']);
-    // Max: největší vklad, na který stačí oba zůstatky. Druhá částka se dopočítá kurzem a tlačítko jde stisknout.
+    // Max: the largest deposit both balances allow. The second amount is computed from the rate and the button can be pressed.
     await page.click('[data-side="a"][data-part="100"]');
     await page.waitForFunction(() => Number(document.querySelector('#add-form input[name=amountB]').value) > 0);
     const max = Number(await page.inputValue('#add-form input[name=amountA]'));
     assert.ok(max > 0 && !(await page.locator('#add-go').isDisabled()), `Max ${max} jde vložit`);
-    // Max hlavní mince nechá rezervu na poplatky a řekne to.
+    // Max of the main coin leaves a reserve for fees and says so.
     await page.locator('#add-note', { hasText: 'Po vkladu zůstane 0,01 dQU' }).waitFor();
-    // Max u tokenu, kterého je dost: vklad omezí zůstatek mince, poznámka to vysvětlí a dopočtená částka má nejvýš 6 desetinných míst.
+    // Max for a token there is plenty of: the coin balance limits the deposit, the note explains it and the computed amount has at most 6 decimals.
     await page.click('[data-side="b"][data-part="100"]');
     await page.locator('#add-note', { hasText: 'Vklad omezuje zůstatek dQU' }).waitFor();
     const capped = await page.inputValue('#add-form input[name=amountA]');
@@ -307,7 +307,7 @@ try {
     await page.click('[data-side="a"][data-part="20"]');
     const fifth = Number(await page.inputValue('#add-form input[name=amountA]'));
     assert.ok(Math.abs(fifth - max / 5) < max * 0.001, `20 % je pětina z Max (${fifth} / ${max})`);
-    // Částka druhého tokenu dopočítá první.
+    // The second token's amount computes the first.
     await page.fill('#add-form input[name=amountB]', '4');
     await page.waitForFunction(() => Number(document.querySelector('#add-form input[name=amountA]').value) > 0);
     await page.fill('#add-form input[name=amountA]', '2');
@@ -332,7 +332,7 @@ try {
     await page.locator('#my-pools.hidden').waitFor({ state: 'attached' });
   });
 
-  await step('nový pool založí první vklad', async () => {
+  await step('the first deposit creates a new pool', async () => {
     await go('#/swap?view=pools');
     await pick('#add-a', 'tNIC');
     await pick('#add-b', 'tUSD');
@@ -364,7 +364,7 @@ try {
     await page.setViewportSize({ width: 1280, height: 900 });
   }
 
-  await step('detail swapu ukáže převody tokenů, funkci směrovače a události', async () => {
+  await step('swap details show token transfers, the router function and events', async () => {
     const last = (await rpc('aether_txs', [{ address: user.address, limit: 25 }])).result.items;
     const routerAbi = new ethers.Interface(artifacts.SwapRouter.abi);
     const swap = last.find((x) => x.to?.toLowerCase() === router.target.toLowerCase() && routerAbi.parseTransaction({ data: x.input })?.name.startsWith('swap'));
@@ -387,14 +387,14 @@ try {
     assert.match(blockText, /vytěžen za \d+ s/);
     assert.match(blockText, /Transactions root/);
     assert.ok(await page.locator(`#block-txs a[href="/tx/${swap.hash}"]`).count(), 'transakce je v seznamu bloku');
-    // Peněženka v Exploreru: u každé transakce typ a směr, převody tokenů i z cizích transakcí.
+    // Wallet in the Explorer: type and direction for each transaction, token transfers including from foreign transactions.
     await page.goto(`${url}/#/address/${user.address}`);
     await page.locator('td .dir').first().waitFor();
     const own = await page.locator('#app').innerText();
     assert.match(own, /Swap Exact/, 'metoda swapu jako v Etherscanu');
     assert.match(own, /Approve/, 'metoda schválení');
     assert.match(own, /Odesláno/);
-    // Rychlý náhled pod okem: z řádku seznamu, s odkazem na detail.
+    // Quick preview under the eye: from a list row, with a link to the details.
     await page.locator('.eye-btn').first().click();
     await page.locator('.tx-preview').waitFor();
     assert.match(await page.locator('.tx-preview').innerText(), /Poplatek[\s\S]*Detail transakce/);
@@ -406,7 +406,7 @@ try {
     assert.match(moves, /Odesláno/, 'vstup zpětné směny je mezi odeslanými');
   });
 
-  await step('čekající transakce s chybějícím nonce řekne, na co čeká, a fronta ji označí', async () => {
+  await step('a pending transaction with a missing nonce says what it waits for and the queue marks it', async () => {
     const nonce = await A.provider.getTransactionCount(admin.address, 'latest');
     const fees = await A.provider.getFeeData();
     const signed = await admin.signTransaction({ to: admin.address, value: 0n, nonce: nonce + 1, gasLimit: 21000n, maxFeePerGas: fees.maxFeePerGas * 2n, maxPriorityFeePerGas: fees.maxPriorityFeePerGas, chainId: A.id, type: 2 });
@@ -421,7 +421,7 @@ try {
     assert.match(metrics, /fronta pojme 5\s?000/);
   });
 
-  await step('žebříček těžařů jde po stránkách, řadit a hledat', async () => {
+  await step('the miner ranking can be paged, sorted and searched', async () => {
     await page.goto(`${url}/#/miners`);
     await page.locator('.metric-grid').waitFor();
     assert.match(await page.locator('.metric-grid').innerText(), /Těžařů celkem/);
@@ -438,8 +438,8 @@ try {
     await page.getByText('Tato adresa zatím nevytěžila žádný blok.').waitFor();
   });
 
-  await step('neúspěšná směna na detailu řekne proč a jak se tomu vyhnout', async () => {
-    // Minimum nad odhadem: kontrakt směnu odmítne stejně jako druhou stejnou směnu za sebou na testnetu.
+  await step('a failed swap explains on its details page why and how to avoid it', async () => {
+    // Minimum above the estimate: the contract rejects the swap, just like a second identical swap in a row on testnet.
     const path = [WAET, usd.target];
     const [, out] = await router.getAmountsOut(WEI, path);
     const tx = await router.connect(A.connect(user)).swapExactNativeForTokens(out * 2n, path, user.address, FAR, { value: WEI, gasLimit: 300_000 });
@@ -453,7 +453,7 @@ try {
     assert.match(await page.locator('#app').innerText(), /SlippageExceeded/, 'název chyby kontraktu');
   });
 
-  await step('další směna počká, dokud z účtu čeká předchozí transakce', async () => {
+  await step('the next swap waits while a previous transaction from the account is pending', async () => {
     paused = true;
     try {
       const waiting = await A.connect(user).sendTransaction({ to: admin.address, value: 1n });
@@ -467,7 +467,7 @@ try {
     } finally { paused = false; }
   });
 
-  await step('všechny jazyky a úzká obrazovka', async () => {
+  await step('all languages and a narrow screen', async () => {
     await go('#/swap');
     for (const [lang, word] of [['en', 'Swap'], ['de', 'Tausch'], ['es', 'Intercambio'], ['fr', 'Échange']]) {
       await page.evaluate((l) => localStorage.setItem('aether.lang', l), lang);
@@ -482,7 +482,7 @@ try {
     }
   });
 
-  await step('stránka nehlásí žádnou chybu', async () => assert.deepEqual(errors, []));
+  await step('the page reports no error', async () => assert.deepEqual(errors, []));
 } finally {
   stopping = true;
   await beat?.catch(() => {});

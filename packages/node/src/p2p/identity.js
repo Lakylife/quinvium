@@ -1,6 +1,6 @@
-// Trvalá identita uzlu: klíč Ed25519 uložený ve složce dat. Identifikátor uzlu je otisk veřejného klíče,
-// takže ho nikdo nemůže převzít, a podpis v HELLO váže klíč ke konkrétnímu šifrovanému spojení.
-// Ed25519 umí OpenSSL i BoringSSL v Electronu (stejný algoritmus podepisuje aktualizace).
+// Persistent node identity: an Ed25519 key stored in the data folder. The node ID is a hash of the public key,
+// so nobody can take it over, and the signature in HELLO binds the key to a specific encrypted connection.
+// Ed25519 is supported by both OpenSSL and the BoringSSL in Electron (the same algorithm signs updates).
 import crypto from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -18,7 +18,7 @@ export class NodeIdentity {
     this.id = nodeIdOf(this.publicKey);
   }
 
-  /** Klíč ze souboru, nebo nový uložený s právy jen pro vlastníka. Bez souboru (testy) vznikne klíč jen pro tento běh. */
+  /** Key from a file, or a new one saved with owner-only permissions. Without a file (tests) a key is created for this run only. */
   static load(file) {
     if (!file) return new NodeIdentity(crypto.generateKeyPairSync('ed25519').privateKey);
     if (existsSync(file)) return new NodeIdentity(crypto.createPrivateKey(readFileSync(file)));
@@ -29,7 +29,7 @@ export class NodeIdentity {
     return new NodeIdentity(privateKey);
   }
 
-  /** @param {Buffer} transcript otisk spojení @param {boolean} initiator role podepisujícího */
+  /** @param {Buffer} transcript connection fingerprint @param {boolean} initiator role of the signer */
   sign(transcript, initiator) {
     return crypto.sign(null, message(transcript, initiator), this.privateKey);
   }
@@ -39,7 +39,7 @@ export const nodeIdOf = (publicKey) => crypto.createHash('sha256').update(public
 
 const message = (transcript, initiator) => Buffer.concat([CONTEXT, Buffer.from([initiator ? 1 : 0]), transcript]);
 
-/** Ověří podpis protistrany. Role je její, takže podpis nejde odrazit zpět ke stejnému uzlu. */
+/** Verifies the other side's signature. The role is theirs, so the signature cannot be reflected back to the same node. */
 export function verifyHello(publicKey, signature, transcript, initiator) {
   if (!(publicKey instanceof Uint8Array) || publicKey.length !== PUB_LEN) return false;
   if (!(signature instanceof Uint8Array) || signature.length !== SIG_LEN) return false;
@@ -51,7 +51,7 @@ export function verifyHello(publicKey, signature, transcript, initiator) {
   }
 }
 
-/** Seed s připnutým klíčem: `klíč@host:port`, klíč jako 64 hex znaků. */
+/** A seed with a pinned key: `key@host:port`, the key as 64 hex characters. */
 export function parsePinned(seed) {
   const m = /^([0-9a-fA-F]{64})@(.+)$/.exec(seed);
   return m ? { key: Buffer.from(m[1], 'hex'), address: m[2] } : { key: null, address: seed };

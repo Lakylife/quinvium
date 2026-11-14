@@ -1,5 +1,5 @@
-// Fronta nepotvrzených transakcí. Přijímá jen to, co by mohlo projít v dalším bloku,
-// a po každé změně špičky řetězce sama odstraní, co už platit nemůže.
+// Queue of unconfirmed transactions. It accepts only what could pass in the next block,
+// and after every change of the chain tip removes by itself what can no longer be valid.
 import { appendFileSync, existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { Capability } from '@ethereumjs/tx';
 import { Address } from '@ethereumjs/util';
@@ -10,8 +10,8 @@ import { decodeTx } from './types.js';
 
 export class MempoolError extends Error {}
 
-// Soubor s frontou: značka a pak záznamy. Transakce: [0][čas přidání 8 B][příznaky 1 B][délka 4 B][transakce].
-// Nahrazená transakce: [1][hash 32 B], připisuje se hned, aby ji starší uložení po pádu nevrátilo.
+// Queue file: a marker followed by records. Transaction: [0][time added 8 B][flags 1 B][length 4 B][transaction].
+// Replaced transaction: [1][hash 32 B], appended immediately so an older save cannot bring it back after a crash.
 const JOURNAL_MAGIC = Buffer.from('QMP1');
 const TX_RECORD = 0;
 const REPLACED_RECORD = 1;
@@ -21,7 +21,7 @@ const MAX_POOL = 5000;
 const MAX_POOL_BYTES = 64 * 1024 * 1024;
 const MAX_PER_SENDER = 64;
 const MAX_NONCE_GAP = 64n;
-const MAX_TX_GAS = 8_000_000n;       // jedna transakce nesmí zabrat celý blok, stačí i na největší kontrakt
+const MAX_TX_GAS = 8_000_000n;       // one transaction must not take the whole block; this is enough even for the largest contract
 const MAX_AGE_MS = 6 * 3600_000;
 const REPLACE_BUMP = 110n;
 
@@ -35,7 +35,7 @@ const effectiveTip = (tx, baseFee) => {
 };
 
 export class Mempool {
-  /** @param {object} [o] @param {number} [o.maxPool] nejvíc transakcí ve frontě */
+  /** @param {object} [o] @param {number} [o.maxPool] maximum number of transactions in the queue */
   constructor(chain, { maxPool = MAX_POOL } = {}) {
     this.chain = chain;
     this.maxPool = maxPool;
@@ -52,14 +52,14 @@ export class Mempool {
   get(hash) { return this.byHash.get(toHex(hash))?.tx ?? null; }
   all() { return [...this.byHash.values()].map((e) => e.tx); }
 
-  /** Co čeká na blok se základním poplatkem baseFee, pro doporučení poplatků. */
+  /** What waits for a block with base fee baseFee, for fee recommendations. */
   competing(baseFee) {
     return this.all().filter((tx) => maxFee(tx) >= baseFee).map((tx) => ({ tip: effectiveTip(tx, baseFee), gas: tx.gasLimit }));
   }
 
   /**
-   * Fronta pro Explorer: souhrn a jedna stránka transakcí. U každé je vidět, proč případně nemůže do dalšího bloku:
-   * od odesílatele chybí dřívější nonce, nebo poplatek nepokryje základní poplatek sítě.
+   * Queue for the Explorer: a summary and one page of transactions. Each shows why it may not enter the next block:
+   * an earlier nonce from the sender is missing, or the fee does not cover the network's base fee.
    */
   async view({ order = 'fee', limit = 25, offset = 0, sender = null } = {}) {
     const baseFee = nextBaseFee(this.chain.head);
@@ -89,10 +89,10 @@ export class Mempool {
   }
 
   /**
-   * Přidá transakci. Při chybě vyhodí MempoolError s důvodem.
+   * Adds a transaction. On error throws MempoolError with the reason.
    * @param {object} [o]
-   * @param {boolean} [o.local] přišla přes RPC tohoto uzlu, uzel ji proto občas pošle sousedům znovu
-   * @param {number} [o.addedAt] čas přidání, při načtení fronty po restartu ten původní
+   * @param {boolean} [o.local] arrived through this node's RPC, so the node occasionally resends it to peers
+   * @param {number} [o.addedAt] time added; when loading the queue after a restart, the original one
    */
   async add(tx, { local = false, addedAt = Date.now() } = {}) {
     const hash = toHex(tx.hash());
@@ -126,8 +126,8 @@ export class Mempool {
     const key = sender.toString();
     let list = this.bySender.get(key);
 
-    // Odesílatel musí mít prostředky na všechny své čekající transakce s nižším nonce dohromady.
-    // Jinak by jeden malý účet zadarmo držel ve frontě transakce, které nikdy nezaplatí.
+    // The sender must have funds for all of its pending transactions with a lower nonce combined.
+    // Otherwise one small account could keep transactions in the queue for free that would never pay.
     let committed = cost(tx);
     for (const e of list?.values() ?? []) if (e.tx.nonce < tx.nonce) committed += cost(e.tx);
     if (balance < committed) throw new MempoolError('nedostatek prostředků');
@@ -141,8 +141,8 @@ export class Mempool {
       throw new MempoolError('příliš mnoho čekajících transakcí od jednoho odesílatele');
     }
 
-    // Plná fronta vytlačí nejlevnější. Kdo neplatí víc než ona, zůstává venku. Místo po nahrazované transakci se
-    // počítá jako volné, ale odstraní se až potom: kdyby se náhrada nevešla, původní transakce musí ve frontě zůstat.
+    // A full queue pushes out the cheapest. Whoever does not pay more than it stays out. The space of a transaction being replaced is
+    // counted as free but removed only afterwards: if the replacement did not fit, the original transaction must stay in the queue.
     const freedCount = existing ? 1 : 0;
     const freedBytes = existing ? existing.size : 0;
     while (this.byHash.size - freedCount >= this.maxPool || this.bytes - freedBytes + size > MAX_POOL_BYTES) {
@@ -166,9 +166,9 @@ export class Mempool {
   }
 
   /**
-   * Kandidát na vytlačení: nejlevnější z posledních transakcí jednotlivých odesílatelů. Transakce z konce řady
-   * nikomu nevytvoří mezeru v nonce, jinak by za vyřazenou zůstaly viset všechny pozdější. Vlastní dřívější
-   * transakce odesílatele kvůli jeho další nevytlačí nic, i ta by mezeru vytvořila.
+   * Candidate for eviction: the cheapest of the last transactions of individual senders. Transactions from the end of a sequence
+   * creates no nonce gap for anyone, otherwise all later ones would hang behind the evicted one. Own earlier
+   * a sender's transaction evicts nothing because of its next one; that would also create a gap.
    */
   _lowest(except) {
     let low = null;
@@ -194,8 +194,8 @@ export class Mempool {
   }
 
   /**
-   * Transakce z RPC tohoto uzlu, které čekají déle než minAgeMs, seřazené podle nonce. Uzel je posílá sousedům
-   * znovu: první rozeslání se mohlo ztratit, třeba když soused ještě neměl poslední blok a transakci odmítl.
+   * Transactions from this node's RPC that have waited longer than minAgeMs, sorted by nonce. The node sends them to peers
+   * again: the first broadcast may have been lost, for example when a peer did not have the latest block yet and rejected the transaction.
    */
   local(minAgeMs, limit = 64) {
     const before = Date.now() - minAgeMs;
@@ -204,7 +204,7 @@ export class Mempool {
       .slice(0, limit).map((e) => e.tx);
   }
 
-  /** Kolik transakcí přišlo do fronty za poslední dobu a pořád čeká. */
+  /** How many transactions entered the queue recently and are still waiting. */
   countSince(ms) {
     const from = Date.now() - ms;
     let n = 0;
@@ -212,14 +212,14 @@ export class Mempool {
     return n;
   }
 
-  /** Všechny čekající transakce seřazené podle nonce, aby je příjemce bral ve správném pořadí. */
+  /** All pending transactions sorted by nonce so the receiver takes them in the right order. */
   ordered() {
     return [...this.byHash.values()].sort((a, b) => (a.tx.nonce < b.tx.nonce ? -1 : a.tx.nonce > b.tx.nonce ? 1 : 0)).map((e) => e.tx);
   }
 
   /**
-   * Uloží frontu na disk, jen když se od minula změnila. Zápis přes dočasný soubor, takže po pádu zůstane
-   * buď stará, nebo nová celá fronta. Plný disk uzel nezastaví, fronta se jen neuloží.
+   * Saves the queue to disk only when it changed since last time. Written through a temporary file, so after a crash
+   * either the old or the new whole queue. A full disk does not stop the node; the queue is just not saved.
    */
   save(path) {
     if (!this.dirty) return true;
@@ -244,9 +244,9 @@ export class Mempool {
   }
 
   /**
-   * Načte frontu uloženou před restartem. Každá transakce projde stejnou kontrolou jako nová, takže co mezitím
-   * přestalo platit nebo už je v bloku, do fronty nevstoupí. Starší než 6 hodin se zahodí jako za běhu.
-   * @returns {Promise<number>} počet načtených transakcí
+   * Loads the queue saved before a restart. Each transaction goes through the same check as a new one, so whatever in the meantime
+   * is no longer valid or is already in a block, it does not enter the queue. Older than 6 hours are dropped as during operation.
+   * @returns {Promise<number>} number of transactions loaded
    */
   async restore(path) {
     this.journal = path;
@@ -270,37 +270,37 @@ export class Mempool {
       const length = data.readUInt32BE(at + 10);
       at += 14;
       if (at + length > data.length) break;
-      try { saved.push({ tx: decodeTx(data.subarray(at, at + length), common), addedAt, local }); } catch { /* poškozená položka */ }
+      try { saved.push({ tx: decodeTx(data.subarray(at, at + length), common), addedAt, local }); } catch { /* corrupted entry */ }
       at += length;
     }
     const oldest = Date.now() - MAX_AGE_MS;
     saved.sort((a, b) => (a.tx.nonce < b.tx.nonce ? -1 : a.tx.nonce > b.tx.nonce ? 1 : 0));
     let restored = 0;
     for (const { tx, addedAt, local } of saved) {
-      // Nahrazená transakce se nevrací: zrušení nebo zrychlení platí, i když uzel spadl dřív, než frontu uložil celou.
+      // A replaced transaction does not come back: a cancellation or speed-up holds even if the node crashed before saving the whole queue.
       if (addedAt < oldest || replaced.has(toHex(tx.hash()))) continue;
       try {
         await this.add(tx, { local, addedAt });
         restored += 1;
-      } catch { /* mezitím vytěžená nebo už neplatná */ }
+      } catch { /* mined in the meantime or no longer valid */ }
     }
     this.dirty = restored !== saved.length || replaced.size > 0;
     return restored;
   }
 
   /**
-   * Nahrazení se do souboru připíše hned, ne až s dalším uložením fronty. Jinak by po pádu uzlu starší uložení vrátilo
-   * původní transakci a třeba zrušená platba by prošla. Jeden krátký záznam na konec souboru nic nestojí.
+   * A replacement is appended to the file immediately, not with the next queue save. Otherwise after a node crash an older save would bring back
+   * the original transaction, and for example a cancelled payment would go through. One short record at the end of the file costs nothing.
    */
   _journalReplaced(tx) {
     if (!this.journal) return;
     try {
       if (!existsSync(this.journal)) writeFileSync(this.journal, JOURNAL_MAGIC, { mode: 0o600 });
       appendFileSync(this.journal, Buffer.concat([Buffer.from([REPLACED_RECORD]), Buffer.from(tx.hash())]));
-    } catch { /* plný disk: zbývá pravidelné uložení */ }
+    } catch { /* full disk: the regular save remains */ }
   }
 
-  /** Vyřadí vše, co nová špička zneplatnila, a vrátí do fronty transakce z opuštěné větve. */
+  /** Removes everything the new tip invalidated and returns transactions from the abandoned branch to the queue. */
   async _onHead({ removed, added }) {
     for (const b of added) for (const tx of b.txs) this._remove(tx);
     for (const b of removed) {
@@ -321,12 +321,12 @@ export class Mempool {
     }
   }
 
-  /** Počká na dokončení úklidu po posledním bloku. */
+  /** Waits for the cleanup after the last block to finish. */
   settled() { return this.pruning; }
 
   /**
-   * Transakce pro další blok: u každého odesílatele jen souvislá řada nonce,
-   * napříč odesílateli podle nejvyššího dýžka.
+   * Transactions for the next block: for each sender only a contiguous run of nonces,
+   * across senders by the highest tip.
    */
   async *pending(limit = 2000) {
     const baseFee = nextBaseFee(this.chain.head);

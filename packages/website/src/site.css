@@ -1,5 +1,5 @@
-/* Web quinvium.com: světlý vzhled značky. Teplá bílá stránka, bílé karty s jemným stínem a vlasovou linkou,
-   modrá jako hlavní akcent, zlatá jen ve znaku. Plné barvy bez přechodů a září. */
+/* The quinvium.com website: the brand's light look. A warm white page, white cards with a soft shadow and a hairline,
+   blue as the main accent, gold only in the mark. Flat colours without gradients or glow. */
 :root {
   --page: #fafaf7;
   --tint: #f2f5f9;
@@ -49,7 +49,7 @@ sup { font-size: 0.65em; }
 .tag { display: inline-block; font-size: 12.5px; font-weight: 650; color: var(--warn); background: var(--warn-soft); padding: 2px 8px; border-radius: 999px; margin-left: 4px; white-space: nowrap; }
 .ic { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: inline-block; vertical-align: -6px; }
 
-/* hlavička */
+/* header */
 .top { position: sticky; top: 0; z-index: 30; background: #ffffff; border-bottom: 1px solid transparent; transition: border-color 0.2s; }
 .top.scrolled { border-bottom-color: var(--hair); }
 .top-in { display: flex; align-items: center; gap: 32px; height: 64px; }
@@ -88,7 +88,7 @@ sup { font-size: 0.65em; }
 .menu[aria-expanded="true"] span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
 body.locked { overflow: hidden; }
 
-/* tlačítka: jeden systém pro celý web */
+/* buttons: one system for the whole site */
 .btn { --h: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--h); padding: 0 18px; border-radius: 12px; border: 1px solid transparent; font: 600 15px/1 var(--sans); cursor: pointer; white-space: nowrap; text-decoration: none !important; transition: background 0.15s, border-color 0.15s, color 0.15s; }
 .btn.md { --h: 44px; }
 .btn.lg { --h: 52px; padding: 0 24px; font-size: 16px; }
@@ -109,7 +109,7 @@ body.locked { overflow: hidden; }
 .more:hover .ic { transform: translateX(3px); }
 .msg { min-height: 1.4em; font-size: 14.5px; color: var(--ink-3); margin: 12px 0 0; }
 
-/* úvod */
+/* home */
 .hero { overflow: hidden; }
 .hero-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 48px; align-items: center; padding-top: 80px; padding-bottom: 72px; }
 .status-pill { display: inline-flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--hair); border-radius: 999px; padding: 7px 14px 7px 12px; font-size: 14px; font-weight: 600; color: var(--ink-2); box-shadow: var(--shadow-sm); margin-bottom: 28px; }
@@ -145,7 +145,7 @@ body.locked { overflow: hidden; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes bob { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-10px) rotate(8deg); } }
 
-/* živý stav */
+/* live status */
 .dot { width: 9px; height: 9px; border-radius: 50%; background: #9aa8b8; flex: 0 0 auto; }
 .dot.on { background: #12b76a; box-shadow: 0 0 0 4px #d1fadf; }
 .dot.off { background: #e07a5f; }
@@ -274,7 +274,7 @@ body.locked { overflow: hidden; }
 .qa > div { padding: 0 24px 22px; color: var(--ink-2); }
 .narrow-wrap { max-width: 860px; }
 
-/* patička */
+/* footer */
 .foot { background: var(--card); border-top: 1px solid var(--hair); color: var(--ink-3); padding: 64px 0 28px; }
 .foot-grid { display: grid; grid-template-columns: 1.6fr repeat(4, 1fr); gap: 32px; }
 .foot-brand p { margin-top: 16px; font-size: 14.5px; max-width: 26em; }
@@ -290,7 +290,7 @@ body.locked { overflow: hidden; }
 .notfound img { border-radius: 14px; }
 .notfound .row-btns { justify-content: center; }
 
-/* šířky */
+/* widths */
 @media (max-width: 1100px) {
   .c4, .appgrid { grid-template-columns: repeat(2, 1fr); }
 }
@@ -325,12 +325,12 @@ body.locked { overflow: hidden; }
   .table.mono .tr { grid-template-columns: 1fr; gap: 2px; }
   .card { padding: 22px; }
 }
-/* obsah mřížek se smí zúžit (dlouhé adresy a kód) */
+/* grid content may shrink (long addresses and code) */
 .split > *, .kv > div > *, .table .tr > *, .hero-grid > * { min-width: 0; }
 .kv a, .kv code { overflow-wrap: anywhere; }
 .panel .kv > div { grid-template-columns: 96px 1fr 1fr; gap: 12px; }
 .panel .kv code, .panel .kv a { font-size: 13px; }
-/* ke stažení */
+/* download */
 .note-box { display: flex; gap: 16px; align-items: flex-start; background: var(--warn-soft); border-radius: 16px; padding: 20px 22px; margin-bottom: 32px; }
 .note-box .ic { width: 28px; height: 28px; color: var(--warn); flex: 0 0 auto; }
 .note-box p { margin: 4px 0 0; color: var(--ink-2); }
@@ -344,7 +344,7 @@ body.locked { overflow: hidden; }
 .sha summary { cursor: pointer; font-size: 14px; color: var(--ink-3); }
 .sha code { display: block; margin: 8px 0 4px; font-size: 12px; overflow-wrap: anywhere; }
 
-/* mobilní nabídka: panel přes celou výšku */
+/* mobile menu: full-height panel */
 @media (max-width: 940px) {
   .menu { display: flex; }
   .head-dl { display: none !important; }
@@ -364,7 +364,7 @@ body.locked { overflow: hidden; }
 }
 
 
-/* ---- dlaždice (bento), barevné plochy podle tématu ---- */
+/* ---- tiles (bento), coloured surfaces by topic ---- */
 :root {
   --t-blue: #eaf2fd; --t-blue-2: #d3e4fa; --t-blue-ink: #0b5cb8;
   --t-amber: #fdf3e0; --t-amber-2: #f8e0b0; --t-amber-ink: #7a4a00;
@@ -403,10 +403,10 @@ a.tile:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 pre.mini { background: rgba(255, 255, 255, 0.8); border: 0; box-shadow: none; margin: 12px 0 4px; padding: 16px 18px; border-radius: 14px; }
 pre.mini code { font-size: 13px; }
 
-/* živá čísla: jedna široká dlaždice */
+/* live numbers: one wide tile */
 .statbar { background: #ffffff; border: 1px solid var(--hair); box-shadow: none; border-radius: 20px; }
 
-/* krokovník */
+/* stepper */
 .stepper { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; position: relative; }
 .stepper::before { content: ""; position: absolute; top: 22px; left: 22px; right: calc(33.33% - 22px); height: 2px; background: var(--t-blue-2); }
 .stepper li { position: relative; display: flex; flex-direction: column; gap: 16px; }
@@ -414,7 +414,7 @@ pre.mini code { font-size: 13px; }
 .stepper h3 { margin-bottom: 6px; }
 .stepper p { color: var(--ink-2); margin: 0 0 10px; }
 
-/* aplikace v síti: kompaktní seznam */
+/* network apps: compact list */
 .applist { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .appitem { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; gap: 4px 14px; align-items: center; background: var(--t-neutral); border-radius: 16px; padding: 14px 16px; min-width: 0; }
 .ai-ic { grid-row: span 2; width: 40px; height: 40px; border-radius: 12px; background: #ffffff; color: var(--t-blue-ink); display: flex; align-items: center; justify-content: center; }
@@ -429,7 +429,7 @@ pre.mini code { font-size: 13px; }
 .copy:hover { color: var(--accent); }
 .copy.done { color: var(--t-green-ink); }
 
-/* karty na vnitřních stránkách ve stejném duchu */
+/* cards on inner pages in the same spirit */
 .card { background: var(--t-neutral); border: 0; box-shadow: none; border-radius: 20px; }
 .card:hover { transform: none; box-shadow: none; }
 .card .ic { background: var(--t-neutral-2); color: var(--t-neutral-ink); border-radius: 16px; }
@@ -457,11 +457,11 @@ pre.mini code { font-size: 13px; }
   .tile.go { padding-right: 60px; }
 }
 
-/* ---- všechny boxy na webu ve stylu dlaždic (13. 11. 23:35): barevné plochy bez rámečku a stínu ---- */
+/* ---- all boxes on the site in the tile style (13 Nov 23:35): coloured surfaces without frames or shadows ---- */
 .card, .dl, .kv, .table, .qa, .app, .appcard, .stats-row div, .panel, .nums div, .blk, .statbar, .steps3 li, pre, .pills span, .chart-wrap.big, .note-box, .cta-box {
   border: 0 !important; box-shadow: none !important; border-radius: 20px;
 }
-/* karty a dlaždice se střídají v barvách témat */
+/* cards and tiles alternate in topic colours */
 .cards .card:nth-child(4n+1), .dlgrid .dl:nth-child(4n+1), .apps .app:nth-child(4n+1) { background: var(--t-blue); }
 .cards .card:nth-child(4n+2), .dlgrid .dl:nth-child(4n+2), .apps .app:nth-child(4n+2) { background: var(--t-amber); }
 .cards .card:nth-child(4n+3), .dlgrid .dl:nth-child(4n+3), .apps .app:nth-child(4n+3) { background: var(--t-green); }
@@ -472,18 +472,18 @@ pre.mini code { font-size: 13px; }
 .cards .card:nth-child(4n+4) .ic, .dlgrid .dl:nth-child(4n+4) .dl-top .ic { background: var(--t-neutral-2); color: var(--t-neutral-ink); }
 .card .ic { width: 52px; height: 52px; padding: 13px; border-radius: 16px; margin-bottom: 18px; }
 .card { padding: 28px; }
-/* tabulky, otázky, kód a panely v neutrální ploše */
+/* tables, questions, code and panels on a neutral surface */
 .kv, .table, .qa, pre, .panel { background: var(--t-neutral); }
 .tint .kv, .tint .table, .tint .qa, .tint pre, .tint .panel { background: #ffffff; }
 .panel .kv { background: transparent !important; }
 .kv > div + div, .table .tr + .tr { border-top-color: rgba(15, 23, 42, 0.07); }
 pre code { color: #23324a; }
-/* čísla a grafy tokenomiky v jantarové */
+/* tokenomics numbers and charts in amber */
 .stats-row div { background: var(--t-amber); }
 .stats-row span { color: var(--t-amber-ink); }
 .chart-big { background: var(--t-amber) !important; }
 .chart-big .chart .area { fill: #fbe4b8; } .chart-big .chart .ln, .chart-big .chart .hv { stroke: #b5730d; } .chart-big .chart .gl { stroke: #f2dfb9; }
-/* živá čísla a bloky v modré */
+/* live numbers and blocks in blue */
 .statbar { background: var(--t-blue); }
 .statbar > div + div { border-left-color: rgba(11, 92, 184, 0.14); }
 .statbar span { color: var(--t-blue-ink); }
@@ -529,7 +529,7 @@ pre code { color: #23324a; }
 }
 .wp-grid > * { min-width: 0; } .wp p code, .wp li code { overflow-wrap: anywhere; word-break: break-all; }
 
-/* menší písmo (13. 11. 23:50, přání uživatele) */
+/* smaller font (13 Nov 23:50, user's request) */
 body { font-size: 16px; }
 h2 { font-size: clamp(26px, 2.8vw, 34px); }
 h3, .tile h3 { font-size: 18px; }
@@ -548,7 +548,7 @@ h3, .tile h3 { font-size: 18px; }
 .nums strong { font-size: 22px; }
 .notfound h1 { font-size: 72px; }
 
-/* patička, nová podoba (14. 11.) */
+/* footer, new design (14 Nov) */
 .foot { background: var(--tint); border-top: 0; color: var(--ink-2); padding: 72px 0 28px; margin-top: 0; }
 .foot-top { display: grid; grid-template-columns: minmax(280px, 1.1fr) 2fr; gap: 64px; }
 .foot-brand .brand { font-size: 20px; }

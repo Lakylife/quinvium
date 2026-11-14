@@ -1,4 +1,4 @@
-// Vytvoří src/quinvium-whitepaper.pdf ze sestavené stránky /whitepaper/ (nejdřív spusťte build.mjs). Potřebuje Playwright.
+// Creates src/quinvium-whitepaper.pdf from the built /whitepaper/ page (run build.mjs first). Needs Playwright.
 import { chromium } from 'playwright';
 import http from 'node:http';
 import { existsSync, readFileSync } from 'node:fs';

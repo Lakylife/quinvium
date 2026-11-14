@@ -1,4 +1,4 @@
-// Plán aktualizací: pravidla se mění přesně na výšce forku a uzly se podle něj poznají.
+// Upgrade plan: rules change exactly at the fork height and nodes recognise each other by it.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -22,7 +22,7 @@ const until = async (cond, ms = 8000) => {
 
 const withFork = (block, rules = { maxGasLimit: 12_000_000n }) => ({ ...NETWORKS.dev, forks: [{ name: 'test', block, rules }] });
 
-test('pravidla platí přesně od výšky forku', () => {
+test('the rules apply exactly from the fork height', () => {
   const n = withFork(100n);
   assert.equal(rulesAt(n, 99n).maxGasLimit, GENESIS_RULES.maxGasLimit);
   assert.equal(rulesAt(n, 100n).maxGasLimit, 12_000_000n);
@@ -31,7 +31,7 @@ test('pravidla platí přesně od výšky forku', () => {
   assert.deepEqual(rulesAt(n, 100n).eips, GENESIS_RULES.eips, 'co fork nemění, zůstává');
 });
 
-test('identifikátor se změní s každým forkem a závisí na genesis', () => {
+test('the identifier changes with every fork and depends on the genesis', () => {
   const plain = forkId({ ...NETWORKS.dev, forks: [] }, GENESIS, 0n);
   assert.equal(plain.next, 0n);
   const n = withFork(100n);
@@ -44,10 +44,10 @@ test('identifikátor se změní s každým forkem a závisí na genesis', () => 
   assert.notDeepEqual(forkId(n, new Uint8Array(32).fill(1), 0n).hash, before.hash);
 });
 
-test('slučitelnost podle EIP-2124', () => {
+test('compatibility per EIP-2124', () => {
   const n = withFork(100n);
   const old = { ...NETWORKS.dev, forks: [] }; // software bez znalosti forku
-  const stale = forkId(old, GENESIS, 200n); // starý uzel za výškou forku
+  const stale = forkId(old, GENESIS, 200n); // old node past the fork height
   const synced = forkId(n, GENESIS, 200n);
   const syncing = forkId(n, GENESIS, 50n);
 
@@ -61,8 +61,8 @@ test('slučitelnost podle EIP-2124', () => {
   assert.ok(!forkCompatible(n, GENESIS, 50n, { hash: new Uint8Array(4), next: 0n }), 'cizí historie');
 });
 
-test('fork opravdu změní pravidla konsensu na dané výšce', async () => {
-  // Strop limitu gasu klesne pod aktuální limit, blok s původním limitem tak po forku neprojde.
+test('a fork really changes the consensus rules at the given height', async () => {
+  // The gas limit cap drops below the current limit, so a block with the original limit does not pass after the fork.
   const network = withFork(3n, { maxGasLimit: 9_000_000n });
   const c = await newChain({ network });
   await mineMany(c, 2);
@@ -70,7 +70,7 @@ test('fork opravdu změní pravidla konsensu na dané výšce', async () => {
   await assert.rejects(mine(c), /gasLimit/, 'limit nad novým stropem je od výšky forku neplatný');
 });
 
-test('každá verze pravidel má vlastní konfiguraci EVM', async () => {
+test('every rules version has its own EVM configuration', async () => {
   const noMcopy = { ...GENESIS_RULES, eips: GENESIS_RULES.eips.filter((e) => e !== 5656) };
   const network = { ...NETWORKS.dev, forks: [{ name: 'mcopy', block: 3n, rules: { eips: [...GENESIS_RULES.eips] } }] };
   const c = await newChain({ network });
@@ -82,10 +82,10 @@ test('každá verze pravidel má vlastní konfiguraci EVM', async () => {
   assert.ok(d.commonAt(0n).isActivatedEIP(5656));
 });
 
-test('uzel se starým softwarem se po forku od sítě čistě odpojí', async () => {
+test('a node with old software disconnects cleanly from the network after a fork', async () => {
   const fresh = await newChain({ network: withFork(2n, {}) });
   const old = await newChain();
-  // Oba mají stejný genesis, liší se jen znalost forku. Nový uzel je za jeho výškou.
+  // Both have the same genesis and differ only in knowing the fork. The new node is past its height.
   assert.deepEqual(fresh.genesis.hash(), old.genesis.hash());
   await mineMany(fresh, 3);
   const a = new Network({ chain: fresh, mempool: fresh.mempool, port: 0, host: '127.0.0.1', allowPrivate: true });
@@ -100,7 +100,7 @@ test('uzel se starým softwarem se po forku od sítě čistě odpojí', async ()
   await a.stop(); await b.stop();
 });
 
-test('dva uzly se stejným plánem forků spolu mluví a synchronizují se přes fork', async () => {
+test('two nodes with the same fork plan talk to each other and sync across the fork', async () => {
   const network = withFork(3n, {});
   const a = await newChain({ network });
   const b = await newChain({ network });
@@ -115,7 +115,7 @@ test('dva uzly se stejným plánem forků spolu mluví a synchronizují se přes
   await na.stop(); await nb.stop();
 });
 
-test('fork poolů přidá továrnu přesně na své výšce a druhý uzel dojde ke stejnému stavu', async () => {
+test('the pools fork adds the factory exactly at its height and a second node reaches the same state', async () => {
   const network = { ...NETWORKS.dev, forks: [{ ...NETWORKS.dev.forks[0], block: 3n }] };
   const c = await newChain({ network });
   const factory = new Address(fromHex(upgrades.PoolFactory.address));
@@ -137,7 +137,7 @@ test('fork poolů přidá továrnu přesně na své výšce a druhý uzel dojde 
   }
   assert.deepEqual(d.head.stateRoot, c.head.stateRoot);
 
-  // Uzel bez forku stejný blok odmítne: to je přesně důvod, proč se včas odpojí.
+  // A node without the fork rejects the same block: that is exactly why it disconnects in time.
   const old = await newChain({ network: { ...NETWORKS.dev, forks: [] } });
   old.setClock(Number(blocks[0].header.timestamp));
   await old.insertBlock(blocks[0]);

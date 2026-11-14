@@ -1,4 +1,4 @@
-// Společné pro zátěžové testy: spuštění uzlu a měření. Testy běží na oddělených portech a dočasných datech.
+// Shared code for load tests: starting a node and measuring. Tests run on separate ports and temporary data.
 import { spawn } from 'node:child_process';
 import http from 'node:http';
 import { mkdtempSync } from 'node:fs';
@@ -46,7 +46,7 @@ export function call(url, method, params = []) {
 
 export const percentile = (sorted, p) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] ?? 0;
 
-/** Pustí `concurrency` paralelních klientů na `ms` milisekund a vrátí propustnost a zpoždění. */
+/** Runs `concurrency` parallel clients for `ms` milliseconds and returns throughput and latency. */
 export async function measure(fn, concurrency, ms) {
   const times = [];
   let errors = 0;

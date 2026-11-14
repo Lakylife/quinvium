@@ -1,11 +1,11 @@
-// Kontrola řetězce z příkazové řádky. Kód uzlu se načítá až tady, ostatní příkazy startují rychle.
+// Chain check from the command line. The node code is loaded only here, so other commands start quickly.
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { CliError, pairs, units } from './context.js';
 import { L } from './i18n.js';
 
-/** Data aplikace, nebo samostatného uzlu. Aplikace má přednost, tam je řetězec, který se právě používá. */
+/** Data of the app, or of a standalone node. The app takes precedence; it has the chain currently in use. */
 function dataFolder(ctx) {
   const folder = ctx.network.folder ?? ctx.networkName;
   const app = process.platform === 'darwin' ? join(homedir(), 'Library', 'Application Support', 'Aether')

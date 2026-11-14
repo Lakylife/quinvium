@@ -1,4 +1,4 @@
-// Uživatelské rozhraní peněženky a schvalovací okna. Zdrojový jazyk textů je angličtina, překlady jsou v i18n.js.
+// Wallet user interface and approval windows. The source language of texts is English; translations are in i18n.js.
 const app = document.getElementById('app');
 const _ = window.AetherI18n.t;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -37,16 +37,16 @@ const ICONS = {
   bridge: svg('<path d="M3 17h18M5 17V9M19 17V9M5 11c3 0 5-3 7-3s4 3 7 3M12 8v9"/>'),
 };
 
-/** Barevný čtverec odvozený z adresy, účty se tak od sebe rozeznají na první pohled. */
+/** A coloured square derived from the address, so accounts can be told apart at first glance. */
 const avatar = (a, cls = '') => {
   const h1 = parseInt(String(a).slice(2, 8), 16) % 360;
   const h2 = parseInt(String(a).slice(-6), 16) % 360;
   return `<i class="avatar ${cls}" style="background:linear-gradient(135deg, hsl(${h1} 55% 52%) 50%, hsl(${h2} 55% 40%) 50%)"></i>`;
 };
 const accountName = (a) => a?.name ?? _('Account {n}', { n: a?.number ?? 1 });
-/** Hlavička podstránky: šipka zpět je vždy na stejném místě. */
+/** Subpage header: the back arrow is always in the same place. */
 const screenHead = (title) => `<header class="screen-head"><button class="icon" id="back" aria-label="${_('Back')}" title="${_('Back')}">${ICONS.back}</button><h1>${title}</h1></header>`;
-// Pomalé načítání nesmí přepsat obrazovku, kterou uživatel mezitím otevřel.
+// Slow loading must not overwrite a screen the user has opened in the meantime.
 let screenVersion = 0;
 const render = (html) => { screenVersion += 1; app.innerHTML = html; };
 const $ = (s) => app.querySelector(s);
@@ -69,7 +69,7 @@ function bindForm(sel, fn) {
   });
 }
 
-/** Tajemství ve schránce nesmí zůstat. Po minutě se schránka vymaže. */
+/** A secret must not stay in the clipboard. The clipboard is cleared after a minute. */
 const CLIPBOARD_MS = 60_000;
 async function copySecret(button, text) {
   await navigator.clipboard.writeText(text);
@@ -84,8 +84,8 @@ const waitText = (s) => (s < 90 ? _('about {n} s', { n: s }) : _('about {n} min'
 const FEE_TIERS = [['slow', 'Slow'], ['normal', 'Normal'], ['fast', 'Fast']];
 
 /**
- * Výběr poplatku jako v Ethereu: tři rychlosti podle stavu sítě, nebo vlastní hodnoty v gwei.
- * @returns {{value: () => object|undefined}} zvolený poplatek, undefined u návrhu stránky
+ * Fee choice as in Ethereum: three speeds by network state, or custom values in gwei.
+ * @returns {{value: () => object|undefined}} the chosen fee, undefined for the page's proposal
  */
 function feePicker(box, fees, gas, symbol, suggested, onChange = () => {}) {
   const base = BigInt(fees.baseFee);
@@ -139,7 +139,7 @@ function feePicker(box, fees, gas, symbol, suggested, onChange = () => {}) {
   return { value: read };
 }
 
-/** Po založení peněženky ze schvalovacího okna pokračuje schválení místo hlavní obrazovky. */
+/** After creating a wallet from the approval window, approval continues instead of the main screen. */
 let afterSetup = null;
 
 function welcome() {
@@ -155,7 +155,7 @@ function welcome() {
   }
 }
 
-/** Peněženka jen z klíče: účet z jiné aplikace, fráze u ní není. */
+/** A wallet from a key only: an account from another app, without a phrase. */
 function importKeyFirst() {
   render(`${screenHead(_('Use a private key'))}<p>${_('Paste the private key of the account. It stays encrypted on this device.')}</p>
     <form id="f"><label>${_('Private key')}<input type="password" name="key" required autocomplete="off" spellcheck="false"></label>
@@ -183,7 +183,7 @@ function showSeed(phrase) {
   on('#back', welcome);
 }
 
-/** Tři náhodná různá místa z fráze, pokaždé jiná, seřazená podle pořadí. */
+/** Three random distinct positions from the phrase, different each time, sorted by order. */
 function randomPositions(count, total) {
   const order = Array.from(crypto.getRandomValues(new Uint32Array(total)), (v, i) => [v, i]).sort((a, b) => a[0] - b[0]);
   return order.slice(0, count).map(([, i]) => i).sort((a, b) => a - b);
@@ -227,8 +227,8 @@ function importSeed() {
 }
 
 /**
- * Odhlášení smaže šifrovanou peněženku ze zařízení. Mince zůstávají na adrese a obnoví je jen fráze,
- * proto je tu výslovné potvrzení. Heslo se nežádá, jinak by zapomenuté heslo peněženku zablokovalo navždy.
+ * Signing out deletes the encrypted wallet from the device. The coins stay at the address and only the phrase restores them,
+ * hence the explicit confirmation. No password is asked, otherwise a forgotten password would block the wallet forever.
  */
 async function logoutExternal(back) {
   render(`${screenHead(_('Log out of this wallet?'))}<p>${_('Your coins and keys stay in your wallet. The app only forgets the connection.')}</p><div class="err"></div><button class="danger" id="confirm-out">${_('Log out')}</button>`);
@@ -267,7 +267,7 @@ function unlockScreen(after, offerOther = true) {
 const coinAmount = (hex) => aet(hex ?? 0);
 const unitsText = (value, decimals) => decimal(ethers.formatUnits(value, decimals).replace(/(\.\d{1,6})\d*$/, '$1').replace(/\.0$/, ''));
 
-// Druh transakce podle volané funkce. Podpisy odpovídají kontraktům sítě, test je kontroluje proti jejich ABI.
+// Kind of transaction by the called function. Selectors match the network's contracts; a test checks them against their ABI.
 const CALL_KINDS = [
   ['transfer(address,uint256)', 'tokenPayment'], ['transferFrom(address,address,uint256)', 'tokenPayment'], ['approve(address,uint256)', 'approval'],
   ['swapExactTokensForTokens(uint256,uint256,address[],address,uint256)', 'swap'], ['swapExactNativeForTokens(uint256,address[],address,uint256)', 'swap'],
@@ -299,9 +299,9 @@ function txLabel(a) {
     default: return _('Contract call');
   }
 }
-/** Co odešlo: u tokenu jeho částka a zkratka, u volání kontraktu bez mincí nic. */
+/** What was sent: for a token its amount and symbol, nothing for a contract call without coins. */
 const sentAmount = (a, symbol) => (a.token ? `−${unitsText(a.token.amount, a.token.decimals)} ${esc(a.token.symbol)}` : BigInt(a.value ?? 0) > 0n ? `−${coinAmount(a.value)} ${esc(symbol)}` : '');
-/** Aplikace otevře Explorer ve vlastní záložce, rozšíření v nové kartě prohlížeče. Cesty jsou jako v Etherscanu: /tx/…, /address/…, /token/…. */
+/** The app opens the Explorer in its own tab, the extension in a new browser tab. Paths are like on Etherscan: /tx/…, /address/…, /token/…. */
 const canOpenExplorer = (o) => !!window.openExplorer || !!o.network.explorer;
 function openInExplorer(o, path) {
   if (window.openExplorer) return window.openExplorer(path);
@@ -314,7 +314,7 @@ let walletView = 'assets';
 async function main() {
   const version = screenVersion;
   const o = await call('overview');
-  if (window.approvalActive?.()) return;   // aplikace mezitím ukázala schválení, to má přednost
+  if (window.approvalActive?.()) return;   // the app has shown the approval in the meantime; that takes precedence
   const symbol = o.network.symbol;
   const accounts = await call('accounts').catch(() => []);
   if (version !== screenVersion) return;
@@ -357,7 +357,7 @@ async function showView(o) {
   const box = $('#view');
   const symbol = o.network.symbol;
   if (walletView === 'activity') {
-    // Naposledy načtená aktivita se ukáže hned, nová ji pak tiše nahradí. Nový blok tak seznam nerozbliká.
+    // The last loaded activity shows immediately; the new one then quietly replaces it. A new block thus does not make the list flicker.
     const key = `${o.network.chainId}:${o.address}`;
     if (feedCache?.key === key) drawActivity(o, box, feedCache.items);
     else box.innerHTML = `<div class="card list"><p class="dim">${_('Loading…')}</p></div>`;
@@ -386,7 +386,7 @@ async function showView(o) {
   });
 }
 
-/** Řádky detailu s hodnotami, které už jsou připravené jako HTML. */
+/** Detail rows with values already prepared as HTML. */
 const detailRows = (rows) => `<div class="kv">${rows.filter(Boolean).map(([k, v]) => `<b>${esc(k)}</b><span>${v}</span>`).join('')}</div>`;
 const copyLink = (value, label) => `<button class="link copy-value" data-copy-value="${esc(value)}">${esc(label)}</button>`;
 function bindCopies() {
@@ -412,7 +412,7 @@ const KIND_ICON = {
   bridge: 'bridge', approval: 'approval', cancel: 'cancel', deploy: 'contract', call: 'contract', payout: 'payout', mining: 'mining',
 };
 let feedCache = null;
-/** Položka uložená peněženkou ve stejném tvaru, jaký vrací activityFeed. Jen pro síť bez rejstříku uzlu. */
+/** An item stored by the wallet in the same shape activityFeed returns. Only for a network without a node index. */
 function localRow(a) {
   const value = BigInt(a.value ?? 0);
   return {
@@ -421,11 +421,11 @@ function localRow(a) {
     legs: a.token ? [{ value: a.token.amount, decimals: a.token.decimals, symbol: a.token.symbol, sign: -1, token: a.token.address }] : value > 0n ? [{ value: value.toString(), decimals: 18, symbol: null, sign: -1 }] : [],
   };
 }
-/** Druh položky: odměny a výplaty podle zdroje, odeslané podle volané funkce, ostatní jsou příchozí platby. */
+/** Kind of item: rewards and payouts by source, sent ones by the called function, the rest are incoming payments. */
 const feedKind = (r) => {
   if (r.kind) return r.kind;
   if (r.out) return txKind({ to: r.to, from: r.from, data: r.data, value: r.value });
-  // Převod tokenu bez transakce v rejstříku (starší, nebo ji poslal někdo jiný): rozhoduje směr převodu.
+  // A token transfer without a transaction in the index (older, or sent by someone else): the direction of the transfer decides.
   return r.out === undefined && r.legs.length && r.legs.every((l) => l.sign < 0) ? 'tokenPayment' : 'received';
 };
 function feedTitle(r) {
@@ -441,7 +441,7 @@ function feedTitle(r) {
 }
 const locale = () => window.AetherI18n.locale?.() ?? undefined;
 const clock = (ms) => new Date(ms).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
-/** Kdo je na druhé straně a kdy. U odměn za bloky počet bloků, u výplaty název poolu. */
+/** Who is on the other side and when. For block rewards the number of blocks, for a payout the pool name. */
 function feedSub(r) {
   const kind = feedKind(r);
   let who = '';
@@ -462,16 +462,16 @@ function dayLabel(ms) {
   return d.toLocaleDateString(locale(), { day: 'numeric', month: 'long', ...(d.getFullYear() === new Date().getFullYear() ? {} : { year: 'numeric' }) });
 }
 
-/** Seznam aktivity po dnech. U čekající odeslané transakce je hned zrychlení a zrušení. */
+/** Activity list by day. A pending sent transaction has speed-up and cancel right there. */
 function drawActivity(o, box, items) {
   const symbol = o.network.symbol;
   const chip = (r) => (r.status === 'failed' ? `<span class="chip bad">${_('Failed')}</span>` : r.status === 'pending' ? `<span class="chip warn">${_('Waiting for confirmation')}</span>` : '');
-  // Nahrazená transakce už nabízí jen tu novější, neproběhlá je přeškrtnutá a říká, že mince zůstaly na účtu.
+  // A replaced transaction only offers the newer one; a failed one is struck through and says the coins stayed on the account.
   const state = (r) => {
     const a = r.local;
     if (r.status === 'dropped') return `<div class="tx-pending"><span class="dim">${_('Did not go through: another transaction with the same number replaced it. Nothing left your account because of it.')}</span></div>`;
     if (r.status !== 'pending' || !a) return r.status === 'replaced' ? `<div class="tx-pending"><span class="dim">${_('Replaced by a newer transaction')}</span></div>` : '';
-    // Cizí peněženka si pořadové číslo volí sama, náhrada by od ní byla druhá platba. Zrychlení a zrušení umí jen ona.
+    // A foreign wallet chooses the nonce itself; a replacement from it would be a second payment. Only it can speed up and cancel.
     if (a.external || o.external) return `<div class="tx-pending"><span class="dim">${_('Speed up or cancel this transaction in the wallet that signed it.')}</span></div>`;
     return `<div class="tx-pending"><span class="dim">${_('Waiting for confirmation')}</span><button class="link" data-speed="${esc(a.hash)}">${_('Speed up')}</button><button class="link" data-cancel="${esc(a.hash)}">${_('Cancel')}</button></div>`;
   };
@@ -501,8 +501,8 @@ function drawActivity(o, box, items) {
 }
 
 /**
- * Detail položky aktivity: stav, obě strany swapu, komu a od koho, poplatek, číslo transakce a blok.
- * U odměn za bloky den a rozsah bloků, u výplaty pool. Odkaz vede do Exploreru na transakci, pool nebo adresu.
+ * Activity item details: status, both sides of a swap, to and from, fee, transaction number and block.
+ * For block rewards the day and the block range, for a payout the pool. The link goes to the Explorer: transaction, pool or address.
  */
 async function activityDetail(o, item) {
   if (!item) return;
@@ -566,7 +566,7 @@ async function activityDetail(o, item) {
   on('#d-cancel', () => replace(true));
 }
 
-/** Detail aktiva: zůstatek, odeslání, vklad, poslední pohyby a odkaz do Exploreru. Index 0 je mince sítě. */
+/** Asset detail: balance, send, deposit, latest movements and a link to the Explorer. Index 0 is the network coin. */
 async function assetDetail(o, index, tokens) {
   const symbol = o.network.symbol;
   const asset = index === 0 ? null : tokens[index - 1];
@@ -651,7 +651,7 @@ function deposit(o) {
   on('#deposit-copy', async () => { await navigator.clipboard.writeText(o.address); $('#deposit-copy span').textContent = _('Copied'); });
 }
 
-/** První krok odeslání: co, komu a kolik. Poplatek a souhrn jsou až v dalším kroku. */
+/** The first step of sending: what, to whom and how much. The fee and summary come in the next step. */
 async function send(o, draft = {}) {
   const tokens = await call('assets').catch(() => []);
   const assets = [{ symbol: o.network.symbol, decimals: 18, balance: BigInt(o.balance ?? 0).toString() }, ...tokens];
@@ -666,7 +666,7 @@ async function send(o, draft = {}) {
   $('[name=asset]').addEventListener('change', showAvailable);
   showAvailable();
   on('#max', () => {
-    // U hlavní mince musí zbýt na poplatek, proto se odečte rezerva pro běžný převod.
+    // Enough of the main coin must remain for the fee, so a reserve for an ordinary transfer is subtracted.
     const a = asset();
     const reserve = a.token ? 0n : 21000n * 3n * 10n ** 9n * 3n;
     const left = BigInt(a.balance) - reserve;
@@ -719,7 +719,7 @@ function sentScreen(o, hash) {
   on('#view-tx', () => window.openExplorer(`/tx/${hash}`));
 }
 
-/** Tajemství se ukáže až po zadání hesla a samo zase zmizí. */
+/** A secret is shown only after entering the password and disappears again by itself. */
 const REVEAL_MS = 60_000;
 function revealForm(selector, command, showValue) {
   bindForm(selector, async (v) => {
@@ -762,19 +762,19 @@ async function settings(o) {
   on('#logout', () => logoutScreen(() => settings(o)));
 }
 
-// ---- schvalovací okna ------------------------------------------------------------
+// ---- approval windows ------------------------------------------------------------
 function kvRows(rows) { return `<div class="kv">${rows.map(([k, v]) => `<b>${esc(k)}</b><span>${esc(v)}</span>`).join('')}</div>`; }
 
-/** Okno rozšíření se po vyřízení zavře, aplikace místo toho pokračuje ve stejném okně. */
+/** The extension window closes after handling; the app continues in the same window instead. */
 const approvalDone = () => (window.onApprovalDone ? window.onApprovalDone() : window.close());
 
 async function approval(id) {
   const a = await call('approvalGet', { id });
   if (!a) { approvalDone(); return; }
-  const keepAlive = setInterval(() => call('approvalGet', { id }).catch(() => {}), 5000); // udrží jádro rozšíření vzhůru
+  const keepAlive = setInterval(() => call('approvalGet', { id }).catch(() => {}), 5000); // keeps the extension core awake
   const answer = async (ok, fee) => { clearInterval(keepAlive); await call('approvalAnswer', { id, ok, fee }); approvalDone(); };
   const status = await call('status');
-  // Stránka chce připojit peněženku, která ještě neexistuje: nejdřív založení, pak běžné schválení.
+  // A page wants to connect a wallet that does not exist yet: first creation, then the usual approval.
   if (!status.initialized) {
     afterSetup = () => renderApproval(a, answer);
     welcome();

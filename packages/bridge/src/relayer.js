@@ -1,8 +1,8 @@
-// Validátor mostu mezi EVM řetězci. Sleduje odeslání na každém řetězci, po dostatečném potvrzení podepíše zprávu
-// a zveřejní podpis v cílové bráně. Jakmile je podpisů dost, doručení odešle kdokoli z validátorů.
+// Bridge validator between EVM chains. Watches sends on each chain and after enough confirmations signs the message
+// and publishes the signature in the target gateway. As soon as there are enough signatures, any validator submits the delivery.
 //
-// Podepisuje jen to, co sám viděl ve vlastním uzlu zdrojového řetězce. Validátor proto musí mít vlastní uzly, jinak
-// přebírá důvěru v cizí server. Každý krok jde opakovat, takže výpadek uprostřed ničemu nevadí.
+// Signs only what it has seen itself in its own node of the source chain. A validator must therefore have its own nodes, otherwise
+// transfers trust to a foreign server. Every step can be repeated, so an outage in the middle does no harm.
 import { readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { ethers } from 'ethers';
 
@@ -10,18 +10,18 @@ const artifacts = JSON.parse(readFileSync(new URL('../../contracts/dist/artifact
 export const GATEWAY_ABI = artifacts.BridgeGateway.abi;
 const DOMAIN = ethers.id('AetherBridge.v1');
 const LOG_BATCH = 2000;
-const ATTEST_WINDOW = 9000;     // uzel Quinvium vrací logy z nejvýše 10 000 bloků najednou
+const ATTEST_WINDOW = 9000;     // a Quinvium node returns logs from at most 10,000 blocks at a time
 const RESEND_MS = 60_000;
 
 /**
- * Nejmenší počet potvrzení podle řetězce. Na malé síti s Proof of Work stojí přepis několika minut málo, stačí pronajatý
- * výkon, a stejné mince by šly mostem poslat dvakrát. Mainnet Quinvia proto čeká hodinu (pod hranicí finality 256 bloků),
- * Ethereum na finalitu dvou epoch. Testovací sítě mají jen obecné minimum.
+ * Minimum number of confirmations by chain. On a small proof-of-work network rewriting a few minutes costs little; rented
+ * hashrate, and the same coins could be sent through the bridge twice. Quinvium mainnet therefore waits an hour (below the 256-block finality boundary),
+ * Ethereum for finality of two epochs. Test networks only have a general minimum.
  */
 export const MIN_CONFIRMATIONS = Object.freeze({ 52401: 240, 1: 64 });
 const coder = ethers.AbiCoder.defaultAbiCoder();
 
-/** Stejný výpočet jako `messageId` v kontraktu, jen bez dotazu na cizí uzel. */
+/** The same computation as `messageId` in the contract, just without querying a foreign node. */
 export function messageId(gateway, m) {
   return ethers.keccak256(coder.encode(
     ['bytes32', 'address', 'uint64', 'uint64', 'uint64', 'bytes32', 'address', 'uint256'],
@@ -29,41 +29,41 @@ export function messageId(gateway, m) {
   ));
 }
 
-/** Co validátor podepisuje: ID zprávy s předponou EIP-191, stejně jako to ověřuje brána. */
+/** What the validator signs: the message ID with the EIP-191 prefix, exactly as the gateway verifies it. */
 export const signedDigest = (id) => ethers.hashMessage(ethers.getBytes(id));
 
-/** Klíč trasy jako v kontraktu: odkud a jaký token. */
+/** Route key as in the contract: from where and which token. */
 export const routeKey = (chain, token) => ethers.keccak256(coder.encode(['uint64', 'bytes32'], [chain, token]));
 
-/** Číslo zprávy odvozené z textu, stejně jako u vrácení na mostě do Bitcoinu. Skutečná čísla zpráv jdou od jedničky, s tímhle se nepotkají. */
+/** A message number derived from text, like refunds on the bridge to Bitcoin. Real message numbers count from one; this one never meets them. */
 export const nonceOf = (text) => BigInt(ethers.dataSlice(ethers.sha256(ethers.toUtf8Bytes(text)), 0, 8));
 
 /**
- * Vrácení zrušeného převodu: zpráva opačným směrem, od cílové sítě zpět na zdrojovou, s původním odesílatelem jako příjemcem.
- * Číslo je odvozené z původního odeslání, takže jedno odeslání se nemůže vrátit dvakrát.
- * @param {object} message původní zpráva s `sender` a `sendId` z události Sent
- * @param {string} local token na cílové síti, na který trasa původní převod měnila
+ * Refund of a cancelled transfer: a message in the opposite direction, from the target network back to the source, with the original sender as recipient.
+ * The number is derived from the original send, so one send cannot be refunded twice.
+ * @param {object} message the original message with `sender` and `sendId` from the Sent event
+ * @param {string} local token on the target network that the route converted the original transfer to
  */
 export const refundMessage = (message, local) => ({
   srcChain: message.dstChain, dstChain: message.srcChain, nonce: nonceOf(`refund:${message.sendId}`),
   srcToken: ethers.zeroPadValue(local, 32), recipient: message.sender, amount: message.amount, refundOf: message.sendId,
 });
 
-/** Do kontraktu jdou jen pole zprávy, poznámky validátora ne. */
+/** Only the message fields go to the contract, not the validator's notes. */
 const wire = ({ srcChain, dstChain, nonce, srcToken, recipient, amount }) => ({ srcChain, dstChain, nonce, srcToken, recipient, amount });
 
-/** Logy z delšího rozsahu po částech, uzly delší dotaz odmítají. */
+/** Logs over a longer range in parts; nodes reject a longer query. */
 export async function queryRange(contract, filter, from, to) {
   const found = [];
   for (let start = from; start <= to; start += LOG_BATCH) found.push(...await contract.queryFilter(filter, start, Math.min(start + LOG_BATCH - 1, to)));
   return found;
 }
 
-/** BigInt v JSON: hodnoty se ukládají jako text s předponou. */
+/** BigInt in JSON: values are stored as text with a prefix. */
 const encode = (value) => JSON.stringify(value, (_, v) => (typeof v === 'bigint' ? `#${v}` : v));
 const decode = (text) => JSON.parse(text, (_, v) => (typeof v === 'string' && /^#\d+$/.test(v) ? BigInt(v.slice(1)) : v));
 
-/** Stav uložený atomicky, po pádu tedy nezůstane rozepsaný soubor. Podpis se bez zápisu stavu neodešle. */
+/** State saved atomically, so no half-written file remains after a crash. A signature is not sent without writing the state. */
 export class StateFile {
   constructor(path) {
     this.path = path;
@@ -83,7 +83,7 @@ export class Relayer {
   /**
    * @param {object} o
    * @param {{ id: bigint, name: string, provider: object, gateway: string, confirmations: number, startBlock?: number }[]} o.chains
-   * @param {string} o.privateKey klíč validátora
+   * @param {string} o.privateKey validator key
    * @param {string} [o.statePath] soubor se stavem
    * @param {(line: string) => void} [o.log]
    */
@@ -104,11 +104,11 @@ export class Relayer {
     this.state = new StateFile(statePath);
     this.state.data.cursor ??= {};
     this.state.data.pending ??= {};
-    this.sent = new Map();     // co už je odeslané a čeká na blok
+    this.sent = new Map();     // what has been sent and waits for a block
     this.running = false;
   }
 
-  /** Zpráva z jiného zdroje než EVM brány, například vklad Bitcoinu. */
+  /** A message from a source other than the EVM gateway, for example a Bitcoin deposit. */
   enqueue(message) {
     const dst = this.chains.get(message.dstChain);
     if (!dst) throw new Error(`Neznámý cílový řetězec ${message.dstChain}`);
@@ -120,7 +120,7 @@ export class Relayer {
     return id;
   }
 
-  /** Jeden průchod. Chyba jednoho řetězce nezastaví ostatní, zkusí se to příště znovu. */
+  /** One pass. An error on one chain does not stop the others; it is retried next time. */
   async tick() {
     for (const chain of this.chains.values()) {
       try { await this.scan(chain); } catch (e) { this.log(`${chain.name}: čtení selhalo: ${e.shortMessage ?? e.message}`); }
@@ -130,7 +130,7 @@ export class Relayer {
     }
   }
 
-  /** Zprávy se berou až z bloků s dostatečným potvrzením, přeskupení řetězce je tak nemůže podstrčit. */
+  /** Messages are taken only from sufficiently confirmed blocks, so a chain reorganisation cannot slip them in. */
   async scan(chain) {
     const safe = await chain.provider.getBlockNumber() - chain.confirmations;
     const key = chain.id.toString();
@@ -147,12 +147,12 @@ export class Relayer {
   accept(chain, log) {
     const { id: sendId, dstChain, token, sender, recipient, amount, nonce } = log.args;
     const dst = this.chains.get(dstChain);
-    if (!dst) return;       // Bitcoin a řetězce, které tento validátor nesleduje
+    if (!dst) return;       // Bitcoin and chains this validator does not watch
     if (ethers.dataLength(recipient) !== 20) {
       this.log(`${chain.name}: zpráva ${nonce} nemá adresu příjemce, přeskakuji`);
       return;
     }
-    // Odesílatel a číslo odeslání patří ke zprávě kvůli vrácení: zrušený převod jde zpět právě jemu.
+    // The sender and the send number belong to the message for refunds: a cancelled transfer goes back to exactly that sender.
     const message = { srcChain: chain.id, dstChain, nonce, srcToken: ethers.zeroPadValue(token, 32), recipient: ethers.getAddress(recipient), amount, sender: ethers.getAddress(sender), sendId };
     const id = messageId(dst.gateway.target, message);
     if (!this.state.data.pending[id]) this.state.data.pending[id] = message;
@@ -191,10 +191,10 @@ export class Relayer {
   }
 
   /**
-   * Zrušený převod se vrátí odesílateli na zdrojové síti, stejnou cestou jako převod opačným směrem.
-   * Vrácení přijde na řadu, až je zrušení dost hluboko v cílovém řetězci: přeskupení by ho jinak mohlo vzít zpět
-   * a mince by dorazily dvakrát. Zrušené doručení už nikdy neprojde, to hlídá brána, a vrácení má číslo
-   * odvozené z odeslání, takže projde nejvýš jednou.
+   * A cancelled transfer is refunded to the sender on the source network, the same way as a transfer in the opposite direction.
+   * A refund comes up when the cancellation is deep enough in the target chain: a reorganisation could otherwise undo it
+   * and the coins would arrive twice. A cancelled delivery never goes through, the gateway enforces that, and the refund has a number
+   * derived from the send, so it passes at most once.
    */
   async refund(id, message, dst) {
     const safe = await dst.provider.getBlockNumber() - dst.confirmations;
@@ -203,7 +203,7 @@ export class Relayer {
     if (!queue.done || done) return;
     const src = this.chains.get(message.srcChain);
     if (!src || !message.sender || message.sendId === undefined) {
-      // Vklad z Bitcoinu nebo samo vrácení: odesílatel na této straně není, vrácení musí obstarat jejich vlastní cesta.
+      // A Bitcoin deposit or a refund itself: there is no sender on this side; refunds must take their own path.
       this.log(`${id.slice(0, 10)}: zrušeno, vrácení tento validátor neobslouží`);
       this.finish(id);
       return;
@@ -225,7 +225,7 @@ export class Relayer {
     const from = Math.max(dst.startBlock ?? 0, head - ATTEST_WINDOW);
     const logs = await dst.gateway.queryFilter(dst.gateway.filters.Attested(id), from, head);
     const found = new Map();
-    // Kontrakt podpis ověřil při zveřejnění, ale uzel je cizí vstup. Co nesouhlasí, doručení by odmítlo.
+    // The contract verified the signature when it was published, but the node is foreign input. Whatever does not match, delivery would reject.
     for (const log of logs) {
       if (ethers.recoverAddress(signedDigest(id), log.args.signature) === log.args.validator && await dst.gateway.isValidator(log.args.validator)) found.set(log.args.validator, log.args.signature);
     }

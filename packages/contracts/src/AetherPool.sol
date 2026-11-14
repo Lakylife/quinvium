@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-/// @title Těžební pool, který nemůže okrást své těžaře
-/// @notice Bloky poolu mají jako příjemce odměny tento kontrakt, takže mince nikdy neprojdou přes provozovatele.
-/// Podíl je hlavička bloku, jejíž extraData obsahuje adresu těžaře a obtížnost podílu. Obojí kryje Proof of Work,
-/// práci ověřuje přímo síť. Provozovatel proto nemůže podíl přepsat na jiného těžaře, změnit poplatek
-/// ani vybrat víc než svůj poplatek. Podíly může odeslat kdokoli a výplatu spustit také, i když provozovatel zmizí.
-/// Rozdělení je PPLNS: odměna jde mezi posledních několik kol, takže přeskakování mezi pooly nic nepřinese.
+/// @title A mining pool that cannot rob its miners
+/// @notice The pool's blocks have this contract as the reward recipient, so coins never pass through the operator.
+/// A share is a block header whose extraData contains the miner's address and the share difficulty. Both are covered by the proof of work,
+/// the network verifies the work directly. The operator therefore cannot reassign a share to another miner, change the fee
+/// nor withdraw more than its fee. Anyone can submit shares and trigger the payout too, even if the operator disappears.
+/// Distribution is PPLNS: the reward goes to the last several rounds, so pool hopping brings nothing.
 contract AetherPool {
-    /// @dev Vestavěná funkce sítě, viz packages/node/src/core/precompiles.js
+    /// @dev A built-in function of the network, see packages/node/src/core/precompiles.js
     address private constant POW_VERIFY = 0x0000000000000000000000000000000000000100;
     uint256 private constant PROOF_BYTES = 224;
     uint256 private constant BPS = 10_000;
@@ -21,7 +21,7 @@ contract AetherPool {
     uint256 public constant MIN_ROUND_BLOCKS = 16;
     uint256 public constant MAX_ROUND_BLOCKS = 5760;
     uint256 public constant MAX_WINDOW_ROUNDS = 256;
-    /// @notice O kolik bloků smí být podíl starší. Kolo se uzavře až potom, aby žádný podíl nepřišel pozdě.
+    /// @notice How many blocks older a share may be. A round closes only after that, so no share arrives late.
     uint256 public constant MAX_SHARE_AGE = 32;
 
     uint8 public constant OK = 0;
@@ -33,12 +33,12 @@ contract AetherPool {
     uint8 public constant REJECT_WORK = 6;
     uint8 public constant REJECT_DUPLICATE = 7;
 
-    /// @notice Jeden krok je kolo, ve kterém někdo těžil. Prázdná kola se nepočítají.
+    /// @notice One step is a round in which someone mined. Empty rounds do not count.
     struct Step {
         uint256 round;
         uint256 work;
-        uint256 totalWork;   // součet práce včetně tohoto kroku
-        uint256 totalRate;   // součet výplat na jednotku práce, posunutý o RATE_SHIFT bitů
+        uint256 totalWork;   // sum of work including this step
+        uint256 totalRate;   // sum of payouts per unit of work, shifted by RATE_SHIFT bits
     }
 
     address public immutable operator;
@@ -50,7 +50,7 @@ contract AetherPool {
 
     Step[] public steps;
     uint256 public settledSteps;
-    /// @notice Mince, které už někomu patří.
+    /// @notice Coins that already belong to someone.
     uint256 public reserved;
     uint256 public operatorOwed;
     uint256 public totalPaid;
@@ -91,19 +91,19 @@ contract AetherPool {
         url = url_;
     }
 
-    /// @notice Přijímá odměny za bloky i dobrovolné příspěvky těžařům.
+    /// @notice Accepts block rewards and voluntary contributions to miners.
     receive() external payable {}
 
-    // ---- Podíly ----
+    // ---- Shares ----
 
-    /// @param header RLP hlavičky včetně mixHash a nonce
+    /// @param header RLP of the header including mixHash and nonce
     function submitShare(bytes calldata header) external {
         uint8 result = _accept(header);
         if (result != OK) revert ShareRejected(result);
         _settle(SETTLE_PER_SHARE_CALL);
     }
 
-    /// @notice Neplatné podíly přeskočí, aby jeden opožděný nezahodil celou dávku.
+    /// @notice Skips invalid shares so that one late share does not discard the whole batch.
     function submitShares(bytes[] calldata headers) external returns (uint256 accepted) {
         for (uint256 i; i < headers.length; ++i) {
             if (_accept(headers[i]) == OK) ++accepted;
@@ -142,14 +142,14 @@ contract AetherPool {
         return OK;
     }
 
-    // ---- Uzavření kol ----
+    // ---- Closing rounds ----
 
-    /// @notice První kolo, do kterého ještě může přijít podíl.
+    /// @notice The first round that can still receive a share.
     function openRound() public view returns (uint256) {
         return block.number < MAX_SHARE_AGE ? 0 : (block.number - MAX_SHARE_AGE) / roundBlocks;
     }
 
-    /// @notice Rozdělí nové mince mezi kroky v okně. Spustit to může kdokoli, odeslání podílů to dělá samo.
+    /// @notice Distributes new coins between the steps in the window. Anyone can trigger it; submitting shares does it automatically.
     function settle(uint256 maxSteps) external returns (uint256) {
         return _settle(maxSteps);
     }
@@ -180,9 +180,9 @@ contract AetherPool {
         emit StepSettled(index, step.round, step.work, pot, fee);
     }
 
-    // ---- Výplaty ----
+    // ---- Payouts ----
 
-    /// @dev Výplata jednoho kroku od poslední výplaty. Krok vydělává, dokud je v okně.
+    /// @dev Payout of one step since the last payout. A step earns while it is in the window.
     function _earned(address miner, uint256 step) private view returns (uint256 amount, uint256 rate, bool closed) {
         uint256 last = step + windowRounds - 1;
         closed = last < settledSteps;
@@ -192,13 +192,13 @@ contract AetherPool {
         amount = (workOf[step][miner] * (rate - from)) >> RATE_SHIFT;
     }
 
-    /// @notice Pošle těžaři vše, co mu patří. Spustit to může kdokoli, mince jdou vždy jen těžaři.
+    /// @notice Sends the miner everything they are owed. Anyone can trigger it; the coins always go only to the miner.
     function claim(address miner) external returns (uint256 amount) {
         _settle(SETTLE_PER_SHARE_CALL);
         amount = _pay(miner);
     }
 
-    /// @notice Hromadná výplata, kterou spouští server poolu. Selhání jednoho těžaře ostatní nezastaví.
+    /// @notice Batch payout triggered by the pool server. One miner's failure does not stop the others.
     function payout(address[] calldata miners) external {
         _settle(SETTLE_PER_SHARE_CALL);
         for (uint256 i; i < miners.length; ++i) _pay(miners[i]);
@@ -241,7 +241,7 @@ contract AetherPool {
         }
     }
 
-    /// @notice Provozovatel dostane jen poplatek z už rozdělených odměn.
+    /// @notice The operator gets only the fee from rewards already distributed.
     function withdrawFee() external {
         uint256 amount = operatorOwed;
         if (amount == 0) revert NothingToPay();
@@ -259,19 +259,19 @@ contract AetherPool {
         emit UrlChanged(url_);
     }
 
-    // ---- Čtení pro aplikace ----
+    // ---- Reads for apps ----
 
     function stepCount() external view returns (uint256) {
         return steps.length;
     }
 
-    /// @notice Je co rozdělit? Tichý pool tak může kola uzavřít i bez nových podílů.
+    /// @notice Is there anything to distribute? A quiet pool can close rounds even without new shares.
     function readyToSettle() external view returns (bool) {
         uint256 next = settledSteps;
         return next < steps.length && steps[next].round < openRound();
     }
 
-    /// @notice Kolik těžař právě může vybrat.
+    /// @notice How much the miner can withdraw right now.
     function pendingOf(address miner) external view returns (uint256 amount) {
         amount = owed[miner];
         uint256[] storage list = minerSteps[miner];
@@ -283,7 +283,7 @@ contract AetherPool {
         }
     }
 
-    /// @notice Práce v aktuálním okně: celá a daného těžaře. Podíl na další odměně je jejich poměr.
+    /// @notice Work in the current window: total and of the given miner. The share of the next reward is their ratio.
     function windowWork(address miner) external view returns (uint256 total, uint256 own) {
         uint256 count = steps.length;
         uint256 start = count > windowRounds ? count - windowRounds : 0;
@@ -293,7 +293,7 @@ contract AetherPool {
         }
     }
 
-    /// @notice Mince čekající na další rozdělení.
+    /// @notice Coins waiting for the next distribution.
     function unsettled() external view returns (uint256) {
         return address(this).balance - reserved;
     }

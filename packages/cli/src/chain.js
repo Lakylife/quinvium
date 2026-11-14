@@ -1,4 +1,4 @@
-// Čtení z řetězce: nic nepodepisuje a nepotřebuje peněženku.
+// Reading from the chain: signs nothing and needs no wallet.
 import { ethers } from 'ethers';
 import { CliError, ago, amountText, count, dateText, gwei, methodOf, pairs, rate, revertInfo, revertReason, short, table, units } from './context.js';
 import { L } from './i18n.js';
@@ -11,7 +11,7 @@ const LIST_LIMIT = 20;
 const MINER_WINDOW = 1000;
 const txs = (n) => count(n, ['transakce', 'transakce', 'transakcí'], ['transaction', 'transactions']);
 
-/** Systémové kontrakty sítě mají v přehledu název, ostatní adresy jen druh. */
+/** The network's system contracts have a name in the overview; other addresses only a kind. */
 function kindOf(ctx, x) {
   const name = Object.entries(ctx.contracts).find(([, c]) => c.address && c.address.toLowerCase() === x.address.toLowerCase())?.[0];
   if (name === 'WAET') return L(`kontrakt Wrapped ${ctx.symbol}`, `contract Wrapped ${ctx.symbol}`);
@@ -19,7 +19,7 @@ function kindOf(ctx, x) {
   return x.isContract ? L('kontrakt', 'contract') : L('účet', 'account');
 }
 
-/** Proč neúspěšná transakce skončila: uzel přehraje blok až po ni (aether_txError). */
+/** Why a failed transaction ended: the node replays the block up to it (aether_txError). */
 function failureOf(res) {
   if (!res) return null;
   if (res.error && res.error !== 'revert') {
@@ -102,7 +102,7 @@ export async function miners(ctx) {
   ctx.print(list, list.length ? table([L('Adresa', 'Address'), L(`Bloky z posledních ${MINER_WINDOW}`, `Blocks of the last ${MINER_WINDOW}`), L('Poslední blok', 'Last block')], list.slice(0, LIST_LIMIT).map((m) => [m.address, m.blocks, m.lastBlock]), [1, 2]) : L('Zatím žádní těžaři.', 'No miners yet.'));
 }
 
-/** Žebříček podle zůstatku. Prázdné adresy (kontrakty bez mincí) do něj nepatří. */
+/** Rich list by balance. Empty addresses (contracts without coins) do not belong in it. */
 export async function rich(ctx) {
   const r = await ctx.rpc('aether_richList', [LIST_LIMIT]);
   const items = r.items.filter((x) => BigInt(x.balance) > 0n);
@@ -111,7 +111,7 @@ export async function rich(ctx) {
     : L('Zatím žádná adresa nemá mince.', 'No address holds coins yet.'));
 }
 
-/** Přímý dotaz na uzel, jako bitcoin-cli nebo geth attach. */
+/** A direct query to the node, like bitcoin-cli or geth attach. */
 export async function rawRpc(ctx, [method, ...params]) {
   if (!method) throw new CliError(L('Zadejte metodu, například: quinvium rpc eth_blockNumber', 'Give a method, for example: quinvium rpc eth_blockNumber'));
   const parsed = params.map((p) => { try { return JSON.parse(p); } catch { return p; } });
@@ -134,8 +134,8 @@ export async function verify(ctx, [message, signature, expected]) {
 }
 
 /**
- * Hledání jako v Exploreru: číslo nebo hash bloku, hash transakce a adresu pozná uzel (aether_search).
- * Navíc jméno .qu z registru jmen a zkratku ověřeného tokenu.
+ * Search as in the Explorer: the node recognises a block number or hash, a transaction hash and an address (aether_search).
+ * Also a .qu name from the name registry and the symbol of a verified token.
  */
 export async function search(ctx, words) {
   const q = words.join(' ').trim();

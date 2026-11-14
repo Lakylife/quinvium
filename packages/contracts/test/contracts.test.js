@@ -1,4 +1,4 @@
-// Systémové kontrakty na skutečném uzlu Aether, včetně pokusů o zneužití.
+// System contracts on a real node, including abuse attempts.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -40,7 +40,7 @@ async function ok(pending) {
   return r;
 }
 
-// Selektory všech vlastních chyb podle názvu, ethers je u odhadu gasu nepojmenuje.
+// Selectors of all custom errors by name; ethers does not name them during gas estimation.
 const errorSelectors = new Map();
 for (const a of Object.values(artifacts)) {
   for (const f of new ethers.Interface(a.abi).fragments) {
@@ -60,14 +60,14 @@ test.before(async () => {
 });
 test.after(async () => { provider.destroy(); await node.stop(); });
 
-test('všechny kontrakty jsou v genesis, továrna na pooly přibude forkem v bloku 1', async () => {
+test('all contracts are in genesis; the pool factory is added by a fork at block 1', async () => {
   await mineBlock();
   for (const [name, a] of Object.entries(artifacts)) {
     if (a.address) assert.notEqual(await provider.getCode(a.address), '0x', name);
   }
 });
 
-test('notář: otisk dokumentu, duplicita, odvolání jen autorem', async () => {
+test('notary: document fingerprint, duplicate, revocation only by the author', async () => {
   const n = contract('Notary');
   const hash = ethers.id('smlouva.pdf');
   await ok(n.notarize(hash, 'Kupní smlouva'));
@@ -82,7 +82,7 @@ test('notář: otisk dokumentu, duplicita, odvolání jen autorem', async () => 
   assert.equal((await n.verify(ethers.id('jiný'), alice.address))[0], false);
 });
 
-test('notář: kdo opíše otisk z čekajících transakcí, cizí zápis nezablokuje ani neodvolá', async () => {
+test("notary: whoever copies a fingerprint from pending transactions cannot block or revoke someone else's record", async () => {
   const hash = ethers.id('tajny-dokument.pdf');
   const thief = contract('Notary', dave);
   await ok(thief.notarize(hash, 'předběhnuto'));
@@ -99,7 +99,7 @@ async function commitName(c, name, owner, target) {
   await mineBlock();
 }
 
-test('jména: registrace, pálení poplatku, cena, vypršení, ochrana vlastníka', async () => {
+test('names: registration, fee burning, price, expiry, owner protection', async () => {
   const ans = contract('AetherNames');
   const bobs = contract('AetherNames', bob);
   assert.equal(await ans.pricePerYear('abc'), 50n * WEI);
@@ -135,7 +135,7 @@ test('jména: registrace, pálení poplatku, cena, vypršení, ochrana vlastník
   assert.equal(await ans.resolve('alice'), carol.address);
 });
 
-test('jména: registraci nejde předběhnout ani provést bez lhůty', async () => {
+test('names: registration cannot be front-run or done without the waiting period', async () => {
   const ans = contract('AetherNames');
   const thief = contract('AetherNames', dave);
   await fails(ans.register('bezzavazku', 1, alice.address, nameSecret, { value: WEI }), 'CommitmentMissing');
@@ -143,7 +143,7 @@ test('jména: registraci nejde předběhnout ani provést bez lhůty', async () 
   await fails(ans.register('vzacne', 1, alice.address, nameSecret, { value: WEI }), 'CommitmentTooNew');
   clock += 61;
   await mineBlock();
-  // Útočník vidí jméno i tajemství v čekající transakci, ale závazek patří jiné adrese.
+  // The attacker sees the name and the secret in the pending transaction, but the commitment belongs to another address.
   await fails(thief.register('vzacne', 1, dave.address, nameSecret, { value: WEI }), 'CommitmentMissing');
   await ok(ans.register('vzacne', 1, alice.address, nameSecret, { value: WEI }));
   assert.equal(await ans.resolve('vzacne'), alice.address);
@@ -153,7 +153,7 @@ test('jména: registraci nejde předběhnout ani provést bez lhůty', async () 
   await fails(ans.register('staryzavazek', 1, alice.address, nameSecret, { value: WEI }), 'CommitmentMissing');
 });
 
-test('certifikáty: vydání, ověření, vypršení, odvolání', async () => {
+test('credentials: issuing, verification, expiry, revocation', async () => {
   const c = contract('Credentials');
   const id = ethers.id('diplom-123');
   const schema = ethers.id('vysokoskolsky-diplom');
@@ -177,7 +177,7 @@ test('certifikáty: vydání, ověření, vypršení, odvolání', async () => {
   assert.equal(await c.isValid(issuer, ethers.id('neexistuje')), false);
 });
 
-test('certifikáty: cizí vydavatel nemůže číslo dokladu obsadit dřív a padělek se neověří', async () => {
+test('credentials: a foreign issuer cannot claim a document number first and a forgery does not verify', async () => {
   const id = ethers.id('diplom-456');
   const schema = ethers.id('vysokoskolsky-diplom');
   const fake = contract('Credentials', dave);
@@ -189,7 +189,7 @@ test('certifikáty: cizí vydavatel nemůže číslo dokladu obsadit dřív a pa
   assert.equal((await contract('Credentials').get(alice.address, id)).subject, bob.address);
 });
 
-test('dodavatelský řetězec: kroky, předání dvěma stranami, uzavření', async () => {
+test('supply chain: steps, two-sided hand-over, closing', async () => {
   const s = contract('SupplyChain');
   const r = await ok(s.create('KAVA-2026-001'));
   const id = s.interface.parseLog(r.logs[0]).args.id;
@@ -211,7 +211,7 @@ test('dodavatelský řetězec: kroky, předání dvěma stranami, uzavření', a
   await fails(s.getItem(999), 'UnknownItem');
 });
 
-test('úschova: uvolnění, vrácení po termínu, spor a rozhodčí', async () => {
+test('escrow: release, refund after the deadline, dispute and arbitration', async () => {
   const e = contract('Escrow');
   const as = (w) => contract('Escrow', w);
   const newDeal = async (fee = 100) => {
@@ -252,7 +252,7 @@ test('úschova: uvolnění, vrácení po termínu, spor a rozhodčí', async () 
   assert.equal(total, await provider.getBalance(artifacts.Escrow.address), 'kontrakt drží přesně to, co dluží');
 });
 
-test('úschova: když rozhodce zmizí, peníze nezůstanou zamčené', async () => {
+test('escrow: when the arbiter disappears, the money does not stay locked', async () => {
   const e = contract('Escrow');
   const r = await ok(e.create(bob.address, carol.address, clock + 1000, 100, 'Záloha', { value: 9n * WEI }));
   const id = e.interface.parseLog(r.logs[0]).args.id;
@@ -271,7 +271,7 @@ test('úschova: když rozhodce zmizí, peníze nezůstanou zamčené', async () 
   await fails(contract('Escrow', carol).resolve(id, 5000), 'WrongState');
 });
 
-test('hlasování: seznam oprávněných, dvojí hlas, konec', async () => {
+test('polls: list of eligible voters, double vote, end', async () => {
   const p = contract('Polls');
   const leaf = (a) => ethers.keccak256(ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(['address'], [a])));
   const pair = (x, y) => ethers.keccak256(ethers.concat(x < y ? [x, y] : [y, x]));
@@ -296,7 +296,7 @@ test('hlasování: seznam oprávněných, dvojí hlas, konec', async () => {
   await fails(p.create('x', ['jen jedna'], ethers.ZeroHash, clock + 100), 'InvalidPoll');
 });
 
-test('tokeny: vytvoření, převod, ražba jen vlastníkem', async () => {
+test('tokens: creation, transfer, minting only by the owner', async () => {
   const f = contract('TokenFactory');
   const r = await ok(f.create('Praha Body', 'PBD', 2, 100000, true));
   const addr = f.interface.parseLog(r.logs.at(-1)).args.token;
@@ -313,7 +313,7 @@ test('tokeny: vytvoření, převod, ražba jen vlastníkem', async () => {
   assert.equal((await f.tokensOf(alice.address)).length, 2);
 });
 
-test('NFT: sbírka, ražba a převod', async () => {
+test('NFT: collection, minting and transfer', async () => {
   const f = contract('CollectionFactory');
   const r = await ok(f.create('Vstupenky 2027', 'VST'));
   const addr = f.interface.parseLog(r.logs.at(-1)).args.collection;
@@ -326,7 +326,7 @@ test('NFT: sbírka, ražba a převod', async () => {
   assert.equal(await c.ownerOf(1), carol.address);
 });
 
-test('peněženka s více podpisy: 2 ze 3', async () => {
+test('multisig wallet: 2 of 3', async () => {
   const f = contract('MultisigFactory');
   const r = await ok(f.create([alice.address, bob.address, carol.address], 2));
   const addr = f.interface.parseLog(r.logs.at(-1)).args.wallet;
@@ -346,7 +346,7 @@ test('peněženka s více podpisy: 2 ze 3', async () => {
   assert.equal((await f.walletsOf(bob.address)).length, 1);
 });
 
-test('peněženka s více podpisy: výměna majitelů jen přes schválený návrh, souhlas bývalého člena neplatí', async () => {
+test("multisig wallet: owner changes only through an approved proposal; a former member's approval does not count", async () => {
   const f = contract('MultisigFactory');
   const r = await ok(f.create([alice.address, bob.address, carol.address], 2));
   const addr = f.interface.parseLog(r.logs.at(-1)).args.wallet;
@@ -355,12 +355,12 @@ test('peněženka s více podpisy: výměna majitelů jen přes schválený náv
   await fails(m.removeOwner(carol.address), 'OnlyThroughProposal');
   await fails(m.addOwner(dave.address), 'OnlyThroughProposal');
 
-  // Carol souhlasí s platbou, pak z peněženky odejde.
+  // Carol agrees to the payment, then leaves the wallet.
   await ok(alice.connect(provider).sendTransaction({ to: addr, value: 2n * WEI }));
-  await ok(m.submit(dave.address, WEI, '0x'));                 // návrh 0: Alice
-  await ok(m.connect(carol.connect(provider)).confirm(0));     // už 2 souhlasy
+  await ok(m.submit(dave.address, WEI, '0x'));                 // proposal 0: Alice
+  await ok(m.connect(carol.connect(provider)).confirm(0));     // already 2 approvals
   const remove = m.interface.encodeFunctionData('removeOwner', [carol.address]);
-  await ok(m.submit(addr, 0, remove));                         // návrh 1
+  await ok(m.submit(addr, 0, remove));                         // proposal 1
   await ok(asBob.confirm(1));
   await ok(m.execute(1));
   assert.deepEqual([...(await m.getOwners())].sort(), [alice.address, bob.address].sort());
@@ -368,7 +368,7 @@ test('peněženka s více podpisy: výměna majitelů jen přes schválený náv
   assert.equal(await m.confirmationCount(0), 1n, 'souhlas bývalého člena se nepočítá');
   await fails(m.execute(0), 'NotEnoughConfirmations');
 
-  // Pod práh se majitelé odebrat nedají.
+  // Owners cannot be removed below the threshold.
   const again = m.interface.encodeFunctionData('removeOwner', [bob.address]);
   await ok(m.submit(addr, 0, again));
   await ok(asBob.confirm(2));
@@ -385,7 +385,7 @@ test('peněženka s více podpisy: výměna majitelů jen přes schválený náv
   assert.equal(await m.threshold(), 3n);
 });
 
-test('zabalený AET a hromadné čtení', async () => {
+test('wrapped QU and batched reads', async () => {
   const w = contract('WAET');
   await ok(w.deposit({ value: 3n * WEI }));
   assert.equal(await w.balanceOf(alice.address), 3n * WEI);
@@ -403,7 +403,7 @@ test('zabalený AET a hromadné čtení', async () => {
   assert.equal(BigInt(results[0].data), WEI);
 });
 
-test('útok opětovným vstupem na úschovu ani WAET neprojde', async () => {
+test('a re-entrancy attack on escrow or WQU does not pass', async () => {
   const solc = (await import('node:module')).createRequire(import.meta.url)('solc');
   const source = `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;

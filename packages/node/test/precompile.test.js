@@ -1,4 +1,4 @@
-// Ověření práce z kontraktu běží na každém uzlu nad daty od kohokoli. Výjimka nebo rozdílný výsledek by rozdělil síť.
+// Proof-of-work verification from a contract runs on every node over data from anyone. An exception or a different result would split the network.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RLP } from '@ethereumjs/rlp';
@@ -27,12 +27,12 @@ async function sealed(fields = {}) {
   return new Header({ ...base, ...fields, mixHash: mixDigest });
 }
 
-test('adresa a cena jsou pevné, změna je tvrdý fork', () => {
+test('the address and price are fixed; a change is a hard fork', () => {
   assert.equal(POW_VERIFY_ADDRESS, '0x0000000000000000000000000000000000000100');
   assert.equal(POW_VERIFY_GAS, 100_000n);
 });
 
-test('platná hlavička vrátí sedm slov a správnou práci', async () => {
+test('a valid header returns seven words and the correct work', async () => {
   const h = await sealed();
   const r = await run(h.encode());
   assert.equal(r.executionGasUsed, POW_VERIFY_GAS);
@@ -49,7 +49,7 @@ test('platná hlavička vrátí sedm slov a správnou práci', async () => {
   assert.deepEqual(word(6), h.hash());
 });
 
-test('málo gasu je chyba volání a spotřebuje celý limit', async () => {
+test('too little gas is a call error and uses the whole limit', async () => {
   const h = await sealed();
   const r = await run(h.encode(), 100n, POW_VERIFY_GAS - 1n);
   assert.equal(r.executionGasUsed, POW_VERIFY_GAS - 1n);
@@ -57,22 +57,22 @@ test('málo gasu je chyba volání a spotřebuje celý limit', async () => {
   assert.equal(r.returnValue.length, 0);
 });
 
-test('cache cizí epochy se nikdy nepočítá', async () => {
+test('the cache of a foreign epoch is never computed', async () => {
   const fake = counting();
   const ask = (number, at) => run(new Header({ ...base, number }).encode(), at, POW_VERIFY_GAS, fake);
-  // Hlavička z budoucnosti a příliš stará epocha skončí bez výpočtu.
+  // A header from the future and a too-old epoch end without computation.
   assert.equal((await ask(101n, 100n)).returnValue.length, 0);
   assert.equal((await ask(EPOCH - 1n, EPOCH * 2n)).returnValue.length, 0);
   assert.equal((await ask(1n, EPOCH * 500n)).returnValue.length, 0);
   assert.equal((await ask(0n, 100n)).returnValue.length, 0);
   assert.equal(fake.calls, 0);
-  // Aktuální a předchozí epocha se počítá, mixHash pak rozhodne.
+  // The current and the previous epoch are computed; mixHash then decides.
   await ask(EPOCH, EPOCH * 2n - 1n);
   await ask(EPOCH * 2n, EPOCH * 2n);
   assert.equal(fake.calls, 2);
 });
 
-test('náhodná data ani poškozené hlavičky uzel neshodí a stojí vždy stejně', async () => {
+test('random data or corrupted headers do not crash the node and always cost the same', async () => {
   const good = (await sealed()).encode();
   const fake = counting();
   const check = async (data) => {
@@ -91,20 +91,20 @@ test('náhodná data ani poškozené hlavičky uzel neshodí a stojí vždy stej
   for (let i = 0; i < 300; i++) await check(new Uint8Array(good.subarray(0, Math.floor(Math.random() * good.length))));
   const fields = new Header(base).fields();
   const nasty = [
-    [...fields, new Uint8Array(1)],                      // 16 polí
-    fields.slice(0, 14),                                 // 14 polí
-    fields.map((f, i) => (i === 3 ? [f] : f)),           // vnořený seznam
-    fields.map((f, i) => (i === 7 ? new Uint8Array(40).fill(255) : f)),  // výška přes 256 bitů
-    fields.map((f, i) => (i === 6 ? new Uint8Array(40).fill(255) : f)),  // obtížnost přes 256 bitů
-    fields.map((f, i) => (i === 6 ? new Uint8Array(0) : f)),             // nulová obtížnost
-    fields.map((f, i) => (i === 11 ? new Uint8Array(33) : f)),           // dlouhé extraData
-    fields.map((f, i) => (i === 7 ? new Uint8Array([0, 7]) : f)),        // nekanonická výška
+    [...fields, new Uint8Array(1)],                      // 16 fields
+    fields.slice(0, 14),                                 // 14 fields
+    fields.map((f, i) => (i === 3 ? [f] : f)),           // nested list
+    fields.map((f, i) => (i === 7 ? new Uint8Array(40).fill(255) : f)),  // height over 256 bits
+    fields.map((f, i) => (i === 6 ? new Uint8Array(40).fill(255) : f)),  // difficulty over 256 bits
+    fields.map((f, i) => (i === 6 ? new Uint8Array(0) : f)),             // zero difficulty
+    fields.map((f, i) => (i === 11 ? new Uint8Array(33) : f)),           // long extraData
+    fields.map((f, i) => (i === 7 ? new Uint8Array([0, 7]) : f)),        // non-canonical height
   ];
   for (const n of nasty) await check(RLP.encode(n));
   assert.equal(fake.calls > 0, true, 'část poškozených hlaviček došla až k ověření práce');
 });
 
-test('výsledek nezávisí na tom, kolikrát a v jakém pořadí se volá', async () => {
+test('the result does not depend on how often and in what order it is called', async () => {
   const a = await sealed({ number: 11n });
   const b = await sealed({ number: 12n });
   const first = [await run(a.encode()), await run(b.encode())];
@@ -113,7 +113,7 @@ test('výsledek nezávisí na tom, kolikrát a v jakém pořadí se volá', asyn
   assert.deepEqual(first[1].returnValue, second[0].returnValue);
 });
 
-test('chyba uzlu se nevydává za neplatnou práci', async () => {
+test('a node error does not pass for invalid work', async () => {
   const broken = { compute: async () => { throw new Error('disk je plný'); } };
   await assert.rejects(run((await sealed()).encode(), 100n, POW_VERIFY_GAS, broken), /disk je plný/);
 });

@@ -1,5 +1,5 @@
-// Bitcoin pro most: adresy, skripty, transakce a podpisy. Kód je malý a bez cizích knihoven, protože každá závislost
-// je další kód, kterému se svěřuje úschova mincí. Testy ho porovnávají s nezávislou knihovnou bitcoinjs-lib.
+// Bitcoin for the bridge: addresses, scripts, transactions and signatures. The code is small and without third-party libraries, because every dependency
+// is more code entrusted with custody of coins. Tests compare it with the independent bitcoinjs-lib library.
 import crypto from 'node:crypto';
 import { SigningKey } from 'ethers';
 
@@ -21,7 +21,7 @@ const OP_CHECKSIG = 0xac;
 const OP_CHECKMULTISIG = 0xae;
 const SIGHASH_ALL = 1;
 const SEQUENCE_FINAL = 0xffffffff;
-const MAX_KEYS = 15;    // OP_1 až OP_16, klíčů i podpisů se musí vejít do jednoho bajtu operace
+const MAX_KEYS = 15;    // OP_1 to OP_16; the number of keys and signatures must fit into one operation byte
 const ADDRESS_PUSH = 20;
 
 export const sha256 = (data) => crypto.createHash('sha256').update(data).digest();
@@ -93,7 +93,7 @@ export function decodeSegwit(hrp, address) {
   return { version, program };
 }
 
-// ---- base58 pro starší adresy ------------------------------------------------------------------
+// ---- base58 for legacy addresses ------------------------------------------------------------------
 
 const BASE58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
@@ -112,7 +112,7 @@ function decodeBase58Check(address) {
   return { version: all[0], hash: all.subarray(1, 21) };
 }
 
-/** @returns {Buffer} skript výstupu pro adresu dané sítě, neplatná adresa nebo cizí síť skončí chybou */
+/** @returns {Buffer} output script for an address of the given network; an invalid address or another network throws */
 export function addressScript(address, networkName) {
   const net = NETWORKS[networkName];
   if (!net) throw new Error('Neznámá síť Bitcoinu');
@@ -126,15 +126,15 @@ export function addressScript(address, networkName) {
   throw new Error('Adresa patří jiné síti');
 }
 
-// ---- úschova --------------------------------------------------------------------------------------
+// ---- escrow --------------------------------------------------------------------------------------
 
-/** Pořadí klíčů je dané jejich hodnotou, takže všichni validátoři spočítají stejnou adresu. */
+/** The order of keys is given by their value, so all validators compute the same address. */
 const sortedKeys = (pubkeys) => pubkeys.map((k) => Buffer.from(k)).sort(Buffer.compare);
 
 /**
- * Skript úschovy: `threshold` z klíčů validátorů. Se zadaným příjemcem je to skript vkladu: adresa příjemce je
- * uvnitř skriptu, takže každý příjemce má vlastní vkladovou adresu a platit na ni jde z libovolné peněženky i burzy.
- * @param {Buffer[]} pubkeys komprimované veřejné klíče
+ * Custody script: `threshold` of the validators' keys. With a recipient given it is the deposit script: the recipient's address is
+ * inside the script, so each recipient has their own deposit address and can be paid from any wallet or exchange.
+ * @param {Buffer[]} pubkeys compressed public keys
  * @param {string} [recipient] adresa na Quinviu `0x…`
  */
 export function custodyScript(pubkeys, threshold, recipient) {
@@ -148,7 +148,7 @@ export const scriptOutput = (witnessScript) => Buffer.from([OP_0, 32, ...sha256(
 export const scriptAddress = (witnessScript, networkName) => encodeSegwit(NETWORKS[networkName].hrp, 0, sha256(witnessScript));
 export const dataOutput = (data) => Buffer.from([OP_RETURN, data.length, ...data]);
 
-/** Veřejný klíč validátora pro úschovu. */
+/** The validator's public key for custody. */
 export const publicKey = (privateKey) => Buffer.from(SigningKey.computePublicKey(privateKey, true).slice(2), 'hex');
 
 // ---- transakce ---------------------------------------------------------------------------------------
@@ -174,7 +174,7 @@ const encodeOutput = (o) => Buffer.concat([u64(o.value), sized(o.script)]);
  * @typedef {{ version: number, locktime: number, inputs: Input[], outputs: Output[] }} Tx
  */
 
-/** Serializace transakce, s `witness` včetně svědků. Identifikátor transakce se počítá bez nich. */
+/** Transaction serialisation, with `witness` including witnesses. The transaction ID is computed without them. */
 export function serializeTx(tx, witness = false) {
   const parts = [u32(tx.version)];
   if (witness) parts.push(Buffer.from([0, 1]));
@@ -191,7 +191,7 @@ export function serializeTx(tx, witness = false) {
   return Buffer.concat(parts);
 }
 
-/** Přečte transakci bez svědků, ve které jsou návrhy platby mezi validátory. Přebytečná data se odmítnou. */
+/** Reads a transaction without witnesses that carries payment proposals between validators. Surplus data is rejected. */
 export function parseTx(raw) {
   let at = 0;
   const take = (n) => {
@@ -224,7 +224,7 @@ export function parseTx(raw) {
 
 export const txidOf = (tx) => Buffer.from(hash256(serializeTx(tx))).reverse().toString('hex');
 
-/** Otisk pro podpis vstupu podle BIP143, SIGHASH_ALL: podpis kryje všechny vstupy a výstupy i částku vstupu. */
+/** Hash for signing an input per BIP143, SIGHASH_ALL: the signature covers all inputs and outputs and the input amount. */
 export function sighash(tx, index, witnessScript, value) {
   const input = tx.inputs[index];
   return hash256(Buffer.concat([
@@ -249,9 +249,9 @@ function derInteger(hex) {
   return value[0] & 0x80 ? Buffer.concat([Buffer.from([0]), value]) : value;
 }
 
-/** @returns {Buffer} podpis vstupu ve formátu DER se značkou SIGHASH_ALL */
+/** @returns {Buffer} input signature in DER format with the SIGHASH_ALL flag */
 export function signInput(tx, index, witnessScript, value, privateKey) {
-  // ethers podepisuje deterministicky (RFC 6979) a s nízkým `s`, což Bitcoin vyžaduje.
+  // ethers signs deterministically (RFC 6979) and with a low `s`, which Bitcoin requires.
   const { r, s } = new SigningKey(privateKey).sign(sighash(tx, index, witnessScript, value));
   const [R, S] = [derInteger(r), derInteger(s)];
   const body = Buffer.concat([Buffer.from([0x02, R.length]), R, Buffer.from([0x02, S.length]), S]);
@@ -259,9 +259,9 @@ export function signInput(tx, index, witnessScript, value, privateKey) {
 }
 
 /**
- * Svědek vstupu úschovy. OP_CHECKMULTISIG čte podpisy ve stejném pořadí jako klíče a kvůli staré chybě bere jednu
- * položku navíc, proto prázdná položka na začátku.
- * @param {Map<string, Buffer>} signatures podpisy podle veřejného klíče v hexu
+ * Witness of a custody input. OP_CHECKMULTISIG reads signatures in the same order as the keys and, because of an old bug, takes one
+ * one extra item, hence the empty item at the start.
+ * @param {Map<string, Buffer>} signatures signatures by public key in hex
  */
 export function multisigWitness(pubkeys, threshold, signatures, witnessScript) {
   const ordered = sortedKeys(pubkeys).map((k) => signatures.get(k.toString('hex'))).filter(Boolean).slice(0, threshold);
@@ -269,7 +269,7 @@ export function multisigWitness(pubkeys, threshold, signatures, witnessScript) {
   return [Buffer.alloc(0), ...ordered, witnessScript];
 }
 
-/** Virtuální velikost podepsané transakce pro výpočet poplatku. */
+/** Virtual size of a signed transaction for computing the fee. */
 export function virtualSize(tx) {
   const base = serializeTx(tx).length;
   const total = serializeTx(tx, true).length;
@@ -283,7 +283,7 @@ function parseDer(signature) {
   return { r: `0x${r.toString('hex').padStart(64, '0').slice(-64)}`, s: `0x${s.toString('hex').padStart(64, '0').slice(-64)}` };
 }
 
-/** Patří podpis vstupu tomuto klíči? Cizí neplatný podpis by jinak zablokoval sestavení platby. */
+/** Does the input signature belong to this key? Otherwise a foreign invalid signature would block building the payment. */
 export function verifyInput(tx, index, witnessScript, value, pubkey, signature) {
   try {
     const digest = sighash(tx, index, witnessScript, value);

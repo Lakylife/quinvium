@@ -1,4 +1,4 @@
-// Metody JSON-RPC. Sada eth_* odpovídá Ethereu, takže fungují běžné peněženky a nástroje.
+// JSON-RPC methods. The eth_* set matches Ethereum, so common wallets and tools work.
 import { RLP } from '@ethereumjs/rlp';
 import { getMerkleStateProof } from '@ethereumjs/statemanager';
 import { Address, createAddressFromString } from '@ethereumjs/util';
@@ -40,7 +40,7 @@ const pad32 = (bytes) => {
 };
 
 const MAX_PAGE = 100;
-const HASHRATE_QUIET_S = 180n;       // 12 cílových časů bloku: u běžící těžby taková pauza prakticky nenastane
+const HASHRATE_QUIET_S = 180n;       // 12 target block times: with mining running such a pause practically never happens
 const MAX_OFFSET = 1_000_000;
 const MAX_CHART_POINTS = 600;
 const TX_KINDS = { transfer: 0, call: 1, create: 2 };
@@ -50,7 +50,7 @@ const MAX_HOLDER_SCAN = 500;
 const HOLDER_SCAN_MS = 2000;
 const MAX_LOG_PAGE = 500;
 const MAX_SHARE_ROWS = 2000;
-const REVERTED = 3;      // kód chyby JSON-RPC pro zamítnuté volání
+const REVERTED = 3;      // JSON-RPC error code for a rejected call
 const TOP_HOLDERS = 25;
 const paidSums = new Map();
 const PAID_TOPIC = keccak(new TextEncoder().encode('Paid(address,uint256)'));
@@ -58,14 +58,14 @@ const TRANSFER_TOPIC = keccak(new TextEncoder().encode('Transfer(address,address
 const SHARE_TOPIC = keccak(new TextEncoder().encode('ShareAccepted(address,uint256,uint256,uint256)'));
 const POOL_CREATED_TOPIC = keccak(new TextEncoder().encode('PoolCreated(address,address,string,uint256,uint256,uint256)'));
 const POOL_FACTORY = fromHex('0xae0000000000000000000000000000000000000c');
-const POOL_WINDOW_BLOCKS = 5760;   // bez zadání den zpátky
-const MAX_POOLS = 10_000;           // seznam poolů z továrny, víc jich žebříček nečte
-const MAX_MINED_ROWS = 20_000;      // bloků na souhrn odměn po dnech
+const POOL_WINDOW_BLOCKS = 5760;   // a day back by default
+const MAX_POOLS = 10_000;           // list of pools from the factory; the ranking reads no more
+const MAX_MINED_ROWS = 20_000;      // blocks for the daily reward summary
 const DAY_S = 86_400;
-const MAX_TX_ERRORS = 512;          // přehrané neúspěšné transakce v paměti
-const POOL_PERIOD_S = 86_400;       // žebříček poolů bez zadání podle posledních 24 hodin
+const MAX_TX_ERRORS = 512;          // replayed failed transactions in memory
+const POOL_PERIOD_S = 86_400;       // pool ranking by the last 24 hours by default
 const URL_CALL = toHex(keccak(new TextEncoder().encode('url()')).subarray(0, 4));
-/** Řetězec z dat ABI: na pozici `slot` je posun, na něm délka a pak bajty textu. */
+/** A string from ABI data: at position `slot` is an offset, at it the length and then the text bytes. */
 const abiText = (hex, slot = 0) => {
   const data = fromHex(hex);
   const offset = Number(BigInt(toHex(data.subarray(slot * 32, slot * 32 + 32))));
@@ -75,9 +75,9 @@ const abiText = (hex, slot = 0) => {
 const abiWord = (hex, slot) => BigInt(toHex(fromHex(hex).subarray(slot * 32, slot * 32 + 32)));
 const HASHRATE_BLOCKS = 240n;
 const HASHRATE_WINDOW_S = 900n;
-const MIN_CHART_BUCKET_S = 60;    // kratší úsek má jen pár bloků a výkon by z něj byl jen náhodný šum
+const MIN_CHART_BUCKET_S = 60;    // a shorter interval has only a few blocks and the hashrate from it would be just random noise
 
-/** Metody, které rozdávají a přijímají práci. Na veřejném uzlu je vypíná volba --no-mining-rpc. */
+/** Methods that hand out and accept work. On a public node they are switched off with --no-mining-rpc. */
 export const MINING_METHODS = ['eth_getWork', 'aether_getWork', 'eth_submitWork', 'aether_submitWork', 'eth_submitHashrate'];
 
 export function createMethods(node) {
@@ -175,7 +175,7 @@ export function createMethods(node) {
     for (const [id, f] of filters) if (Date.now() - f.at > FILTER_TTL) filters.delete(id);
   }, 60_000).unref();
 
-  // Spočítá se jednou za blok, data se během bloku nemění.
+  // Computed once per block; the data does not change during a block.
   let feeCache = null;
   const feeBlocks = () => {
     const key = toHex(chain.head.hash());
@@ -227,7 +227,7 @@ export function createMethods(node) {
   };
 
 
-  /** Skutečně odvedená práce za posledních 15 minut. Když se přestane těžit, odhad klesá, i když nepřišel nový blok. */
+  /** Work actually done over the last 15 minutes. When mining stops, the estimate drops even without a new block. */
   const estimatedHashrate = () => {
     const head = chain.head;
     const now = BigInt(chain.now());
@@ -246,8 +246,8 @@ export function createMethods(node) {
   };
 
   /**
-   * Odhad z bloků je náhodný: u 60 bloků kolísá o 13 %, i když výkon stojí. Těžaři připojení k tomuto uzlu hlásí přesné číslo,
-   * proto má přednost, dokud s odhadem souhlasí. Výrazně vyšší odhad znamená, že v síti těží ještě někdo další.
+   * An estimate from blocks is random: over 60 blocks it varies by 13 % even when hashrate is steady. Miners connected to this node report the exact number,
+   * so it takes precedence as long as it agrees with the estimate. A much higher estimate means someone else is also mining in the network.
    */
   const networkHashrate = () => {
     const estimate = estimatedHashrate();
@@ -273,7 +273,7 @@ export function createMethods(node) {
     };
   };
 
-  /** Transakce podle místa v rejstříku: hash, odesílatel, částka a čas bloku. */
+  /** Transactions by position in the index: hash, sender, amount and block time. */
   const txAt = (loc) => {
     if (!loc) return null;
     const b = chain.getBlock(chain.store.canonicalHash(loc.number));
@@ -282,7 +282,7 @@ export function createMethods(node) {
     return { hash: toHex(tx.hash()), from: tx.getSenderAddress().toString(), to: tx.to ? tx.to.toString() : null, value: tx.value.toString(), number: loc.number, timestamp: Number(b.header.timestamp) };
   };
 
-  /** Souhrn bloku. Těžař dostane odměnu za blok a všechny poplatky, nic se nepálí: income je jejich součet. */
+  /** Block summary. The miner gets the block reward and all fees, nothing is burned: income is their sum. */
   const summary = (h) => {
     const fees = h.number > 0n ? chain.store.feesAt(h.number) - chain.store.feesAt(h.number - 1n) : 0n;
     const reward = blockReward(h.number);
@@ -456,11 +456,11 @@ export function createMethods(node) {
       return { accepted: r.accepted, stale: !!r.stale, reason: r.reason ?? null, block: b?.accepted ? { hash: toHex(b.hash), number: Number(b.number), stale: !!b.stale } : null };
     },
 
-    // ---- rozšíření pro explorer a aplikace ------------------------------------------
+    // ---- extension for the Explorer and the app ------------------------------------------
     aether_stats: () => {
       const h = chain.head;
       const n = h.number < 50n ? h.number : 50n;
-      // Genesis má pevný čas, do průměru se proto nepočítá.
+      // Genesis has a fixed time, so it is not counted in the average.
       const span = h.number - n === 0n && n > 1n ? n - 1n : n;
       const start = n > 0n ? chain.getHeaderByNumber(h.number - span) : h;
       const minted = emitted(h.number);
@@ -479,8 +479,8 @@ export function createMethods(node) {
       };
     },
     /**
-     * Provoz za posledních 24 hodin pro přehled, seznam transakcí a bloků: transakce, poplatky, aktivní adresy,
-     * vytížení sítě, bloky poolů a čekající transakce za poslední hodinu. Čas počítá od posledního bloku.
+     * Traffic over the last 24 hours for the overview and the transaction and block lists: transactions, fees, active addresses,
+     * network utilisation, pool blocks and pending transactions over the last hour. Time counts from the last block.
      */
     aether_activity: async () => {
       const h = chain.head;
@@ -521,14 +521,14 @@ export function createMethods(node) {
       return out;
     },
     aether_recentTxs: ([limit = 20] = []) => {
-      // Z indexu: řetězec bez transakcí se nesmí procházet od špičky po genesis.
+      // From the index: a chain without transactions must not be walked from the tip to genesis.
       return chain.store.recentTxs(Math.min(100, Number(limit)) || 20).map(({ number, idx }) => {
         const b = chain.getBlock(chain.store.canonicalHash(number));
         return { ...txToRpc(b.txs[idx], { blockHash: toHex(b.hash()), number: BigInt(number), index: idx, baseFee: b.header.baseFee }), timestamp: Number(b.header.timestamp) };
       });
     },
     aether_pendingTxs: () => mempool.all().slice(0, 200).map((t) => txToRpc(t, null)),
-    /** Čekající transakce po stránkách se souhrnem fronty. U každé je vidět, jestli může do dalšího bloku. */
+    /** Pending transactions by page with a queue summary. Each shows whether it can enter the next block. */
     aether_mempool: async ([f = {}] = []) => {
       const { limit, offset } = paging(f);
       const v = await mempool.view({ order: f.order === 'time' ? 'time' : 'fee', limit, offset, sender: f.address ? hexAddress(f.address).toString() : null });
@@ -552,7 +552,7 @@ export function createMethods(node) {
       });
       return { total: chain.store.addressTxCount(address.bytes), items };
     },
-    /** Bloky s filtry: těžař, počet transakcí, čas, rozsah výšek. */
+    /** Blocks with filters: miner, number of transactions, time, height range. */
     aether_blocks: async ([f = {}] = []) => {
       const { limit, offset } = paging(f);
       const { total, capped, numbers } = await index('findBlocks', {
@@ -561,7 +561,7 @@ export function createMethods(node) {
       });
       return { total, capped, items: numbers.map((n) => summary(chain.getHeaderByNumber(BigInt(n)))) };
     },
-    /** Transakce s filtry: adresa a směr, druh, stav, čas, výše, rozsah výšek. */
+    /** Transactions with filters: address and direction, kind, status, time, amount, height range. */
     aether_txs: async ([f = {}] = []) => {
       const { limit, offset } = paging(f);
       const { total, capped, rows } = await index('findTxs', {
@@ -571,7 +571,7 @@ export function createMethods(node) {
       });
       return { total, capped, items: rows.map(indexedTx) };
     },
-    /** Všechno, co uzel ví o adrese: zůstatek, souhrn transakcí, vytěžené bloky a tokeny. */
+    /** Everything the node knows about an address: balance, transaction summary, mined blocks and tokens. */
     aether_addressInfo: async ([a]) => {
       const address = hexAddress(a);
       const head = chain.head;
@@ -592,7 +592,7 @@ export function createMethods(node) {
         firstSent: txAt(firstSent), lastSent: txAt(lastSent), fundedBy: txAt(funding),
       };
     },
-    /** Držitelé a počet převodů tokenu. Zůstatky čte přímo z kontraktu, výsledek platí do dalšího bloku. */
+    /** Holders and transfer count of a token. Balances are read directly from the contract; the result is valid until the next block. */
     aether_tokenInfo: ([a]) => {
       const address = hexAddress(a);
       const key = address.toString();
@@ -604,10 +604,10 @@ export function createMethods(node) {
       tokenCache.set(key, { head, value });
       return value;
     },
-    /** Převody tokenu s částkami, stránkovaně. */
+    /** Token transfers with amounts, paginated. */
     /**
-     * Převody tokenů jedné adresy v obou směrech: co poslala a co dostala, i z cizích transakcí, třeba výstup swapu.
-     * U NFT (ERC-721) je místo částky číslo tokenu.
+     * Token transfers of one address in both directions: what it sent and received, including from foreign transactions, for example swap output.
+     * For NFTs (ERC-721) the token ID replaces the amount.
      */
     aether_addressTransfers: async ([a, limit = 25, offset = 0]) => {
       const address = hexAddress(a);
@@ -643,7 +643,7 @@ export function createMethods(node) {
         }),
       };
     },
-    /** Události jednoho druhu z kontraktu, nejnovější první. Stránka Swap z nich skládá cenu a poslední obchody. */
+    /** Events of one kind from a contract, newest first. The Swap page builds the price and latest trades from them. */
     aether_contractLogs: async ([a, topic, limit = 50, offset = 0]) => {
       const address = hexAddress(a);
       const { total, rows } = await index('tokenEvents', address.bytes, fromHex(topic), Math.min(MAX_LOG_PAGE, count(limit) ?? 50) || 50, Math.min(MAX_OFFSET, count(offset) ?? 0));
@@ -656,7 +656,7 @@ export function createMethods(node) {
         }),
       };
     },
-    /** Podíl těžařů a poolů na blocích za období, stejný zdroj jako grafy. */
+    /** Share of blocks by miners and pools over the period, the same source as the charts. */
     aether_minerShares: async ([f = {}] = []) => {
       const [{ from, to, rows }, pools] = await Promise.all([shareRows(f), poolList()]);
       const isPool = new Set(pools.map((p) => p.pool));
@@ -666,10 +666,10 @@ export function createMethods(node) {
         items: rows.map((r) => { const address = new Address(r.miner).toString(); return { address, pool: isPool.has(address), blocks: r.blocks, work: r.work, hashrate: r.work / seconds, last: r.last }; }),
       };
     },
-    /** Výplaty z poolů na adresu. Jsou to vnitřní převody kontraktu, běžný seznam transakcí je neukáže. */
+    /** Pool payouts to the address. They are internal contract transfers; the ordinary transaction list does not show them. */
     /**
-     * Těžaři poolu od daného bloku podle přijatých podílů: kolik podílů a kdy naposledy. Práci v okně,
-     * čekající výplatu a vyplacené mince čte stránka přímo z kontraktu poolu.
+     * Pool miners since the given block by accepted shares: how many shares and when last. Work in the window,
+     * the page reads pending payout and paid coins directly from the pool contract.
      */
     aether_poolMiners: async ([a, fromBlock, f = {}] = []) => {
       const pool = hexAddress(a);
@@ -678,7 +678,7 @@ export function createMethods(node) {
       const limit = Math.min(MAX_PAGE, count(f.limit) ?? MAX_PAGE) || MAX_PAGE;
       const offset = Math.min(MAX_OFFSET, count(f.offset) ?? 0);
       const item = (r) => ({ miner: new Address(Uint8Array.from(r.who).slice(12)).toString(), shares: r.count, last: r.last });
-      // Hledaný těžař přijde i s pořadím, takže ho najde i ten, kdo je mezi tisíci na poslední stránce.
+      // The searched miner comes with its rank, so even someone among thousands on the last page is found.
       const [{ total, rows }, match] = await Promise.all([
         index('poolMiners', pool.bytes, SHARE_TOPIC, from, limit, offset),
         f.miner ? index('poolMinerRank', pool.bytes, SHARE_TOPIC, from, hexAddress(f.miner).bytes) : null,
@@ -686,8 +686,8 @@ export function createMethods(node) {
       return { fromBlock: from, total, items: rows.map(item), ...(f.miner ? { match: match ? { ...item(match), rank: match.rank } : null } : {}) };
     },
     /**
-     * Žebříček poolů z továrny podle podílu na blocích za období, nejsilnější první, po stránkách a s hledáním
-     * podle jména, adresy poolu nebo provozovatele. Pool bez bloků v období je za aktivními, nejnovější dřív.
+     * Ranking of pools from the factory by share of blocks over the period, strongest first, by page and with search
+     * by name, pool address or operator. A pool without blocks in the period comes after active ones, newest first.
      */
     aether_pools: async ([f = {}] = []) => {
       const limit = Math.min(MAX_PAGE, count(f.limit) ?? 10) || 10;
@@ -716,8 +716,8 @@ export function createMethods(node) {
       return { total: pools.length, matched: rows.length, from: period.from, to: period.to, work: allWork, items };
     },
     /**
-     * Odměny za vytěžené bloky po dnech: kolik bloků a kolik přinesly, tedy odměna za blok a všechny poplatky.
-     * Den se počítá v časovém pásmu volajícího (`tz` je posun v sekundách), aby seděl s jeho kalendářem.
+     * Rewards for mined blocks per day: how many blocks and how much they brought, i.e. the block reward and all fees.
+     * The day is computed in the caller's time zone (`tz` is the offset in seconds) so it matches their calendar.
      */
     aether_minedByDay: async ([a, f = {}] = []) => {
       const miner = hexAddress(a);
@@ -741,8 +741,8 @@ export function createMethods(node) {
       return { capped: rows.length >= MAX_MINED_ROWS, items: [...byDay.values()].map((d) => ({ start: d.day * DAY_S - tz, blocks: d.blocks, income: d.income.toString(), first: d.first, last: d.last, time: d.time })) };
     },
     /**
-     * Proč transakce v bloku selhala. Uzel přehraje blok až po ni a vrátí chybu EVM a data revertu, Explorer z nich
-     * pozná chybu kontraktu (třeba SlippageExceeded). U úspěšné, čekající nebo neznámé transakce vrátí null.
+     * Why a transaction failed in a block. The node replays the block up to it and returns the EVM error and revert data; the Explorer
+     * recognises the contract error (for example SlippageExceeded). For a successful, pending or unknown transaction it returns null.
      */
     aether_txError: async ([h]) => {
       const hash = hexHash(h);
@@ -758,7 +758,7 @@ export function createMethods(node) {
       txErrors.set(key, result);
       return result;
     },
-    /** Pooly, které adresa založila a provozuje. Jen z události továrny poolů, jiný kontrakt se za ni vydávat nemůže. */
+    /** Pools the address created and operates. Only from the pool factory's event; no other contract can impersonate it. */
     aether_poolsOf: async ([a]) => {
       const operator = hexAddress(a);
       const rows = await index('eventsBySecond', POOL_FACTORY, POOL_CREATED_TOPIC, operator.bytes, 100);
@@ -772,7 +772,7 @@ export function createMethods(node) {
         const log = fullReceipts(block)[r.tx_idx].logs.find((l) => l.logIndex === r.log_idx);
         return { number: r.number, timestamp: Number(block.header.timestamp), pool: new Address(r.address).toString(), amount: BigInt(log.data).toString(), hash: log.transactionHash };
       };
-      // Součet čte stovky bloků, proto se počítá jen když přibude výplata. Jinak by šel opakovaným dotazem přetížit uzel.
+      // The sum reads hundreds of blocks, so it is computed only when a payout is added. Otherwise repeated queries could overload the node.
       const key = address.toString();
       let known = paidSums.get(key);
       if (known?.total !== total) {
@@ -783,13 +783,13 @@ export function createMethods(node) {
       }
       return { total, sum: known.sum, items: rows.map(amount) };
     },
-    /** Historie sítě po úsecích: čas bloku, obtížnost, odhad výkonu, transakce a gas. */
+    /** Network history by interval: block time, difficulty, hashrate estimate, transactions and gas. */
     aether_chartSeries: async ([f = {}] = []) => {
       const range = await index('indexRange');
       const to = count(f.to) ?? range.last ?? 0;
       const from = Math.max(count(f.from) ?? range.first ?? 0, range.first ?? 0);
       const points = Math.min(MAX_CHART_POINTS, Math.max(10, count(f.points) ?? 120));
-      // Pevný úsek, třeba den pro graf za 14 dní. Jinak se úsek dopočítá z počtu bodů.
+      // A fixed interval, for example a day for the 14-day chart. Otherwise the interval is derived from the number of points.
       const bucket = Math.max(MIN_CHART_BUCKET_S, count(f.bucket) ?? Math.ceil((to - from + 1) / points));
       const [rows, extra] = await Promise.all([index('chartSeries', from, to, bucket), index('chartExtra', from, to, bucket, TRANSFER_TOPIC)]);
       const txOf = new Map(extra.tx.map((r) => [r.b, r]));
@@ -800,7 +800,7 @@ export function createMethods(node) {
           activeAddresses: txOf.get(r.b)?.senders ?? 0, fees: String(Math.round(txOf.get(r.b)?.fees ?? 0)), contracts: txOf.get(r.b)?.created ?? 0,
           failed: txOf.get(r.b)?.failed ?? 0, transfers: transfersOf.get(r.b) ?? 0,
           time: r.time, first: r.first, last: r.last, blocks: r.blocks, blockTime: r.solve, slowest: r.slowest, difficulty: r.difficulty,
-          // Poslední úsek bývá neúplný. Dělit celou délkou by na konci grafu ukázalo falešný pokles výkonu.
+          // The last interval is often incomplete. Dividing by the full length would show a false drop in hashrate at the end of the chart.
           hashrate: r.work / Math.max(bucket / 2, Math.min(bucket, to - (from + r.b * bucket) + 1)), txs: r.txs, gas: r.gas,
         })),
       };
@@ -823,8 +823,8 @@ export function createMethods(node) {
       return [...stats.values()].sort((a, b) => b.blocks - a.blocks);
     },
     /**
-     * Všichni těžaři za celou historii po stránkách, z průběžných součtů. Volitelně jeden těžař s pořadím,
-     * aby šel najít i mezi miliony.
+     * All miners over the whole history by page, from running totals. Optionally one miner with its rank,
+     * so it can be found even among millions.
      */
     aether_minerList: async ([f = {}] = []) => {
       const { limit, offset } = paging(f);
@@ -856,15 +856,15 @@ export function createMethods(node) {
       return out;
     },
     aether_peers: () => network?.peersInfo() ?? [],
-    /** Adresy, na kterých uzel přijímá peněženky. Prázdné pole `lan` znamená, že RPC slyší jen na tomto počítači. */
-    // Rozložení místní sítě patří jen volajícím z ní. Cizí volající dostane jen veřejnou adresu.
+    /** Addresses on which the node accepts wallets. An empty `lan` array means RPC listens on this computer only. */
+    // The layout of the local network belongs only to callers from it. A foreign caller gets only the public address.
     aether_endpoints: (_, caller) => {
       const e = node.endpoints?.() ?? null;
       if (!e || caller?.local !== false) return e;
       const a = e.access;
       return { chainId: e.chainId, rpcPort: e.rpcPort, p2pPort: e.p2pPort, local: null, lan: [], public: e.public, restricted: true, access: a && { method: a.method, upnp: a.upnp, behindNat: a.behindNat, nat: a.nat, ports: a.ports, checked: a.checked } };
     },
-    /** Vlastní identita uzlu. Klíč patří do seznamu seedů jako `klíč@host:port`, nový uzel tak seed pozná. */
+    /** The node's own identity. The key goes into the seed list as `key@host:port`, so a new node recognises the seed. */
     aether_nodeInfo: () => (network ? {
       id: Buffer.from(network.nodeId).toString('hex'), publicKey: Buffer.from(network.identity.publicKey).toString('hex'),
       port: network.port, seed: `${Buffer.from(network.identity.publicKey).toString('hex')}@HOST:${network.port}`,
@@ -882,9 +882,9 @@ export function createMethods(node) {
     },
   };
 
-  /** Výpočet EVM ve vlákně s časovým limitem. Databáze v paměti (testy) vlákno mít nemůže. */
-  /** Dotaz do indexu mimo hlavní vlákno. Přetížený uzel raději odpoví chybou, než aby zdržel bloky. */
-  /** Bloky a práce každého příjemce odměny za období. Celá historie jde z průběžných součtů, ne přes miliony bloků. */
+  /** EVM computation in a thread with a time limit. An in-memory database (tests) cannot have a thread. */
+  /** An index query off the main thread. An overloaded node rather answers with an error than delays blocks. */
+  /** Blocks and work of each reward recipient over the period. The whole history comes from running totals, not from millions of blocks. */
   async function shareRows(f = {}) {
     const range = await index('indexRange');
     const to = count(f.to) ?? range.last ?? 0;
@@ -894,8 +894,8 @@ export function createMethods(node) {
     return { from, to, rows };
   }
 
-  // Pooly z události továrny. Jméno, poplatek a okno se po založení nemění, proto si je uzel pamatuje
-  // a čte jen nově založené. Klíč hlídá i výměnu bloků: změní se počet nebo nejnovější založení.
+  // Pools from the factory event. The name, fee and window do not change after creation, so the node remembers them
+  // and reads only newly created ones. The key also watches block changes: the count or the newest creation changes.
   let poolDirectory = { key: null, items: [] };
   const txErrors = new Map();
   async function poolList() {
@@ -915,7 +915,7 @@ export function createMethods(node) {
         number: r.number, txIdx: r.tx_idx, logIdx: r.log_idx,
       };
     });
-    // Pořadí založení drží barvu poolu v grafech: nový pool ani změna období nikoho nepřebarví.
+    // The creation order keeps a pool's colour in charts: a new pool or a change of period recolours nobody.
     items.forEach((p, i) => { p.order = items.length - 1 - i; });
     poolDirectory = { key, items };
     return items;
@@ -930,7 +930,7 @@ export function createMethods(node) {
     }
   }
 
-  /** Cizí kontrakt může `balanceOf` schválně prodražit, proto má celý průchod časový limit a částečný výsledek se přizná. */
+  /** A foreign contract can make `balanceOf` deliberately expensive, so the whole pass has a time limit and a partial result is admitted. */
   async function tokenHolders(address) {
     const { total } = await index('tokenEvents', address.bytes, TRANSFER_TOPIC, 1, 0);
     const recipients = await index('tokenRecipients', address.bytes, TRANSFER_TOPIC, MAX_HOLDER_SCAN);
@@ -940,7 +940,7 @@ export function createMethods(node) {
     for (const topic of recipients) {
       if (Date.now() > deadline) break;
       scanned += 1;
-      // Revert znamená, že kontrakt zůstatek nevrací. Plná fronta je jiná věc: zůstatek by se tiše počítal jako nula.
+      // A revert means the contract does not return a balance. A full queue is something else: the balance would silently count as zero.
       const result = await evm('call', { to: address.toString(), data: `0x70a08231${toHex(topic).slice(2)}` }, 'latest').catch((e) => { if (e.code === REVERTED) return '0x'; throw e; });
       const balance = result === '0x' ? 0n : BigInt(result);
       if (balance > 0n) holders.push({ address: new Address(Uint8Array.from(topic).slice(12)).toString(), balance });
@@ -983,19 +983,19 @@ export function createMethods(node) {
     return [toHex(w.sealHash), toHex(w.seedHash), `0x${w.target >= 2n ** 256n ? 'f'.repeat(64) : w.target.toString(16).padStart(64, '0')}`, quantity(w.number)];
   }
 
-  // Veřejný uzel (--no-mining-rpc) práci nerozdává ani nepřijímá: sestavení šablony zdrží zpracování bloků
-  // a hlášený výkon by mohl kdokoli zfalšovat. Těžaři patří na vlastní uzel nebo na Stratum.
+  // A public node (--no-mining-rpc) neither hands out nor accepts work: building a template would delay block processing
+  // and anyone could fake the reported hashrate. Miners belong on their own node or on Stratum.
   if (node.miningRpc === false) {
     const off = () => { throw new RpcError(-32601, 'těžba přes RPC je na tomto uzlu vypnutá'); };
     for (const name of MINING_METHODS) methods[name] = off;
   }
 
-  // Vlastní metody sítě se jmenují quinvium_*. Dřívější názvy quintium_* a aether_* zůstávají, aby starší programy fungovaly dál.
+  // The network's own methods are called quinvium_*. The earlier names quintium_* and aether_* remain so older programs keep working.
   for (const name of Object.keys(methods)) {
     if (!name.startsWith('aether_')) continue;
     const rest = name.slice('aether_'.length);
     methods[`quintium_${rest}`] = methods[name];
-    methods[`quinvium_${rest}`] = methods[name];   // jméno sítě od 13. 11. 2026
+    methods[`quinvium_${rest}`] = methods[name];   // network name since 13 Nov 2026
   }
   return { methods, collectLogs, resolve };
 }

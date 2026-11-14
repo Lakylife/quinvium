@@ -1,5 +1,5 @@
-// Aplikace sítě z příkazové řádky, stejné jako na stránce Aplikace v Exploreru: notář, certifikáty, dodavatelský
-// řetězec, úschova plateb, hlasování, jména adres, vlastní token, sbírka NFT a peněženka s více podpisy.
+// Network apps from the command line, the same as on the Apps page in the Explorer: notary, credentials, supply
+// chain, payment escrow, polls, address names, custom token, NFT collection and multisig wallet.
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { basename } from 'node:path';
@@ -20,7 +20,7 @@ const ID = {
   proposal: { cs: 'číslo návrhu', en: 'proposal number' }, option: { cs: 'číslo možnosti od 1', en: 'option number from 1' }, nft: { cs: 'číslo položky', en: 'item number' },
 };
 
-/** Události z účtenky podle ABI kontraktu. Logy jiných kontraktů se přeskočí. */
+/** Events from a receipt according to the contract's ABI. Logs of other contracts are skipped. */
 function events(result, contract) {
   return (result.logs ?? []).map((log) => {
     if (log.address.toLowerCase() !== String(contract.target).toLowerCase()) return null;
@@ -29,7 +29,7 @@ function events(result, contract) {
 }
 const eventArg = (result, contract, name, key) => events(result, contract).find((e) => e.name === name)?.args?.[key];
 
-/** Výsledek transakce. S --no-wait ještě není v bloku, číslo nové položky ani adresa se tedy neznají. */
+/** Transaction result. With --no-wait it is not in a block yet, so the new item's number or address is not known. */
 function finish(ctx, result, text, data = {}) {
   if (result.pending) {
     ctx.print(result, L(`Odesláno: ${result.hash}\nVýsledek ukáže: quinvium tx ${result.hash}`, `Sent: ${result.hash}\nSee the result with: quinvium tx ${result.hash}`));
@@ -38,7 +38,7 @@ function finish(ctx, result, text, data = {}) {
   ctx.print({ ...result, ...data }, text);
 }
 
-/** Počet dní do budoucna jako časová značka. */
+/** Number of days into the future as a timestamp. */
 function daysFrom(ctx, fallback) {
   const text = String(ctx.opts.days ?? fallback).replace(',', '.');
   const n = Number(text);
@@ -51,15 +51,15 @@ function need(value, cs, en) {
   return value;
 }
 
-/** Text podúkolu bez platného podúkolu: nápověda aplikace, chyba jen u neznámého názvu. */
+/** Subtask text without a valid subtask: the app's help, an error only for an unknown name. */
 function usageOf(app, sub) {
   const text = app.usage();
   if (sub && sub !== 'help') throw new CliError(L(`Neznámý příkaz ${app.name} ${sub}.\n\n${text}`, `Unknown command ${app.name} ${sub}.\n\n${text}`));
   console.log(text);
 }
 
-// ------------------------------------------------------------------- notář
-/** Otisk souboru (SHA-256 obsahu jako v Exploreru), hodnota 0x… nebo text z --text (keccak256). */
+// ------------------------------------------------------------------- notary
+/** File fingerprint (SHA-256 of the content as in the Explorer), a 0x… value or text from --text (keccak256). */
 function fingerprint(ctx, input) {
   if (ctx.opts.text !== undefined) return { hash: ethers.id(ctx.opts.text), source: L('text z --text', 'text from --text') };
   need(input, 'soubor, otisk 0x… nebo --text "…"', 'a file, a 0x… fingerprint or --text "…"');
@@ -122,7 +122,7 @@ A 0x… fingerprint can be given instead of a file. The record proves existence 
   },
 };
 
-// ------------------------------------------------------------------- certifikáty
+// ------------------------------------------------------------------- credentials
 const credential = {
   name: 'credential',
   usage: () => L(`Certifikáty: ověřitelné diplomy a licence. Jméno vydavatele si každý uvádí sám, proto ověřujte adresu vydavatele z jeho oficiálního webu.
@@ -187,7 +187,7 @@ The issuer chooses the number, for example the diploma number. Without --days th
   },
 };
 
-// ------------------------------------------------------------------- dodavatelský řetězec
+// ------------------------------------------------------------------- supply chain
 const supply = {
   name: 'supply',
   usage: () => L(`Dodavatelský řetězec: celá cesta zboží od výrobce k zákazníkovi. Předání musí potvrdit obě strany.
@@ -260,7 +260,7 @@ const supply = {
   },
 };
 
-// ------------------------------------------------------------------- úschova plateb
+// ------------------------------------------------------------------- payment escrow
 const ESCROW_STATES = () => [L('neexistuje', 'does not exist'), L('zaplaceno, čeká na plnění', 'paid, awaiting delivery'), L('spor', 'disputed'), L('uzavřeno', 'closed')];
 const escrowAction = (fn, label, done) => async (ctx, [text]) => {
   const id = parseId(text, ID.deal);
@@ -335,7 +335,7 @@ const escrow = {
   },
 };
 
-// ------------------------------------------------------------------- hlasování
+// ------------------------------------------------------------------- polls
 const poll = {
   name: 'poll',
   usage: () => L(`Hlasování, které nejde přepsat. Každá adresa má jeden hlas a hlasy jsou veřejné, tajné volby se pro něj nehodí.
@@ -389,7 +389,7 @@ The options can also be one text separated by commas.`),
   },
 };
 
-// ------------------------------------------------------------------- jména adres
+// ------------------------------------------------------------------- address names
 const cleanName = (text) => need(text, 'jméno', 'the name').toLowerCase().replace(/\.qu$/, '');
 const yearsOf = (ctx) => {
   const n = Number(ctx.opts.years ?? 1);
@@ -397,7 +397,7 @@ const yearsOf = (ctx) => {
   return BigInt(n);
 };
 
-/** Registrace má dva kroky: závazek s tajným číslem a po ochranné lhůtě odhalení. Nikdo tak jméno nepředběhne. */
+/** Registration has two steps: a commitment with a secret number and, after a waiting period, the reveal. Nobody can front-run the name. */
 async function registerName(ctx, [text]) {
   const name = cleanName(text);
   if (ctx.opts['no-wait']) throw new CliError(L('Registrace jména čeká na dva bloky, bez --no-wait.', 'A name registration waits for two blocks, use it without --no-wait.'));
@@ -500,7 +500,7 @@ const nameCommand = {
     (name) => L(`Jméno ${name}.qu má nového vlastníka.`, `The name ${name}.qu has a new owner.`)),
 };
 
-// ------------------------------------------------------------------- vlastní token (doplňuje quinvium token <symbol>)
+// ------------------------------------------------------------------- custom token (extends quinvium token <symbol>)
 export const tokenApp = {
   async create(ctx, [name, symbol, amount]) {
     need(name, 'název tokenu', 'the token name');
@@ -526,7 +526,7 @@ export const tokenApp = {
   },
 };
 
-// ------------------------------------------------------------------- sbírka NFT
+// ------------------------------------------------------------------- NFT collection
 const nft = {
   name: 'nft',
   usage: () => L(`Sbírka NFT: jedinečné položky, třeba vstupenky, záruční listy nebo díla. Razit smí jen tvůrce sbírky.
@@ -585,7 +585,7 @@ const nft = {
     const c = ctx.at('AetherCollection', collection);
     const me = walletAddress(ctx);
     if (!sameOwner(await c.ownerOf(id).catch(() => ethers.ZeroAddress), me)) throw new CliError(L(`Položku ${id} nevlastníte.`, `You do not own item ${id}.`));
-    // Bezpečný převod: kontrakt, který NFT neumí přijmout, převod odmítne, položka se tak neztratí.
+    // Safe transfer: a contract that cannot receive NFTs rejects the transfer, so the item is not lost.
     finish(ctx, await submit(ctx, { to: collection, data: encode(c, 'safeTransferFrom(address,address,uint256)', [me, target, id]) }, [[L('Položka', 'Item'), `${id}, ${collection}`], [L('Příjemce', 'Recipient'), target]]), L('Položka je odeslaná.', 'The item is sent.'));
   },
   async created(ctx, [who]) {
@@ -602,7 +602,7 @@ const nft = {
 };
 const sameOwner = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
 
-// ------------------------------------------------------------------- peněženka s více podpisy
+// ------------------------------------------------------------------- multisig wallet
 async function walletContract(ctx, text) {
   const address = await ctx.address(need(text, 'adresa peněženky', 'the wallet address'));
   await ctx.connect();
@@ -688,7 +688,7 @@ const multisig = {
   },
 };
 
-/** Spuštění podúkolu aplikace. Bez podúkolu, s help nebo --help se ukáže nápověda aplikace. */
+/** Running an app subtask. Without a subtask, with help or --help, the app's help is shown. */
 const appCommand = (app) => {
   const run = async (ctx, [sub, ...rest]) => {
     const fn = app[sub];

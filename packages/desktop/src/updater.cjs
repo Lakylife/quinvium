@@ -1,6 +1,6 @@
-// Aktualizace na dálku a hlášení stavu pro testovací provoz. Obojí je vypnuté, dokud nastavení neurčí adresu.
-// Aktualizace je spuštění cizího kódu na počítači uživatele, proto se přijme jen balíček podepsaný klíčem vydavatele
-// a jen novější verze. Adresa serveru tak nemusí být důvěryhodná a soukromý klíč nikdy neopouští počítač vydavatele.
+// Remote updates and status reports for test operation. Both are off until the settings specify an address.
+// An update runs foreign code on the user's computer, so only a package signed with the publisher's key is accepted
+// and only newer versions. The server address therefore does not have to be trusted and the private key never leaves the publisher's computer.
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -18,9 +18,9 @@ const REQUEST_MS = 15_000;
 const PLATFORMS = ['win32', 'darwin'];
 
 /**
- * Ověří podpis a tvar popisu aktualizace. Soubor se jmenuje jen prostým názvem, ne cestou nebo adresou.
- * Platforma je součástí podpisu: jinak by server mohl Macu podstrčit platný balíček pro Windows.
- * @param {string} [platform] očekávaná platforma, `win32` nebo `darwin`
+ * Verifies the signature and shape of an update description. The file is named by a plain name only, not a path or address.
+ * The platform is part of the signature: otherwise a server could feed a Mac a valid package for Windows.
+ * @param {string} [platform] expected platform, `win32` or `darwin`
  */
 function verifyManifest(text, signature, key = PUBLIC_KEY, platform) {
   if (!crypto.verify(null, Buffer.from(text), key, Buffer.from(signature.trim(), 'base64'))) throw new Error('Podpis aktualizace nesouhlasí');
@@ -42,7 +42,7 @@ async function fetchText(url) {
   return text;
 }
 
-/** @returns {Promise<object|null>} ověřený popis novější verze, jinak null */
+/** @returns {Promise<object|null>} verified description of a newer version, otherwise null */
 async function checkForUpdate(baseUrl, currentVersion, name = 'manifest', platform = process.platform) {
   const base = baseUrl.replace(/\/$/, '');
   const [text, signature] = await Promise.all([fetchText(`${base}/${name}.json`), fetchText(`${base}/${name}.sig`)]);
@@ -51,8 +51,8 @@ async function checkForUpdate(baseUrl, currentVersion, name = 'manifest', platfo
 }
 
 /**
- * Stáhne balíček a ověří velikost i otisk. Neúplný nebo změněný soubor se smaže.
- * Stahování skončí hned, jak server pošle víc, než slibuje podepsaný popis, jinak by mohl zaplnit disk.
+ * Downloads the package and verifies its size and hash. An incomplete or modified file is deleted.
+ * The download stops as soon as the server sends more than the signed description promises; otherwise it could fill the disk.
  */
 async function downloadPackage(baseUrl, manifest, directory) {
   const target = path.join(directory, manifest.file);
@@ -80,7 +80,7 @@ async function downloadPackage(baseUrl, manifest, directory) {
   return target;
 }
 
-/** Počítadla z řádku těžaře `Výkon 3.91 MH/s, nalezené bloky 2, osiřelé 1, odmítnuté 0`. */
+/** Counters from the miner's line `Výkon 3.91 MH/s, nalezené bloky 2, osiřelé 1, odmítnuté 0`. */
 function parseMinerLine(line) {
   const m = /Výkon ([\d.]+) ([^\s,]+), nalezené bloky (\d+), osiřelé (\d+), odmítnuté (\d+)(?:, podíly (\d+))?/.exec(line);
   if (!m) return null;
@@ -88,7 +88,7 @@ function parseMinerLine(line) {
   return { rate: Math.round(Number(m[1]) * scale), found: Number(m[3]), stale: Number(m[4]), rejected: Number(m[5]), shares: Number(m[6] ?? 0) };
 }
 
-/** Odešle řádek stavu na adresu z nastavení. Výpadek serveru nesmí aplikaci nijak ovlivnit. */
+/** Sends a status line to the address from the settings. A server outage must not affect the app in any way. */
 async function sendReport(reportUrl, name, data) {
   const url = `${reportUrl.replace(/\/$/, '')}/report?name=${encodeURIComponent(name)}`;
   await fetch(url, { method: 'POST', body: `${JSON.stringify(data)}\n`, signal: AbortSignal.timeout(5000) }).catch(() => {});

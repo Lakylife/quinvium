@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-/// Peněženka s více podpisy: firmy, spolky a společné účty.
+/// Multisig wallet: companies, associations and shared accounts.
 contract Multisig {
     struct Proposal {
         address to;
@@ -57,8 +57,8 @@ contract Multisig {
         _;
     }
 
-    /// Změny majitelů schvalují sami majitelé: návrh zavolá vlastní peněženku.
-    /// Bez toho by odchod člena nebo ztráta klíče znamenaly zablokované peníze.
+    /// Owner changes are approved by the owners themselves: the proposal calls the wallet itself.
+    /// Without it a member leaving or a lost key would mean frozen money.
     modifier onlySelf() {
         if (msg.sender != address(this)) revert OnlyThroughProposal();
         _;
@@ -117,7 +117,7 @@ contract Multisig {
         emit ThresholdChanged(threshold_);
     }
 
-    /// Počítá se až teď: souhlas člena, který už majitelem není, neplatí.
+    /// Counted only now: the approval of a member who is no longer an owner does not count.
     function confirmationCount(uint256 id) public view returns (uint256 count) {
         for (uint256 i; i < owners.length; i++) {
             if (confirmed[id][owners[i]]) count++;
@@ -150,7 +150,7 @@ contract Multisig {
     }
 }
 
-/// @title Továrna na peněženky s více podpisy
+/// @title Factory for multisig wallets
 contract MultisigFactory {
     mapping(address => address[]) private byOwner;
 

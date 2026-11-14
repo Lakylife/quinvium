@@ -1,4 +1,4 @@
-// Aktualizace spouští nový kód na počítači uživatele, proto musí odmítnout vše, co nepodepsal vydavatel.
+// An update runs new code on the user's computer, so it must reject everything the publisher did not sign.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
@@ -13,18 +13,18 @@ const pub = publicKey.export({ type: 'spki', format: 'pem' });
 const sign = (text, key = privateKey) => crypto.sign(null, Buffer.from(text), key).toString('base64');
 const manifest = (over = {}) => JSON.stringify({ version: '2.0.1', file: 'aether-2.0.1.zip', sha256: 'ab'.repeat(32), size: 100, platform: 'win32', ...over });
 
-test('verze se porovnávají číselně', () => {
+test('versions are compared numerically', () => {
   assert.equal(isNewer('2.0.10', '2.0.9'), true);
   assert.equal(isNewer('2.1.0', '2.0.9'), true);
   assert.equal(isNewer('2.0.9', '2.0.10'), false);
   assert.equal(isNewer('2.0.0', '2.0.0'), false);
 });
 
-test('platný podpis projde', () => {
+test('a valid signature passes', () => {
   assert.equal(verifyManifest(manifest(), sign(manifest()), pub).version, '2.0.1');
 });
 
-test('změněný popis nebo cizí klíč se odmítne', () => {
+test('a changed description or a foreign key is rejected', () => {
   const signature = sign(manifest());
   assert.throws(() => verifyManifest(manifest({ version: '9.9.9' }), signature, pub), /Podpis/);
   const other = crypto.generateKeyPairSync('ed25519').privateKey;
@@ -32,11 +32,11 @@ test('změněný popis nebo cizí klíč se odmítne', () => {
   assert.throws(() => verifyManifest(manifest(), 'smetí', pub), /Podpis/);
 });
 
-test('zabudovaný klíč nepřijme podpis jiného vydavatele', () => {
+test("the built-in key does not accept another publisher's signature", () => {
   assert.throws(() => verifyManifest(manifest(), sign(manifest())), /Podpis/);
 });
 
-test('ani podepsaný popis nesmí ukázat mimo složku aktualizací', () => {
+test('not even a signed description may point outside the updates folder', () => {
   for (const file of ['../../zlo.zip', 'http://zlo.cz/a.zip', 'C:\\a.zip', 'aplikace.exe']) {
     const text = manifest({ file });
     assert.throws(() => verifyManifest(text, sign(text), pub), /název/);
@@ -47,7 +47,7 @@ test('ani podepsaný popis nesmí ukázat mimo složku aktualizací', () => {
   }
 });
 
-test('platforma je v podpisu: balíček pro Windows se na Mac nedostane', () => {
+test('the platform is in the signature: a Windows package cannot reach a Mac', () => {
   const text = manifest();
   assert.equal(verifyManifest(text, sign(text), pub, 'win32').platform, 'win32');
   assert.throws(() => verifyManifest(text, sign(text), pub, 'darwin'), /jinou platformu/);
@@ -57,14 +57,14 @@ test('platforma je v podpisu: balíček pro Windows se na Mac nedostane', () => 
   assert.throws(() => verifyManifest(unknown, sign(unknown), pub), /platformu/);
 });
 
-test('řádek těžaře se převede na čísla', () => {
+test("the miner's line is converted to numbers", () => {
   assert.deepEqual(parseMinerLine('Výkon 3.91 MH/s, nalezené bloky 2, osiřelé 1, odmítnuté 0'), { rate: 3910000, found: 2, stale: 1, rejected: 0, shares: 0 });
   assert.deepEqual(parseMinerLine('Výkon 424.00 kH/s, nalezené bloky 0, osiřelé 0, odmítnuté 0').rate, 424000);
   assert.equal(parseMinerLine('[karta] NALEZEN BLOK #5'), null);
   assert.equal(parseMinerLine('Výkon 3.91 MH/s, nalezené bloky 2, osiřelé 1, odmítnuté 0, podíly 75').shares, 75, 'v poolu přibývají podíly');
 });
 
-test('stažený balíček musí sedět s otiskem, jinak se smaže', async () => {
+test('a downloaded package must match its hash, otherwise it is deleted', async () => {
   const body = Buffer.from('obsah aktualizace');
   const server = http.createServer((req, res) => res.end(body)).listen(0, '127.0.0.1');
   await new Promise((r) => server.once('listening', r));
@@ -82,11 +82,11 @@ test('stažený balíček musí sedět s otiskem, jinak se smaže', async () => 
   }
 });
 
-test('nedostupný server není chyba aplikace, jen se ohlásí', async () => {
+test('an unavailable server is not an app error; it is only reported', async () => {
   await assert.rejects(checkForUpdate('http://127.0.0.1:9', '2.0.0'));
 });
 
-// ---- verze ve vlastních složkách --------------------------------------------------------------------
+// ---- versions in their own folders --------------------------------------------------------------------
 const { execFileSync } = require('node:child_process');
 const versions = require('../src/versions.cjs');
 
@@ -102,7 +102,7 @@ function makePackage(files) {
 const GOOD = { 'resources/app.asar': 'aplikace'.repeat(1000), 'resources/bin/quintium-miner': 'miner', 'resources/explorer/index.html': '<html>' };
 const emptyDir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'aether-verze-'));
 
-test('balíček ZIP se rozbalí beze změny a miner jde spustit', () => {
+test('the ZIP package unpacks unchanged and the miner can be started', () => {
   const dir = emptyDir();
   versions.installVersion(makePackage(GOOD), dir, '2.3.0');
   assert.equal(fs.readFileSync(path.join(dir, '2.3.0', 'app.asar'), 'utf8'), GOOD['resources/app.asar']);
@@ -110,17 +110,17 @@ test('balíček ZIP se rozbalí beze změny a miner jde spustit', () => {
   assert.ok(fs.statSync(path.join(dir, '2.3.0', 'bin', 'quintium-miner')).mode & 0o100);
 });
 
-test('cesta mimo složku verze nebo balíček bez aplikace se odmítne a nic se nevybere', () => {
+test('a path outside the version folder or a package without the app is rejected and nothing is chosen', () => {
   const dir = emptyDir();
   assert.throws(() => versions.installVersion(makePackage({ 'jinde/app.asar': 'x' }), dir, '2.3.0'), /Neplatná cesta/);
-  // Na Windows je zpětné lomítko oddělovač: tahle položka by se zapsala dvě složky nad složku verze.
+  // On Windows the backslash is a separator: this entry would be written two folders above the version folder.
   assert.throws(() => versions.installVersion(makePackage({ ...GOOD, 'resources/a\\..\\..\\zlo.txt': 'x' }), dir, '2.3.0'), /Neplatná cesta/);
   assert.throws(() => versions.installVersion(makePackage({ 'resources/bin/x': 'x' }), dir, '2.3.0'), /chybí aplikace/);
   assert.equal(versions.pickVersion(dir, '2.2.0'), null);
   assert.equal(fs.existsSync(path.join(dir, '2.3.0')), false, 'rozdělaná složka se nepoužije');
 });
 
-test('nainstalovaná novější verze má přednost před starou aktualizací', () => {
+test('an installed newer version takes precedence over an old update', () => {
   const dir = emptyDir();
   versions.installVersion(makePackage(GOOD), dir, '2.3.0');
   assert.equal(versions.pickVersion(dir, '2.3.0'), null);
@@ -128,7 +128,7 @@ test('nainstalovaná novější verze má přednost před starou aktualizací', 
   assert.equal(versions.pickVersion(dir, '2.2.0').version, '2.3.0');
 });
 
-test('verze, která se dvakrát nerozběhne, se opustí a znovu se nestáhne', () => {
+test('a version that fails to start twice is abandoned and not downloaded again', () => {
   const dir = emptyDir();
   versions.installVersion(makePackage(GOOD), dir, '2.3.0');
   assert.equal(versions.pickVersion(dir, '2.2.0').version, '2.3.0');
@@ -138,7 +138,7 @@ test('verze, která se dvakrát nerozběhne, se opustí a znovu se nestáhne', (
   assert.equal(versions.pickVersion(dir, '2.2.0'), null);
 });
 
-test('potvrzená verze vydrží a pád další vrátí tu předchozí', () => {
+test('a confirmed version holds and a crash of the next one returns the previous', () => {
   const dir = emptyDir();
   versions.installVersion(makePackage(GOOD), dir, '2.3.0');
   versions.pickVersion(dir, '2.2.0');
@@ -154,7 +154,7 @@ test('potvrzená verze vydrží a pád další vrátí tu předchozí', () => {
   assert.equal(versions.isBad(dir, '2.3.1'), true);
 });
 
-test('verze, kterou nejde načíst, se odmítne hned', () => {
+test('a version that cannot be loaded is rejected immediately', () => {
   const dir = emptyDir();
   versions.installVersion(makePackage(GOOD), dir, '2.3.0');
   versions.pickVersion(dir, '2.2.0');
@@ -165,7 +165,7 @@ test('verze, kterou nejde načíst, se odmítne hned', () => {
   assert.equal(versions.isBad(dir, '2.3.1'), true);
 });
 
-test('po potvrzení zůstanou jen dvě poslední verze', () => {
+test('after confirmation only the two latest versions remain', () => {
   const dir = emptyDir();
   for (const v of ['2.3.0', '2.3.1', '2.3.2']) {
     versions.installVersion(makePackage(GOOD), dir, v);
@@ -175,22 +175,22 @@ test('po potvrzení zůstanou jen dvě poslední verze', () => {
   assert.deepEqual(fs.readdirSync(dir).filter((f) => f !== 'current.json').sort(), ['2.3.1', '2.3.2']);
 });
 
-// ---- domácí síť --------------------------------------------------------------------------------------
+// ---- home network --------------------------------------------------------------------------------------
 const { followHost } = require('../src/home-network.cjs');
 const POOL = 'http://192.168.1.235:8546';
 const peers = [{ address: '192.168.1.139:30525' }, { address: '203.0.113.9:30525' }];
 
-test('funkční adresa se nemění', async () => {
+test('a working address does not change', async () => {
   assert.equal(await followHost(POOL, peers, async () => true), POOL);
 });
 
-test('po změně adresy iMacu se služba najde podle spojeného uzlu', async () => {
+test("after the iMac's address changes, the service is found through the connected node", async () => {
   const alive = async (url) => url === 'http://192.168.1.139:8546';
   assert.equal(await followHost(POOL, peers, alive), 'http://192.168.1.139:8546');
   assert.equal(await followHost('http://192.168.1.235:8090/aktualizace', peers, async (u) => u.includes('.139')), 'http://192.168.1.139:8090/aktualizace');
 });
 
-test('veřejné adresy a uzly mimo soukromou síť se nezkouší', async () => {
+test('public addresses and nodes outside the private network are not tried', async () => {
   const asked = [];
   const alive = async (url) => { asked.push(url); return false; };
   assert.equal(await followHost(POOL, [{ address: '203.0.113.9:30525' }], alive), POOL);
@@ -198,6 +198,6 @@ test('veřejné adresy a uzly mimo soukromou síť se nezkouší', async () => {
   assert.equal(await followHost('https://pool.example.org', peers, alive), 'https://pool.example.org');
 });
 
-test('když nikdo neodpoví, zůstane původní adresa', async () => {
+test('when nobody answers, the original address stays', async () => {
   assert.equal(await followHost(POOL, peers, async () => false), POOL);
 });

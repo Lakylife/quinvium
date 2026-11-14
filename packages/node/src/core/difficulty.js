@@ -1,10 +1,10 @@
-// LWMA: vážený klouzavý průměr po každém bloku. Síť reaguje během minut na příchod
-// i odchod velkého hashrate, což u malé sítě chrání proti výkyvům obtížnosti.
+// LWMA: a weighted moving average after every block. The network reacts within minutes to the arrival
+// and the departure of large hashrate, which protects a small network against difficulty swings.
 import { CONSENSUS as C } from '../params.js';
 
 /**
- * @param {Header} parent rodič počítaného bloku
- * @param {(hash: Uint8Array) => Header} headerOf načtení hlavičky podle hashe
+ * @param {Header} parent parent of the block being computed
+ * @param {(hash: Uint8Array) => Header} headerOf loads a header by hash
  * @param {{genesisDifficulty: bigint, minDifficulty: bigint}} network
  */
 export function nextDifficulty(parent, headerOf, network) {
@@ -12,7 +12,7 @@ export function nextDifficulty(parent, headerOf, network) {
   if (available < C.lwmaMinSamples) return network.genesisDifficulty;
   const n = Math.min(available, C.lwmaWindow);
 
-  // Od rodiče zpět po poslední váhu n. Hlavička na pozici i má váhu i.
+  // From the parent back to the last weight n. The header at position i has weight i.
   const chain = new Array(n + 1);
   chain[n] = parent;
   for (let i = n; i > 0; i--) chain[i - 1] = headerOf(chain[i].parentHash);

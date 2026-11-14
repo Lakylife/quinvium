@@ -1,4 +1,4 @@
-// Rejstřík Exploreru: filtry bloků a transakcí, detail adresy, historie pro grafy a chování při reorganizaci.
+// Explorer index: block and transaction filters, address details, history for charts and behaviour during a reorganisation.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Address, bytesToHex } from '@ethereumjs/util';
@@ -20,14 +20,14 @@ async function setup() {
   const c = await newChain({ alloc });
   const { methods } = createMethods({ chain: c, mempool: c.mempool, network: null, work: null, version: 'x', sendTx: () => {} });
   const to = new Address(b.address);
-  await mine(c, { miner: minerA, txs: [transfer(c, a, to, 5n * WEI, 0n)] });                                                  // 1: převod
-  await mine(c, { miner: minerB });                                                                                            // 2: prázdný
-  await mine(c, { miner: minerA, txs: [transfer(c, a, to, 1n, 1n, { gas: 60000n, data: new Uint8Array([1, 2]) })] });           // 3: volání, data na běžnou adresu projdou
-  await mine(c, { miner: minerA, txs: [transfer(c, b, new Address(a.address), 2n * WEI, 0n)] });                                // 4: zpět
+  await mine(c, { miner: minerA, txs: [transfer(c, a, to, 5n * WEI, 0n)] });                                                  // 1: transfer
+  await mine(c, { miner: minerB });                                                                                            // 2: empty
+  await mine(c, { miner: minerA, txs: [transfer(c, a, to, 1n, 1n, { gas: 60000n, data: new Uint8Array([1, 2]) })] });           // 3: call, data to a plain address goes through
+  await mine(c, { miner: minerA, txs: [transfer(c, b, new Address(a.address), 2n * WEI, 0n)] });                                // 4: back
   return { c, methods };
 }
 
-test('když se přestane těžit, odhad výkonu sítě spadne na nulu', async () => {
+test('when mining stops, the network hashrate estimate drops to zero', async () => {
   const c = await newChain({ network: { ...NETWORKS.dev, genesisDifficulty: 64n, minDifficulty: 64n } });
   await mineMany(c, 4);
   const { methods } = createMethods({ chain: c, mempool: c.mempool, network: null, work: null, version: 'x', sendTx: () => {} });
@@ -41,7 +41,7 @@ test('když se přestane těžit, odhad výkonu sítě spadne na nulu', async ()
   assert.equal(methods.aether_stats().hashrate, '0');
 });
 
-test('bloky jde filtrovat podle těžaře, obsahu, času a rozsahu', async () => {
+test('blocks can be filtered by miner, content, time and range', async () => {
   const { c, methods } = await setup();
   const numbers = async (f) => (await methods.aether_blocks([f])).items.map((x) => x.number);
   assert.deepEqual(await numbers({}), [4, 3, 2, 1]);
@@ -57,7 +57,7 @@ test('bloky jde filtrovat podle těžaře, obsahu, času a rozsahu', async () =>
   await assert.rejects(methods.aether_blocks([{ fromBlock: 'x' }]), /neplatné číslo/);
 });
 
-test('transakce jde filtrovat podle adresy, směru, druhu a výše', async () => {
+test('transactions can be filtered by address, direction, kind and amount', async () => {
   const { methods } = await setup();
   const blocks = async (f) => (await methods.aether_txs([f])).items.map((x) => Number(x.blockNumber));
   assert.deepEqual(await blocks({}), [4, 3, 1]);
@@ -75,7 +75,7 @@ test('transakce jde filtrovat podle adresy, směru, druhu a výše', async () =>
   assert.equal((await methods.aether_txs([{ address: hex(minerA) }])).total, 0);
 });
 
-test('detail adresy ukazuje souhrn transakcí i vytěžené bloky', async () => {
+test('address details show the transaction summary and mined blocks', async () => {
   const { c, methods } = await setup();
   const i = await methods.aether_addressInfo([hex(a.address)]);
   assert.equal(i.sent.count, 2);
@@ -98,7 +98,7 @@ test('detail adresy ukazuje souhrn transakcí i vytěžené bloky', async () => 
   assert.equal(c.head.number, 4n);
 });
 
-test('historie pro grafy se skládá z úseků a stojí na skutečných blocích', async () => {
+test('chart history consists of intervals and rests on real blocks', async () => {
   const { c, methods } = await setup();
   await mineMany(c, 40);
   const s = await methods.aether_chartSeries([{ points: 10 }]);
@@ -112,7 +112,7 @@ test('historie pro grafy se skládá z úseků a stojí na skutečných blocích
   assert.ok(narrow.bucket < s.bucket);
 });
 
-test('reorganizace přepíše rejstřík a staré bloky se dají doplnit', async () => {
+test('a reorganisation rewrites the index and old blocks can be backfilled', async () => {
   const { c, methods } = await setup();
   const { store } = c;
   store.db.exec('DELETE FROM block_index; DELETE FROM tx_index;');
@@ -124,7 +124,7 @@ test('reorganizace přepíše rejstřík a staré bloky se dají doplnit', async
   assert.equal((await methods.aether_txs([{ address: hex(b.address), direction: 'out' }])).items[0].status, 1);
 });
 
-test('žebříček těžařů je z průběžných součtů a jde po stránkách', async () => {
+test('the miner ranking comes from running totals and is paginated', async () => {
   const { c, methods } = await setup();
   const all = await methods.aether_minerList([{}]);
   assert.equal(all.total, 2);
@@ -138,16 +138,16 @@ test('žebříček těžařů je z průběžných součtů a jde po stránkách'
   assert.equal(found.match.rank, 2);
   assert.equal(found.match.blocks, 1);
   assert.equal((await methods.aether_minerList([{ address: hex(new Uint8Array(20).fill(9)) }])).match, null);
-  // Součty za celou historii čte stránka poolů ze stejného místa a musí sedět s procházením bloků.
+  // The pools page reads all-time totals from the same place and they must match walking the blocks.
   const shares = await methods.aether_minerShares([{}]);
   assert.deepEqual(shares.items.map((x) => [x.address, x.blocks]).sort(), [[hex(minerA), 3], [hex(minerB), 1]]);
-  // Po ručním smazání součtů je uzel při dalším startu spočítá znovu.
+  // After totals are deleted by hand, the node recomputes them on the next start.
   c.store.db.exec('DELETE FROM miner_index');
   c.store._heal();
   assert.equal((await methods.aether_minerList([{}])).items[0].blocks, 3);
 });
 
-test('počty účtů v souhrnu sítě se drží průběžně a sedí se skutečností', async () => {
+test('account counts in the network summary are maintained continuously and match reality', async () => {
   const { c, methods } = await setup();
   const real = (sql) => c.store.db.prepare(sql).get().c;
   const s = methods.aether_stats();
@@ -162,7 +162,7 @@ test('počty účtů v souhrnu sítě se drží průběžně a sedí se skutečn
   assert.equal(methods.aether_stats().txCount, 3, 'počet transakcí se po rozbití sám opraví');
 });
 
-test('adresa ví, odkud přišly první mince a kdy poprvé a naposledy posílala', async () => {
+test('the address knows where its first coins came from and when it first and last sent', async () => {
   const { methods } = await setup();
   const infoB = await methods.aether_addressInfo([hex(b.address)]);
   assert.equal(infoB.fundedBy.from.toLowerCase(), hex(a.address), 'první mince poslal účet a');
@@ -175,7 +175,7 @@ test('adresa ví, odkud přišly první mince a kdy poprvé a naposledy posílal
   assert.equal(infoA.fundedBy.number, 4, 'a dostal mince až zpětným převodem');
 });
 
-test('provoz za 24 hodin, odměna bloku včetně poplatků a řady grafů', async () => {
+test('24-hour traffic, block reward including fees and chart series', async () => {
   const { methods } = await setup();
   const a = await methods.aether_activity();
   assert.equal(a.txs, 3);
@@ -197,7 +197,7 @@ test('provoz za 24 hodin, odměna bloku včetně poplatků a řady grafů', asyn
   assert.ok(series.items.reduce((n, p) => n + BigInt(p.fees), 0n) > 0n);
 });
 
-test('čekající transakce jdou po stránkách a ukážou, na co čekají', async () => {
+test('pending transactions come by page and show what they wait for', async () => {
   const { c, methods } = await setup();
   const to = new Address(b.address);
   const nonce = BigInt(await methods.eth_getTransactionCount([hex(a.address), 'latest']));
@@ -217,7 +217,7 @@ test('čekající transakce jdou po stránkách a ukážou, na co čekají', asy
   assert.equal(BigInt(v.tips.max), 5n * GWEI);
 });
 
-test('fork v průběhu mění výsledky filtrů stejně jako řetězec', async () => {
+test('a fork in progress changes filter results the same way as the chain', async () => {
   const alloc = { [hex(a.address)]: { balance: 100n * WEI } };
   const main = await newChain({ alloc });
   const fork = await newChain({ alloc });
@@ -233,12 +233,12 @@ test('fork v průběhu mění výsledky filtrů stejně jako řetězec', async (
   assert.deepEqual((await methods.aether_blocks([{ miner: hex(minerA) }])).items, []);
   assert.equal((await methods.aether_blocks([{}])).total, 3);
   assert.equal((await methods.aether_txs([{}])).total, 0);
-  // Žebříček těžařů se při reorganizaci přepočítá s rejstříkem: opuštěná větev v něm nezůstane.
+  // The miner ranking is recomputed with the index on a reorganisation: the abandoned branch does not stay in it.
   const miners = await methods.aether_minerList([{}]);
   assert.deepEqual(miners.items.map((x) => [x.address, x.blocks, x.first, x.last]), [[hex(minerB), 3, 1, 3]]);
 });
 
-test('převody tokenů adresy: příchozí i odchozí od nejnovějšího, převod sám sobě jednou, bez řazení celé historie', () => {
+test('token transfers of an address: incoming and outgoing newest first, a self-transfer once, without sorting the whole history', () => {
   const store = new Store(join(tmpData(), 'chain.db'));
   const topic = Buffer.from(keccak(new TextEncoder().encode('Transfer(address,address,uint256)')));
   const pad = (addr) => { const p = Buffer.alloc(32); p.set(addr, 12); return p; };
@@ -262,7 +262,7 @@ test('převody tokenů adresy: příchozí i odchozí od nejnovějšího, převo
   store.close?.();
 });
 
-test('těžaři poolu z podílů v okně a pooly provozovatele jen z události továrny', async () => {
+test("pool miners from shares in the window and an operator's pools only from the factory event", async () => {
   const { c, methods } = await setup();
   const topic = (sig) => Buffer.from(keccak(new TextEncoder().encode(sig)));
   const pad = (addr) => { const p = Buffer.alloc(32); p.set(addr, 12); return p; };
@@ -275,14 +275,14 @@ test('těžaři poolu z podílů v okně a pooly provozovatele jen z události t
   insert.run(1, 0, 10, pool, share, pad(m1), Buffer.alloc(32));
   insert.run(2, 0, 10, pool, share, pad(m1), Buffer.alloc(32));
   insert.run(3, 0, 10, pool, share, pad(m2), Buffer.alloc(32));
-  insert.run(3, 0, 11, fake, share, pad(m2), Buffer.alloc(32));          // podíl v jiném kontraktu se nepočítá
+  insert.run(3, 0, 11, fake, share, pad(m2), Buffer.alloc(32));          // a share in another contract does not count
   insert.run(4, 0, 10, factory, created, pad(pool), pad(operator));
-  insert.run(4, 0, 11, fake, created, pad(fake), pad(operator));         // stejná událost mimo továrnu se za pool nevydává
+  insert.run(4, 0, 11, fake, created, pad(fake), pad(operator));         // the same event outside the factory does not pass for a pool
   const all = await methods.aether_poolMiners([hex(pool), 0]);
   assert.deepEqual(all.items.map((x) => [x.miner.toLowerCase(), x.shares, x.last]), [[hex(m1), 2, 2], [hex(m2), 1, 3]]);
   const window = await methods.aether_poolMiners([hex(pool), 3]);
   assert.deepEqual(window.items.map((x) => x.miner.toLowerCase()), [hex(m2)], 'jen okno od zadaného bloku');
-  // Velký pool: těžaři po stránkách, celkový počet zvlášť a hledaný těžař i se svým pořadím.
+  // A large pool: miners by page, the total count separately and the searched miner with its rank.
   const second = await methods.aether_poolMiners([hex(pool), 0, { limit: 1, offset: 1 }]);
   assert.equal(second.total, 2);
   assert.deepEqual(second.items.map((x) => x.miner.toLowerCase()), [hex(m2)], 'druhá stránka');

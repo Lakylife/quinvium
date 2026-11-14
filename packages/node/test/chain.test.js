@@ -14,7 +14,7 @@ const balance = async (c, addr) => {
 };
 const fund = (w, amount = 100n * WEI) => ({ [`0x${Buffer.from(w.address).toString('hex')}`]: { balance: amount } });
 
-test('emise: 4 QU, půlení po 8 milionech bloků, strop 64 milionů', () => {
+test('issuance: 4 QU, halving every 8 million blocks, cap 64 million', () => {
   assert.equal(blockReward(0), 0n);
   assert.equal(blockReward(1), 4n * WEI);
   assert.equal(blockReward(8_000_000), 4n * WEI);
@@ -26,7 +26,7 @@ test('emise: 4 QU, půlení po 8 milionech bloků, strop 64 milionů', () => {
   assert.ok(total <= C.maxSupply && C.maxSupply - total < 10n ** 12n, `celkem ${total}`);
 });
 
-test('base fee: růst, pokles a spodní mez', () => {
+test('base fee: rise, fall and the floor', () => {
   const p = (gasUsed, baseFee = 100n * GWEI) => ({ gasLimit: 15_000_000n, gasUsed, baseFee });
   assert.equal(nextBaseFee(p(7_500_000n)), 100n * GWEI);
   assert.equal(nextBaseFee(p(15_000_000n)), 112_500_000_000n);
@@ -34,7 +34,7 @@ test('base fee: růst, pokles a spodní mez', () => {
   assert.equal(nextBaseFee(p(0n, GWEI)), GWEI);
 });
 
-test('limit gasu se mění jen po malých krocích', () => {
+test('the gas limit changes only in small steps', () => {
   const cap = 15_000_000n;
   assert.ok(gasLimitValid(10_000_000n, 10_000_000n, cap));
   assert.ok(!gasLimitValid(11_000_000n, 10_000_000n, cap));
@@ -43,7 +43,7 @@ test('limit gasu se mění jen po malých krocích', () => {
   assert.ok(!gasLimitValid(cap + 1n, cap, cap), 'strop hlasování minerů');
 });
 
-test('LWMA: rychlé bloky zvyšují obtížnost, pomalé ji snižují', () => {
+test('LWMA: fast blocks raise difficulty, slow ones lower it', () => {
   const net = { genesisDifficulty: 1000n, minDifficulty: 1n };
   const series = (solve, n = 70) => {
     const list = [];
@@ -57,7 +57,7 @@ test('LWMA: rychlé bloky zvyšují obtížnost, pomalé ji snižují', () => {
   assert.equal(series(1000), 25n, 'doba bloku se počítá nejvýš jako 40násobek cíle');
 });
 
-test('těžba vyplatí odměnu a řetězec se uloží', async () => {
+test('mining pays out the reward and the chain is saved', async () => {
   const c = await newChain();
   const m = wallet();
   const { res } = await mine(c, { miner: m.address });
@@ -66,7 +66,7 @@ test('těžba vyplatí odměnu a řetězec se uloží', async () => {
   assert.equal(await balance(c, m.address), 4n * WEI);
 });
 
-test('převod: těžař dostane základní poplatek i dýško, nic se nepálí', async () => {
+test('transfer: the miner gets the base fee and the tip; nothing is burned', async () => {
   const a = wallet(); const b = wallet(); const m = wallet();
   const c = await newChain({ alloc: fund(a) });
   const tx = transfer(c, a, new Address(b.address), 10n * WEI, 0n, { tip: GWEI, fee: 5n * GWEI });
@@ -79,7 +79,7 @@ test('převod: těžař dostane základní poplatek i dýško, nic se nepálí',
   assert.equal(r.receipts.length, 1);
 });
 
-test('stav přežije zavření a znovuotevření databáze', async () => {
+test('the state survives closing and reopening the database', async () => {
   const dir = tmpData();
   const a = wallet(); const m = wallet();
   const net = NETWORKS.dev;
@@ -99,14 +99,14 @@ test('stav přežije zavření a znovuotevření databáze', async () => {
   await c.close();
 });
 
-test('databáze jiné sítě se odmítne otevřít', async () => {
+test('a database of another network refuses to open', async () => {
   const dir = tmpData();
   const c = await Chain.open({ network: NETWORKS.dev, dataDir: dir });
   await c.close();
   await assert.rejects(Chain.open({ network: NETWORKS.testnet, dataDir: dir }), /jiné síti/);
 });
 
-// ---- bezpečnostní pravidla bloku -------------------------------------------------
+// ---- block safety rules -------------------------------------------------
 
 const tamper = async (c, patch) => {
   c.tick();
@@ -125,7 +125,7 @@ for (const [name, patch, re] of [
   ['gasUsed nad limitem', { gasUsed: 30_000_000n }, /gasUsed/],
   ['příliš dlouhé extraData', { extraData: new Uint8Array(33) }, /extraData/],
 ]) {
-  test(`blok je odmítnut: ${name}`, async () => {
+  test(`the block is rejected: ${name}`, async () => {
     const c = await newChain();
     await mine(c);
     await assert.rejects(c.insertBlock(await seal(c, await tamper(c, patch))), re);
@@ -133,31 +133,31 @@ for (const [name, patch, re] of [
   });
 }
 
-test('blok bez platného PoW je odmítnut', async () => {
+test('a block without valid PoW is rejected', async () => {
   const c = await newChain();
   await assert.rejects(c.insertBlock(await tamper(c, {})), /Proof of Work|obtížnost/);
 });
 
-test('čas bloku musí růst a nesmí být příliš v budoucnosti', async () => {
+test('block time must increase and must not be too far in the future', async () => {
   const c = await newChain();
   await mine(c);
   await assert.rejects(c.insertBlock(await seal(c, await tamper(c, { timestamp: c.head.timestamp }))), /čas bloku/);
   await assert.rejects(c.insertBlock(await seal(c, await tamper(c, { timestamp: BigInt(c.now() + 1000) }))), /budoucnosti/);
 });
 
-test('blok s neplatnou transakcí je neplatný celý', async () => {
+test('a block with an invalid transaction is invalid as a whole', async () => {
   const a = wallet(); const b = wallet();
   const c = await newChain({ alloc: fund(a, 10n ** 15n) });
   c.tick();
   const t = await c.buildTemplate({ miner: b.address });
-  const bad = transfer(c, a, new Address(b.address), 50n * WEI, 0n); // nemá prostředky
+  const bad = transfer(c, a, new Address(b.address), 50n * WEI, 0n); // has no funds
   const { orderedRoot } = await import('../src/core/executor.js');
   const f = Object.fromEntries(Object.entries(t.header).filter(([k]) => !k.startsWith('_')));
   const forged = new Block(new Header({ ...f, txRoot: await orderedRoot([bad.serialize()], c.common) }), [bad]);
   await assert.rejects(c.insertBlock(await seal(c, forged)), /neplatná transakce/);
 });
 
-test('neplatnou transakci v bloku pozná vlastní kontrola, ne text chyby knihovny', async () => {
+test("an invalid transaction in a block is detected by our own check, not by the library's error text", async () => {
   const { orderedRoot, txRejection } = await import('../src/core/executor.js');
   const a = wallet(); const b = wallet(); const k = wallet();
   const contractKey = `0x${Buffer.from(k.address).toString('hex')}`;
@@ -182,13 +182,13 @@ test('neplatnou transakci v bloku pozná vlastní kontrola, ne text chyby knihov
     await assert.rejects(c.insertBlock(block), reason);
     assert.match(c.store.badReason(block.hash()) ?? '', reason, 'blok je označený jako neplatný');
   }
-  // Platná transakce důvod nemá: kdyby ji knihovna odmítla, je to chyba uzlu a blok se neoznačí.
+  // A valid transaction has no reason: if the library rejected it, it is a node error and the block is not marked.
   const state = await c.stateAt(c.head.stateRoot);
   assert.equal(await txRejection(transfer(c, a, to, 1n, 0n), state.stateManager, nextBaseFee(c.head)), null);
   assert.equal((await mine(c, { txs: [transfer(c, a, to, 1n, 0n)] })).res.status, 'added');
 });
 
-test('transakce z jiné sítě ani bez chainId neprojde', async () => {
+test('a transaction from another network or without a chainId does not pass', async () => {
   const a = wallet();
   const c = await newChain({ alloc: fund(a) });
   const other = await newChain({ network: NETWORKS.testnet });
@@ -203,7 +203,7 @@ async function twin(alloc) {
   return [x, y];
 }
 
-test('těžší větev vyhraje, stav se vrátí a transakce jdou zpět do fronty', async () => {
+test('the heavier branch wins, the state is rolled back and transactions go back to the queue', async () => {
   const a = wallet(); const shop = wallet(); const other = wallet();
   const [x, y] = await twin(fund(a));
   const pay = transfer(x, a, new Address(shop.address), 50n * WEI, 0n);
@@ -226,7 +226,7 @@ test('těžší větev vyhraje, stav se vrátí a transakce jdou zpět do fronty
   assert.ok(x.store.txLocation(spend.hash()));
 });
 
-test('oba uzly skončí stejně při libovolném pořadí bloků', async () => {
+test('both nodes end the same with any block order', async () => {
   const a = wallet(); const m1 = wallet(); const m2 = wallet();
   const [x, y] = await twin(fund(a));
   const b1 = (await mine(x, { miner: m1.address })).block;
@@ -240,7 +240,7 @@ test('oba uzly skončí stejně při libovolném pořadí bloků', async () => {
   assert.deepEqual(p.head.stateRoot, q.head.stateRoot);
 });
 
-test('blok bez rodiče stav nemění', async () => {
+test('a block without a parent does not change the state', async () => {
   const [x, y] = await twin({});
   const m = wallet();
   await mine(y);
@@ -251,7 +251,7 @@ test('blok bez rodiče stav nemění', async () => {
   assert.equal(x.head.number, 0n);
 });
 
-test('neplatná těžší větev se odmítne a řetězec zůstane nedotčený', async () => {
+test('an invalid heavier branch is rejected and the chain stays untouched', async () => {
   const a = wallet();
   const [x, y] = await twin(fund(a));
   await mine(x);
@@ -268,7 +268,7 @@ test('neplatná těžší větev se odmítne a řetězec zůstane nedotčený', 
   await assert.rejects(x.insertBlock(bad), /dříve odmítnutý/);
 });
 
-test('rolling finality: přepis hlubší než limit síť odmítne i při větší práci', async () => {
+test('rolling finality: the network rejects a rewrite deeper than the limit even with more work', async () => {
   const [x, y] = await twin({});
   const attacker = wallet();
   await mineMany(x, C.maxReorgDepth + 2);
@@ -291,7 +291,7 @@ test('rolling finality: přepis hlubší než limit síť odmítne i při větš
   assert.equal(await balance(x, attacker.address), 0n);
 });
 
-/** Větev s rychlými časy bloků: LWMA zvedne obtížnost, takže nese víc práce na blok. */
+/** A branch with fast block times: LWMA raises the difficulty, so it carries more work per block. */
 async function heavyBranch(chain, minTd, maxBlocks = 400) {
   const blocks = [];
   while (chain.headTd < minTd && blocks.length < maxBlocks) blocks.push((await mine(chain, { step: 1, miner: new Uint8Array(20).fill(7) })).block);
@@ -299,7 +299,7 @@ async function heavyBranch(chain, minTd, maxBlocks = 400) {
   return blocks;
 }
 
-test('hluboká větev: bez ověření sítí se odmítne, s dvojnásobnou prací přepíše řetězec', async () => {
+test('deep branch: rejected without network verification, rewrites the chain with twice the work', async () => {
   const [x, y] = await twin({});
   await mineMany(x, C.maxReorgDepth + 4);
   const ours = x.headTd - x.genesis.difficulty;
@@ -307,11 +307,11 @@ test('hluboká větev: bez ověření sítí se odmítne, s dvojnásobnou prací
   x.setClock(Math.max(x.now(), y.now()));
   const head = x.head.hash();
 
-  // Bez povolení: první blok větve leží pod hranicí finality.
+  // Not allowed: the first block of the branch lies below the finality boundary.
   await assert.rejects(x.insertBlock(blocks[0]), /finality/);
   assert.deepEqual(x.head.hash(), head);
 
-  // Síť ověřila hlavičky a povolila větev od genesis. Přepis proběhne až s dvojnásobkem práce.
+  // The network verified the headers and allowed the branch from genesis. The rewrite happens only with twice the work.
   x.permitDeepFork(x.genesis);
   let switched = null;
   for (const [i, b] of blocks.entries()) {
@@ -325,7 +325,7 @@ test('hluboká větev: bez ověření sítí se odmítne, s dvojnásobnou prací
   assert.deepEqual(x.head.hash(), y.head.hash());
 });
 
-test('hluboká větev s menší než dvojnásobnou prací zůstane postranní i s povolením', async () => {
+test('a deep branch with less than twice the work stays a side branch even when allowed', async () => {
   const [x, y] = await twin({});
   await mineMany(x, C.maxReorgDepth + 4);
   const ours = x.headTd - x.genesis.difficulty;
@@ -340,7 +340,7 @@ test('hluboká větev s menší než dvojnásobnou prací zůstane postranní i 
 
 // ---- mempool ---------------------------------------------------------------------
 
-test('mempool odmítá špatný podpis, nonce, chybějící prostředky a nízký poplatek', async () => {
+test('the mempool rejects a bad signature, nonce, missing funds and a low fee', async () => {
   const a = wallet(); const b = wallet();
   const c = await newChain({ alloc: fund(a, WEI) });
   const to = new Address(b.address);
@@ -353,7 +353,7 @@ test('mempool odmítá špatný podpis, nonce, chybějící prostředky a nízk�
   assert.equal(c.mempool.size, 1);
 });
 
-test('náhrada transakce vyžaduje vyšší poplatek', async () => {
+test('replacing a transaction requires a higher fee', async () => {
   const a = wallet(); const b = wallet();
   const c = await newChain({ alloc: fund(a) });
   const to = new Address(b.address);
@@ -363,7 +363,7 @@ test('náhrada transakce vyžaduje vyšší poplatek', async () => {
   assert.equal(c.mempool.size, 1);
 });
 
-test('těžba bere transakce podle poplatku a nonce, potvrzené zmizí z fronty', async () => {
+test('mining takes transactions by fee and nonce; confirmed ones disappear from the queue', async () => {
   const a = wallet(); const b = wallet(); const d = wallet();
   const c = await newChain({ alloc: { ...fund(a), ...fund(b) } });
   const to = new Address(d.address);
@@ -380,7 +380,7 @@ test('těžba bere transakce podle poplatku a nonce, potvrzené zmizí z fronty'
   assert.equal(c.mempool.size, 0);
 });
 
-test('konfliktní transakce po bloku ze sítě těžbu nezastaví', async () => {
+test('conflicting transactions after a block from the network do not stop mining', async () => {
   const a = wallet(); const b = wallet();
   const [x, y] = await twin(fund(a));
   const to = new Address(b.address);
@@ -394,7 +394,7 @@ test('konfliktní transakce po bloku ze sítě těžbu nezastaví', async () => 
   assert.equal(r.res.status, 'added');
 });
 
-test('starý formát transakce s EIP-155 funguje, bez něj ne', async () => {
+test('the old transaction format with EIP-155 works, without it it does not', async () => {
   const a = wallet(); const b = wallet();
   const c = await newChain({ alloc: fund(a) });
   await mine(c, { txs: [legacy(c, a, new Address(b.address), 5n, 0n)] });

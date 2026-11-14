@@ -1,4 +1,4 @@
-// Jádro peněženky. Fráze je zašifrovaná heslem a po odemčení leží jen v session paměti prohlížeče.
+// Wallet core. The phrase is encrypted with the password and after unlocking lives only in the browser's session memory.
 importScripts('ethers.umd.min.js');
 const { ethers } = self;
 
@@ -10,7 +10,7 @@ const DEFAULT_NETWORKS = {
   52402: { chainId: 52402, name: 'Quinvium Testnet', rpc: 'https://rpc1.quinvium.com', symbol: 'tQU', explorer: 'https://testnet.quinvium.com', registry: '0x1F29eD151d57E51706494aB3E9579B2212102C10' },
   52403: { chainId: 52403, name: 'Quinvium Dev', rpc: 'http://127.0.0.1:8547', symbol: 'dQU', explorer: 'http://127.0.0.1:8547' },
 };
-// Zkušební aplikace vedle skutečné má uzel testnetu na vlastním portu. Rozšíření tuhle proměnnou nikdy nedostane.
+// The test app next to the real one has its testnet node on its own port. The extension never gets this variable.
 if (self.AETHER_TEST_RPC) Object.assign(DEFAULT_NETWORKS[52402], { rpc: self.AETHER_TEST_RPC, explorer: self.AETHER_TEST_RPC });
 const RPC_PASSTHROUGH = /^(eth_(blockNumber|call|estimateGas|feeHistory|gasPrice|getBalance|getBlockBy|getBlockTransactionCountBy|getCode|getFilter|getLogs|getProof|getStorageAt|getTransactionBy|getTransactionCount|getTransactionReceipt|maxPriorityFeePerGas|newBlockFilter|newFilter|newPendingTransactionFilter|protocolVersion|syncing|uninstallFilter)|net_|web3_clientVersion|aether_)/;
 
@@ -48,14 +48,14 @@ async function decryptVault(vault, password) {
   }
 }
 
-/** Odemčená tajemství: fráze a klíče importovaných účtů. Peněženka z klíče frázi nemá. */
+/** Unlocked secrets: the phrase and the keys of imported accounts. A wallet from a key has no phrase. */
 async function secrets() {
   const s = await session.get(['open', 'mnemonic', 'keys']);
   return s.open ? { phrase: s.mnemonic ?? '', keys: s.keys ?? [] } : null;
 }
 const openSession = (phrase, keys) => session.set({ open: true, mnemonic: phrase, keys });
 
-/** Každá činnost uživatele posouvá zámek. Dobu si volí v nastavení. */
+/** Every user action extends the lock. The time is chosen in the settings. */
 async function touch() {
   chrome.alarms.create('autolock', { delayInMinutes: await local.get('autoLockMinutes', AUTO_LOCK_MINUTES) });
 }
@@ -68,7 +68,7 @@ async function lock() {
   globalThis.onWalletLocked?.();
 }
 
-/** Všechny účty: nejdřív z fráze, potom importované klíče. */
+/** All accounts: first from the phrase, then imported keys. */
 async function wallets() {
   const s = await secrets();
   if (!s) return [];
@@ -77,7 +77,7 @@ async function wallets() {
   return [...hd, ...s.keys.map((k) => new ethers.Wallet(k))];
 }
 
-/** Importované klíče jsou zašifrované zvlášť stejným heslem. */
+/** Imported keys are encrypted separately with the same password. */
 async function loadKeys(password) {
   const stored = await local.get('keyVault');
   return stored ? JSON.parse(await decryptVault(stored, password)) : [];
@@ -105,8 +105,8 @@ async function requireSigner(address) {
 }
 
 /**
- * Peněženka mimo aplikaci, MetaMask nebo WalletConnect: klíče drží ona, aplikace zná jen adresu a žádosti jí předává.
- * Rozšíření pro Chrome tuhle cestu nemá, `externalRequest` dodává jen aplikace.
+ * A wallet outside the app, MetaMask or WalletConnect: it holds the keys, the app knows only the address and relays requests to it.
+ * The Chrome extension does not have this path; only the app provides `externalRequest`.
  */
 const externalWallet = () => local.get('external', null);
 function externalSign(ext, method, params) {
@@ -124,12 +124,12 @@ async function selectedAddress() {
   return list[await local.get('selected', 0)] ?? list[0] ?? null;
 }
 
-// ---- sítě a RPC ------------------------------------------------------------------
+// ---- networks and RPC ------------------------------------------------------------------
 const rpcError = (code, message) => Object.assign(new Error(message), { code });
 
 async function networks() {
   const all = { ...DEFAULT_NETWORKS, ...(await local.get('networks', {})) };
-  // Zkratku mince určuje síť. Uložená kopie z dřívější verze aplikace nesmí ukazovat starou.
+  // The coin's ticker is determined by the network. A stored copy from an earlier app version must not show an old one.
   for (const id of Object.keys(DEFAULT_NETWORKS)) all[id] = { ...all[id], symbol: DEFAULT_NETWORKS[id].symbol, registry: DEFAULT_NETWORKS[id].registry };
   return all;
 }
@@ -151,7 +151,7 @@ async function rpc(method, params = [], net) {
   return data.result;
 }
 
-// ---- schvalování -----------------------------------------------------------------
+// ---- approvals -----------------------------------------------------------------
 const approvals = new Map();
 let nextApproval = 1;
 
@@ -159,7 +159,7 @@ const MAX_APPROVALS_PER_SITE = 3;
 
 function askUser(kind, origin, data) {
   return new Promise((resolve, reject) => {
-    // Stránka nesmí zaplavit uživatele okny, v tom shonu se snadno schválí něco nechtěného.
+    // A page must not flood the user with windows; in that rush it is easy to approve something unwanted.
     if ([...approvals.values()].filter((a) => a.origin === origin).length >= MAX_APPROVALS_PER_SITE) {
       reject(rpcError(4001, 'Too many pending requests'));
       return;
@@ -185,7 +185,7 @@ chrome.windows.onRemoved.addListener((windowId) => {
 // ---- poplatky --------------------------------------------------------------------
 const hexOf = (v) => `0x${BigInt(v).toString(16)}`;
 
-/** Doporučení uzlu. Cizí síť tuhle metodu nemá, tam se vychází ze standardních metod. */
+/** The node's recommendation. A foreign network lacks this method; standard methods are used there. */
 async function feeEstimates(net) {
   try {
     return await rpc('aether_feeEstimates', [], net);
@@ -198,7 +198,7 @@ async function feeEstimates(net) {
   }
 }
 
-/** Zvolený poplatek z okna peněženky. */
+/** The fee chosen in the wallet window. */
 function applyFee(prepared, fee) {
   if (!fee) return prepared;
   const maxFee = BigInt(fee.maxFeePerGas);
@@ -222,14 +222,14 @@ async function prepareTx(from, tx) {
   return { prepared, fees, suggested: tx.maxFeePerGas !== undefined };
 }
 
-/** Podepsaná transakce se pamatuje, aby šla poslat znovu, když ji uzel zapomene. Velká nasazení kontraktů ne. */
+/** A signed transaction is remembered so it can be resent when the node forgets it. Large contract deployments are not. */
 const MAX_KEPT_RAW = 16 * 1024;
 
 /**
- * Nahrazená transakce v historii zůstává s odkazem na novější. Která z nich projde, ukáže až blok: zrychlení
- * může přijít pozdě a vytěží se původní.
+ * A replaced transaction stays in history with a link to the newer one. Only the block shows which of them goes through: the speed-up
+ * may arrive late and the original gets mined.
  * @param {string} [replaces] hash transakce, kterou tahle nahrazuje
- * @param {object} [extra] co peněženka o transakci ví navíc, třeba převáděný token, aby ji historie uměla popsat
+ * @param {object} [extra] what the wallet knows additionally about the transaction, for example the token being transferred, so history can describe it
  */
 async function signAndSend(from, prepared, replaces, extra = {}) {
   const ext = await externalWallet();
@@ -238,7 +238,7 @@ async function signAndSend(from, prepared, replaces, extra = {}) {
   if (ext) {
     const { to, value, data, gasLimit, maxFeePerGas, maxPriorityFeePerGas } = prepared;
     hash = await externalSign(ext, 'eth_sendTransaction', [{ from, ...(to ? { to } : {}), value: hexOf(value), data, gas: hexOf(gasLimit), maxFeePerGas, maxPriorityFeePerGas }]);
-    // Pořadové číslo volí cizí peněženka. Platí to, které má transakce v síti, a bez něj se neproběhlá nepozná.
+    // The nonce is chosen by a foreign wallet. The one of the transaction in the network applies; without it a failed one cannot be recognised.
     const sent = await rpc('eth_getTransactionByHash', [hash]).catch(() => null);
     prepared = { ...prepared, nonce: sent ? Number(sent.nonce) : undefined, external: true };
   } else {
@@ -256,13 +256,13 @@ async function signAndSend(from, prepared, replaces, extra = {}) {
   return hash;
 }
 
-const DROP_DEPTH = 3;   // nonce spotřebované tak hluboko v řetězci už přeskupení bloků nevrátí
+const DROP_DEPTH = 3;   // nonces used this deep in the chain can no longer be undone by a reorganisation
 
 /**
- * Zjistí, co ještě čeká na potvrzení. Potvrzené se už znovu nekontroluje.
- * Čekající transakce skončí jedním ze tří způsobů: vytěží se, nebo její pořadové číslo (nonce) spotřebuje jiná
- * transakce a pak už nikdy neproběhne, a mince ani tokeny kvůli ní z účtu neodejdou. Třetí možnost je, že ji uzel
- * zapomněl, třeba po výpadku. Podepsaná transakce je pořád platná, peněženka ji proto pošle znovu, stejnou.
+ * Finds out what is still waiting for confirmation. Confirmed ones are not checked again.
+ * A pending transaction ends in one of three ways: it gets mined, or its nonce is used by another
+ * transaction and then it never happens, and neither coins nor tokens leave the account because of it. The third option is that the node
+ * forgot it, for example after an outage. The signed transaction is still valid, so the wallet sends it again, the same one.
  */
 async function withStatus(list, net) {
   let head = null;
@@ -284,12 +284,12 @@ async function withStatus(list, net) {
     if (a.nonce === undefined) return { ...a, pending: true };
     const nonce = await usedNonce(a.from);
     if (nonce !== null && nonce > Number(a.nonce)) {
-      // Nonce je pryč. Ještě jednou potvrzení: transakce se mohla vytěžit právě teď.
+      // The nonce is gone. One more confirmation check: the transaction may have been mined just now.
       const again = await rpc('eth_getTransactionReceipt', [a.hash], net).catch(() => undefined);
       if (again === undefined) return a;
       return again ? { ...a, done: true, pending: false } : { ...a, done: true, pending: false, dropped: true };
     }
-    // Nahrazená se znovu neposílá: vrátila by zrušenou platbu.
+    // A replaced one is not sent again: it would bring back a cancelled payment.
     if (a.raw && !a.replacedBy) {
       const known = await rpc('eth_getTransactionByHash', [a.hash], net).catch(() => undefined);
       if (known === null) await rpc('eth_sendRawTransaction', [a.raw], net).catch(() => {});
@@ -305,8 +305,8 @@ async function withStatus(list, net) {
 }
 
 /**
- * Adresy, ze kterých se nic nevrátí: nulová adresa a kontrakt tokenu samotný. Na obě se posílá jen omylem,
- * typicky po vložení adresy tokenu místo adresy příjemce.
+ * Addresses nothing comes back from: the zero address and the token contract itself. Both receive coins only by mistake,
+ * typically after pasting a token address instead of the recipient's address.
  */
 function checkRecipient(to, token) {
   if (!ethers.isAddress(to)) throw new Error('Invalid recipient address');
@@ -316,7 +316,7 @@ function checkRecipient(to, token) {
 
 const TRANSFER_SELECTOR = '0xa9059cbb';   // transfer(address,uint256)
 const tokenMetaCache = new Map();
-/** Zkratka a desetinná místa tokenu. Co token není, vrátí null. */
+/** Token symbol and decimals. Returns null for anything that is not a token. */
 async function tokenMeta(token, net) {
   const key = `${net.chainId}:${token.toLowerCase()}`;
   if (!tokenMetaCache.has(key)) {
@@ -328,15 +328,15 @@ async function tokenMeta(token, net) {
   return tokenMetaCache.get(key);
 }
 
-// ---- aktivita účtu ---------------------------------------------------------------
-// Obalená mince sítě má v genesis starý název. Peněženka ji ukazuje jako W + zkratka mince, třeba WtQU.
+// ---- account activity ---------------------------------------------------------------
+// The network's wrapped coin has the old name in genesis. The wallet shows it as W + the coin symbol, for example WtQU.
 const WRAPPED_COIN = '0xae0000000000000000000000000000000000000a';
 const WITHDRAWAL_TOPIC = ethers.id('Withdrawal(address,uint256)');
-// Volání, po kterých přijde hlavní mince vnitřním převodem: v seznamu transakcí ani převodů tokenů nejsou.
+// Calls after which the main coin arrives through an internal transfer: they are neither in the transaction list nor in token transfers.
 const NATIVE_BACK = new Set(['swapExactTokensForNative(uint256,uint256,address[],address,uint256)', 'removeLiquidityNative(address,uint256,uint256,uint256,address,uint256)', 'withdraw(uint256)'].map((sig) => ethers.id(sig).slice(0, 10)));
 const FEED = { local: 25, txs: 30, transfers: 40, payouts: 20, days: 7, rows: 40, receipts: 15 };
 const poolNameCache = new Map();
-/** Název poolu z uzlu pro výplatu. Jméno poolu se po založení nemění, stačí ho zjistit jednou. */
+/** Pool name from the node for the payout. A pool's name does not change after creation, so it only needs to be fetched once. */
 function poolName(pool, net) {
   const key = `${net.chainId}:${pool.toLowerCase()}`;
   if (!poolNameCache.has(key)) poolNameCache.set(key, rpc('aether_pools', [{ query: pool.toLowerCase(), limit: 1 }], net).then((r) => r?.items?.[0]?.name ?? null, () => null));
@@ -345,9 +345,9 @@ function poolName(pool, net) {
 const coinMeta = async (token, net) => (token.toLowerCase() === WRAPPED_COIN ? { symbol: `W${net.symbol}`, decimals: 18 } : tokenMeta(token, net));
 
 /**
- * Aktivita účtu jako v Etherscanu, jen srozumitelně: odeslané z peněženky i čekající, přijaté platby, převody
- * tokenů tam i zpět (u swapu tedy obě strany), výplaty z poolů a odměny za vytěžené bloky po dnech.
- * Síť bez rejstříku uzlu Quinvium (cizí RPC) vrátí jen to, co odeslala tahle peněženka.
+ * Account activity like on Etherscan, only easier to understand: sent from the wallet and pending, received payments, transfers
+ * tokens in both directions (both sides for a swap), pool payouts and rewards for mined blocks per day.
+ * A network without the Quinvium node index (foreign RPC) returns only what this wallet sent.
  */
 async function activityFeed() {
   const net = await currentNetwork();
@@ -366,7 +366,7 @@ async function activityFeed() {
   ]);
   const rows = new Map();
   const row = (hash) => { if (!rows.has(hash)) rows.set(hash, { id: hash, hash, legs: [] }); return rows.get(hash); };
-  // Rejstřík uzlu vrací adresy malými písmeny. Peněženka je ukazuje s kontrolním součtem, stejně jako všude jinde.
+  // The node's index returns addresses in lower case. The wallet shows them with a checksum, as everywhere else.
   const sum = (a) => (a ? ethers.getAddress(a) : null);
   const coin = (value, sign) => ({ value: BigInt(value).toString(), decimals: 18, symbol, sign });
   for (const tx of txs?.items ?? []) {
@@ -413,7 +413,7 @@ async function activityFeed() {
   for (const a of own) {
     const known = rows.get(a.hash);
     if (known) { known.local = a; continue; }
-    // Není v rejstříku uzlu: čeká, neprošla, byla nahrazená, nebo je starší než první stránka rejstříku.
+    // Not in the node's index: pending, failed, replaced, or older than the first page of the index.
     const value = BigInt(a.value ?? 0);
     rows.set(a.hash, {
       id: a.hash, hash: a.hash, time: a.at, status: a.dropped ? 'dropped' : a.pending ? (a.replacedBy ? 'replaced' : 'pending') : 'ok',
@@ -423,7 +423,7 @@ async function activityFeed() {
     });
   }
   const items = [...rows.values()].filter((r) => r.time).sort((x, y) => y.time - x.time).slice(0, FEED.rows);
-  // Hlavní mince přišla vnitřním převodem (swap na minci, výběr likvidity, rozbalení): částku řekne událost Withdrawal.
+  // The main coin arrived through an internal transfer (swap to the coin, liquidity withdrawal, unwrapping): the Withdrawal event gives the amount.
   const back = items.filter((r) => r.out && r.status === 'ok' && NATIVE_BACK.has(r.data) && !r.legs.some((l) => l.sign === 1 && !l.token)).slice(0, FEED.receipts);
   await Promise.all(back.map(async (r) => {
     const rc = await rpc('eth_getTransactionReceipt', [r.hash], net).catch(() => null);
@@ -433,13 +433,13 @@ async function activityFeed() {
   return { items, indexed: !!txs, address };
 }
 
-/** Převod tokenu ERC-20 je volání kontraktu, částka je v jeho vlastních desetinných místech. */
+/** An ERC-20 token transfer is a contract call; the amount is in the token's own decimals. */
 function tokenTransfer(token, to, value, decimals) {
   const data = `0xa9059cbb${ethers.AbiCoder.defaultAbiCoder().encode(['address', 'uint256'], [ethers.getAddress(to), ethers.parseUnits(value, decimals)]).slice(2)}`;
   return { to: ethers.getAddress(token), value: '0x0', data };
 }
 
-// ---- požadavky ze stránek --------------------------------------------------------
+// ---- requests from web pages --------------------------------------------------------
 const ports = new Set();
 
 function broadcast(event, data) {
@@ -460,7 +460,7 @@ async function ensureUnlocked(origin) {
   await askUser('unlock', origin, {});
 }
 
-/** Stránka smí žádat podpis jen za účet, který jí peněženka ukázala, ne za jiný účet z trezoru. */
+/** A page may request a signature only for the account the wallet showed it, not for another account from the vault. */
 async function requireSelected(address) {
   const selected = await selectedAddress();
   if (typeof address !== 'string' || !selected || address.toLowerCase() !== selected.toLowerCase()) throw rpcError(4100, 'This account is not allowed');
@@ -483,7 +483,7 @@ async function dappRequest(port, method, params) {
     case 'eth_requestAccounts': {
       if (!connected) {
         await askUser('connect', origin, {});
-        // Znovu načíst: během čekání mohla schválení dokončit jiná stránka.
+        // Reload: another page may have completed the approval while waiting.
         const fresh = await local.get('sites', {});
         fresh[origin] = { at: Date.now() };
         await local.set('sites', fresh);
@@ -509,11 +509,11 @@ async function dappRequest(port, method, params) {
     case 'wallet_addEthereumChain': {
       const p = params[0];
       const id = Number(BigInt(p.chainId));
-      // Známá síť se jen přepne: stránka nesmí podstrčit jiný uzel pro existující síť.
+      // A known network is only switched to: a page must not slip in another node for an existing network.
       if ((await networks())[id]) return dappRequest(port, 'wallet_switchEthereumChain', [{ chainId: p.chainId }]);
       const net = { chainId: id, name: String(p.chainName).slice(0, 40), rpc: p.rpcUrls?.[0], symbol: String(p.nativeCurrency?.symbol ?? 'QU').slice(0, 8), explorer: p.blockExplorerUrls?.[0] ?? '' };
       if (!/^https?:\/\//.test(net.rpc ?? '')) throw rpcError(-32602, 'Invalid RPC address');
-      // Na adresu ze stránky se rozšíření připojí až po souhlasu, jinak by šlo posílat požadavky do místní sítě.
+      // The extension connects to an address from the page only after consent, otherwise requests could be sent into the local network.
       await askUser('addNetwork', origin, { network: net });
       const remote = BigInt(await rpc('eth_chainId', [], net));
       if (remote !== BigInt(id)) throw rpcError(-32602, 'The node belongs to a different network than stated');
@@ -530,7 +530,7 @@ async function dappRequest(port, method, params) {
       const from = await selectedAddress();
       if (tx.from && tx.from.toLowerCase() !== from.toLowerCase()) throw rpcError(4100, 'This account is not allowed');
       const { prepared, fees, suggested } = await prepareTx(from, tx);
-      if (await externalWallet()) return signAndSend(from, prepared);    // potvrzení ukáže sama peněženka
+      if (await externalWallet()) return signAndSend(from, prepared);    // the wallet itself shows the confirmation
       const answer = await askUser('transaction', origin, { from, tx: prepared, network: await currentNetwork(), fees, suggested });
       return signAndSend(from, applyFee(prepared, answer?.fee));
     }
@@ -539,7 +539,7 @@ async function dappRequest(port, method, params) {
       await ensureUnlocked(origin);
       const ext = await externalWallet();
       if (ext) return externalSign(ext, method, params);
-      // Adresa je také hex, proto se pořadí pozná podle ní: některé stránky posílají (adresa, zpráva).
+      // The address is hex too, so the order is recognised by it: some pages send (address, message).
       const [data, address] = ethers.isAddress(params[0]) && !ethers.isAddress(params[1]) ? [params[1], params[0]] : params;
       await requireSelected(address);
       const text = (() => { try { return ethers.toUtf8String(data); } catch { return data; } })();
@@ -555,7 +555,7 @@ async function dappRequest(port, method, params) {
       const typed = typeof params[1] === 'string' ? JSON.parse(params[1]) : params[1];
       const chain = BigInt((await currentNetwork()).chainId);
       if (typed.domain?.chainId !== undefined && BigInt(typed.domain.chainId) !== chain) throw rpcError(-32602, 'The signature is for a different network');
-      // Pro koho podpis platí je stejně důležité jako jeho obsah, tudy vedou podvody s povolením utrácet tokeny.
+      // Whom a signature is valid for matters as much as its content; that is where token allowance scams go through.
       const shown = { kontrakt: typed.domain?.verifyingContract ?? '—', aplikace: typed.domain?.name ?? '—', zprava: typed.message };
       await askUser('sign', origin, { message: JSON.stringify(shown, null, 2), address: params[0], typed: typed.primaryType });
       const { EIP712Domain, ...types } = typed.types;
@@ -586,16 +586,16 @@ chrome.runtime.onConnect.addListener((port) => {
   });
 });
 
-// ---- příkazy z vlastních oken rozšíření ------------------------------------------
+// ---- commands from the extension's own windows ------------------------------------------
 const commands = {
   async status() {
     const vault = await local.get('vault');
     const external = await externalWallet();
     return { initialized: !!vault || !!external, unlocked: !!external || !!(await secrets()), external: external ?? null };
   },
-  /** Adresa přihlášené peněženky. Sem jdou výplaty z těžby, jiná adresa se nastavit nedá. */
+  /** Address of the signed-in wallet. Mining payouts go here; no other address can be set. */
   address: () => selectedAddress(),
-  /** Přihlášení peněženkou mimo aplikaci. Vlastnictví adresy ověřil podpis v okně aplikace. */
+  /** Sign-in with a wallet outside the app. A signature in the app window proved ownership of the address. */
   async setExternal({ kind, name, address, rdns }) {
     if (await local.get('vault')) throw new Error('Log out of the current wallet first');
     await chrome.storage.local.set({ external: { kind, name: String(name ?? kind).slice(0, 40), rdns: rdns ?? null, address: ethers.getAddress(address) }, selected: 0 });
@@ -614,7 +614,7 @@ const commands = {
     await touch();
     return true;
   },
-  /** Peněženka jen ze soukromého klíče, třeba z jiné aplikace. Fráze u ní neexistuje. */
+  /** A wallet from a private key only, for example from another app. It has no phrase. */
   async createFromKey({ key, password }) {
     if (typeof password !== 'string' || password.length < 10) throw new Error('The password must have at least 10 characters');
     const clean = cleanKey(key);
@@ -635,12 +635,12 @@ const commands = {
     return true;
   },
   lock,
-  /** Uživatel je u počítače: prodlouží odemčení, ale zamčenou peněženku neotevře. */
+  /** The user is at the computer: extends the unlock but does not open a locked wallet. */
   async touch() {
     if (await secrets()) await touch();
     return true;
   },
-  /** Ověří heslo před citlivou změnou v aplikaci. Tajemství nikam nevrací. */
+  /** Verifies the password before a sensitive change in the app. Returns no secret. */
   async checkPassword({ password }) {
     await decryptVault(await local.get('vault'), password);
     await touch();
@@ -653,7 +653,7 @@ const commands = {
     await touch();
     return true;
   },
-  /** Odhlášení. Stránky se to dozví hned, nastavená síť patří k zařízení a zůstává. */
+  /** Sign-out. Pages learn about it immediately; the chosen network belongs to the device and stays. */
   async wipe() {
     for (const p of ports) p.postMessage({ event: 'accountsChanged', data: [] });
     const keep = await chrome.storage.local.get(['chainId', 'networks']);
@@ -676,7 +676,7 @@ const commands = {
     const activity = online ? await withStatus(recent, net) : recent;
     return { network: net, networks: Object.values(await networks()), accounts, selected, address, balance, online, activity, external: await externalWallet() };
   },
-  /** Účty pro výběr: jméno, zůstatek a odkud účet pochází. */
+  /** Accounts for selection: name, balance and where the account comes from. */
   async accounts() {
     const net = await currentNetwork();
     const names = await local.get('accountNames', {});
@@ -696,7 +696,7 @@ const commands = {
     await local.set('accountNames', names);
     return true;
   },
-  /** Přidá účet ze soukromého klíče. Heslo potvrzuje majitele a zašifruje klíč. */
+  /** Adds an account from a private key. The password confirms the owner and encrypts the key. */
   async importKey({ key, password }) {
     const clean = cleanKey(key);
     const s = await secrets();
@@ -713,7 +713,7 @@ const commands = {
     broadcast('accountsChanged', [a]);
     return true;
   },
-  /** Tokeny, které adresa drží. Seznam dává uzel, cizí síť ho nezná a ukáže se jen hlavní mince. */
+  /** Tokens the address holds. The node provides the list; a foreign network does not know it and only the main coin is shown. */
   async assets() {
     const net = await currentNetwork();
     const address = await selectedAddress();
@@ -724,14 +724,14 @@ const commands = {
     const rows = await Promise.all((info?.tokens ?? []).map(async (token) => {
       try {
         const [symbol, decimals, balance] = await Promise.all([read(token, '0x95d89b41'), read(token, '0x313ce567'), read(token, `0x70a08231${coder.encode(['address'], [address]).slice(2)}`)]);
-        // Název tokenu si volí kdokoli. O pravosti rozhoduje jen seznam ověřených adres.
+        // Anyone chooses a token name. Only the list of verified addresses decides authenticity.
         const listed = net.registry ? await read(net.registry, `0x${ethers.id('listed(address)').slice(2, 10)}${coder.encode(['address'], [token]).slice(2)}`).catch(() => '0x0') : '0x0';
         return { token, symbol: coder.decode(['string'], symbol)[0].slice(0, 12), decimals: Number(decimals), balance: BigInt(balance).toString(), verified: BigInt(listed) === 1n };
       } catch { return null; }
     }));
     return rows.filter((r) => r && r.balance !== '0');
   },
-  /** Odhad gasu pro souhrn před odesláním. */
+  /** Gas estimate for the summary before sending. */
   async quote({ to, value, token, decimals }) {
     checkRecipient(to, token);
     const from = await selectedAddress();
@@ -772,12 +772,12 @@ const commands = {
     const from = await selectedAddress();
     const tx = token ? tokenTransfer(token, to, value, decimals) : { to: ethers.getAddress(to), value: ethers.toBeHex(ethers.parseEther(value)) };
     const { prepared } = await prepareTx(from, tx);
-    // Převod tokenu má v transakci nulovou částku. Historie proto potřebuje vědět, kolik čeho a komu šlo.
+    // A token transfer has a zero amount in the transaction. History therefore needs to know how much of what went to whom.
     const extra = token ? { token: { address: ethers.getAddress(token), symbol: String(symbol ?? '').slice(0, 12), decimals: Number(decimals), to: ethers.getAddress(to), amount: ethers.parseUnits(value, decimals).toString() } } : {};
     return signAndSend(from, applyFee(prepared, fee), undefined, extra);
   },
   activityFeed: () => activityFeed(),
-  /** Detail transakce z historie: stav, blok, čas a skutečně zaplacený poplatek. U převodu tokenu i jeho zkratka. */
+  /** Details of a transaction from history: status, block, time and the fee actually paid. For a token transfer also its symbol. */
   async txDetail({ hash }) {
     const net = await currentNetwork();
     const item = (await local.get('activity', [])).find((a) => a.hash === hash) ?? null;
@@ -800,7 +800,7 @@ const commands = {
       explorer: net.explorer || null,
     };
   },
-  /** Poslední pohyby jednoho aktiva účtu z rejstříku uzlu. Síť bez rejstříku Quinvia vrátí null a seznam se neukáže. */
+  /** Latest movements of one asset of the account from the node index. A network without the Quinvium index returns null and the list is not shown. */
   async assetHistory({ token }) {
     const net = await currentNetwork();
     const address = (await selectedAddress())?.toLowerCase();
@@ -816,23 +816,23 @@ const commands = {
     } catch { return null; }
   },
   async feeOptions() { return feeEstimates(await currentNetwork()); },
-  /** Uvízlá transakce: stejné nonce s vyšším poplatkem. Zrušení je prázdná platba sám sobě. */
+  /** A stuck transaction: the same nonce with a higher fee. A cancellation is an empty payment to oneself. */
   async replaceTx({ hash, cancel }) {
     const net = await currentNetwork();
     const old = (await local.get('activity', [])).find((a) => a.hash === hash);
-    // Cizí peněženka si pořadové číslo volí sama. Náhrada by od ní dostala další číslo a „zrychlení“ by zaplatilo podruhé.
+    // A foreign wallet chooses the nonce itself. A replacement would get the next number from it and a "speed-up" would pay twice.
     if (old?.external || (await externalWallet())) throw new Error('Speed up or cancel this transaction in the wallet that signed it.');
     if (old?.nonce === undefined) throw new Error('This transaction cannot be replaced');
     const fast = (await feeEstimates(net)).tiers.fast;
     const atLeast = (a, b) => (a > b ? a : b);
-    const bump = (v) => (BigInt(v) * 11n + 9n) / 10n;   // uzel chce alespoň o 10 % víc
+    const bump = (v) => (BigInt(v) * 11n + 9n) / 10n;   // the node wants at least 10 % more
     const tip = atLeast(bump(old.maxPriorityFeePerGas), BigInt(fast.tip));
     const maxFee = atLeast(atLeast(bump(old.maxFeePerGas), BigInt(fast.maxFee)), tip);
     const body = cancel ? { to: old.from, value: '0x0', data: '0x', gasLimit: '0x5208' } : { to: old.to, value: old.value, data: old.data, gasLimit: old.gasLimit };
     return signAndSend(old.from, { type: 2, chainId: old.chainId, nonce: old.nonce, ...body, maxFeePerGas: hexOf(maxFee), maxPriorityFeePerGas: hexOf(tip) }, hash);
   },
   async revealSeed({ password }) { return decryptVault(await local.get('vault'), password); },
-  /** Soukromý klíč vybraného účtu. Vždy vyžaduje heslo, i když je peněženka odemčená. */
+  /** Private key of the selected account. Always requires the password, even when the wallet is unlocked. */
   async revealKey({ password }) {
     await decryptVault(await local.get('vault'), password);
     return (await wallets())[await local.get('selected', 0)].privateKey;
@@ -859,7 +859,7 @@ const commands = {
 };
 
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
-  // Citlivé příkazy smí volat jen vlastní stránky rozšíření, ne obsah webů.
+  // Sensitive commands may be called only by the extension's own pages, not by website content.
   const ownPage = sender.id === chrome.runtime.id && sender.url?.startsWith(`chrome-extension://${chrome.runtime.id}/`);
   if (!ownPage || !commands[msg?.cmd]) {
     reply({ error: 'Command not allowed' });

@@ -1,4 +1,4 @@
-// Skutečné uzly Quinvium v jednom procesu pro testy mostu: každý má vlastní chain ID a bloky se těží na povel.
+// Real Quinvium nodes in one process for bridge tests: each has its own chain ID and blocks are mined on command.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { ethers } from 'ethers';

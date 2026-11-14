@@ -1,5 +1,5 @@
-// Přihlášení do aplikace peněženkou mimo ni: MetaMask přes stránku v prohlížeči a WalletConnect přes QR kód.
-// Skutečná aplikace i uzel. MetaMask nahrazuje skutečný klíč v druhém prohlížeči, relay WalletConnectu náhrada v testu.
+// Signing in to the app with a wallet outside it: MetaMask through a browser page and WalletConnect through a QR code.
+// The real app and node. A real key in a second browser stands in for MetaMask; a stand-in in the test replaces the WalletConnect relay.
 import { _electron as electron, chromium } from 'playwright';
 import { mkdtempSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -35,7 +35,7 @@ const until = async (fn, ms) => {
 };
 const app = await electron.launch({
   executablePath: electronPath, args: [join(here, '..')],
-  // Vlastní porty uzlu: test běží i vedle otevřené aplikace a jejího uzlu se nedotkne.
+  // Own node ports: the test runs even next to the open app and does not touch its node.
   env: { ...process.env, AETHER_NO_SEEDS: '1', AETHER_USER_DATA: mkdtempSync(join(tmpdir(), 'aether-externi-')), AETHER_LAN_PORT: '30594', AETHER_P2P_PORT: '30595', AETHER_RPC_PORT: '18766', AETHER_STRATUM_PORT: '13766' },
 });
 const errors = [];
@@ -48,7 +48,7 @@ try {
   await win.waitForSelector('#ext-browser');
   const inExplorer = (code) => win.evaluate((c) => document.getElementById('explorer-view').executeJavaScript(c), code);
 
-  await step('přihlášení přes MetaMask: podpis dokáže adresu, výplata jde na ni a podpisy přes prohlížeč fungují', async () => {
+  await step('sign-in via MetaMask: the signature proves the address, the payout goes to it and signatures through the browser work', async () => {
     const outside = ethers.Wallet.createRandom();
     const provider = new ethers.JsonRpcProvider('http://127.0.0.1:18766', undefined, { staticNetwork: true, cacheTimeout: -1 });
     await app.evaluate(({ shell }) => { shell.openExternal = async (url) => { globalThis.openedUrl = url; }; });
@@ -113,7 +113,7 @@ try {
     await win.click('#confirm-out');
     await win.waitForSelector('#ext-browser');
   });
-  await step('přihlášení přes WalletConnect ukáže QR kód', async () => {
+  await step('sign-in via WalletConnect shows a QR code', async () => {
     await win.routeWebSocket(/walletconnect|reown/, (ws) => ws.onMessage((text) => {
       const m = JSON.parse(text);
       const batch = /batchSubscribe/i.test(m.method ?? '');

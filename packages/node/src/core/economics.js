@@ -1,7 +1,7 @@
 // Emise a poplatky.
 import { CONSENSUS as C } from '../params.js';
 
-/** Odměna za blok: 4 QU, půlení po 8 000 000 blocích. Blok 0 odměnu nemá. */
+/** Block reward: 4 QU, halving every 8,000,000 blocks. Block 0 has no reward. */
 export function blockReward(number) {
   const n = BigInt(number);
   if (n === 0n) return 0n;
@@ -9,7 +9,7 @@ export function blockReward(number) {
   return halvings >= 64n ? 0n : C.initialReward >> halvings;
 }
 
-/** Kolik mincí mohlo do dané výšky vzniknout. Jiný zdroj mincí v síti není, poplatky jen mění majitele. */
+/** How many coins could have been created up to the given height. There is no other source of coins in the network; fees only change owner. */
 export function emitted(height) {
   let total = 0n;
   let remaining = BigInt(height);
@@ -23,7 +23,7 @@ export function emitted(height) {
   return total;
 }
 
-/** EIP-1559: základní poplatek reaguje na provoz a má spodní mez. Nepálí se, dostává ho těžař. */
+/** EIP-1559: the base fee responds to traffic and has a floor. It is not burned; the miner receives it. */
 export function nextBaseFee(parent) {
   const target = parent.gasLimit / C.elasticity;
   const base = parent.baseFee;
@@ -45,7 +45,7 @@ export function gasLimitValid(gasLimit, parentGasLimit, maxGasLimit) {
   return diff < limit && gasLimit >= C.minGasLimit && gasLimit <= maxGasLimit;
 }
 
-/** Miner se blíží k cíli po co největších povolených krocích. */
+/** The miner approaches the target in the largest allowed steps. */
 export function nextGasLimit(parentGasLimit, target) {
   const step = parentGasLimit / C.gasLimitBoundDivisor - 1n;
   if (parentGasLimit < target) return parentGasLimit + step > target ? target : parentGasLimit + step;

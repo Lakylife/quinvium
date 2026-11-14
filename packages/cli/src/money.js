@@ -1,4 +1,4 @@
-// Zůstatky, převody, tokeny a Swap.
+// Balances, transfers, tokens and Swap.
 import { ethers } from 'ethers';
 import { tokenApp } from './apps.js';
 import { CliError, SWAP_DEADLINE_S, amountText, pairs, parseAmount, sameAddress, short, significant, table, units } from './context.js';
@@ -14,7 +14,7 @@ const QUOTE_PROBE = 1000n;
 
 const deadline = () => Math.floor(Date.now() / 1000) + SWAP_DEADLINE_S;
 
-/** Zkratka tokenu v poolu. Wrapped mince se ukazuje jako mince sítě, protože Swap ji balí a rozbaluje sám. */
+/** Symbol of the token in a pool. The wrapped coin is shown as the network coin because Swap wraps and unwraps it itself. */
 const symbolOf = (ctx, list, address) => (sameAddress(address, ctx.contracts.WAET.address) ? ctx.symbol : list.find((t) => sameAddress(t.address, address))?.symbol ?? short(address));
 const decimalsOf = (list, address) => list.find((t) => sameAddress(t.address, address))?.decimals ?? 18;
 
@@ -49,7 +49,7 @@ export async function send(ctx, [to, amount]) {
   ctx.print(await submit(ctx, { to: target, value }, lines), sent);
 }
 
-/** Cena tokenu z poolu s Quinviem. Bez poolu cena není. */
+/** Token price from the pool with Quinvium. No pool, no price. */
 async function poolWithCoin(ctx, d, token) {
   if (!d?.swap?.factory) return null;
   const address = await ctx.at('SwapFactory', d.swap.factory).getPair(token.address, ctx.contracts.WAET.address).catch(() => ethers.ZeroAddress);
@@ -60,7 +60,7 @@ async function poolWithCoin(ctx, d, token) {
   return own ? { address, reserveCoin: coin, price: (coin * 10n ** BigInt(token.decimals)) / own } : null;
 }
 
-/** Starší uzel statistiky tokenů nezná. Nástroj kvůli tomu nesmí selhat, jen je neukáže. */
+/** An older node does not know token statistics. The tool must not fail because of that; it just does not show them. */
 const tokenInfo = (ctx, t) => ctx.rpc('aether_tokenInfo', [t.address]).catch(() => ({ holders: '—', transfers: '—', top: [], complete: false }));
 
 export async function tokens(ctx) {
@@ -114,7 +114,7 @@ async function swapSetup(ctx) {
   return d;
 }
 
-/** Přímý pool, jinak cesta přes minci sítě. Stejně jako na stránce Swap. */
+/** A direct pool, otherwise the path through the network coin. The same as on the Swap page. */
 async function bestRoute(ctx, router, a, b, amount) {
   const hub = ctx.contracts.WAET.address;
   const paths = [[a.address, b.address]];
@@ -188,7 +188,7 @@ export async function swap(ctx, args) {
   ctx.print(await submit(ctx, request, [], { confirmed: true, label: L('Směna', 'Swap') }), L('Směna proběhla.', 'The swap is done.'));
 }
 
-/** Do existujícího poolu jde vložit jen v jeho poměru. Přebytek zůstane v peněžence, jinak by kontrakt vklad odmítl. */
+/** An existing pool accepts deposits only in its ratio. The surplus stays in the wallet, otherwise the contract would reject the deposit. */
 async function fitToPool(ctx, d, a, b, x, y) {
   const address = await ctx.at('SwapFactory', d.swap.factory).getPair(a.address, b.address);
   if (address === ethers.ZeroAddress) return [x, y];

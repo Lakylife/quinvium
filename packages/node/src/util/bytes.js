@@ -1,8 +1,8 @@
 import { createHash, getHashes } from 'node:crypto';
 import { keccak_256 } from '@noble/hashes/sha3.js';
 
-// OpenSSL v Node počítá Keccak mnohem rychleji. Electron má BoringSSL bez Keccaku,
-// proto zůstává záložní implementace. Výsledek je v obou případech stejný.
+// OpenSSL in Node computes Keccak much faster. Electron has BoringSSL without Keccak,
+// so a fallback implementation remains. The result is the same in both cases.
 const NATIVE_KECCAK = getHashes().includes('keccak-256');
 export const keccak = NATIVE_KECCAK
   ? (b) => new Uint8Array(createHash('keccak-256').update(b).digest())
@@ -16,7 +16,7 @@ export const fromHex = (h) => {
 export const quantity = (v) => '0x' + BigInt(v).toString(16);
 export const equal = (a, b) => a.length === b.length && Buffer.compare(a, b) === 0;
 
-/** Minimální big-endian zápis celého čísla pro RLP (0 je prázdné pole). */
+/** Minimal big-endian encoding of an integer for RLP (0 is an empty array). */
 export function intToBytes(v) {
   const n = BigInt(v);
   if (n < 0n) throw new Error('záporné číslo');

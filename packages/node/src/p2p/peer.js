@@ -1,4 +1,4 @@
-// Jeden připojený uzel: požadavky s odpovědí, limity provozu a počítání prohřešků.
+// One connected peer: requests with responses, traffic limits and counting misbehaviour.
 import { EventEmitter } from 'node:events';
 import { RLP } from '@ethereumjs/rlp';
 import { bytesToInt, intToBytes } from '../util/bytes.js';
@@ -12,7 +12,7 @@ const MAX_MSGS_PER_SECOND = 512;
 const MAX_BYTES_PER_SECOND = 64 * 1024 * 1024;
 const MAX_KNOWN = 32_768;
 
-/** Omezení rychlosti: za sekundu přibude `rate` žetonů až do stropu `burst`. */
+/** Rate limiting: `rate` tokens are added per second up to the `burst` cap. */
 export class Bucket {
   constructor(rate, burst) {
     this.rate = rate;
@@ -30,8 +30,8 @@ export class Bucket {
   }
 }
 
-// Zpráva za sekundu a povolený nárazový objem. Čte se podle ceny obsluhy,
-// poctivý uzel při synchronizaci posílá vždy jen jeden požadavek najednou.
+// Messages per second and the allowed burst. Counted by the cost of handling,
+// an honest node always sends only one request at a time while syncing.
 const BUDGET = {
   [MSG.GET_HEADERS]: [8, 32],
   [MSG.GET_BLOCKS]: [16, 64],
@@ -68,7 +68,7 @@ export class Peer extends EventEmitter {
     this.nodeId = null;
     this.agent = '';
     this.features = 0;
-    this.known = new Set();       // hashe transakcí, které uzel má nebo mu byly poslány
+    this.known = new Set();       // hashes of transactions the peer has or was sent
     channel.on('frame', (type, payload) => this._onFrame(type, payload));
     channel.on('close', (reason) => {
       for (const p of this.pending.values()) { clearTimeout(p.timer); p.reject(new Error('uzel se odpojil')); }
@@ -77,13 +77,13 @@ export class Peer extends EventEmitter {
     });
   }
 
-  /** Zapamatuje si, že uzel transakci zná, aby se mu znovu neposílala. Paměť je omezená. */
+  /** Remembers that the peer knows the transaction so it is not sent again. The memory is bounded. */
   markKnown(hash) {
     if (this.known.size >= MAX_KNOWN) this.known = new Set();
     this.known.add(hash);
   }
 
-  /** Celkové omezení provozu, platí pro všechny zprávy včetně odpovědí. */
+  /** Overall traffic limit; applies to all messages including responses. */
   _withinLimits(size) {
     const now = Date.now();
     const w = this.window;
@@ -103,7 +103,7 @@ export class Peer extends EventEmitter {
       this.misbehave(20, 'příliš mnoho zpráv');
       return;
     }
-    // Limit podle typu se hlídá před dekódováním, přebytečná zpráva nestojí téměř nic.
+    // The per-type limit is checked before decoding; a surplus message costs almost nothing.
     const bucket = this.budget[type];
     if (bucket && !bucket.take()) {
       this.misbehave(OVER_LIMIT_POINTS, `příliš mnoho zpráv typu ${type}`);
@@ -133,7 +133,7 @@ export class Peer extends EventEmitter {
 
   send(type, body) { return this.channel.send(type, Buffer.from(RLP.encode(body))); }
 
-  /** Požadavek s odpovědí: první pole těla je vždy identifikátor. */
+  /** A request with a response: the first field of the body is always the identifier. */
   request(type, body, timeout = REQUEST_TIMEOUT) {
     return new Promise((resolve, reject) => {
       const id = this.nextId++;
@@ -160,7 +160,7 @@ export class Peer extends EventEmitter {
     if (this.score >= BAN_THRESHOLD) this.emit('ban', reason);
   }
 
-  /** Staré prohřešky časem odeznívají, občasný výpadek poctivého uzlu nevede k blokaci. */
+  /** Old misbehaviour fades over time; an occasional outage of an honest node does not lead to a block. */
   forgive(points) { this.score = Math.max(0, this.score - points); }
 
   disconnect(reason) { this.channel.close(reason); }

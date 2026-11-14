@@ -29,7 +29,7 @@ async function node(alloc, seeds = []) {
 const stopAll = async (...ns) => { for (const n of ns) await n.net.stop(); };
 const fund = (w) => ({ [`0x${Buffer.from(w.address).toString('hex')}`]: { balance: 100n * WEI } });
 
-test('dva uzly se spojí šifrovaně a nový blok se rozšíří', async () => {
+test('two nodes connect encrypted and a new block spreads', async () => {
   const a = await node(); const b = await node({}, [a.addr()]);
   assert.ok(await until(() => a.net.peerCount === 1 && b.net.peerCount === 1));
   b.chain.setClock(a.chain.now() + 15);
@@ -39,7 +39,7 @@ test('dva uzly se spojí šifrovaně a nový blok se rozšíří', async () => {
   await stopAll(a, b);
 });
 
-test('nový uzel stáhne delší řetězec po dávkách', async () => {
+test('a new node downloads a longer chain in batches', async () => {
   const a = await node();
   await mineMany(a.chain, 300);
   const b = await node({}, [a.addr()]);
@@ -49,7 +49,7 @@ test('nový uzel stáhne delší řetězec po dávkách', async () => {
   await stopAll(a, b);
 });
 
-test('transakce se rozšíří napříč sítí a potvrdí se na všech uzlech', async () => {
+test('a transaction spreads across the network and is confirmed on all nodes', async () => {
   const w = wallet(); const to = wallet();
   const alloc = fund(w);
   const a = await node(alloc); const b = await node(alloc, [a.addr()]); const c = await node(alloc, [b.addr()]);
@@ -66,11 +66,11 @@ test('transakce se rozšíří napříč sítí a potvrdí se na všech uzlech',
   await stopAll(a, b, c);
 });
 
-test('uzel připojený později dostane čekající transakce a těžař je vytěží', async () => {
+test('a node connected later gets pending transactions and the miner mines them', async () => {
   const w = wallet(); const to = new Address(wallet().address);
   const alloc = fund(w);
   const a = await node(alloc);
-  // Transakce přišla, když uzel A neměl žádného souseda. Rozeslání tehdy nikam nedošlo.
+  // The transaction arrived while node A had no peer. The broadcast then went nowhere.
   const txs = [];
   for (let n = 0n; n < 60n; n++) txs.push(transfer(a.chain, w, to, 1n, n));
   for (const tx of txs) await a.chain.mempool.add(tx);
@@ -83,7 +83,7 @@ test('uzel připojený později dostane čekající transakce a těžař je vyt�
   await stopAll(a, b);
 });
 
-test('rozdělená síť se po spojení srovná na těžší větev', async () => {
+test('a split network converges on the heavier branch after reconnecting', async () => {
   const a = await node(); const b = await node();
   await mineMany(a.chain, 3);
   await mineMany(b.chain, 6, { miner: new Uint8Array(20).fill(5) });
@@ -94,7 +94,7 @@ test('rozdělená síť se po spojení srovná na těžší větev', async () =>
   await stopAll(a, b);
 });
 
-test('síť rozdělená déle než hranice finality se srovná na větev s dvojnásobnou prací, slabší strana se neblokuje', async () => {
+test('a network split longer than the finality boundary converges on the branch with twice the work; the weaker side is not blocked', async () => {
   const a = await node(); const b = await node();
   await mineMany(a.chain, C.maxReorgDepth + 4);
   const ours = a.chain.headTd - a.chain.genesis.difficulty;
@@ -110,7 +110,7 @@ test('síť rozdělená déle než hranice finality se srovná na větev s dvojn
   await stopAll(a, b);
 });
 
-test('hlubší větev s menší prací se nepřijme a její uzel se neblokuje', async () => {
+test('a deeper branch with less work is not accepted and its node is not blocked', async () => {
   const a = await node(); const b = await node();
   await mineMany(a.chain, C.maxReorgDepth + 4);
   await mineMany(b.chain, C.maxReorgDepth + 10, { miner: new Uint8Array(20).fill(6) });
@@ -128,13 +128,13 @@ test('hlubší větev s menší prací se nepřijme a její uzel se neblokuje', 
   await stopAll(a, b);
 });
 
-test('ohlášení hashem: celé zprávy dostane jen část sousedů, přesto dorazí ke všem a starší uzel dostane celé', async () => {
+test('announcement by hash: only some peers get full messages, yet they reach everyone and an older node gets them in full', async () => {
   const w = wallet();
   const alloc = fund(w);
   const hub = await node(alloc);
   const leaves = [];
   for (let i = 0; i < 5; i++) leaves.push(await node(alloc));
-  // Jeden soused je starší verze: neumí ohlášení, musí dostat celé zprávy.
+  // One peer is an older version: it does not support announcements and must get full messages.
   const legacy = leaves[4];
   legacy.net._helloBody = function legacyHello(peer) { return Network.prototype._helloBody.call(this, peer).slice(0, 11); };
   for (const l of leaves) hub.net.connect('127.0.0.1', l.net.port);
@@ -159,7 +159,7 @@ test('ohlášení hashem: celé zprávy dostane jen část sousedů, přesto dor
   await stopAll(hub, ...leaves);
 });
 
-test('uzel šířící neplatný blok je zablokován', async () => {
+test('a node spreading an invalid block is blocked', async () => {
   const a = await node();
   const evil = await newChain();
   evil.tick();
@@ -179,7 +179,7 @@ test('uzel šířící neplatný blok je zablokován', async () => {
   await stopAll(a);
 });
 
-test('uzel z jiné sítě ani smetí na portu server neshodí', async () => {
+test('a node from another network or garbage on the port does not crash the server', async () => {
   const a = await node();
   const s = net.connect({ host: '127.0.0.1', port: a.net.port });
   await once(s);
@@ -197,7 +197,7 @@ test('uzel z jiné sítě ani smetí na portu server neshodí', async () => {
   await stopAll(a, b);
 });
 
-test('adresy uzlů se šíří mezi uzly bez centrální registry', async () => {
+test('node addresses spread between nodes without a central registry', async () => {
   const a = await node(); const b = await node({}, [a.addr()]);
   assert.ok(await until(() => a.net.peerCount === 1));
   const c = await node({}, [a.addr()]);
@@ -205,7 +205,7 @@ test('adresy uzlů se šíří mezi uzly bez centrální registry', async () => 
   await stopAll(a, b, c);
 });
 
-test('seed zadaný jménem: uzel zná všechny jeho adresy a spojí se', async () => {
+test('a seed given by name: the node knows all its addresses and connects', async () => {
   const a = await node();
   const b = await node({}, [`localhost:${a.net.port}`]);
   assert.ok(b.chain.store.peersNew(100).includes(`127.0.0.1:${a.net.port}`) || b.chain.store.peersTried(100).includes(`127.0.0.1:${a.net.port}`), 'adresa ze jména je mezi známými uzly');

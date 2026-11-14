@@ -1,4 +1,4 @@
-// Swap na skutečném uzlu: kurz, poplatek, skluz, likvidita, hlavní mince a pokusy pool obelstít.
+// Swap on a real node: rate, fee, slippage, liquidity, the main coin and attempts to trick the pool.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ethers } from 'ethers';
@@ -38,7 +38,7 @@ test.before(async () => {
 
 test.after(async () => { await A.stop(); });
 
-test('první vklad založí pool, část likvidity zůstane navždy uzamčená', async () => {
+test('the first deposit creates the pool; part of the liquidity stays locked forever', async () => {
   await A.ok(as(alice).addLiquidity(order(usd.target, btc.target, 100_000_000_000n, 200_000_000n), alice.address, FAR));
   const pair = await pairOf(usd.target, btc.target);
   assert.equal(await pair.balanceOf('0x000000000000000000000000000000000000dEaD'), 1000n);
@@ -49,7 +49,7 @@ test('první vklad založí pool, část likvidity zůstane navždy uzamčená',
   await reverts(factory.createPair.staticCall(btc.target, usd.target), 'PairExists');
 });
 
-test('směna dá přesně částku podle vzorce s poplatkem 0,3 %', async () => {
+test('a swap gives exactly the amount by the formula with a 0.3 % fee', async () => {
   const pair = await pairOf(usd.target, btc.target);
   const [r0, r1] = await pair.getReserves();
   const usdFirst = (await pair.token0()) === usd.target;
@@ -65,7 +65,7 @@ test('směna dá přesně částku podle vzorce s poplatkem 0,3 %', async () => 
   assert.ok(n0 * n1 > r0 * r1, 'poplatek zůstal v poolu');
 });
 
-test('skluz a prošlá platnost transakci vrátí', async () => {
+test('slippage and an expired deadline revert the transaction', async () => {
   const [, quoted] = await router.getAmountsOut(1_000_000n, [usd.target, btc.target]);
   await reverts(as(bob).swapExactTokensForTokens.staticCall(1_000_000n, quoted + 1n, [usd.target, btc.target], bob.address, FAR), 'SlippageExceeded');
   await reverts(as(bob).swapExactTokensForTokens.staticCall(1_000_000n, 0n, [usd.target, btc.target], bob.address, 1), 'Expired');
@@ -73,7 +73,7 @@ test('skluz a prošlá platnost transakci vrátí', async () => {
   await reverts(router.getAmountsOut.staticCall(1n, [usd.target, WAET]), 'NoPair');
 });
 
-test('hlavní mince AET: vklad, směna oběma směry a přes dva pooly', async () => {
+test('the main coin QU: deposit, swap in both directions and through two pools', async () => {
   await A.ok(as(alice).addLiquidityNative(usd.target, 50_000_000_000n, 0n, 0n, alice.address, FAR, { value: 100n * WEI }));
   const before = await usd.balanceOf(bob.address);
   await A.ok(as(bob).swapExactNativeForTokens(1n, [WAET, usd.target], bob.address, FAR, { value: WEI }));
@@ -91,7 +91,7 @@ test('hlavní mince AET: vklad, směna oběma směry a přes dva pooly', async (
   await assert.rejects(A.connect(bob).sendTransaction({ to: router.target, value: 1n }));
 });
 
-test('výběr likvidity vrátí podíl včetně vydělaných poplatků', async () => {
+test('a liquidity withdrawal returns the share including earned fees', async () => {
   const pair = await pairOf(usd.target, btc.target);
   const lp = pair.connect(A.connect(alice));
   await A.ok(lp.approve(router.target, ethers.MaxUint256));
@@ -105,7 +105,7 @@ test('výběr likvidity vrátí podíl včetně vydělaných poplatků', async (
   await A.ok(as(alice).addLiquidity(order(usd.target, btc.target, 100_000_000_000n, 200_000_000n, 1n, 1n), alice.address, FAR));
 });
 
-test('přímé volání poolu nic neodnese', async () => {
+test('calling the pool directly takes nothing', async () => {
   const pair = await pairOf(usd.target, btc.target);
   const direct = pair.connect(A.connect(mallory));
   const [r0, r1] = await pair.getReserves();
@@ -114,7 +114,7 @@ test('přímé volání poolu nic neodnese', async () => {
   await reverts(direct.swap.staticCall(0n, 0n, mallory.address), 'InsufficientOutput');
   await reverts(direct.swap.staticCall(1n, 0n, await pair.token0()), 'InvalidTo');
   await reverts(direct.burn.staticCall(mallory.address), 'InsufficientLiquidity');
-  // Vstup bez započítaného poplatku neprojde.
+  // An input without the fee counted does not pass.
   const token = A.at('StableToken', await pair.token0());
   const amountIn = r0 / 100n;
   const noFee = (amountIn * r1) / (r0 + amountIn);
@@ -124,7 +124,7 @@ test('přímé volání poolu nic neodnese', async () => {
   await A.ok(direct.sync());
 });
 
-test('náhodné směny a likvidita: součin nikdy neklesne a zásoby sedí', async () => {
+test('random swaps and liquidity: the product never decreases and the reserves match', async () => {
   let a = SEED >>> 0;
   const next = () => {
     a = (a + 0x6d2b79f5) >>> 0;
@@ -164,7 +164,7 @@ test('náhodné směny a likvidita: součin nikdy neklesne a zásoby sedí', asy
     assert.equal(await A.at('StableToken', token0).balanceOf(pair.target), r0, `krok ${i}: zásoba 0 nesedí`);
     assert.equal(await A.at('StableToken', token1).balanceOf(pair.target), r1, `krok ${i}: zásoba 1 nesedí`);
     if (liquidityChanged) {
-      // Hodnota jednoho podílu nesmí klesnout, jinak by jeden poskytovatel bral druhému.
+      // The value of one share must not decrease, otherwise one provider would take from another.
       const supply = await pair.totalSupply();
       assert.ok(r0 * supplyBefore * 1001n >= before[0] * supply * 1000n, `krok ${i}: podíl ztratil hodnotu`);
     } else {

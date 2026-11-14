@@ -1,9 +1,9 @@
-// Dokumentace pro vývojáře. Příklady kódu se spouští v testu packages/explorer/test/docs.mjs,
-// seznam metod a voleb se v něm porovnává s kódem uzlu. Nic tady proto nesmí být psané „od oka“.
+// Developer documentation. Code examples are run in the test packages/explorer/test/docs.mjs,
+// the list of methods and options is compared with the node code there. Nothing here may be written "by eye".
 (() => {
   const L = (cs, en) => ({ cs, en });
 
-  // Hodnoty sítě se doplňují podle toho, ke kterému uzlu je explorer připojený.
+  // Network values are filled in according to the node the Explorer is connected to.
   const EXAMPLES = {
     startDev: { lang: 'bash', code: () => `npm install
 node packages/node/src/cli.js --network dev --dev-mine --miner-address 0xVASE_ADRESA` },
@@ -519,7 +519,7 @@ console.log('blok', receipt.blockNumber, 'poplatek', ethers.formatEther(receipt.
     ] },
   ];
 
-  /** Hodnoty, které se doplní do příkladů. */
+  /** Values that are filled into the examples. */
   function networkValues({ rpcBase, stats, contracts }) {
     const chainId = stats?.chainId ?? 52402;
     const address = Object.fromEntries(Object.entries(contracts).filter(([, c]) => c.address).map(([k, c]) => [k, c.address]));
@@ -531,7 +531,7 @@ console.log('blok', receipt.blockNumber, 'poplatek', ethers.formatEther(receipt.
 
   function render(ctx) {
     const { app, lang, esc, head, copyBtn, contracts, rpc, section } = ctx;
-    // Dokumentace pro vývojáře je česky a anglicky, ostatní jazyky ukazují angličtinu.
+    // The developer documentation is in Czech and English; the other languages show English.
     const pick = (v) => (typeof v === 'string' ? v : v?.[lang] ?? v?.en ?? v?.cs ?? '');
     const values = networkValues(ctx);
     const inline = (text) => esc(text)

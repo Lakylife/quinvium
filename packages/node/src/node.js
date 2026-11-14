@@ -1,4 +1,4 @@
-// Plný uzel: spojuje řetězec, frontu transakcí, síť, RPC a práci pro minery.
+// Full node: ties together the chain, the transaction queue, the network, RPC and work for miners.
 import { EventEmitter } from 'node:events';
 import { homedir, networkInterfaces } from 'node:os';
 import { join } from 'node:path';
@@ -20,11 +20,11 @@ import { L } from './lang.js';
 
 export const VERSION = 'quintium-node/2.14.1';
 const POOL_RETRY_MS = 60_000;
-const JOURNAL_MS = 30_000;       // fronta na disku, po pádu chybí nejvýš poslední půlminuta
-const REBROADCAST_MS = 60_000;   // vlastní čekající transakce znovu sousedům
+const JOURNAL_MS = 30_000;       // queue on disk; after a crash at most the last half minute is missing
+const REBROADCAST_MS = 60_000;   // own pending transactions to peers again
 
-/** Systémové kontrakty v genesis jsou stejné ve všech sítích. */
-const DEEP_REORG = 6;     // běžné větve mají jeden nebo dva bloky
+/** The system contracts in genesis are the same on all networks. */
+const DEEP_REORG = 6;     // ordinary branches have one or two blocks
 export const loadAlloc = () => predeploys;
 
 export class AetherNode extends EventEmitter {
@@ -44,19 +44,19 @@ export class AetherNode extends EventEmitter {
     this.dataDir = dataDir;
     this.chain = await Chain.open({ network, dataDir, alloc: o.alloc ?? loadAlloc(), now: o.now, powDir: o.powDir });
     this.mempool = new Mempool(this.chain);
-    // Čekající transakce přežijí restart i aktualizaci programu, peněženky by jinak čekaly na transakci, kterou uzel zapomněl.
+    // Pending transactions survive a restart and a program update; otherwise wallets would wait for a transaction the node forgot.
     if (dataDir !== ':memory:') {
       this.journal = join(dataDir, 'mempool.bin');
       const restored = await this.mempool.restore(this.journal);
       if (restored) this.log(L(`Fronta: načteno ${restored} čekajících transakcí z doby před restartem`, `Queue: loaded ${restored} pending transactions from before the restart`));
     }
     this.chain.backfillIndex().catch((e) => this.log(`${L('Rejstřík Exploreru', 'Explorer index')}: ${e.message}`));
-    // AETHER_NO_SEEDS=1: bez vestavěných seedů, aby se testovací uzly nespojily se skutečnou sítí.
+    // AETHER_NO_SEEDS=1: without built-in seeds, so test nodes do not connect to the real network.
     const seeds = [...(process.env.AETHER_NO_SEEDS === '1' ? [] : network.seeds), ...(o.seeds ?? [])];
     this.network = new Network({
       chain: this.chain, mempool: this.mempool, port: o.p2pPort ?? network.ports.p2p, host: o.p2pHost ?? '0.0.0.0', seeds,
       allowPrivate: o.allowPrivate ?? false, lan: o.lan ?? false, agent: VERSION, log: o.verbose ? this.log : () => {},
-      // Trvalý klíč uzlu ve složce dat. Mainnet přijímá jen uzly s podepsanou identitou, testnet i starší verze.
+      // Persistent node key in the data folder. Mainnet accepts only nodes with a signed identity; testnet also older versions.
       identity: NodeIdentity.load(dataDir === ':memory:' ? null : join(dataDir, 'node.key')),
       requireIdentity: o.requireIdentity ?? network.name === 'mainnet',
     });
@@ -67,7 +67,7 @@ export class AetherNode extends EventEmitter {
       host: o.rpcHost ?? '127.0.0.1', port: o.rpcPort ?? network.ports.rpc, staticDir: o.staticDir ?? null, rateLimit: o.rateLimit ?? 0, trustProxy: o.trustProxy ?? false, publicMode: !!o.publicAccess, publicRateLimit: o.publicRateLimit, log: this.log,
     });
     this.stratum = new StratumServer({ chain: this.chain, work: this.work, host: o.stratumHost ?? '127.0.0.1', port: o.stratumPort ?? network.ports.stratum, maxSessions: o.stratumSessions, maxSessionsPerIp: o.stratumSessionsPerIp, localOnlyWithoutPool: !!o.publicAccess, log: this.log });
-    // Starý software si uživatel jinak nevšimne: uzel jen ztrácí spojení se sítí.
+    // Otherwise the user would not notice old software: the node just keeps losing its connection to the network.
     let warned = 0;
     this.network.on('incompatible', (peer) => {
       if (Date.now() - warned < 3_600_000) return;
@@ -78,7 +78,7 @@ export class AetherNode extends EventEmitter {
     await this.rpc.start();
     await this.stratum.start();
     if (o.pool) await this._configuredPool();
-    // Přístup z internetu: router otevře porty RPC a sítě (u poolu i Stratum). Hledání routeru nesmí zdržet start uzlu.
+    // Access from the internet: the router opens the RPC and network ports (for a pool also Stratum). Finding the router must not delay the node's start.
     if (o.publicAccess) {
       const ports = [{ port: this.rpc.port, name: 'RPC' }, { port: this.network.port, name: 'P2P' }];
       if (o.pool) ports.push({ port: this.stratum.port, name: 'Stratum' });
@@ -102,7 +102,7 @@ export class AetherNode extends EventEmitter {
     return this;
   }
 
-  /** Špatná adresa poolu nebo síť před forkem nesmí vypnout celý uzel. Zkusí se to znovu, až se situace změní. */
+  /** A wrong pool address or a network before the fork must not switch off the whole node. It is retried when the situation changes. */
   async _configuredPool() {
     const o = this.opts;
     try {
@@ -114,7 +114,7 @@ export class AetherNode extends EventEmitter {
     }
   }
 
-  /** Přijetí transakce od uzlu samotného, stejná cesta jako z RPC. */
+  /** Accepting a transaction from the node itself, the same path as from RPC. */
   async sendTx(tx) {
     await this.mempool.add(tx, { local: true });
     this.network?.broadcastTxs([tx]);
@@ -122,14 +122,14 @@ export class AetherNode extends EventEmitter {
     return tx;
   }
 
-  /** Vlastní transakce, které čekají přes půl minuty, jdou sousedům znovu. Kdo je už má, jen je přeskočí. */
+  /** Own transactions pending for over half a minute are sent to peers again. Whoever has them already just skips them. */
   rebroadcast() {
     const txs = this.mempool.local(REBROADCAST_MS / 2);
     if (txs.length) this.network?.broadcastTxs(txs);
     return txs.length;
   }
 
-  /** Spustí server poolu. Stratum i RPC pak rozdávají práci pro kontrakt poolu. */
+  /** Starts the pool server. Stratum and RPC then hand out work for the pool contract. */
   async startPool(address, key, options = {}) {
     const head = () => this.chain.head;
     const call = async (params) => (this.vm ? this.vm.run('call', head(), params) : toHex(await ethCall(this.chain, head(), params)));
@@ -144,11 +144,11 @@ export class AetherNode extends EventEmitter {
     return pool;
   }
 
-  /** Adresy RPC pro peněženky: tento počítač, místní síť a internet. Vidí je i Explorer na stránce Síť. */
+  /** RPC addresses for wallets: this computer, the local network and the internet. The Explorer shows them on the Network page too. */
   endpoints() {
     const port = this.rpc.port;
     const open = ['0.0.0.0', '::'].includes(this.rpc.host);
-    // 169.254 je automatická adresa bez sítě, peněženka ji nepoužije.
+    // 169.254 is an automatic address without a network; the wallet does not use it.
     const lan = open ? Object.values(networkInterfaces()).flat().filter((a) => a.family === 'IPv4' && !a.internal && !isPublicIPv4(a.address) && !a.address.startsWith('169.254.')).map((a) => a.address) : [];
     const access = this.publicAccess?.info() ?? null;
     const host = access?.host ?? null;

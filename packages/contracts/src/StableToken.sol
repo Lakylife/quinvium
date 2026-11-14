@@ -6,9 +6,9 @@ import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20P
 import {ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
-/// @title Stablecoin vydavatele na síti Aether
-/// @notice Výbava, kterou vydavatelé regulovaných stablecoinů požadují: limity pro razení po jednotlivých
-/// rolích, zastavení převodů, blokace adres a podpisy bez gasu (EIP-2612). Krytí a odpovědnost nese vydavatel, síť ho nezaručuje.
+/// @title An issuer's stablecoin on Quinvium
+/// @notice The features issuers of regulated stablecoins require: per-minter minting limits
+/// roles, pausing transfers, blocking addresses and gasless signatures (EIP-2612). The issuer bears backing and responsibility; the network does not guarantee it.
 contract StableToken is ERC20, ERC20Permit, ERC20Pausable, AccessControl {
     bytes32 public constant MINTER_ADMIN_ROLE = keccak256("MINTER_ADMIN_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
@@ -36,7 +36,7 @@ contract StableToken is ERC20, ERC20Permit, ERC20Pausable, AccessControl {
         return _decimals;
     }
 
-    /// @notice Kolik smí daný minter ještě vyrazit. Bez nastavení je to nula.
+    /// @notice How much the given minter may still mint. Zero unless set.
     function configureMinter(address minter, uint256 allowance) external onlyRole(MINTER_ADMIN_ROLE) {
         minterAllowance[minter] = allowance;
         emit MinterConfigured(minter, allowance);
@@ -49,7 +49,7 @@ contract StableToken is ERC20, ERC20Permit, ERC20Pausable, AccessControl {
         _mint(to, amount);
     }
 
-    /// @notice Vydavatel pálí jen z vlastních zásob, například při výplatě klientovi.
+    /// @notice The issuer burns only from its own reserves, for example when paying out to a client.
     function burn(uint256 amount) external {
         _burn(msg.sender, amount);
     }

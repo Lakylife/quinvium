@@ -1,5 +1,5 @@
-/* Peněženka: stejné barvy a tvary jako Explorer. Sekce jsou bílé plochy na šedé stránce, bez rámečků, mezi řádky tenká linka.
-   V rozšíření se řídí systémem, aplikace nastaví data-theme sama. */
+/* Wallet: the same colours and shapes as the Explorer. Sections are white surfaces on a grey page, without frames, with a thin line between rows.
+   In the extension it follows the system; the app sets data-theme itself. */
 :root {
   --bg: #0b1016; --side: #0f151c; --panel: #131a23; --card: #0f151c; --card-2: #212b37; --card-3: #2b3644; --line: #1c242e; --float: #1c2530; --shadow: none; --text: #e9eef4; --dim: #a5b4c3;
   --accent: #4da3f0; --accent-fill: #2f86d8; --accent-ink: #ffffff; --accent-soft: #15283b;
@@ -59,7 +59,7 @@ label { display: flex; flex-direction: column; gap: 4px; color: var(--dim); font
 form { display: flex; flex-direction: column; gap: 12px; }
 form button[type=submit] { width: 100%; }
 
-/* Horní lišta peněženky */
+/* Wallet top bar */
 .wallet-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .account-chip { display: flex; min-width: 0; align-items: center; gap: 9px; margin-left: -8px; padding: 6px 8px; background: none; text-align: left; }
 .account-chip:hover { background: var(--card-2); }
@@ -74,7 +74,7 @@ button.icon:hover { background: var(--card-2); color: var(--text); }
 .screen-head { display: flex; align-items: center; gap: 6px; margin-left: -8px; }
 .screen-head h1 { margin: 0; font-size: 22px; }
 
-/* Přehled */
+/* Overview */
 .hero { gap: 2px; padding: 16px; }
 .quick { display: grid; width: 100%; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; gap: 8px; margin-top: 14px; }
 .quick-btn { display: flex; height: 68px; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 0; border-radius: var(--radius); background: var(--card); font-size: 12.5px; font-weight: 500; }
@@ -103,7 +103,7 @@ button.icon:hover { background: var(--card-2); color: var(--text); }
 .tx-pending .dim { flex: 1; font-size: 12px; }
 .tx.dropped .tx-amount { color: var(--dim); text-decoration: line-through; }
 
-/* Účty */
+/* Accounts */
 .account-row { display: flex; align-items: center; gap: 4px; padding: 3px 0; border-bottom: 1px solid var(--line); }
 .account-pick { display: flex; min-width: 0; flex: 1; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius); background: none; text-align: left; }
 .account-pick:hover { background: var(--card); }
@@ -116,7 +116,7 @@ button.icon:hover { background: var(--card-2); color: var(--text); }
 .stack { display: grid; gap: 8px; }
 .stack button { display: flex; align-items: center; justify-content: center; gap: 8px; }
 
-/* Vklad a odeslání */
+/* Deposit and send */
 .qr-card { align-items: center; gap: 12px; padding: 20px 16px; text-align: center; }
 .qr { width: 216px; height: 216px; padding: 8px; border-radius: var(--radius); background: #fff; }
 .qr svg { display: block; width: 100%; height: 100%; }
@@ -128,7 +128,7 @@ button.icon:hover { background: var(--card-2); color: var(--text); }
 .done-mark { display: grid; width: 56px; height: 56px; place-items: center; border-radius: 50%; background: var(--panel); color: var(--ok); }
 .done-mark svg { width: 34px; height: 34px; }
 
-/* Schvalování a poplatky */
+/* Approvals and fees */
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 13px; }
 .kv b { font-weight: 500; color: var(--dim); }
 .kv span { text-align: right; word-break: break-all; }
@@ -145,7 +145,7 @@ button.icon:hover { background: var(--card-2); color: var(--text); }
 .quiet-links { justify-content: center; gap: 20px; }
 .or-line { margin: 10px 0 0; color: var(--dim); font-size: 12.5px; text-align: center; }
 
-/* Řádky historie a aktiv jdou rozkliknout do detailu. */
+/* History and asset rows can be opened into details. */
 .tx-open, .asset-open { cursor: pointer; }
 .tx-open:hover .tx-main b, .asset-open:hover .asset-name b { color: var(--accent, var(--text)); }
 .tx-open:focus-visible, .asset-open:focus-visible { outline: 2px solid var(--accent, currentColor); outline-offset: 2px; border-radius: 6px; }
@@ -155,11 +155,11 @@ button.icon:hover { background: var(--card-2); color: var(--text); }
 .hero .dim.ok { color: var(--ok); }
 .hero .dim.warn { color: var(--warn); }
 
-/* Detail: karty pod sebou se stejnou mezerou jako na hlavní obrazovce. */
+/* Details: cards one below another with the same gap as on the main screen. */
 .wallet-detail { display: flex; flex-direction: column; gap: 12px; }
 .hero .balance.in { color: var(--ok); }
 .hero .balance + .balance { font-size: 24px; }
-/* Aktivita po dnech: ikona druhu, popis s protistranou a časem, vpravo částky se znaménkem. */
+/* Activity by day: kind icon, description with counterparty and time, signed amounts on the right. */
 .act-day { margin: 12px 2px 6px; }
 #view > .act-day:first-child { margin-top: 0; }
 .tx.act { gap: 10px; }

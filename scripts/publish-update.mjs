@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Vydání aktualizace na dálku: sestaví aplikaci pro Windows, zabalí její části a podepíše je.
-// Použití: node scripts/publish-update.mjs 2.0.2 "co je nového" [--with-exe]
-// --with-exe přibalí i Aether.exe. Rozbalí ho jen aplikace od verze 2.2.0, starší by takový balíček odmítla.
-// Soukromý klíč je v ~/.aether/aktualizace-klic.pem, nikam se nekopíruje a složka aktualizací ho neobsahuje.
+// Publishing a remote update: builds the app for Windows, packs its parts and signs them.
+// Usage: node scripts/publish-update.mjs 2.0.2 "what's new" [--with-exe]
+// --with-exe also bundles Aether.exe. Only apps from version 2.2.0 unpack it; older ones would reject such a package.
+// The private key is kept by the publisher outside the repository, is never copied and the update folder does not contain it.
 import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -31,7 +31,7 @@ run(process.execPath, ['scripts/prepare.mjs', 'win'], desktop);
 run('npx', ['electron-builder', '--win', 'dir', '--x64', '--publish', 'never'], desktop);
 
 const unpacked = join(desktop, 'release', 'win-unpacked');
-// Aplikace přijme jakýkoli název z podepsaného manifestu, starší verze se tedy aktualizují i na nový název.
+// The app accepts any name from a signed manifest, so older versions also update to the new name.
 const file = `quintium-${version}.zip`;
 const zip = join(unpacked, file);
 rmSync(zip, { force: true });
@@ -41,7 +41,7 @@ mkdirSync(out, { recursive: true });
 copyFileSync(zip, join(out, file));
 rmSync(zip, { force: true });
 const sha256 = crypto.createHash('sha256').update(readFileSync(join(out, file))).digest('hex');
-// Platforma je v podpisu, aby se balíček pro Windows nedal podstrčit jiné platformě. Aplikace od 2.11.1 bez ní aktualizaci odmítne.
+// The platform is in the signature so a Windows package cannot be fed to another platform. Apps from 2.11.1 reject an update without it.
 const manifest = JSON.stringify({ version, file, sha256, size: statSync(join(out, file)).size, platform: 'win32', notes });
 writeFileSync(join(out, 'manifest.sig'), crypto.sign(null, Buffer.from(manifest), key).toString('base64'));
 writeFileSync(join(out, 'manifest.json'), manifest);

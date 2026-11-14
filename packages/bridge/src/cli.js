@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Spuštění validátora mostu: node packages/bridge/src/cli.js <nastavení.json>
-// Vzor nastavení je v config.example.json. Klíče jsou v samostatných souborech s právy jen pro vlastníka.
+// Starting a bridge validator: node packages/bridge/src/cli.js <settings.json>
+// An example configuration is in config.example.json. Keys are in separate files readable only by the owner.
 import { readFileSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { ethers } from 'ethers';

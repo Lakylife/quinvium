@@ -1,4 +1,4 @@
-// Doporučené poplatky: musí sedět v klidné i přetížené síti, při málo i hodně těžařích.
+// Recommended fees: must be right in a quiet and in an overloaded network, with few and with many miners.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Address, bytesToHex } from '@ethereumjs/util';
@@ -10,7 +10,7 @@ import { mine, newChain, transfer, wallet } from './helpers/chain.js';
 const block = (ratio, tips, time) => ({ ratio, time, txs: tips.map((t) => ({ tip: BigInt(t) * GWEI, gas: 21000n })) });
 const series = (ratio, tips, n = 20, spacing = 15) => Array.from({ length: n }, (_, i) => block(ratio, tips, i * spacing));
 
-test('klidná síť: stačí minimum a vše projde v dalším bloku', () => {
+test('a quiet network: the minimum is enough and everything passes in the next block', () => {
   const e = estimateFees({ blocks: series(0.1, [50, 60]), baseFee: GWEI });
   assert.equal(e.congested, false);
   assert.equal(e.tiers.slow.tip, GWEI / 10n);
@@ -19,7 +19,7 @@ test('klidná síť: stačí minimum a vše projde v dalším bloku', () => {
   assert.equal(e.tiers.slow.blocks, 1);
 });
 
-test('vytížená síť: úrovně vycházejí ze skutečně placených dýšek', () => {
+test('busy network: the levels are based on tips actually paid', () => {
   const tips = [];
   for (let i = 1; i <= 100; i++) tips.push(i);
   const e = estimateFees({ blocks: series(0.9, tips), baseFee: 10n * GWEI });
@@ -31,19 +31,19 @@ test('vytížená síť: úrovně vycházejí ze skutečně placených dýšek',
   assert.ok(e.tiers.slow.maxFee < e.tiers.normal.maxFee && e.tiers.normal.maxFee < e.tiers.fast.maxFee);
 });
 
-test('úrovně jdou vždy vzestupně a extrémní dýško má strop', () => {
+test('levels always ascend and an extreme tip has a cap', () => {
   const e = estimateFees({ blocks: series(0.9, [1, 100000]), baseFee: GWEI });
   assert.ok(e.tiers.slow.tip <= e.tiers.normal.tip && e.tiers.normal.tip <= e.tiers.fast.tip);
   assert.ok(e.tiers.fast.tip <= 500n * GWEI);
 });
 
-test('jedna transakce s velkým gasem má větší váhu než mnoho malých', () => {
+test('one transaction with a lot of gas weighs more than many small ones', () => {
   const big = { ratio: 0.9, time: 0, txs: [{ tip: 40n * GWEI, gas: 9_000_000n }, { tip: GWEI * 2n, gas: 21000n }, { tip: GWEI * 3n, gas: 21000n }] };
   const e = estimateFees({ blocks: [big, { ...big, time: 15 }], baseFee: GWEI });
   assert.equal(e.tiers.normal.tip, 40n * GWEI);
 });
 
-test('odhad čekání se řídí skutečnou dobou bloku, tedy počtem těžařů', () => {
+test('the waiting estimate follows the real block time, i.e. the number of miners', () => {
   const few = estimateFees({ blocks: series(0.9, [5], 20, 120), baseFee: GWEI });
   const many = estimateFees({ blocks: series(0.9, [5], 20, 10), baseFee: GWEI });
   assert.equal(few.blockTime, 120);
@@ -52,14 +52,14 @@ test('odhad čekání se řídí skutečnou dobou bloku, tedy počtem těžařů
   assert.equal(many.tiers.fast.seconds, 10);
 });
 
-test('náhlý nápor se pozná hned, ne až po průměru celého okna', () => {
+test('a sudden surge is detected immediately, not only after the average of the whole window', () => {
   const blocks = [...series(0.02, [1], 16), ...series(1, [3], 4).map((b, i) => ({ ...b, time: (16 + i) * 15 }))];
   const e = estimateFees({ blocks, baseFee: GWEI });
   assert.equal(e.congested, true);
   assert.equal(e.tiers.normal.tip, 3n * GWEI);
 });
 
-test('fronta delší než blok: doporučení ji předběhne dřív, než se bloky zaplní', () => {
+test('a queue longer than a block: the recommendation gets ahead of it before blocks fill up', () => {
   const pending = Array.from({ length: 1800 }, () => ({ tip: GWEI, gas: 21000n }));
   const e = estimateFees({ blocks: series(0.01, [1]), baseFee: GWEI, pending, capacity: 10_000_000n });
   assert.equal(e.congested, true);
@@ -69,14 +69,14 @@ test('fronta delší než blok: doporučení ji předběhne dřív, než se blok
   assert.equal(e.tiers.slow.blocks, 5);
 });
 
-test('fronta kratší než blok na nic netlačí a zaplacené dýško v ní nevadí', () => {
+test('a queue shorter than a block pushes nothing and a paid tip in it does not matter', () => {
   const pending = Array.from({ length: 100 }, () => ({ tip: 50n * GWEI, gas: 21000n }));
   const e = estimateFees({ blocks: series(0.01, [1]), baseFee: GWEI, pending, capacity: 10_000_000n });
   assert.equal(e.congested, false);
   assert.equal(e.tiers.normal.tip, GWEI);
 });
 
-test('dvě vrstvy fronty: rychlá úroveň platí horní, běžná spodní', () => {
+test('two queue levels: the fast level pays the upper bound, the normal one the lower', () => {
   const pending = [
     ...Array.from({ length: 500 }, () => ({ tip: 10n * GWEI, gas: 21000n })),
     ...Array.from({ length: 500 }, () => ({ tip: 3n * GWEI, gas: 21000n })),
@@ -86,13 +86,13 @@ test('dvě vrstvy fronty: rychlá úroveň platí horní, běžná spodní', () 
   assert.ok(e.tiers.normal.tip > 3n * GWEI && e.tiers.normal.tip < 10n * GWEI);
 });
 
-test('prázdný řetězec dá rozumné výchozí hodnoty', () => {
+test('an empty chain gives sensible defaults', () => {
   const e = estimateFees({ blocks: [], baseFee: GWEI });
   assert.equal(e.tiers.normal.tip, GWEI);
   assert.equal(e.blockTime, 15);
 });
 
-test('skutečný mempool: čekající platby zvednou doporučení ještě před dalším blokem', async () => {
+test('real mempool: pending payments raise the recommendation even before the next block', async () => {
   const senders = Array.from({ length: 30 }, () => wallet());
   const alloc = Object.fromEntries(senders.map((w) => [bytesToHex(w.address), { balance: 10n * WEI }]));
   const c = await newChain({ alloc });
@@ -108,7 +108,7 @@ test('skutečný mempool: čekající platby zvednou doporučení ještě před 
   assert.equal(BigInt(methods.eth_maxPriorityFeePerGas()), BigInt(busy.tiers.normal.tip));
 });
 
-test('skutečný řetězec: plné bloky zdraží doporučení, prázdné ho vrátí zpět', async () => {
+test('real chain: full blocks raise the recommendation, empty ones bring it back', async () => {
   const senders = Array.from({ length: 300 }, () => wallet());
   const alloc = Object.fromEntries(senders.map((w) => [bytesToHex(w.address), { balance: 10n * WEI }]));
   const c = await newChain({ alloc });
@@ -119,7 +119,7 @@ test('skutečný řetězec: plné bloky zdraží doporučení, prázdné ho vrá
   assert.equal(quiet.congested, false);
   assert.equal(BigInt(methods.eth_maxPriorityFeePerGas()), GWEI);
 
-  // Bloky plné z 60 % s dýškem 7 gwei. Základní poplatek roste, doporučení ho následuje.
+  // Blocks 60 % full with a 7 gwei tip. The base fee rises and the recommendation follows it.
   let used = 0;
   for (let round = 0; round < 6; round++) {
     const txs = [];

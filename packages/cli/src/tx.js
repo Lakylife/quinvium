@@ -1,4 +1,4 @@
-// Odeslání transakce: odhad, přehled, potvrzení, podpis a čekání na blok. Stejný postup pro všechny příkazy.
+// Sending a transaction: estimate, overview, confirmation, signature and waiting for a block. The same procedure for all commands.
 import { ethers } from 'ethers';
 import { CliError, TX_WAIT_MS, ask, gwei, pairs, reason, units } from './context.js';
 import { L } from './i18n.js';
@@ -13,7 +13,7 @@ export async function confirm(ctx, text) {
   if (!/^(a|ano|y|yes)$/i.test(answer)) throw new CliError(L('Zrušeno.', 'Cancelled.'));
 }
 
-/** Heslo se chce až po přehledu a jen jednou, i když příkaz posílá víc transakcí. */
+/** The password is asked only after the overview and only once, even when the command sends several transactions. */
 export async function signer(ctx) {
   ctx.signer ??= (await unlock(ctx)).connect(await ctx.connect());
   return ctx.signer;
@@ -23,8 +23,8 @@ const waitText = (seconds) => (seconds < 90 ? L(`asi ${seconds} s`, `about ${sec
 
 /**
  * @param {object} request pole transakce: to, data, value
- * @param {[string, string][]} lines co se uživateli ukáže před potvrzením
- * @param {{confirmed?: boolean, label?: string}} [o] confirmed: příkaz už se zeptal sám
+ * @param {[string, string][]} lines what the user is shown before confirming
+ * @param {{confirmed?: boolean, label?: string}} [o] confirmed: the command has already asked itself
  * @returns {Promise<{hash: string, block?: number, gasUsed?: string, pending?: boolean}>}
  */
 export async function submit(ctx, request, lines = [], o = {}) {
@@ -63,7 +63,7 @@ export async function submit(ctx, request, lines = [], o = {}) {
   }
 }
 
-/** Povolení přesně na tuto částku, ne napořád: kontrakt pak nesmí sáhnout na zbytek. */
+/** Allowance for exactly this amount, not forever: the contract then may not touch the rest. */
 export async function approve(ctx, token, spender, amount) {
   if (token.native) return;
   const from = walletAddress(ctx);

@@ -1,5 +1,5 @@
-// Všechny aplikace v exploreru: skutečný Chromium proti skutečnému uzlu.
-// Peněženka je tu nahrazená testovací, sama peněženka má vlastní test v packages/extension/test/e2e.mjs.
+// All apps in the Explorer: real Chromium against a real node.
+// The wallet is replaced here by a test one; the wallet itself has its own test in packages/extension/test/e2e.mjs.
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
@@ -55,7 +55,7 @@ let browser;
 try {
   await until(async () => (await provider.getBalance(miner.address)) >= 32n * 10n ** 18n, 120000);
 
-  // Peníze pro ostatní účastníky od minera.
+  // Money for the other participants from the miner.
   let nonce = await provider.getTransactionCount(miner.address);
   const funding = [];
   for (const w of [buyer, seller, arbiter]) {
@@ -68,7 +68,7 @@ try {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
 
-  // Testovací peněženka: chyby předává stránce se stejnými poli jako skutečná, včetně kódu chyby kontraktu.
+  // Test wallet: passes errors to the page with the same fields as the real one, including the contract error code.
   const forward = async (method, params) => {
     const r = await fetch(RPC, { method: 'POST', body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params: params ?? [] }) });
     return r.json();
@@ -108,7 +108,7 @@ try {
   const output = (c) => c.locator('.tool-output');
   const clear = (c) => output(c).evaluate((n) => { n.className = 'tool-output'; n.textContent = ''; });
   const value = (c, name) => c.locator(`input[name="${name}"]`).inputValue();
-  /** Zvolí úkol aplikace, vyplní jeho pole, spustí ho a počká na konečný výsledek. */
+  /** Chooses an app task, fills in its fields, runs it and waits for the final result. */
   const act = async (c, task, values = {}, expected = 'good') => {
     await clear(c);
     await c.locator(`[data-task="${task}"]`).click();
@@ -129,7 +129,7 @@ try {
     return output(c).textContent();
   };
 
-  await step('Notář: zápis, ověření, ochrana proti opakování, odvolání', async () => {
+  await step('Notary: recording, verification, replay protection, revocation', async () => {
     current = buyer;
     const c = card('Notář');
     assert.equal(await c.locator('[data-task].active').textContent(), 'Zapsat', 'první úkol je zápis');
@@ -146,7 +146,7 @@ try {
     assert.match(await read(c), /Odvoláno/);
   });
 
-  await step('Certifikáty: registrace, vydání, ověření podle vydavatele, odvolání', async () => {
+  await step('Credentials: registration, issuing, verification by issuer, revocation', async () => {
     current = arbiter;
     const c = card('Certifikáty');
     await fails(c, 'write', { id: 'DIPLOM-2026-1', subject: buyer.address, schema: 'Bakalář' }, /zaregistrujte jako vydavatel/);
@@ -162,7 +162,7 @@ try {
     assert.match(await read(c, { issuer: arbiter.address }), /Odvolaný/);
   });
 
-  await step('Dodavatelský řetězec: nová položka, krok, předání dvěma stranami, uzavření', async () => {
+  await step('Supply chain: new item, step, two-sided hand-over, closing', async () => {
     current = seller;
     const c = card('Dodavatelský řetězec');
     const done = await act(c, 'write', { sku: 'KAVA-001' });
@@ -180,7 +180,7 @@ try {
     assert.match(shown, /Uzavřená/);
   });
 
-  await step('Úschova: založení, uvolnění a výběr prodávajícím', async () => {
+  await step('Escrow: creation, release and withdrawal by the seller', async () => {
     current = buyer;
     const c = card('Úschova plateb');
     await act(c, 'write', { seller: seller.address, arbiter: arbiter.address, amount: '0,5', days: 14 });
@@ -197,7 +197,7 @@ try {
     await fails(c, 'withdraw', {}, /Nemáte co vybrat/);
   });
 
-  await step('Úschova: spor, rozhodnutí rozhodce, ochrana lhůty bez rozhodce', async () => {
+  await step("Escrow: dispute, the arbiter's decision, deadline protection without an arbiter", async () => {
     current = buyer;
     const c = card('Úschova plateb');
     const first = Number(await value(c, 'id'));
@@ -214,7 +214,7 @@ try {
     await act(c, 'withdraw');
   });
 
-  await step('Hlasování: založení, hlas, výsledek, dvojí hlas je odmítnut', async () => {
+  await step('Polls: creation, vote, result, a double vote is rejected', async () => {
     current = buyer;
     const c = card('Hlasování');
     await act(c, 'write', { title: 'Nový park?', choices: 'Ano, Ne', days: 7 });
@@ -228,7 +228,7 @@ try {
     assert.match(shown, /Probíhá/);
   });
 
-  await step('Jména: registrace ve dvou krocích, obsazené jméno, změna cíle a prodloužení', async () => {
+  await step('Names: two-step registration, a taken name, changing the target and renewal', async () => {
     current = buyer;
     const c = card('Jména adres');
     assert.match(await read(c, { name: 'novak-brno' }), /Volné/);
@@ -242,7 +242,7 @@ try {
     assert.match(await read(c), new RegExp(arbiter.address));
   });
 
-  await step('Vlastní token: vytvoření a převod', async () => {
+  await step('Custom token: creation and transfer', async () => {
     current = buyer;
     const c = card('Vlastní token');
     const done = await act(c, 'write', { name: 'Body Brno', symbol: 'BDY', supply: '1 000' });
@@ -256,7 +256,7 @@ try {
     assert.equal(await t.balanceOf(seller.address), ethers.parseEther('25'));
   });
 
-  await step('Sbírka NFT: vytvoření a ražba', async () => {
+  await step('NFT collection: creation and minting', async () => {
     current = buyer;
     const c = card('Sbírka NFT');
     await act(c, 'write', { name: 'Vstupenky', symbol: 'VST' });
@@ -270,7 +270,7 @@ try {
     await fails(c, 'mint', {}, /jen tvůrce/);
   });
 
-  await step('Více podpisů: založení, návrh, schválení dvěma, provedení platby', async () => {
+  await step('Multisig: creation, proposal, approval by two, executing the payment', async () => {
     current = buyer;
     const c = card('Peněženka s více podpisy');
     await act(c, 'write', { owners: `${buyer.address}, ${seller.address}`, threshold: 2 });
@@ -289,8 +289,8 @@ try {
     assert.match(await read(c), /Provedeno/);
   });
 
-  await step('Aplikace v angličtině: popisky, úkoly i výsledek bez českých slov', async () => {
-    // Přepnutí jazyka v menu stránku překreslí na místě. Načtení stránky by vrátilo češtinu z přípravy testu.
+  await step('App in English: labels, tasks and result without Czech words', async () => {
+    // Switching the language in the menu redraws the page in place. Reloading would bring back Czech from the test setup.
     await page.click('#lang-btn');
     await page.click('[data-lang=en]');
     const c = card('Notary');
@@ -300,12 +300,12 @@ try {
     const shown = await read(c, { hash: 'Kupní smlouva 2026', author: buyer.address });
     assert.match(shown, /Status\s*Revoked/);
     assert.match(shown, /Recorded by/);
-    // Výsledek ukazuje i zapsanou poznámku uživatele, proto se kontrolují jen popisky, úkoly a nápověda.
+    // The result also shows the user's note, so only labels, tasks and help are checked.
     const labels = (await c.locator('summary, .tool-tasks, .tool-hint, form').allInnerTexts()).join(' ');
     assert.doesNotMatch(labels, /[ěščřžýáíéůú]/i, `v anglické kartě nejsou česká slova: ${labels}`);
   });
 
-  await step('Stránka nehlásí žádnou chybu JavaScriptu', async () => {
+  await step('The page reports no JavaScript error', async () => {
     assert.deepEqual(errors, []);
   });
 } finally {

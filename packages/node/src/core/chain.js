@@ -1,4 +1,4 @@
-// Řetězec: ověřování bloků, výběr větve s největší prací, reorganizace a indexy.
+// Chain: block verification, choosing the branch with the most work, reorganisations and indexes.
 import { EventEmitter } from 'node:events';
 import { join } from 'node:path';
 import { RLP } from '@ethereumjs/rlp';
@@ -18,23 +18,23 @@ import { blockReceipts, effectivePrice } from '../rpc/format.js';
 
 const HEADER_CACHE = 2048;
 const INDEX_BATCH = 200;
-const BUILD_BUDGET_MS = 800;   // déle miner nečeká, šablona vznikne z toho, co se do té doby stihlo
+const BUILD_BUDGET_MS = 800;   // the miner waits no longer; the template is built from what was ready by then
 const utf8 = new TextEncoder();
 const min = (a, b) => (a < b ? a : b);
 
-/** Dočasná chyba: blok může být platný později, peera za něj netrestáme. */
+/** A temporary error: the block may be valid later; we do not penalise the peer for it. */
 export class TemporaryBlockError extends Error {}
 
 /**
- * Blok nebo přepis za hranicí finality. Poctivý uzel z druhé půlky rozdělené sítě takový blok posílá v dobré víře,
- * proto to není důvod k zablokování.
+ * A block or rewrite beyond the finality boundary. An honest node from the other half of a split network sends such a block in good faith,
+ * so it is not a reason for a block.
  */
 export class FinalityError extends Error {}
 
 /**
- * Přepis hlubší než hranice finality projde jen s výrazně větší prací. Rozdělená síť se tak po spojení srovná
- * a uzel, který při první synchronizaci dostal levnou falešnou větev, se z ní dostane. Útočník musí mít
- * dvojnásobek práce celé sítě od místa rozdělení.
+ * A rewrite deeper than the finality boundary succeeds only with much more work. A split network thus converges after reconnecting
+ * and a node that got a cheap fake branch on its first sync escapes it. The attacker must have
+ * twice the work of the whole network since the split.
  */
 export const DEEP_REORG_WORK_RATIO = 2n;
 const DEEP_PERMIT_MS = 30 * 60_000;
@@ -50,7 +50,7 @@ export class Chain extends EventEmitter {
     this.commonAt = this.commonAt.bind(this);
   }
 
-  /** Konfigurace EVM platná pro blok dané výšky. */
+  /** EVM configuration valid for a block at the given height. */
   commonAt(number) {
     const i = forkIndex(this.network, number);
     let c = this.commons.get(i);
@@ -63,25 +63,25 @@ export class Chain extends EventEmitter {
 
   /**
    * @param {object} o
-   * @param {object} o.network parametry sítě z params.js
-   * @param {string} o.dataDir složka dat, nebo ':memory:' pro testy
-   * @param {string} [o.powDir] složka s cache Ethash
-   * @param {object} [o.alloc] předinstalované kontrakty
-   * @param {() => number} [o.now] hodiny v sekundách
+   * @param {object} o.network network parameters from params.js
+   * @param {string} o.dataDir data folder, or ':memory:' for tests
+   * @param {string} [o.powDir] folder with the Ethash cache
+   * @param {object} [o.alloc] predeployed contracts
+   * @param {() => number} [o.now] clock in seconds
    */
   static async open({ network, dataDir, powDir, alloc = {}, now, gasTarget }) {
     const store = new Store(dataDir === ':memory:' ? ':memory:' : join(dataDir, 'chain.db'));
     const common = makeCommon(network);
     const pow = new Pow(powDir ?? (dataDir === ':memory:' ? null : join(dataDir, 'ethash')));
-    // Odmítnutí platí jen pro tento běh programu. Blok, který stará verze neuměla (třeba první blok po forku),
-    // by jinak nová verze odmítala dál a uzel by po aktualizaci zůstal navždy odříznutý od sítě.
+    // A rejection applies only to this run of the program. A block the old version could not handle (for example the first block after a fork)
+    // the new version would keep rejecting it and the node would stay cut off from the network forever after the update.
     store.clearBad();
     const chain = new Chain({
       network, store, common, pow, alloc, dataDir,
       now: now ?? (() => Math.floor(Date.now() / 1000)),
       gasTarget: gasTarget ?? C.genesisGasLimit,
       checkpoints: new Map((network.checkpoints ?? []).map((c) => [c.number, fromHex(c.hash)])),
-      reorgs: { count: 0, deepest: 0, refused: 0 },   // pro dohled: hluboký přepis je první známka útoku
+      reorgs: { count: 0, deepest: 0, refused: 0 },   // for monitoring: a deep rewrite is the first sign of an attack
     });
     await chain._init();
     return chain;
@@ -114,9 +114,9 @@ export class Chain extends EventEmitter {
   }
 
   /**
-   * Povolí přijímat bloky větve, která se odpojila hlouběji než hranice finality. Volá ji síť, až ověří hlavičky
-   * celé větve a ty nesou aspoň dvojnásobek práce. Přepis pak stejně projde jen při splnění poměru práce.
-   * @param {Header} ancestor společný předek na kanonickém řetězci
+   * Allows accepting blocks of a branch that diverged deeper than the finality boundary. The network calls it after verifying the headers
+   * of whole branches, and they carry at least twice the work. The rewrite then still passes only when the work ratio is met.
+   * @param {Header} ancestor common ancestor on the canonical chain
    */
   permitDeepFork(ancestor, ms = DEEP_PERMIT_MS) {
     this.deepPermit = { hash: ancestor.hash(), number: ancestor.number, until: Date.now() + ms };
@@ -127,7 +127,7 @@ export class Chain extends EventEmitter {
     return !!p && p.until > Date.now() && number >= p.number;
   }
 
-  /** Nejvyšší kontrolní bod, který už řetězec prošel. Pod ním je historie pevná. */
+  /** The highest checkpoint the chain has already passed. History below it is fixed. */
   passedCheckpoint() {
     let top = -1n;
     for (const number of this.checkpoints.keys()) if (number <= this.head.number && number > top) top = number;
@@ -138,7 +138,7 @@ export class Chain extends EventEmitter {
     return this._exclusive(async () => this.store.close());
   }
 
-  /** Bloky se zpracovávají po jednom. */
+  /** Blocks are processed one at a time. */
   _exclusive(fn) {
     const run = this.queue.then(fn, fn);
     this.queue = run.catch(() => {});
@@ -175,7 +175,7 @@ export class Chain extends EventEmitter {
     return hash ? this.getBlock(hash) : null;
   }
 
-  /** Počet transakcí bez dekódování každé z nich. */
+  /** Number of transactions without decoding each of them. */
   txCount(hash) {
     const r = this.store.blockGet(hash);
     return r ? RLP.decode(r.body).length : 0;
@@ -202,7 +202,7 @@ export class Chain extends EventEmitter {
     }, this.network);
   }
 
-  /** Hash předka na větvi končící rodičem, pro opcode BLOCKHASH. */
+  /** Hash of the ancestor on the branch ending with the parent, for the BLOCKHASH opcode. */
   _ancestorLookup(parent) {
     return (n) => {
       if (n > parent.number) return new Uint8Array(32);
@@ -217,7 +217,7 @@ export class Chain extends EventEmitter {
     };
   }
 
-  /** Pravidla hlavičky, která nezávisí na obsahu bloku. */
+  /** Header rules that do not depend on the block content. */
   async validateHeader(h, parent) {
     if (h.number !== parent.number + 1n) throw new InvalidBlock('špatná výška');
     if (h.timestamp <= parent.timestamp) throw new InvalidBlock('čas bloku není větší než čas rodiče');
@@ -243,7 +243,7 @@ export class Chain extends EventEmitter {
     if (!equal(txRoot, block.header.txRoot)) throw new InvalidBlock('špatný kořen transakcí');
   }
 
-  /** Přehraje transakci na jejím místě v bloku a vrátí, jak dopadla. Nic se neukládá. */
+  /** Replays the transaction at its place in the block and returns how it ended. Nothing is stored. */
   async replayTx(block, index) {
     const h = block.header;
     const parent = this.getHeader(h.parentHash);
@@ -253,7 +253,7 @@ export class Chain extends EventEmitter {
     });
   }
 
-  /** Provede blok nad stavem rodiče a porovná výsledek s hlavičkou. */
+  /** Executes the block on the parent state and compares the result with the header. */
   async _execute(block, parent) {
     const h = block.header;
     const res = await executeBlock({
@@ -268,7 +268,7 @@ export class Chain extends EventEmitter {
   }
 
   /**
-   * Přijme blok ze sítě nebo od minera.
+   * Accepts a block from the network or from a miner.
    * @returns {Promise<{status: 'known'|'orphan'|'added'|'side'|'reorg', hash: Uint8Array, depth?: number}>}
    */
   insertBlock(block) {
@@ -282,7 +282,7 @@ export class Chain extends EventEmitter {
       if (!parent) return { status: 'orphan', hash };
       if (this.store.badReason(h.parentHash)) throw new InvalidBlock('rodič je neplatný');
       if (h.number + BigInt(C.maxReorgDepth) <= this.head.number) {
-        // Hluboko pod špičkou jen větev, kterou síť předem ověřila, a jen nad kanonickým předkem nebo jinou postranní větví.
+        // Deep below the tip only a branch the network verified in advance, and only on top of the canonical ancestor or another side branch.
         const deep = this._deepPermitted(h.number - 1n)
           && (equal(h.parentHash, this.deepPermit.hash) || !this.isCanonical(h.parentHash, parent.number));
         if (!deep) throw new FinalityError('blok je pod hranicí finality');
@@ -291,9 +291,9 @@ export class Chain extends EventEmitter {
       if (fixed && !equal(fixed, hash)) throw new InvalidBlock(`blok neodpovídá kontrolnímu bodu ${h.number}`);
       if (h.number <= this.passedCheckpoint()) throw new InvalidBlock('blok je pod kontrolním bodem');
 
-      // Tady se blok neoznačuje za neplatný. Hash kryje jen hlavičku, takže útočník může k cizímu
-      // platnému bloku přidat zfalšované tělo: zápis hashe by pak uzel navždy odřízl od správného řetězce.
-      // Označit jde až blok se správným tělem a platnou prací, kterému selže provedení.
+      // The block is not marked invalid here. The hash covers only the header, so an attacker could attach
+      // a forged body to a valid block: recording the hash would cut the node off from the correct chain forever.
+      // Only a block with the correct body and valid work whose execution fails may be marked.
       await this.validateHeader(h, parent);
       await this._validateBody(block);
 
@@ -330,7 +330,7 @@ export class Chain extends EventEmitter {
     this.pow.prepareFor(h.number);
   }
 
-  /** Zapíše blok do kanonického řetězce a indexů. Volá se uvnitř databázové transakce. */
+  /** Writes a block into the canonical chain and indexes. Called inside a database transaction. */
   _connect(block, res) {
     const { store } = this;
     const h = block.header;
@@ -354,7 +354,7 @@ export class Chain extends EventEmitter {
     this._index(block, res.receipts.map((r) => ({ gasUsed: r.gasUsed, ok: !!r.receipt.status })));
   }
 
-  /** Rejstřík pro Explorer: filtry, detail adresy a grafy. Konsensus ho nečte. */
+  /** Index for the Explorer: filters, address details and charts. Consensus does not read it. */
   _index(block, receipts) {
     const { q } = this.store;
     const h = block.header;
@@ -373,8 +373,8 @@ export class Chain extends EventEmitter {
   }
 
   /**
-   * Doplní rejstřík pro bloky z dřívějších verzí uzlu. Běží po malých dávkách, aby nebrzdil síť ani těžbu.
-   * @returns {Promise<void>} hotovo, když rejstřík dohnal špičku
+   * Fills the index for blocks from earlier node versions. Runs in small batches so it does not slow the network or mining.
+   * @returns {Promise<void>} done when the index has caught up with the tip
    */
   async backfillIndex(batch = INDEX_BATCH) {
     for (;;) {
@@ -392,7 +392,7 @@ export class Chain extends EventEmitter {
     }
   }
 
-  /** Přechod na těžší větev. Stav se počítá znovu, starý řetězec zůstane, dokud vše neprojde. */
+  /** Switch to a heavier branch. The state is recomputed; the old chain stays until everything passes. */
   async _reorg(block, td) {
     const path = [];
     let cursor = block.header;
@@ -409,7 +409,7 @@ export class Chain extends EventEmitter {
         this.emit('finality-violation', { hash: block.hash(), depth });
         throw new FinalityError(`reorganizace o ${depth} bloků je za hranicí finality`);
       }
-      // Větev zůstane postranní, dokud nemá dvojnásobek práce naší větve od společného předka.
+      // The branch stays a side branch until it has twice the work of our branch since the common ancestor.
       const base = this.getTd(ancestor.hash());
       if (td - base < DEEP_REORG_WORK_RATIO * (this.headTd - base)) return { status: 'side', hash: block.hash() };
       this.emit('deep-reorg', { depth, ancestor: ancestor.number });
@@ -424,7 +424,7 @@ export class Chain extends EventEmitter {
         res = await this._execute(b, parent);
       } catch (e) {
         if (e instanceof InvalidBlock) {
-          // Neplatný je tento blok i všichni potomci na větvi.
+          // This block and all its descendants on the branch are invalid.
           for (const x of path.slice(path.indexOf(header))) this.store.markBad(x.hash(), e.message);
         }
         throw e;
@@ -456,7 +456,7 @@ export class Chain extends EventEmitter {
       this._setHead(block.header, td);
     });
 
-    // Účty dotčené opuštěnou větví se přepočítají z nového stavu.
+    // Accounts affected by the abandoned branch are recomputed from the new state.
     const state = await this.stateAt(block.header.stateRoot);
     for (const a of touched.values()) {
       const account = await state.getAccountByBytes(a);
@@ -472,7 +472,7 @@ export class Chain extends EventEmitter {
     return { status: 'reorg', hash: block.hash(), depth };
   }
 
-  /** Přístup ke stavu pro čtení, nikdy nezapisuje na disk. */
+  /** Read access to the state; never writes to disk. */
   async stateAt(root) {
     const { stateManager } = await openState(this.store, this.common, root);
     return {
@@ -482,12 +482,12 @@ export class Chain extends EventEmitter {
   }
 
   /**
-   * Sestaví šablonu bloku pro minera.
+   * Builds a block template for the miner.
    * @param {object} o
-   * @param {Uint8Array} o.miner adresa výplaty
+   * @param {Uint8Array} o.miner payout address
    * @param {Iterable} o.txs transakce podle priority
-   * @param {string} [o.extra] krátký popis v extraData
-   * @param {number} [o.budgetMs] časový limit na transakce šablony
+   * @param {string} [o.extra] short description in extraData
+   * @param {number} [o.budgetMs] time limit for template transactions
    */
   buildTemplate({ miner, txs = [], extra = 'aether', onSkip, budgetMs = BUILD_BUDGET_MS }) {
     return this._exclusive(async () => {

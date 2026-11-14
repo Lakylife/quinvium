@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-/// @title Úschova plateb: obchod, služby, zálohy na nemovitosti
-/// @notice Peníze drží kontrakt, rozhodce spory jen rozděluje a nemůže si nic ponechat nad poplatek.
-///         Výplaty si příjemci vybírají sami, takže je nikdo nemůže zablokovat.
+/// @title Payment escrow: trade, services, real estate deposits
+/// @notice The contract holds the money; the arbiter only splits disputes and cannot keep anything beyond the fee.
+///         Recipients withdraw their payouts themselves, so nobody can block them.
 contract Escrow {
     enum State {
         None,
@@ -25,7 +25,7 @@ contract Escrow {
     }
 
     uint256 public constant MAX_FEE_BPS = 1000;
-    /// Když rozhodce do této doby nerozhodne, peníze nesmí zůstat zamčené navždy.
+    /// If the arbiter does not decide by this time, the money must not stay locked forever.
     uint256 public constant ARBITER_TIMEOUT = 90 days;
 
     uint256 public dealCount;
@@ -59,7 +59,7 @@ contract Escrow {
         emit Created(id, msg.sender, seller, arbiter, msg.value, deadline);
     }
 
-    /// Kupující potvrdí plnění, nebo prodávající dobrovolně vrátí peníze.
+    /// The buyer confirms delivery, or the seller voluntarily refunds the money.
     function release(uint256 id) external {
         Deal storage d = _state(id, State.Funded);
         if (msg.sender != d.buyer) revert NotAllowed();
@@ -87,7 +87,7 @@ contract Escrow {
         emit Disputed(id, msg.sender);
     }
 
-    /// @param sellerBps podíl prodávajícího v bazických bodech ze zbytku po poplatku rozhodce
+    /// @param sellerBps the seller's share in basis points of what remains after the arbiter's fee
     function resolve(uint256 id, uint16 sellerBps) external {
         Deal storage d = _state(id, State.Disputed);
         if (msg.sender != d.arbiter) revert NotAllowed();
@@ -103,7 +103,7 @@ contract Escrow {
         emit Resolved(id, toSeller, toBuyer, fee);
     }
 
-    /// Rozhodce zmizel: obě strany dostanou polovinu a rozhodce nic.
+    /// The arbiter disappeared: both sides get half and the arbiter nothing.
     function settleAbandoned(uint256 id) external {
         Deal storage d = _state(id, State.Disputed);
         if (msg.sender != d.buyer && msg.sender != d.seller) revert NotAllowed();

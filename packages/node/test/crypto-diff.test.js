@@ -1,5 +1,5 @@
-// Křížová kontrola: WebAssembly implementace se musí ve všech případech chovat stejně
-// jako referenční implementace v JavaScriptu. Rozdíl by znamenal rozštěpení sítě.
+// Cross-check: the WebAssembly implementation must behave identically in all cases
+// as the reference implementation in JavaScript. A difference would mean a network split.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
@@ -23,7 +23,7 @@ const attempt = (fn) => {
   }
 };
 
-test('ecrecover: WebAssembly se shoduje s referencí na platných i zlomyslných vstupech', () => {
+test('ecrecover: WebAssembly matches the reference on valid and malicious inputs', () => {
   const edge = [0n, 1n, 2n, N - 1n, N, N + 1n, P - 1n, P, P + 1n, 2n ** 256n - 1n, N / 2n, N / 2n + 1n];
   let checked = 0;
   const check = (hash, v, r, s, chainId) => {
@@ -40,10 +40,10 @@ test('ecrecover: WebAssembly se shoduje s referencí na platných i zlomyslných
     check(hash, 27n + BigInt(sig.recovery), r, s);
     check(hash, BigInt(sig.recovery), r, s);
     check(hash, 35n + 2n * 52401n + BigInt(sig.recovery), r, s, 52401n);
-    check(hash, 28n - BigInt(sig.recovery), r, s);               // opačná parita
-    check(hash, 27n + BigInt(sig.recovery), r, b32(N - sig.s));  // vysoké s
-    check(hash, 27n, new Uint8Array(randomBytes(32)), new Uint8Array(randomBytes(32))); // r nemusí ležet na křivce
-    check(hash, 29n, r, s);                                       // neplatné v
+    check(hash, 28n - BigInt(sig.recovery), r, s);               // opposite parity
+    check(hash, 27n + BigInt(sig.recovery), r, b32(N - sig.s));  // high s
+    check(hash, 27n, new Uint8Array(randomBytes(32)), new Uint8Array(randomBytes(32))); // r does not have to lie on the curve
+    check(hash, 29n, r, s);                                       // invalid v
   }
   for (const r of edge) {
     for (const s of edge) {
@@ -56,7 +56,7 @@ test('ecrecover: WebAssembly se shoduje s referencí na platných i zlomyslných
   assert.ok(checked > 10000);
 });
 
-test('bn254: WebAssembly se shoduje s referencí na platných i zlomyslných vstupech', async () => {
+test('bn254: WebAssembly matches the reference on valid and malicious inputs', async () => {
   const wasm = await bn254();
   const noble = new NobleBN254();
   const G1 = [1n, 2n];
@@ -101,11 +101,11 @@ test('bn254: WebAssembly se shoduje s referencí na platných i zlomyslných vst
     const k = BigInt(`0x${randomBytes(31).toString('hex')}`);
     const a = wasm.mul(new Uint8Array(join(...G1, k)));
     const c = wasm.mul(new Uint8Array(join(...negG1, k)));
-    same('pairing', join(a, ...G2, c, ...G2));     // skutečně platná rovnost
+    same('pairing', join(a, ...G2, c, ...G2));     // a really valid equality
     same('pairing', join(a, ...G2, a, ...G2));     // nerovnost
     same('pairing', join(new Uint8Array(64), ...G2));
     same('pairing', join(a, new Uint8Array(128)));
-    same('pairing', join(a, FP, ...G2.slice(1)));  // souřadnice mimo těleso
-    same('pairing', join(a, randomBytes(128)));    // bod mimo podgrupu i křivku
+    same('pairing', join(a, FP, ...G2.slice(1)));  // coordinates outside the field
+    same('pairing', join(a, randomBytes(128)));    // a point outside the subgroup and the curve
   }
 });

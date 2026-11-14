@@ -1,14 +1,14 @@
-// Příkaz quinvium (dříve quintium) v terminálu. Spouštěč leží v datech aplikace (stálá cesta) a aplikace ho při každém startu
-// přepíše na právě používanou verzi. Aktualizace přes internet má vlastní složku s novou příkazovou řádkou,
-// odkaz do instalace by po ní dál spouštěl starou verzi.
+// The quinvium command (formerly quintium) in the terminal. The launcher lives in the app data (a permanent path) and the app on every start
+// to the version currently in use. An update over the internet has its own folder with a new command line,
+// a link into the installation would keep starting the old version after it.
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
 
-/** Text uvnitř uvozovek v sh: zpětné lomítko, uvozovky, dolar a obrácený apostrof se musí uvodit. */
+/** Text inside double quotes in sh: backslash, quotes, dollar and backtick must be escaped. */
 const sh = (text) => String(text).replace(/[\\"$`]/g, (c) => `\\${c}`);
 
-/** Cesta ve Windows přes proměnnou prostředí. V souboru .cmd tak nezůstane diakritika ze jména uživatele. */
+/** On Windows the path goes through an environment variable, so no diacritics from the user name end up in the .cmd file. */
 function winPath(p, env) {
   for (const name of ['LOCALAPPDATA', 'APPDATA', 'USERPROFILE']) {
     const base = env[name];
@@ -19,8 +19,8 @@ function winPath(p, env) {
 
 /**
  * @param {{dir: string, execPath: string, bundle: string, fallback: string, platform: string, env: object}} o
- *   bundle: příkazová řádka právě běžící verze, fallback: ta z instalace pro případ, že složka verze zmizí
- * @returns {string} cesta ke spouštěči
+ *   bundle: the command line of the running version, fallback: the one from the installation in case the version folder disappears
+ * @returns {string} path to the launcher
  */
 function writeLauncher({ dir, execPath, bundle, fallback, platform, env = process.env }) {
   fs.mkdirSync(dir, { recursive: true });
@@ -35,15 +35,15 @@ function writeLauncher({ dir, execPath, bundle, fallback, platform, env = proces
       `if not exist "%B%" set "B=${winPath(fallback, env)}"`,
       `"${winPath(execPath, env)}" "%B%" cli %*`, ''].join('\r\n')
     : ['#!/bin/sh',
-      '# Příkazová řádka Quinvium z právě používané verze aplikace. Aplikace tento soubor obnovuje při každém spuštění.',
+      '# Quinvium command line from the app version currently in use. The app rewrites this file on every start.',
       `B="${sh(bundle)}"`,
       `[ -f "$B" ] || B="${sh(fallback)}"`,
       `ELECTRON_RUN_AS_NODE=1 exec "${sh(execPath)}" "$B" cli "$@"`, ''].join('\n');
-  // Příkaz quinvium je nové jméno, quintium zůstává pro starší návody a skripty. Oba soubory jsou stejné.
+  // quinvium is the new command name; quintium stays for older guides and scripts. Both files are identical.
   for (const name of win ? ['quintium.cmd', 'quinvium.cmd'] : ['quintium', 'quinvium']) {
     const target = path.join(dir, name);
     let old = null;
-    try { old = fs.readFileSync(target, 'utf8'); } catch { /* první spuštění */ }
+    try { old = fs.readFileSync(target, 'utf8'); } catch { /* first start */ }
     if (old !== text) {
       fs.writeFileSync(`${target}.tmp`, text, { mode: 0o755 });
       fs.renameSync(`${target}.tmp`, target);
@@ -53,18 +53,18 @@ function writeLauncher({ dir, execPath, bundle, fallback, platform, env = proces
   return file;
 }
 
-/** Profil shellu, do kterého patří cesta: zsh je na macOS výchozí, bash má .bash_profile. */
+/** The shell profile the path belongs in: zsh is the default on macOS, bash has .bash_profile. */
 const profileOf = ({ home, shell, profile }) => profile ?? path.join(home, /bash$/.test(shell ?? '') ? '.bash_profile' : '.zshrc');
 
-/** Řádek, který si uživatel může spustit sám. Dělá totéž co tlačítko. */
+/** A line the user can run themselves. It does the same as the button. */
 function manualLine(dir, platform) {
   if (platform === 'win32') return `powershell -NoProfile -Command "[Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path', 'User') + ';${dir.replace(/'/g, "''")}', 'User')"`;
   return `echo 'export PATH="${sh(dir)}:$PATH"' >> ~/.zshrc`;
 }
 
 /**
- * Přidá složku spouštěče do cesty uživatele. Jen na jeho kliknutí: systémovou cestu ani cizí účty nemění.
- * Windows: uživatelská proměnná Path přes PowerShell (setx by ji zkrátil na 1024 znaků). macOS a Linux: řádek v profilu shellu.
+ * Adds the launcher folder to the user's path. Only on their click: it changes neither the system path nor other accounts.
+ * Windows: the user Path variable through PowerShell (setx would truncate it to 1024 characters). macOS and Linux: a line in the shell profile.
  * @returns {Promise<{ok: boolean, added?: boolean, file?: string, error?: string}>}
  */
 function installPath({ dir, platform, home, shell, profile, run = execFile }) {
@@ -82,8 +82,8 @@ function installPath({ dir, platform, home, shell, profile, run = execFile }) {
   try {
     const file = profileOf({ home, shell, profile });
     let text = '';
-    try { text = fs.readFileSync(file, 'utf8'); } catch { /* profil zatím neexistuje */ }
-    if (text.includes(dir) || text.includes(sh(dir))) return Promise.resolve({ ok: true, added: false, file });   // v profilu je cesta uvozená
+    try { text = fs.readFileSync(file, 'utf8'); } catch { /* the profile does not exist yet */ }
+    if (text.includes(dir) || text.includes(sh(dir))) return Promise.resolve({ ok: true, added: false, file });   // the path in the profile is quoted
     const lead = text && !text.endsWith('\n') ? '\n' : '';
     fs.appendFileSync(file, `${lead}\n# Quinvium: příkazy quinvium a quintium v terminálu\nexport PATH="${sh(dir)}:$PATH"\n`);
     return Promise.resolve({ ok: true, added: true, file });

@@ -1,4 +1,4 @@
-// Těžební pooly: pravidla drží kontrakt z továrny sítě, provozovatel na odměny nedosáhne.
+// Mining pools: the rules are enforced by a contract from the network's factory; the operator cannot reach the rewards.
 import { ethers } from 'ethers';
 import { CliError, pairs, rate, table, units } from './context.js';
 import { L } from './i18n.js';
@@ -9,7 +9,7 @@ const LIST_LIMIT = 100;
 const SECONDS_PER_BLOCK = 15;
 const MAX_FEE_PCT = 5;
 
-/** Pravidla jsou zaručená jen u poolu z továrny. Cizí kontrakt může vypadat stejně a odměny si nechat. */
+/** The rules are guaranteed only for a pool from the factory. A foreign contract can look the same and keep the rewards. */
 export async function factoryPool(ctx, text) {
   await ctx.connect();
   if (!ethers.isAddress(text ?? '')) throw new CliError(L('Zadejte adresu poolu.', 'Give the pool address.'));

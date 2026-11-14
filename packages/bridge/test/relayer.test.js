@@ -1,4 +1,4 @@
-// Validátoři mezi dvěma skutečnými uzly: nikdo nedoručuje ručně, všechno obstarají běžící relayery.
+// Validators between two real nodes: nobody delivers by hand; the running relayers handle everything.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
@@ -29,7 +29,7 @@ const config = (confirmations = 2) => [
 ];
 const relayerFor = (wallet, confirmations = 2, statePath = undefined) => new Relayer({ chains: config(confirmations), privateKey: wallet.privateKey, statePath });
 
-/** Běh sítě: bloky přibývají a validátoři dělají svou práci. */
+/** The network running: blocks keep coming and validators do their job. */
 async function run(list = relayers, rounds = 6) {
   for (let i = 0; i < rounds; i++) {
     for (const r of list) await r.tick();
@@ -63,12 +63,12 @@ const sendUsdc = async (amount) => {
   return B.ok(gateB.connect(B.connect(alice)).send(usdc.target, amount, Number(A.id), alice.address));
 };
 
-test('výpočet identifikátoru je stejný jako v kontraktu', async () => {
+test('the identifier computation is the same as in the contract', async () => {
   const m = { srcChain: 7n, dstChain: A.id, nonce: 9n, srcToken: ethers.ZeroHash, recipient: bob.address, amount: 123n };
   assert.equal(messageId(gateA.target, m), await gateA.messageId(m));
 });
 
-test('tam i zpět bez ruční práce a krytí sedí', async () => {
+test('there and back without manual work and the backing matches', async () => {
   await sendUsdc(200_000_000n);
   await run();
   assert.equal(await usdcA.balanceOf(alice.address), 200_000_000n);
@@ -80,7 +80,7 @@ test('tam i zpět bez ruční práce a krytí sedí', async () => {
   assert.deepEqual(relayers.map((r) => Object.keys(r.state.data.pending).length), [0, 0, 0], 'nic nezůstalo viset');
 });
 
-test('před dostatečným potvrzením validátor nic nepodepíše', async () => {
+test('the validator signs nothing before sufficient confirmation', async () => {
   const careful = relayerFor(validators[0], 5);
   const head = await B.provider.getBlockNumber();
   careful.state.data.cursor[B.id.toString()] = head;
@@ -94,7 +94,7 @@ test('před dostatečným potvrzením validátor nic nepodepíše', async () => 
   await run();
 });
 
-test('jeden validátor nestačí, po návratu druhého se zpráva doručí', async () => {
+test('one validator is not enough; after the second returns the message is delivered', async () => {
   const before = await usdcA.balanceOf(alice.address);
   await sendUsdc(2_000_000n);
   await run([relayers[0]]);
@@ -104,7 +104,7 @@ test('jeden validátor nestačí, po návratu druhého se zpráva doručí', asy
   await run();
 });
 
-test('výpadek uzlu jednoho řetězce nezastaví druhý', async () => {
+test("an outage of one chain's node does not stop the other", async () => {
   const broken = { ...config()[1], provider: new ethers.JsonRpcProvider('http://127.0.0.1:9', undefined, { staticNetwork: true }), name: 'nedostupný' };
   const lines = [];
   const r = new Relayer({ chains: [config()[0], broken], privateKey: validators[0].privateKey, log: (l) => lines.push(l) });
@@ -113,7 +113,7 @@ test('výpadek uzlu jednoho řetězce nezastaví druhý', async () => {
   assert.ok(lines.some((l) => /nedostupný/.test(l)));
 });
 
-test('velký převod čeká ve frontě a validátor ho sám dokončí', async () => {
+test('a large transfer waits in the queue and the validator completes it itself', async () => {
   const before = await usdcA.balanceOf(alice.address);
   await sendUsdc(600_000_000n);
   await run();
@@ -123,7 +123,7 @@ test('velký převod čeká ve frontě a validátor ho sám dokončí', async ()
   assert.equal(await usdcA.balanceOf(alice.address), before + 600_000_000n);
 });
 
-test('převod zrušený strážcem se vrátí odesílateli přesně jednou', async () => {
+test('a transfer cancelled by the guardian is refunded to the sender exactly once', async () => {
   const beforeA = await usdcA.balanceOf(alice.address);
   const beforeB = await usdc.balanceOf(alice.address);
   const lockedB = await gateB.locked(usdc.target);
@@ -139,17 +139,17 @@ test('převod zrušený strážcem se vrátí odesílateli přesně jednou', asy
   assert.equal(await usdc.balanceOf(alice.address), beforeB, 'odesílatel má zpět celou částku');
   assert.equal(await gateB.locked(usdc.target), lockedB, 'krytí sedí');
   assert.equal(await usdc.balanceOf(gateB.target), await usdcA.totalSupply(), 'uzamčeno je přesně tolik, kolik je přemostěno');
-  // Další běh validátorů ani opakované zrušení nic nevrátí podruhé.
+  // Another validator run or a repeated cancellation never refunds a second time.
   await run();
   await assert.rejects(gateA.connect(A.connect(guardian)).cancelQueued.staticCall(id));
   assert.equal(await usdc.balanceOf(alice.address), beforeB, 'vrácení proběhlo jen jednou');
   assert.deepEqual(relayers.map((r) => Object.keys(r.state.data.pending).length), [0, 0, 0], 'nic nezůstalo viset');
 });
 
-test('převod, který příjemce odmítne, se vrátí odesílateli', async () => {
+test('a transfer the recipient rejects is refunded to the sender', async () => {
   const beforeB = await usdc.balanceOf(alice.address);
   const supply = await usdcA.totalSupply();
-  // Validátor, který zrovna nedoručuje: zprávu jen uvidí, doručit ji ještě nestihne.
+  // A validator that is not delivering at the moment: it only sees the message and has not delivered it yet.
   const watcher = relayerFor(validators[0]);
   watcher.state.data.cursor = { ...relayers[0].state.data.cursor };
   await sendUsdc(7_000_000n);
@@ -163,7 +163,7 @@ test('převod, který příjemce odmítne, se vrátí odesílateli', async () =>
   assert.equal(await usdc.balanceOf(alice.address), beforeB, 'odesílatel má zpět celou částku');
 });
 
-test('doručený převod se nikdy nevrací', async () => {
+test('a delivered transfer is never refunded', async () => {
   const beforeA = await usdcA.balanceOf(alice.address);
   const beforeB = await usdc.balanceOf(alice.address);
   await sendUsdc(4_000_000n);
@@ -174,7 +174,7 @@ test('doručený převod se nikdy nevrací', async () => {
   assert.equal(await usdc.balanceOf(gateB.target), await usdcA.totalSupply(), 'krytí sedí');
 });
 
-test('po restartu validátor pokračuje a nic nezopakuje', async () => {
+test('after a restart the validator continues and repeats nothing', async () => {
   const statePath = join(folder, 'validator.json');
   const first = validators.map((v, i) => relayerFor(v, 2, i === 0 ? statePath : undefined));
   await run(first, 3);
@@ -190,17 +190,17 @@ test('po restartu validátor pokračuje a nic nezopakuje', async () => {
   assert.equal(await usdcA.balanceOf(alice.address), before + 3_000_000n, 'doručení se neopakuje');
 });
 
-test('cizí klíč podpis do brány nedostane', async () => {
+test('a foreign key does not get a signature into the gateway', async () => {
   const stranger = ethers.Wallet.createRandom();
   const id = ethers.id('cokoli');
   await assert.rejects(gateA.attest.staticCall(id, new ethers.SigningKey(stranger.privateKey).sign(ethers.hashMessage(ethers.getBytes(id))).serialized));
 });
 
-test('příjemce musí být adresa, jinak by mince uvízly', async () => {
+test('the recipient must be an address, otherwise coins would get stuck', async () => {
   await assert.rejects(gateB.connect(B.connect(alice)).send.staticCall(usdc.target, 1n, Number(A.id), '0x1234'));
 });
 
-test('hlavní mince jde stejnou cestou', async () => {
+test('the main coin goes the same way', async () => {
   const r = await B.ok(gateB.createWrapped('Quinvium (bridged)', 'QU.e', 18, Number(A.id), ethers.ZeroHash, 100n * WEI, 50n * WEI));
   const wrapped = B.at('WrappedAsset', iface.parseLog(r.logs.find((l) => l.topics[0] === iface.getEvent('WrappedCreated').topicHash)).args.token);
   await A.ok(gateA.setOutbound(ethers.ZeroAddress, Number(B.id), true, false, 1n));
@@ -215,7 +215,7 @@ test('hlavní mince jde stejnou cestou', async () => {
   assert.equal(await A.provider.getBalance(gateA.target), 6n * WEI);
 });
 
-test('mainnet Quinvia a Ethereum vyžadují dost potvrzení, jinak se validátor nespustí', async () => {
+test('Quinvium mainnet and Ethereum require enough confirmations, otherwise the validator does not start', async () => {
   const { MIN_CONFIRMATIONS } = await import('../src/relayer.js');
   const wallet = ethers.Wallet.createRandom();
   const chain = (id, confirmations) => ({ id, name: `síť ${id}`, provider: A.provider, gateway: gateA.target, confirmations });

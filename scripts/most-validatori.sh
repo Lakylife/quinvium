@@ -1,7 +1,7 @@
 #!/bin/zsh
-# Spustí tři testovací validátory mostu jako služby macOS (LaunchAgent). Po restartu počítače se spustí samy.
-# Nastavení a klíče vytváří scripts/nasadit-most.mjs v ~/.aether/most-testnet. Jen pro testnet.
-# Použití: scripts/most-validatori.sh spustit | zastavit | stav
+# Starts three test bridge validators as macOS services (LaunchAgent). They start again by themselves after a reboot.
+# Configuration and keys are created by scripts/nasadit-most.mjs in the operator's private folder. Testnet only.
+# Usage: scripts/most-validatori.sh spustit | zastavit | stav   (start | stop | status)
 set -euo pipefail
 DIR="$HOME/.aether/most-testnet"
 AGENTS="$HOME/Library/LaunchAgents"

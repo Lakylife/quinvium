@@ -1,5 +1,5 @@
-// Síť uzlů bez centrální registry: seed uzly slouží jen pro první kontakt,
-// dál si uzly vyměňují adresy samy a pamatují si je v databázi.
+// A network of nodes without a central registry: seed nodes serve only for the first contact,
+// after that nodes exchange addresses themselves and remember them in the database.
 import { EventEmitter } from 'node:events';
 import net from 'node:net';
 import crypto from 'node:crypto';
@@ -25,7 +25,7 @@ const PEER_TIMEOUT = 90_000;
 const STATUS_INTERVAL = 15_000;
 const DIAL_INTERVAL = 5_000;
 const PEX_INTERVAL = 300_000;
-const SEED_RESOLVE_INTERVAL = 1_800_000;   // seed jako doménové jméno: adresy se mohou změnit bez nové verze
+const SEED_RESOLVE_INTERVAL = 1_800_000;   // seed as a domain name: addresses can change without a new version
 const SEED_RESOLVE_WAIT = 3000;
 const BAN_MS = 3_600_000;
 const MAX_HEADERS = 256;
@@ -34,33 +34,33 @@ const MAX_BLOCKS_BYTES = 8 * 1024 * 1024;
 const MAX_TXS = 256;
 const MAX_PEX = 64;
 const MAX_PER_IP = 3;
-const MAX_PER_GROUP = 6;            // příchozích spojení z jednoho rozsahu /16
+const MAX_PER_GROUP = 6;            // inbound connections from one /16 range
 const MAX_KNOWN_PEERS = 10000;
 const MAX_LAN_PEERS = 64;
 const LAN_DIAL_JITTER = 2_000;
 const MAX_BANS = 4096;
-const HEADERS_TIMEOUT = 8_000;      // lhář o práci se pozná rychle, hlavičky jsou levné
+const HEADERS_TIMEOUT = 8_000;      // a liar about work is detected quickly; headers are cheap
 const MAX_SEND_QUEUE = 8 * 1024 * 1024;
-const FORGIVE_POINTS = 3;           // za každý interval PING
-const BEHIND_AFTER = 32;            // od tolika stažených bloků se uzel považuje za opožděný
-const RELAY_MAX_AGE = 120;          // sekund, starší bloky se při synchronizaci nešíří
-const OUTBOUND_NEW_SHARE = 0.25;    // část odchozích spojení zkouší neověřené adresy
+const FORGIVE_POINTS = 3;           // for each PING interval
+const BEHIND_AFTER = 32;            // after this many downloaded blocks the node considers itself behind
+const RELAY_MAX_AGE = 120;          // seconds; older blocks are not propagated during sync
+const OUTBOUND_NEW_SHARE = 0.25;    // part of outbound connections tries unverified addresses
 const GLOBAL_TX_RATE = [512, 1024];
-// Předání fronty novému sousedovi: příjemce bere od jednoho uzlu 64 transakcí za sekundu.
+// Handing the queue to a new peer: the receiver takes 64 transactions per second from one node.
 const TX_SYNC_BATCH = 48;
 const TX_SYNC_INTERVAL = 1_000;
-// Schopnosti v HELLO. Ohlášení hashů dostane jen uzel, který je umí, starší dál dostává celé transakce a bloky.
+// Capabilities in HELLO. Only a node that supports hash announcements gets them; older ones keep getting full transactions and blocks.
 export const FEATURE_ANNOUNCE = 1;
 const FEATURES = FEATURE_ANNOUNCE;
-const MAX_ANNOUNCE = 1024;          // hashů v jednom ohlášení
+const MAX_ANNOUNCE = 1024;          // hashes in one announcement
 const MAX_TXS_BYTES = 8 * 1024 * 1024;
-const REQUEST_TTL_MS = 5_000;       // jak dlouho se na vyžádanou transakci čeká, než ji smí nabídnout jiný uzel
+const REQUEST_TTL_MS = 5_000;       // how long to wait for a requested transaction before another peer may offer it
 const MAX_REQUESTED = 65_536;
 
 /**
- * Komu poslat celou zprávu: všem starším uzlům a odmocnině z počtu nových. Ostatní nové dostanou jen hash
- * a o obsah si řeknou, pokud ho ještě nemají. Provoz tak roste s odmocninou počtu sousedů, ne s jejich počtem,
- * a zpráva se přesto dostane ke všem stejně rychle jako dřív, protože celou ji dostane hned několik uzlů.
+ * Who gets the full message: all older peers and the square root of the number of new ones. The other new ones get only the hash
+ * and request the content if they do not have it yet. Traffic thus grows with the square root of the number of peers, not with their number,
+ * and the message still reaches everyone as fast as before, because several nodes get it in full right away.
  */
 function splitRecipients(peers) {
   const legacy = [];
@@ -70,13 +70,13 @@ function splitRecipients(peers) {
   const full = Math.ceil(Math.sqrt(mixed.length));
   return { full: [...legacy, ...mixed.slice(0, full)], announce: mixed.slice(full) };
 }
-// Větev odpojená hlouběji než hranice finality: kolik hlaviček se nejvýš ověří a jak dlouho se od uzlu nestahuje,
-// když jeho větev neunese dvojnásobek práce. Ověření jedné hlavičky stojí jeden výpočet Ethash.
+// A branch that diverged deeper than the finality boundary: how many headers are verified at most and how long we stop downloading from the peer,
+// when its branch does not carry twice the work. Verifying one header costs one Ethash computation.
 const MAX_DEEP_HEADERS = 50_000;
 const DEEP_FORK_PAUSE_MS = 10 * 60_000;
 
-// Rozsahy, které nejsou veřejný internet: místní sítě, smyčka, sdílený rozsah operátorů (CGNAT), dokumentační,
-// vícesměrové a vyhrazené adresy. Uzel se na ně z výměny adres nepřipojuje, jinak by ho šlo poslat do cizí vnitřní sítě.
+// Ranges that are not the public internet: local networks, loopback, the shared operator range (CGNAT), documentation,
+// multicast and reserved addresses. The node does not connect to them from address exchange, otherwise it could be sent into a foreign internal network.
 const NON_PUBLIC = new net.BlockList();
 for (const [prefix, bits] of [
   ['0.0.0.0', 8], ['10.0.0.0', 8], ['100.64.0.0', 10], ['127.0.0.0', 8], ['169.254.0.0', 16], ['172.16.0.0', 12],
@@ -92,7 +92,7 @@ function isPrivate(ip) {
   return false;
 }
 
-/** Skupina adres: útočník má snazší přístup k adresám jedné sítě než k mnoha různým. */
+/** Address group: an attacker has easier access to addresses of one network than to many different ones. */
 function ipGroup(host) {
   const v = host.replace(/^::ffff:/, '');
   if (isIP(v) === 4) return v.split('.').slice(0, 2).join('.');
@@ -124,16 +124,16 @@ export class Network extends EventEmitter {
    * @param {string[]} [o.seeds] adresy host:port
    * @param {number} [o.maxOutbound]
    * @param {number} [o.maxInbound]
-   * @param {boolean} [o.allowPrivate] povolit lokální adresy, jen pro testy a vlastní LAN
-   * @param {boolean|object} [o.lan] hledat uzly v místní síti, objekt upravuje nastavení v testech
-   * @param {NodeIdentity} [o.identity] trvalý klíč uzlu, bez něj vznikne klíč jen pro tento běh
-   * @param {boolean} [o.requireIdentity] odmítnout uzly bez podepsané identity (starší verze)
+   * @param {boolean} [o.allowPrivate] allow local addresses, only for tests and your own LAN
+   * @param {boolean|object} [o.lan] look for nodes on the local network; an object adjusts the settings in tests
+   * @param {NodeIdentity} [o.identity] persistent node key; without it a key is created for this run only
+   * @param {boolean} [o.requireIdentity] reject nodes without a signed identity (older versions)
    */
   constructor({ chain, mempool, port, host = '0.0.0.0', seeds = [], maxOutbound = 8, maxInbound = 32, allowPrivate = false, lan = false, agent = 'quintium-node/2.0.0', identity = null, requireIdentity = false, log = () => {} }) {
     super();
     Object.assign(this, { chain, mempool, port, host, maxOutbound, maxInbound, allowPrivate, lan, agent, requireIdentity, log });
-    // Seed může mít připnutý klíč (`klíč@host:port`). Spojení s ním pak projde jen s jeho podpisem,
-    // takže ani podvržené DNS nebo útočník na cestě nepodstrčí novému uzlu cizí síť.
+    // A seed can have a pinned key (`key@host:port`). A connection to it then succeeds only with its signature,
+    // so not even forged DNS or an attacker on the path can feed a new node a foreign network.
     this.pinned = new Map();
     this.seeds = seeds.map((seed) => {
       const { key, address } = parsePinned(seed);
@@ -150,8 +150,8 @@ export class Network extends EventEmitter {
     this.imported = 0;
     this.temporary = false;
     this.txBudget = new Bucket(...GLOBAL_TX_RATE);
-    this.requested = new Map();      // hash transakce -> čas žádosti
-    this.deepPauses = new Map();     // IP -> do kdy se od ní nestahuje větev za hranicí finality, přežije nové spojení
+    this.requested = new Map();      // transaction hash -> time of the request
+    this.deepPauses = new Map();     // IP -> until when we do not download a branch beyond the finality boundary from it; survives a new connection
     this.timers = [];
     this.server = null;
     this._onHead = (e) => this._relayHead(e);
@@ -174,15 +174,15 @@ export class Network extends EventEmitter {
     this.timers.push(setInterval(() => this._announceStatus(), STATUS_INTERVAL));
     this.timers.push(setInterval(() => this._askPeers(), PEX_INTERVAL));
     this.timers.push(setInterval(() => { this._resolveSeeds().catch(() => {}); }, SEED_RESOLVE_INTERVAL));
-    // Pomalé DNS nesmí zdržet start: po krátké chvíli se vytáčí i bez něj a adresy doplní pozdější kolo.
+    // Slow DNS must not delay start-up: after a short while dialling starts without it and a later round adds the addresses.
     await Promise.race([this._resolveSeeds().catch(() => {}), new Promise((r) => { setTimeout(r, SEED_RESOLVE_WAIT).unref(); })]);
     this._dialLoop();
     if (this.lan) await this._startDiscovery();
   }
 
   /**
-   * Seed zadaný jménem (seed.domena.cz) může mít víc adres. Všechny se zapíšou mezi známé uzly, takže když
-   * jeden server neběží, uzel zkusí další. Samotné jméno se dál vytáčí také, rozhodne systémové DNS.
+   * A seed given by name (seed.example.org) can have several addresses. All are recorded among known nodes, so when
+   * one server is down, the node tries another. The name itself is also dialled; system DNS decides.
    */
   async _resolveSeeds() {
     for (const seed of this.seeds) {
@@ -211,14 +211,14 @@ export class Network extends EventEmitter {
     }
   }
 
-  /** Uzel ohlášený v místní síti. Ověří se jako každý jiný, jen se k němu smí připojit i na lokální adresu. */
+  /** A node announced on the local network. It is verified like any other; only connecting to a local address is allowed for it. */
   _onLanPeer(ip, port, nodeId) {
     if (this.stopped) return;
     if (!this.lanPeers.has(ip) && this.lanPeers.size >= MAX_LAN_PEERS) return;
     this.lanPeers.add(ip);
-    // Počítač se dvěma rozhraními se ozve ze dvou adres, spojení k němu už ale stačí jedno.
+    // A computer with two interfaces answers from two addresses, but one connection to it is enough.
     if ([...this.peers].some((p) => p.nodeId && Buffer.from(p.nodeId).toString('hex') === nodeId)) return;
-    // Oba uzly se slyší zároveň. Náhodný odstup brání tomu, aby se dvě souběžná spojení navzájem zrušila.
+    // Both nodes hear each other at the same time. A random delay prevents two concurrent connections from cancelling each other.
     setTimeout(() => this.connect(ip, port), crypto.randomInt(LAN_DIAL_JITTER)).unref();
   }
 
@@ -234,8 +234,8 @@ export class Network extends EventEmitter {
   get peerCount() { return [...this.peers].filter((p) => p.ready).length; }
 
   /**
-   * Skutečné opoždění, ne jen probíhající synchronizace. Tvrzení cizího uzlu o jeho práci nic nedokazuje,
-   * proto se těžba a šíření bloků zastaví až podle bloků, které opravdu prošly ověřením.
+   * Real lag, not just a sync in progress. A foreign node's claim about its work proves nothing,
+   * so mining and block propagation stop only based on blocks that actually passed verification.
    */
   get behind() { return this.syncing && this.imported >= BEHIND_AFTER; }
 
@@ -317,8 +317,8 @@ export class Network extends EventEmitter {
   }
 
   /**
-   * Prvních 11 polí zná každá verze. Za nimi je identita (veřejný klíč a podpis otisku spojení) a seznam schopností.
-   * Starší uzly pole navíc přeskočí, takže se s novými domluví dál.
+   * Every version knows the first 11 fields. After them come the identity (public key and signature of the connection fingerprint) and a list of capabilities.
+   * Older nodes skip the extra fields, so they keep agreeing with new ones.
    */
   _helloBody(peer) {
     const { chain } = this;
@@ -334,7 +334,7 @@ export class Network extends EventEmitter {
 
   _sendHello(peer) { peer.send(MSG.HELLO, this._helloBody(peer)); }
 
-  /** Ověří identitu protistrany. @returns {string|null} důvod odmítnutí */
+  /** Verifies the identity of the other side. @returns {string|null} reason for rejection */
   _checkIdentity(peer, nodeId, publicKey, signature, dialed) {
     const pinned = peer.inbound ? null : this.pinned.get(`${peer.address}:${dialed}`);
     peer.verified = false;
@@ -384,7 +384,7 @@ export class Network extends EventEmitter {
     peer.ready = true;
     peer.channel.unlock();
     peer.emit('hello');
-    // Ověřená je jen adresa, na kterou jsme se sami připojili. Příchozí uzel může port jen tvrdit.
+    // Only an address we connected to ourselves is verified. An incoming peer can only claim its port.
     if (!peer.inbound) chain.store.peerConnected(`${peer.address}:${dialed}`);
     else if (peer.listenPort && chain.store.peerCount() < MAX_KNOWN_PEERS) chain.store.peerLearned(`${peer.address}:${peer.listenPort}`);
     this.log(L(`Připojen uzel ${peer.address}:${peer.listenPort} (výška ${peer.headNumber})`, `Connected peer ${peer.address}:${peer.listenPort} (height ${peer.headNumber})`));
@@ -396,9 +396,9 @@ export class Network extends EventEmitter {
   }
 
   /**
-   * Nově připojený uzel dostane čekající transakce. Jinak by k němu nikdy nedošly ty, které síť rozeslala, když
-   * ještě nebyl připojený, a pokud těží jen on, zůstaly by viset. Posílá se po dávkách v tempu, které příjemce
-   * přijme bez trestu za zahlcení.
+   * A newly connected peer gets pending transactions. Otherwise it would never receive those the network broadcast while
+   * was not connected yet, and if it is the only miner, they would stay stuck. Sent in batches at a pace the receiver
+   * accepts without a penalty for flooding.
    */
   _syncTxs(peer) {
     const txs = this.mempool.ordered();
@@ -438,8 +438,8 @@ export class Network extends EventEmitter {
       case MSG.GET_TXS: return this._onGetTxs(peer, b);
       case MSG.NEW_BLOCK_HASH: return this._onBlockHash(peer, b);
       case MSG.GET_PEERS: {
-        // Ověřené i neověřené: seed uzel se sám nepřipojuje, přesto musí předávat adresy uzlů, které ho našly.
-        // Podvrhy tím neškodí, příjemce je drží stranou a věnuje jim jen malou část odchozích spojení.
+        // Verified and unverified: a seed node does not connect by itself, yet it must relay addresses of the nodes that found it.
+        // Fakes do no harm this way: the receiver keeps them aside and gives them only a small share of outbound connections.
         const { store } = this.chain;
         const half = MAX_PEX / 2;
         const list = [...shuffled(store.peersTried(MAX_PEX * 4)).slice(0, half), ...shuffled(store.peersNew(MAX_PEX * 4)).slice(0, half)];
@@ -519,7 +519,7 @@ export class Network extends EventEmitter {
       if (e instanceof InvalidBlock) peer.misbehave(100, `neplatný blok: ${e.message}`);
       else if (e instanceof TemporaryBlockError) this.temporary = true;
       else if (e instanceof FinalityError) {
-        // Poctivý uzel z druhé části sítě, ne útok: od uzlu se chvíli nestahuje, ale neblokuje se.
+        // An honest node from the other part of the network, not an attack: we stop downloading from it for a while but do not block it.
         this.deepRefused = true;
         this._pauseDeep(peer);
         this.log(`${L('Blok za hranicí finality od', 'Block beyond the finality limit from')} ${peer.address}: ${e.message}`);
@@ -534,9 +534,9 @@ export class Network extends EventEmitter {
     return this._acceptTxs(peer, b[0]);
   }
 
-  /** Transakce od uzlu, ať je poslal sám, nebo jsme si o ně řekli. */
+  /** Transactions from a peer, whether it sent them itself or we asked for them. */
   async _acceptTxs(peer, raws) {
-    // Podpis ověřuje každá transakce, proto má limit i platně podepsaný spam bez krytí.
+    // Every transaction verifies its signature, so even validly signed spam without funds has a limit.
     if (!peer.txBudget.take(raws.length)) return peer.misbehave(5, 'příliš mnoho transakcí za sekundu');
     if (!this.txBudget.take(raws.length)) return undefined;
     const added = [];
@@ -556,7 +556,7 @@ export class Network extends EventEmitter {
         added.push(tx);
       } catch (e) {
         if (!(e instanceof MempoolError)) throw e;
-        // Neplatný podpis nejde vysvětlit zpožděním, ostatní důvody ano.
+        // An invalid signature cannot be explained by delay; the other reasons can.
         if (/podpis|neplatná transakce/.test(e.message)) peer.misbehave(10, e.message);
       }
     }
@@ -578,7 +578,7 @@ export class Network extends EventEmitter {
     for (const p of announce) send(p, MSG.NEW_TX_HASHES, (t) => t.hash());
   }
 
-  /** Ohlášené hashe: o transakce, které ještě nemáme a nikdo nám je právě neposílá, si řekneme. */
+  /** Announced hashes: we ask for transactions we do not have yet and that nobody is sending us right now. */
   async _onTxHashes(peer, b) {
     if (!Array.isArray(b[0]) || b[0].length > MAX_ANNOUNCE) return peer.misbehave(20, 'příliš mnoho hashů');
     const now = Date.now();
@@ -619,7 +619,7 @@ export class Network extends EventEmitter {
     return peer.respond(MSG.TXS, id, out);
   }
 
-  /** Ohlášený blok: neznámý si vyžádáme od toho, kdo ho ohlásil. */
+  /** An announced block: if unknown, we request it from whoever announced it. */
   async _onBlockHash(peer, b) {
     const [hash, number, td] = b;
     if (!(hash instanceof Uint8Array) || hash.length !== 32) return peer.misbehave(20, 'neplatný hash bloku');
@@ -640,7 +640,7 @@ export class Network extends EventEmitter {
   }
 
   _relayHead({ block }) {
-    // Podle stáří bloku, ne podle stavu synchronizace: tu může zapnout i cizí lživé tvrzení.
+    // By block age, not by sync state: that could be switched on even by a foreign false claim.
     if (this.chain.now() - Number(block.header.timestamp) > RELAY_MAX_AGE) return;
     const ready = [...this.peers].filter((p) => p.ready && !(p.headHash && equal(p.headHash, block.hash())));
     const { full, announce } = splitRecipients(ready);
@@ -658,7 +658,7 @@ export class Network extends EventEmitter {
     for (const p of this.peers) if (p.ready) p.send(MSG.STATUS, body);
   }
 
-  /** Uzel s největší slíbenou prací, který ji ještě nezklamal. */
+  /** The peer with the most promised work that has not failed yet. */
   _bestPeer() {
     let best = null;
     const now = Date.now();
@@ -675,7 +675,7 @@ export class Network extends EventEmitter {
     if (target) this._sync(target).catch((e) => this.log(`${L('Synchronizace', 'Sync')}: ${e.message}`));
   }
 
-  /** Lokátor: hashe od špičky zpět s rostoucími rozestupy, poslední je genesis. */
+  /** Locator: hashes from the tip back with growing gaps; the last one is genesis. */
   _locator() {
     const { chain } = this;
     const list = [];
@@ -691,8 +691,8 @@ export class Network extends EventEmitter {
   }
 
   /**
-   * Stahuje od jednoho uzlu a hlídá, že slibovanou práci opravdu dodá.
-   * Kdo mlčí nebo nedodá, dostane body a přijde na řadu další, takže jediný lhář síť nezastaví.
+   * Downloads from one peer and checks that it really delivers the promised work.
+   * Whoever stays silent or fails to deliver gets penalty points and the next one is tried, so a single liar cannot stop the network.
    */
   async _sync(peer) {
     this.syncing = true;
@@ -718,10 +718,10 @@ export class Network extends EventEmitter {
     }
   }
 
-  /** Hlavičky a bloky po dávkách, velikost řetězce tak není omezena velikostí zprávy. */
+  /** Headers and blocks in batches, so the chain length is not limited by the message size. */
   async _download(peer) {
-    // Poslední stažená hlavička jde do lokátoru první. Postranní větev není kanonická, takže by ji samotný lokátor
-    // neobsahoval a protistrana by posílala pořád stejné, už známé hlavičky od rozdvojení.
+    // The last downloaded header goes into the locator first. A side branch is not canonical, so the locator alone would
+    // did not contain, and the other side would keep sending the same already known headers from the fork point.
     let from = null;
     for (;;) {
       if (this.stopped || !peer.ready) return undefined;
@@ -748,7 +748,7 @@ export class Network extends EventEmitter {
       if (!(await this._deepForkAllowed(peer, headers))) return undefined;
       const wanted = headers.filter((h) => !this.chain.store.blockHas(h.hash()));
       const last = headers[headers.length - 1].hash();
-      if (from && equal(last, from)) return undefined;     // protistrana posílá pořád totéž
+      if (from && equal(last, from)) return undefined;     // the other side keeps sending the same thing
       from = last;
       if (wanted.length === 0) {
         if (raw.length < MAX_HEADERS) return undefined;
@@ -779,10 +779,10 @@ export class Network extends EventEmitter {
   }
 
   /**
-   * Větev, která se od naší odpojila hlouběji než hranice finality. Uzel stáhne a ověří všechny její hlavičky
-   * včetně práce a větev přijme, jen když nese aspoň dvojnásobek práce naší větve od společného předka.
-   * Tak se srovná rozdělená síť a uzel se dostane z levné falešné větve. Hlubší přepis s menší prací zůstává zakázaný.
-   * @returns {Promise<boolean>} smí se pokračovat stahováním bloků
+   * A branch that diverged from ours deeper than the finality boundary. The node downloads and verifies all its headers
+   * including work, and accepts the branch only when it carries at least twice the work of our branch since the common ancestor.
+   * This is how a split network converges and a node escapes a cheap fake branch. A deeper rewrite with less work stays forbidden.
+   * @returns {Promise<boolean>} whether downloading blocks may continue
    */
   async _deepForkAllowed(peer, first) {
     const { chain } = this;
@@ -791,15 +791,15 @@ export class Network extends EventEmitter {
     if (chain.head.number - ancestor.number <= BigInt(C.maxReorgDepth)) return true;
     if (ancestor.number <= chain.passedCheckpoint()) return this._refuseDeep(peer, ancestor, 'větev je pod kontrolním bodem');
     if (chain.deepPermit && equal(chain.deepPermit.hash, ancestor.hash()) && chain.deepPermit.until > Date.now()) return true;
-    // Výška a obtížnost se hlídají před výpočtem Ethash. Výšku si jinak volí protistrana a cache její epochy by se
-    // počítala navždy: jediná hlavička s výškou 10^30 by zablokovala celý uzel.
+    // Height and difficulty are checked before computing Ethash. Otherwise the other side chooses the height and the cache of its epoch would be
+    // computed forever: a single header with height 10^30 would block the whole node.
     if (first[0].number !== ancestor.number + 1n) {
       peer.misbehave(100, 'hlavička hluboké větve má špatnou výšku');
       return false;
     }
     const minDifficulty = chain.network.minDifficulty ?? 1n;
-    // Obtížnost se počítá stejně jako při přijetí bloku (LWMA nad předky na této větvi). Jinak by si útočník zvolil
-    // obtížnost 1, vyrobil jednou 50 000 hlaviček zadarmo a každý uzel by je minuty ověřoval.
+    // Difficulty is computed the same way as when accepting a block (LWMA over the ancestors on this branch). Otherwise an attacker would choose
+    // difficulty 1, produced 50,000 headers once for free and every node would spend minutes verifying them.
     const branch = new Map();
     const headerOf = (hash) => {
       const h = branch.get(Buffer.from(hash).toString('hex')) ?? chain.getHeader(hash);
@@ -873,7 +873,7 @@ export class Network extends EventEmitter {
     return true;
   }
 
-  /** Pauza platí pro adresu, takže ji uzel neobejde novým spojením. */
+  /** The pause applies to the address, so the node cannot bypass it with a new connection. */
   _pauseDeep(peer) {
     const until = Date.now() + DEEP_FORK_PAUSE_MS;
     peer.deepForkUntil = until;
@@ -881,7 +881,7 @@ export class Network extends EventEmitter {
     this.deepPauses.set(this._pauseKey(peer), until);
   }
 
-  /** V místní síti a v testech běží víc uzlů na jedné adrese, tam se pauza váže i na port. */
+  /** On a local network and in tests several nodes run on one address; there the pause is also tied to the port. */
   _pauseKey(peer) {
     return this.allowPrivate && isPrivate(peer.address) ? `${peer.address}:${peer.listenPort}` : peer.address;
   }
@@ -913,9 +913,9 @@ export class Network extends EventEmitter {
   }
 
   /**
-   * Výběr adres pro odchozí spojení. Většina míří na ověřené uzly, zbytek zkouší nové,
-   * vždy jen jedna adresa z rozsahu a v náhodném pořadí. Útočník tak nemůže obklíčit uzel
-   * zaplavením adresami, ani kdyby měl mnoho adres v jedné síti.
+   * Choosing addresses for outbound connections. Most go to verified nodes, the rest try new ones,
+   * always only one address per range and in random order. An attacker thus cannot eclipse the node
+   * by flooding with addresses, even with many addresses in one network.
    */
   _pickOutbound(count) {
     const { store } = this.chain;

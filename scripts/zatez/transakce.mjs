@@ -1,4 +1,4 @@
-// Zápisy: kolik transakcí uzel přijme, jak dlouho trvá plný blok a kolik místa zabere jedna transakce.
+// Writes: how many transactions the node accepts, how long a full block takes and how much space one transaction uses.
 import { readdirSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';

@@ -1,4 +1,4 @@
-// Server poolu se skutečným podílem: podíl projde serverem do kontraktu a Explorer ho uvidí mezi těžaři i zařízeními.
+// Pool server with a real share: the share goes through the server to the contract and the Explorer sees it among miners and devices.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -13,7 +13,7 @@ import { bytesToBigInt } from '../src/crypto/ethash.js';
 const artifacts = JSON.parse(readFileSync(new URL('../../contracts/dist/artifacts.json', import.meta.url)));
 const FACTORY = '0xae0000000000000000000000000000000000000c';
 
-test('podíl těžaře projde serverem poolu do kontraktu, pool ukáže těžaře, zařízení i provozovatele', async () => {
+test("a miner's share passes through the pool server into the contract; the pool shows miners, devices and the operator", async () => {
   const owner = ethers.Wallet.createRandom();
   const payer = ethers.Wallet.createRandom();
   const miner = ethers.Wallet.createRandom().address;
@@ -39,7 +39,7 @@ test('podíl těžaře projde serverem poolu do kontraktu, pool ukáže těžař
     await node.mempool.settled();
   };
   try {
-    await mine();   // továrna poolů vzniká forkem na bloku 1
+    await mine();   // the pool factory is created by a fork at block 1
     const factory = new ethers.Contract(FACTORY, artifacts.PoolFactory.abi, owner.connect(provider));
     const sent = await factory.createPool('Testovací pool', '', 100, 16, 4);
     await sleep(30);
@@ -75,7 +75,7 @@ test('podíl těžaře projde serverem poolu do kontraktu, pool ukáže těžař
     assert.equal((await call('aether_poolInfo', [{ miner }])).deviceCount, 1, 'zařízení jednoho těžaře');
     assert.deepEqual((await call('aether_poolInfo', [{ miner: payer.address }])).devices, [], 'cizí adresa žádná zařízení nemá');
 
-    // Druhý pool bez bloků a blok, jehož odměnu dostal první pool: žebříček je seřadí podle podílu na blocích.
+    // A second pool without blocks and a block whose reward went to the first pool: the ranking sorts them by share of blocks.
     const next = await factory.createPool('Druhý pool', 'http://192.168.1.9:8547', 250, 16, 4);
     await sleep(30);
     await mine();
@@ -87,7 +87,7 @@ test('podíl těžaře projde serverem poolu do kontraktu, pool ukáže těžař
     assert.ok((await node.work.submit(sealed.header.nonce, w.sealHash, sealed.header.mixHash)).accepted);
     const ranked = await call('aether_pools', [{}]);
     assert.equal(ranked.total, 2);
-    // Podíl s nejnižší obtížností mohl na vývojové síti zároveň vytěžit blok, proto „aspoň jeden“.
+    // The share with the lowest difficulty could also have mined a block on the development network, hence "at least one".
     assert.deepEqual(ranked.items.map((p) => [p.name, p.blocks > 0]), [['Testovací pool', true], ['Druhý pool', false]], 'pool s bloky je první');
     assert.equal(ranked.items[0].miners, 1, 'těžař v okně poolu');
     assert.ok(ranked.items[0].share > 0 && ranked.items[0].share < 1, 'podíl na všech blocích období');
@@ -97,7 +97,7 @@ test('podíl těžaře projde serverem poolu do kontraktu, pool ukáže těžař
     assert.deepEqual((await call('aether_pools', [{ query: pool.slice(2, 12).toLowerCase() }])).items.map((p) => p.name), ['Testovací pool'], 'hledání podle adresy');
     assert.deepEqual((await call('aether_pools', [{ limit: 1, offset: 1 }])).items.map((p) => p.name), ['Druhý pool'], 'druhá stránka');
 
-    // Neúspěšná transakce v bloku: poplatek 9 % kontrakt odmítne. Uzel ji přehraje na jejím místě a vrátí chybu kontraktu.
+    // A failed transaction in a block: the contract rejects a 9 % fee. The node replays it in place and returns the contract error.
     const bad = await factory.createPool('Moc drahý', '', 900, 16, 4, { gasLimit: 900_000 });
     await sleep(30);
     await mine();
@@ -115,7 +115,7 @@ test('podíl těžaře projde serverem poolu do kontraktu, pool ukáže těžař
   }
 });
 
-test('podíly poolu ustupují, když se bloky plní', async () => {
+test('pool shares give way when blocks fill up', async () => {
   const { PoolServer } = await import('../src/mining/pool.js');
   const chainWith = (ratio) => {
     const headers = [];

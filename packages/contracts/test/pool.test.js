@@ -1,4 +1,4 @@
-// Pool s automatickým rozdělováním na skutečném uzlu se skutečným Ethash, včetně pokusů o podvod.
+// A pool with automatic distribution on a real node with real Ethash, including cheating attempts.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -60,7 +60,7 @@ async function ok(pending) {
 const fields = (h) => Object.fromEntries(Object.entries(h).filter(([k]) => !k.startsWith('_')));
 const shareExtra = (miner, credit) => ethers.getBytes(ethers.concat([miner, ethers.zeroPadValue(ethers.toBeHex(credit), 12)]));
 
-/** Vytěží podíl: skutečnou hlavičku s adresou těžaře a splněnou prací. */
+/** Mines a share: a real header with the miner's address and the required work. */
 async function share({ coinbase, miner, credit, claim = credit, mutate = (h) => h }) {
   const tpl = await node.chain.buildTemplate({ miner: ethers.getBytes(coinbase), txs: [] });
   const header = mutate(new Header({ ...fields(tpl.header), extraData: shareExtra(miner, claim) }));
@@ -105,7 +105,7 @@ test.after(async () => {
   await node.stop();
 });
 
-test('ověření práce vrátí údaje jen pro skutečně vytěženou hlavičku', async () => {
+test('proof-of-work verification returns data only for a really mined header', async () => {
   const coinbase = ethers.hexlify(ethers.randomBytes(20));
   const h = await share({ coinbase, miner: alice.address, credit: 4n });
   const out = await provider.call({ to: POW_VERIFY_ADDRESS, data: ethers.hexlify(h.encode()) });
@@ -131,7 +131,7 @@ test('ověření práce vrátí údaje jen pro skutečně vytěženou hlavičku'
   await assert.rejects(provider.call({ to: POW_VERIFY_ADDRESS, data: ethers.hexlify(h.encode()), gasLimit: 50000n }), (e) => /out of gas/.test(JSON.stringify(e.info ?? e.message)));
 });
 
-test('továrna je na pevné adrese a hlídá meze nastavení', async () => {
+test('the factory is at a fixed address and enforces the setting bounds', async () => {
   const f = factory();
   assert.equal(await f.poolCount(), 0n);
   const pool = await createPool();
@@ -152,7 +152,7 @@ test('továrna je na pevné adrese a hlídá meze nastavení', async () => {
   assert.equal(await pool.url(), 'http://novy');
 });
 
-test('podvržené podíly neprojdou', async () => {
+test('forged shares do not pass', async () => {
   const pool = await createPool();
   const coinbase = await pool.getAddress();
   const good = await share({ coinbase, miner: alice.address, credit: 4n });
@@ -160,12 +160,12 @@ test('podvržené podíly neprojdou', async () => {
   assert.equal((await pool.windowWork(alice.address)).own, 4n);
 
   await rejected(pool.submitShare.staticCall(good.encode()), REJECT.duplicate);
-  // Stejná hlavička s jinak zapsanou výškou nesmí být nový podíl.
+  // The same header with a differently encoded height must not be a new share.
   const longNumber = [...good.fields()];
   longNumber[7] = new Uint8Array([0, ...longNumber[7]]);
   await rejected(pool.submitShare.staticCall(RLP.encode(longNumber)), REJECT.proof);
 
-  // Provozovatel přepíše adresu těžaře na svou: práce pak nesedí.
+  // The operator rewrites the miner's address to its own: the work then does not match.
   const stolen = new Header({ ...fields(good), extraData: shareExtra(operator.address, 4n) });
   await rejected(pool.submitShare.staticCall(stolen.encode()), REJECT.proof);
   const inflated = new Header({ ...fields(good), extraData: shareExtra(alice.address, 4000n) });
@@ -183,7 +183,7 @@ test('podvržené podíly neprojdou', async () => {
   await rejected(pool.submitShare.staticCall(foreign.encode()), REJECT.chain);
 
   const old = await share({ coinbase, miner: alice.address, credit: 2n });
-  // eth_call běží v kontextu dalšího bloku.
+  // eth_call runs in the context of the next block.
   await mineUntil(old.number + BigInt(MAX_AGE) - 1n);
   await pool.submitShare.staticCall(old.encode());
   await mineBlock();
@@ -195,13 +195,13 @@ test('podvržené podíly neprojdou', async () => {
   });
 });
 
-test('odměna se rozdělí podle práce, provozovatel dostane jen poplatek', async () => {
+test('the reward is split by work; the operator gets only the fee', async () => {
   const pool = await createPool();
   const coinbase = await pool.getAddress();
   await nextRound(pool);
   const a = await share({ coinbase, miner: alice.address, credit: 30n });
   const b = await share({ coinbase, miner: bob.address, credit: 10n });
-  // Dávku může poslat kdokoli a neplatný podíl ji nezastaví.
+  // Anyone can submit a batch and an invalid share does not stop it.
   await ok(pool.connect(stranger.connect(provider)).submitShares([a.encode(), a.encode(), b.encode()]));
   assert.deepEqual([...(await pool.windowWork(alice.address))], [40n, 30n]);
 
@@ -213,7 +213,7 @@ test('odměna se rozdělí podle práce, provozovatel dostane jen poplatek', asy
   assert.equal(await pool.pendingOf(alice.address), 0n, 'před uzavřením kola nic');
 
   const round = a.number / BigInt(ROUND);
-  // Kolo jde uzavřít až po posledním možném podílu.
+  // A round can be closed only after the last possible share.
   await mineUntil((round + 1n) * BigInt(ROUND) + BigInt(MAX_AGE) - 2n);
   await pool.settle(10);
   assert.equal(await pool.settledSteps(), 0n);
@@ -231,13 +231,13 @@ test('odměna se rozdělí podle práce, provozovatel dostane jen poplatek', asy
   assert.equal(await pool.pendingOf(alice.address), shareA);
   assert.equal(await pool.pendingOf(bob.address), shareB);
 
-  // Provozovatel nemá jak vzít mince těžařů: vybere jen poplatek a jde na jeho adresu, ať to spustí kdokoli.
+  // The operator has no way to take miners' coins: it withdraws only the fee, which goes to its address whoever triggers it.
   const before = await provider.getBalance(operator.address);
   await ok(pool.connect(stranger.connect(provider)).withdrawFee());
   assert.equal(await provider.getBalance(operator.address), before + fee);
   await assert.rejects(pool.withdrawFee());
 
-  // Výplatu spustí cizí účet, mince jdou těžaři.
+  // A foreign account triggers the payout; the coins go to the miner.
   const aliceBefore = await provider.getBalance(alice.address);
   await ok(pool.connect(stranger.connect(provider)).claim(alice.address));
   assert.equal(await provider.getBalance(alice.address), aliceBefore + shareA);
@@ -251,7 +251,7 @@ test('odměna se rozdělí podle práce, provozovatel dostane jen poplatek', asy
   assert.ok((await provider.getBalance(coinbase)) < 4n, 'v kontraktu zůstalo jen zaokrouhlení');
 });
 
-test('PPLNS: odměna jde mezi poslední kola v okně a stará práce vypadne', async () => {
+test('PPLNS: the reward goes to the last rounds in the window and old work drops out', async () => {
   const pool = await createPool(0n, ROUND, WINDOW);
   const coinbase = await pool.getAddress();
   await nextRound(pool);
@@ -267,11 +267,11 @@ test('PPLNS: odměna jde mezi poslední kola v okně a stará práce vypadne', a
   await ok(pool.settle(1));
   const pot1 = await pool.reserved();
   assert.ok(pot1 >= 4n * WEI);
-  // První krok má v okně jen sebe.
+  // The first step has only itself in the window.
   const alice1 = await pool.pendingOf(alice.address);
   assert.ok(pot1 - alice1 < 4n, 'celá první odměna patří Alice');
 
-  // Výběr během okna nesmí zablokovat další výdělek ze stejného kroku.
+  // A withdrawal during the window must not block further earnings from the same step.
   await ok(pool.claim(alice.address));
   assert.equal(await pool.pendingOf(alice.address), 0n);
 
@@ -298,13 +298,13 @@ test('PPLNS: odměna jde mezi poslední kola v okně a stará práce vypadne', a
 
   await ok(pool.payout([alice.address, bob.address, carol.address]));
   assert.ok((await provider.getBalance(coinbase)) - (await pool.unsettled()) < 16n, 'všechno rozdělené je vyplacené');
-  // Těžař bez dalších podílů nesmí v cyklu výběru nic navíc.
+  // A miner without further shares must get nothing extra in the withdrawal cycle.
   const carolBefore = await provider.getBalance(carol.address);
   await ok(pool.claim(carol.address));
   assert.equal(await provider.getBalance(carol.address), carolBefore);
 });
 
-test('podíly samy uzavírají hotová kola a po odchodu provozovatele výplata funguje dál', async () => {
+test('shares close finished rounds by themselves and payouts keep working after the operator leaves', async () => {
   const pool = await createPool();
   const coinbase = await pool.getAddress();
   await nextRound(pool);
@@ -316,18 +316,18 @@ test('podíly samy uzavírají hotová kola a po odchodu provozovatele výplata 
   await ok(pool.submitShare(b.encode()));
   assert.equal(await pool.settledSteps(), 1n, 'odeslání podílu uzavřelo staré kolo');
   assert.equal(await pool.readyToSettle(), false);
-  // Poslední krok v okně nikdy nezavře další kolo, přesto jde vybrat vše rozdělené.
+  // The last step in the window never closes another round, yet everything distributed can be withdrawn.
   await mineBlock(coinbase);
   await closeRound(b.number / BigInt(ROUND));
   assert.equal(await pool.readyToSettle(), true);
-  // Tichý pool uzavře kolo i samotný výběr.
+  // A quiet pool closes the round even with a withdrawal alone.
   await ok(pool.connect(alice.connect(provider)).claim(alice.address));
   assert.equal(await pool.settledSteps(), 2n);
   assert.equal(await pool.pendingOf(alice.address), 0n);
   assert.ok((await pool.paidTo(alice.address)) > 7n * WEI);
 });
 
-test('těžař, který je kontrakt, nemůže vybrat dvakrát ani zablokovat výplatu ostatním', async () => {
+test('a miner that is a contract cannot withdraw twice or block payouts to others', async () => {
   const solc = createRequire(import.meta.url)('solc');
   const source = `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;

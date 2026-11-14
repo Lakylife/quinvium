@@ -1,12 +1,12 @@
-// Obsah webu quinvium.com v češtině a angličtině. Každý text je u sebe v obou jazycích: L(česky, anglicky).
-// Fakta pocházejí z packages/node/src/params.js, docs/ a CLAUDE.md. Čísla nevymýšlet.
+// Content of the quinvium.com website in Czech and English. Each text sits next to its translation: L(Czech, English).
+// Facts come from packages/node/src/params.js and docs/. Do not invent numbers.
 
 export const SITE = 'https://quinvium.com';
 export const EXPLORER = 'https://explorer.quinvium.com';
 export const TESTNET_EXPLORER = 'https://testnet.quinvium.com';
 export const GENESIS_HASH = '0x49c889ad9d4f44869cf7f97a6e079a50dbf13974263b1afedec3b774ebeeac39';
 
-// Vestavěné kontrakty v genesis (packages/node/src/genesis/predeploys.json, upgrades.json).
+// Built-in contracts in genesis (packages/node/src/genesis/predeploys.json, upgrades.json).
 export const PREDEPLOYS = [
   ['0xae00000000000000000000000000000000000001', ['Notář', 'Notary'], ['Otisk dokumentu s časem bloku.', 'Proof that a document existed at a block time.'], 'file'],
   ['0xae00000000000000000000000000000000000002', ['Jména .qu', '.qu names'], ['Čitelné jméno místo adresy.', 'A readable name instead of an address.'], 'at'],
@@ -50,10 +50,10 @@ const ic = {
 };
 export const icon = (n) => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ic[n]}</svg>`;
 
-/** Stránky webu. Funkce dostane L(cs, en) pro zvolený jazyk a u(slug) pro odkaz ve stejném jazyce. */
+/** Website pages. The function gets L(cs, en) for the chosen language and u(slug) for a link in the same language. */
 export function pages(L, u, dl = null) {
   const card = (i, h, p) => `<article class="card">${icon(i)}<h3>${h}</h3><p>${p}</p></article>`;
-  // Tlačítka: primary (plné), secondary (bílé s linkou), link (text se šipkou). Velikosti md a lg.
+  // Buttons: primary (solid), secondary (white with a line), link (text with an arrow). Sizes md and lg.
   const cta = (href, text, cls = 'primary') => {
     const ext = /^https?:/.test(href);
     const v = cls === 'ghost' ? 'secondary' : cls;
@@ -72,7 +72,7 @@ export function pages(L, u, dl = null) {
   </div>`;
 
   return [
-    // ------------------------------------------------------------------ úvod
+    // ------------------------------------------------------------------ home
     {
       slug: '', nav: false,
       title: L('Quinvium: blockchain, který těží grafické karty', 'Quinvium: the blockchain mined on graphics cards'),
@@ -239,7 +239,7 @@ await provider.getBlockNumber();</code></pre>
   </div>
 </section>`,
     },
-    // ------------------------------------------------------------------ o síti
+    // ------------------------------------------------------------------ about
     {
       slug: 'about', label: L('O síti', 'About'),
       title: L('O síti Quinvium', 'About Quinvium'),
@@ -310,7 +310,7 @@ await provider.getBlockNumber();</code></pre>
 </div></section>`,
     },
 
-    // ------------------------------------------------------------------ těžba
+    // ------------------------------------------------------------------ mining
     {
       slug: 'mining', label: L('Těžba', 'Mining'),
       title: L('Těžba Quinvia', 'Mining Quinvium'),
@@ -354,7 +354,7 @@ quintium-miner --address VAŠE_ADRESA --node http://127.0.0.1:8545</code></pre>
 </div></section>`,
     },
 
-    // ------------------------------------------------------------------ peněženky
+    // ------------------------------------------------------------------ wallets
     {
       slug: 'wallets', label: L('Peněženky', 'Wallets'),
       title: L('Peněženky pro Quinvium', 'Wallets for Quinvium'),
@@ -384,7 +384,7 @@ quintium-miner --address VAŠE_ADRESA --node http://127.0.0.1:8545</code></pre>
 </div></section>`,
     },
 
-    // ------------------------------------------------------------------ ekosystém
+    // ------------------------------------------------------------------ ecosystem
     {
       slug: 'ecosystem', label: L('Ekosystém', 'Ecosystem'),
       title: L('Ekosystém Quinvia', 'The Quinvium ecosystem'),
@@ -414,7 +414,7 @@ quintium-miner --address VAŠE_ADRESA --node http://127.0.0.1:8545</code></pre>
 </div></section>`,
     },
 
-    // ------------------------------------------------------------------ vývojáři
+    // ------------------------------------------------------------------ developers
     {
       slug: 'developers', label: L('Vývojáři', 'Developers'),
       title: L('Quinvium pro vývojáře', 'Quinvium for developers'),
@@ -463,7 +463,7 @@ console.log(await provider.getBlockNumber());</code></pre>
 </div></section>`,
     },
 
-    // ------------------------------------------------------------------ plán
+    // ------------------------------------------------------------------ roadmap
     {
       slug: 'roadmap', label: L('Plán', 'Roadmap'),
       title: L('Plán Quinvia', 'Quinvium roadmap'),
@@ -480,7 +480,7 @@ console.log(await provider.getBlockNumber());</code></pre>
 </div></section>`,
     },
 
-    // ------------------------------------------------------------------ bezpečnost
+    // ------------------------------------------------------------------ security
     {
       slug: 'security', label: L('Bezpečnost', 'Security'),
       title: L('Bezpečnost', 'Security'),
@@ -505,7 +505,7 @@ console.log(await provider.getBlockNumber());</code></pre>
 </div></section>`,
     },
 
-    // ------------------------------------------------------------------ ke stažení
+    // ------------------------------------------------------------------ download
     {
       slug: 'download', label: L('Ke stažení', 'Download'),
       title: L('Ke stažení', 'Download Quinvium'),
@@ -549,7 +549,7 @@ certutil -hashfile Quinvium-${dl ? dl.version : 'x'}-Windows-x64.exe SHA256    #
 </div></section>`,
     },
 
-    // ------------------------------------------------------------------ otázky
+    // ------------------------------------------------------------------ FAQ
     {
       slug: 'faq', label: L('Otázky', 'FAQ'),
       title: L('Časté otázky', 'Frequently asked questions'),
@@ -574,7 +574,7 @@ certutil -hashfile Quinvium-${dl ? dl.version : 'x'}-Windows-x64.exe SHA256    #
 </div></section>`,
     },
 
-    // ------------------------------------------------------------------ právní
+    // ------------------------------------------------------------------ legal
     {
       slug: 'legal', label: L('Právní upozornění', 'Disclaimer'), footerOnly: true,
       title: L('Právní upozornění', 'Disclaimer'),
@@ -611,7 +611,7 @@ certutil -hashfile Quinvium-${dl ? dl.version : 'x'}-Windows-x64.exe SHA256    #
   ];
 }
 
-/** Ilustrace v úvodu: vrstvené průsvitné pětiúhelníky kolem znaku, plné barvy bez přechodů. */
+/** Illustration on the home page: layered translucent pentagons around the mark, flat colours without gradients. */
 function heroArt() {
   const pent = (cx, cy, r, rot = 0) => {
     const pts = [];
@@ -634,7 +634,7 @@ function heroArt() {
 </svg>`;
 }
 
-/** Graf vydávání: vytěžené QU podle let při 15 s na blok. */
+/** Issuance chart: mined QU by years at 15 s per block. */
 export function emissionChart(L) {
   const bpy = (365.25 * 86400) / 15;
   const W = 560; const H = 260; const px = 44; const py = 20;

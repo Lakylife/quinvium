@@ -1,4 +1,4 @@
-// Čekající transakce nesmí uváznout: přežijí restart uzlu a plná fronta nikomu nevytvoří mezeru v nonce.
+// Pending transactions must not get stuck: they survive a node restart and a full queue creates no nonce gap for anyone.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
@@ -15,7 +15,7 @@ const fund = (...ws) => Object.fromEntries(ws.map((w) => [`0x${Buffer.from(w.add
 const hashes = (pool) => new Set(pool.all().map((tx) => ethers.hexlify(tx.hash())));
 const hex = (tx) => ethers.hexlify(tx.hash());
 
-test('plná fronta vytlačí poslední transakci odesílatele, nikdy prostřední', async () => {
+test("a full queue evicts the sender's last transaction, never a middle one", async () => {
   const a = wallet(); const b = wallet(); const c = wallet(); const d = wallet();
   const chain = await newChain({ alloc: fund(a, b, c, d) });
   const pool = new Mempool(chain, { maxPool: 4 });
@@ -24,16 +24,16 @@ test('plná fronta vytlačí poslední transakci odesílatele, nikdy prostředn�
   const a0 = tx(a, 0n, 9n); const a1 = tx(a, 1n, 3n); const a2 = tx(a, 2n, 9n); const b0 = tx(b, 0n, 5n);
   for (const t of [a0, a1, a2, b0]) await pool.add(t);
 
-  // Nejlevnější je a1 uprostřed řady. Jeho vyřazení by zaseklo a2, proto jde ven b0 z konce své řady.
+  // The cheapest is a1 in the middle of a sequence. Evicting it would block a2, so b0 from the end of its sequence goes out.
   const c0 = tx(c, 0n, 6n);
   await pool.add(c0);
   assert.deepEqual(hashes(pool), new Set([a0, a1, a2, c0].map(hex)));
 
-  // Nikdo na konci řady není levnější než nový: fronta ho odmítne a nic nevyřadí.
+  // Nobody at the end of a sequence is cheaper than the new one: the queue rejects it and evicts nothing.
   await assert.rejects(pool.add(tx(d, 0n, 4n)), /fronta je plná/);
   assert.equal(pool.size, 4);
 
-  // Další transakce téhož odesílatele nevytlačí jeho vlastní dřívější, ta by po ní chyběla.
+  // Further transactions from the same sender do not push out its own earlier one, which would then be missing.
   const a3 = tx(a, 3n, 20n);
   await pool.add(a3);
   assert.deepEqual(hashes(pool), new Set([a0, a1, a2, a3].map(hex)));
@@ -42,7 +42,7 @@ test('plná fronta vytlačí poslední transakci odesílatele, nikdy prostředn�
   assert.deepEqual(order, [0n, 1n, 2n, 3n], 'celá řada jde do bloku');
 });
 
-test('fronta se uloží a po restartu načte, vytěžené a staré transakce se zahodí', async () => {
+test('the queue is saved and loaded after a restart; mined and old transactions are dropped', async () => {
   const a = wallet(); const b = wallet(); const c = wallet();
   const chain = await newChain({ alloc: fund(a, b, c) });
   const to = new Address(wallet().address);
@@ -56,7 +56,7 @@ test('fronta se uloží a po restartu načte, vytěžené a staré transakce se 
   assert.ok(chain.mempool.save(path) && existsSync(path));
   const savedAt = [...chain.mempool.byHash.values()].find((e) => e.tx === a0).addedAt;
 
-  // Mezitím se b0 vytěží. Po restartu se do fronty vrátí jen to, co pořád čeká.
+  // Meanwhile b0 gets mined. After a restart only what is still pending returns to the queue.
   await mine(chain, { txs: [b0] });
   await chain.mempool.settled();
   const restarted = new Mempool(chain);
@@ -69,7 +69,7 @@ test('fronta se uloží a po restartu načte, vytěžené a staré transakce se 
   assert.equal(await new Mempool(chain).restore(join(tmpData(), 'neexistuje.bin')), 0);
 });
 
-test('zrušená platba se po pádu uzlu z uložené fronty nevrátí', async () => {
+test('a cancelled payment does not come back from the saved queue after a node crash', async () => {
   const a = wallet();
   const chain = await newChain({ alloc: fund(a) });
   const path = join(tmpData(), 'mempool.bin');
@@ -78,20 +78,20 @@ test('zrušená platba se po pádu uzlu z uložené fronty nevrátí', async () 
   const payment = transfer(chain, a, new Address(wallet().address), 5n * WEI, 0n, { fee: 10n * GWEI, tip: GWEI });
   await pool.add(payment, { local: true });
   pool.save(path);
-  // Zrušení: prázdná platba sám sobě se stejným nonce a vyšším poplatkem. Uzel pak spadne dřív, než frontu uloží znovu.
+  // Cancellation: an empty payment to oneself with the same nonce and a higher fee. The node then crashes before saving the queue again.
   const cancel = transfer(chain, a, new Address(a.address), 0n, 0n, { fee: 20n * GWEI, tip: 2n * GWEI });
   await pool.add(cancel, { local: true });
   const after = new Mempool(chain);
   assert.equal(await after.restore(path), 0, 'původní platba se nevrátila');
   assert.equal(after.size, 0);
-  // Další uložení už zapíše jen zrušení a záznam o nahrazení zmizí.
+  // The next save writes only the cancellation and the replacement record disappears.
   pool.save(path);
   const again = new Mempool(chain);
   assert.equal(await again.restore(path), 1);
   assert.deepEqual(hashes(again), new Set([hex(cancel)]));
 });
 
-test('uzel po restartu zná transakci odeslanou před ním a vytěží ji', async () => {
+test('after a restart the node knows a transaction sent before it and mines it', async () => {
   const sender = ethers.Wallet.createRandom();
   let clock = Number(NETWORKS.dev.genesisTimestamp);
   const dataDir = tmpData();
@@ -117,7 +117,7 @@ test('uzel po restartu zná transakci odeslanou před ním a vytěží ji', asyn
   }
 });
 
-test('náhrada v plné frontě nikoho nevytlačí a původní transakce zmizí až s ní', async () => {
+test('a replacement in a full queue evicts nobody and the original transaction disappears only with it', async () => {
   const a = wallet(); const b = wallet();
   const chain = await newChain({ alloc: fund(a, b) });
   const pool = new Mempool(chain, { maxPool: 2 });
@@ -125,7 +125,7 @@ test('náhrada v plné frontě nikoho nevytlačí a původní transakce zmizí a
   const tx = (w, nonce, fee, tip = 1n) => transfer(chain, w, to, 1n, nonce, { fee: fee * GWEI, tip: tip * GWEI });
   const a0 = tx(a, 0n, 5n); const b0 = tx(b, 0n, 3n);
   await pool.add(a0); await pool.add(b0);
-  // Slabá náhrada neprojde a původní zůstává.
+  // A weak replacement does not pass and the original stays.
   await assert.rejects(pool.add(tx(a, 0n, 5n, 1n)), /už je ve frontě|o 10 %/);
   assert.deepEqual(hashes(pool), new Set([a0, b0].map(hex)));
   const a0b = tx(a, 0n, 10n, 2n);

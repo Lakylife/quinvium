@@ -1,6 +1,6 @@
-// Rychlá kryptografie pro provádění bloků: libsecp256k1 a rustbn ve WebAssembly.
-// Výsledky musí být bajt po bajtu stejné jako u referenční implementace v JavaScriptu,
-// což hlídá křížový test test/crypto-diff.test.js.
+// Fast cryptography for executing blocks: libsecp256k1 and rustbn in WebAssembly.
+// Results must be byte for byte identical to the reference implementation in JavaScript,
+// which the cross-test test/crypto-diff.test.js guards.
 import { createHash, getHashes } from 'node:crypto';
 import { RustBN254 } from '@ethereumjs/evm';
 import { setLengthLeft } from '@ethereumjs/util';
@@ -16,7 +16,7 @@ function recoveryId(v, chainId) {
   return chainId === undefined ? v - 27n : v - (chainId * 2n + 35n);
 }
 
-/** Stejné rozhraní a chování jako ecrecover z @ethereumjs/util. */
+/** The same interface and behaviour as ecrecover from @ethereumjs/util. */
 export function ecrecover(msgHash, v, r, s, chainId) {
   const id = recoveryId(v, chainId);
   if (id !== 0n && id !== 1n) throw new Error('Invalid signature v value');
@@ -30,7 +30,7 @@ export function ecrecover(msgHash, v, r, s, chainId) {
 
 let bn254Ready = null;
 
-/** @returns {Promise<RustBN254>} sdílená instance, inicializuje se jednou */
+/** @returns {Promise<RustBN254>} shared instance, initialised once */
 export function bn254() {
   bn254Ready ??= initRustBN().then((wasm) => new RustBN254(wasm));
   return bn254Ready;

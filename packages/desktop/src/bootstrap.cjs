@@ -1,10 +1,10 @@
-// Spouštěč aplikace. Je malý a mění se jen instalací: vybere verzi a předá jí řízení.
-// Když se nová verze nedá načíst, spustí předchozí nebo nainstalovanou, takže aktualizace aplikaci nezastaví.
+// App launcher. It is small and changes only with installation: chooses a version and hands over control.
+// If the new version cannot be loaded, the previous or the installed one starts, so an update does not stop the app.
 const { app } = require('electron');
 const path = require('node:path');
 const { pickVersion, rejectVersion } = require('./versions.cjs');
 
-// Data zůstávají ve složce Aether i po přejmenování aplikace: peněženka a řetězec se nesmí ztratit.
+// Data stays in the Aether folder even after the app was renamed: the wallet and the chain must not be lost.
 app.setPath('userData', process.env.AETHER_USER_DATA ?? path.join(app.getPath('appData'), 'Aether'));
 
 const installed = app.getVersion();

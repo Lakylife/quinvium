@@ -1,4 +1,4 @@
-// Peněženky v šifrovaných souborech, stejný formát jako geth (keystore V3). Klíč se dešifruje jen na dobu podpisu.
+// Wallets in encrypted files, the same format as geth (keystore V3). The key is decrypted only for the duration of a signature.
 import { createDecipheriv, pbkdf2Sync } from 'node:crypto';
 import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -24,7 +24,7 @@ function ensureDir() {
   chmodSync(dir(), 0o700);
 }
 
-/** Zápis přes dočasný soubor: pád uprostřed nesmí poškodit jedinou kopii klíče. */
+/** Written through a temporary file: a crash in the middle must not damage the only copy of the key. */
 function writeSafe(path, text) {
   ensureDir();
   writeFileSync(`${path}.tmp`, text, { mode: 0o600 });
@@ -50,7 +50,7 @@ function defaultName() {
 
 const NO_WALLET = () => L('Zatím tu není žádná peněženka. Založte ji příkazem: quinvium wallet create', 'There is no wallet yet. Create one with: quinvium wallet create');
 
-/** Název peněženky pro příkaz. Bez volby se bere výchozí. */
+/** Wallet name for the command. Without the option the default is used. */
 export function chosenWallet(ctx) {
   const name = ctx.opts.wallet ?? defaultName();
   if (!name) throw new CliError(NO_WALLET());
@@ -76,7 +76,7 @@ async function newPassword(ctx) {
   return first;
 }
 
-/** Odemkne peněženku jen pro tento příkaz. */
+/** Unlocks the wallet for this command only. */
 export async function unlock(ctx) {
   const name = chosenWallet(ctx);
   const json = readFileSync(fileOf(name), 'utf8');
@@ -91,11 +91,11 @@ export async function unlock(ctx) {
 async function store(ctx, name, wallet, known) {
   const path = fileOf(name);
   if (existsSync(path)) throw new CliError(L(`Peněženka ${name} už existuje. Zvolte jiný název přes --name.`, `Wallet ${name} already exists. Choose another name with --name.`));
-  // Peněženka z aplikace si nechá své heslo, pokud je dost dlouhé. Jinak se zeptá na nové.
+  // The app's wallet keeps its password if it is long enough. Otherwise it asks for a new one.
   const secret = known && known.length >= MIN_PASSWORD ? known : await newPassword(ctx);
   const first = listWallets().length === 0;
   writeSafe(path, await wallet.encrypt(secret));
-  if (first) writeSafe(join(dir(), DEFAULT_FILE), name);   // výchozí je první peněženka, ne ta první podle abecedy
+  if (first) writeSafe(join(dir(), DEFAULT_FILE), name);   // the default is the first wallet, not the first alphabetically
   return path;
 }
 
@@ -106,7 +106,7 @@ function needName(ctx, rest) {
   return name;
 }
 
-/** Tajemství se na obrazovku smí dostat jen v terminálu, jinak by skončilo v logu nebo v souboru. */
+/** A secret may reach the screen only in a terminal, otherwise it would end up in a log or a file. */
 function showSecret(ctx, title, value) {
   if (!process.stdout.isTTY && !ctx.opts['show-secret']) {
     throw new CliError(L('Výstup nejde do terminálu, tajemství se nevypíše. Pokud to tak opravdu chcete, přidejte --show-secret.', 'The output is not a terminal, so the secret is not printed. If you really want that, add --show-secret.'));
@@ -121,11 +121,11 @@ async function secretInput(ctx, fileOption, prompt) {
 
 const hdWallet = (phrase, index) => ethers.HDNodeWallet.fromPhrase(phrase, undefined, `${HD_PATH}${index}`);
 
-/** Data aplikace Quinvium. Složka se po přejmenování nezměnila, jmenuje se dál Aether. */
+/** Data of the Quinvium app. The folder did not change after renaming; it is still called Aether. */
 export const appDataDir = () => process.env.AETHER_APP_DATA ?? (process.platform === 'darwin' ? join(homedir(), 'Library', 'Application Support', 'Aether')
   : process.platform === 'win32' ? join(process.env.APPDATA ?? homedir(), 'Aether') : join(homedir(), '.config', 'Aether'));
 
-/** Trezor peněženky aplikace: PBKDF2-SHA256 a AES-256-GCM jako WebCrypto v aplikaci, značka ověření je na konci dat. */
+/** The app wallet's vault: PBKDF2-SHA256 and AES-256-GCM like WebCrypto in the app; the authentication tag is at the end of the data. */
 function openAppVault(vault, secret) {
   const key = pbkdf2Sync(secret, Buffer.from(vault.salt, 'base64'), vault.iterations, 32, 'sha256');
   const data = Buffer.from(vault.data, 'base64');
@@ -134,7 +134,7 @@ function openAppVault(vault, secret) {
   return Buffer.concat([decipher.update(data.subarray(0, data.length - 16)), decipher.final()]).toString('utf8');
 }
 
-/** Účty aplikace ve stejném pořadí jako v ní: nejdřív z fráze, potom importované klíče. */
+/** The app's accounts in the same order as in it: first from the phrase, then imported keys. */
 async function appAccounts(ctx) {
   const file = join(appDataDir(), 'wallet.json');
   let stored;
@@ -194,7 +194,7 @@ const COMMANDS = {
     ctx.print({ name, address: wallet.address, path }, summary(name, wallet.address, path));
   },
 
-  /** Stejná peněženka jako v aplikaci: z jejího trezoru, heslem aplikace. Fráze se nemusí opisovat. */
+  /** The same wallet as in the app: from its vault, with the app password. The phrase does not need to be copied. */
   async 'import-app'(ctx, rest) {
     const name = needName(ctx, rest);
     const { accounts, selected, secret } = await appAccounts(ctx);
@@ -261,7 +261,7 @@ const COMMANDS = {
   },
 };
 
-/** quinvium login: v terminálu se nepřihlašuje na dobu sezení. Vybere se peněženka a heslo se zadá při každém podpisu. */
+/** quinvium login: the terminal has no session-long sign-in. A wallet is selected and the password is entered for every signature. */
 export async function login(ctx, [name]) {
   if (name) {
     ctx.opts.wallet = name;

@@ -5,7 +5,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-/// Token vytvořený továrnou: věrnostní body, firemní a komunitní tokeny, poukázky.
+/// A token created by the factory: loyalty points, company and community tokens, vouchers.
 contract AetherToken is ERC20, ERC20Burnable, Ownable {
     uint8 private immutable _customDecimals;
     bool public immutable mintable;
@@ -31,7 +31,7 @@ contract AetherToken is ERC20, ERC20Burnable, Ownable {
     }
 }
 
-/// @title Továrna na tokeny: vlastní token bez psaní kódu
+/// @title Token factory: a custom token without writing code
 contract TokenFactory {
     address[] public tokens;
     mapping(address => address[]) private byCreator;

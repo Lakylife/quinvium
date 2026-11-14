@@ -3,8 +3,8 @@ pragma solidity ^0.8.28;
 
 import {SwapPair} from "./SwapPair.sol";
 
-/// @title Továrna poolů likvidity
-/// @notice Pool může založit kdokoli. Pro každou dvojici tokenů existuje jen jeden.
+/// @title Factory for liquidity pools
+/// @notice Anyone can create a pool. There is only one per token pair.
 contract SwapFactory {
     mapping(address tokenA => mapping(address tokenB => address)) public getPair;
     address[] public allPairs;
@@ -19,7 +19,7 @@ contract SwapFactory {
         return allPairs.length;
     }
 
-    /// @return out seznam poolů od zadané pozice, stránka pro Explorer
+    /// @return out list of pools from the given position, a page for the Explorer
     function list(uint256 start, uint256 count) external view returns (address[] memory out) {
         uint256 total = allPairs.length;
         if (start >= total) return new address[](0);

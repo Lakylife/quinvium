@@ -1,9 +1,9 @@
 #!/bin/bash
-# Sestaví všechny balíčky pro Windows do složky release/. Vyžaduje Node 24, Rust a mingw-w64.
+# Builds all Windows packages into the release/ folder. Requires Node 24, Rust and mingw-w64.
 set -euo pipefail
-# Rust z rustup (má cíl x86_64-pc-windows-gnu) před Rustem z Homebrew, který ho nemá.
+# Rust from rustup (has the x86_64-pc-windows-gnu target) before Rust from Homebrew, which does not.
 [ -d "$HOME/.cargo/bin" ] && export PATH="$HOME/.cargo/bin:$PATH"
-# Cesty ke zdrojům v binárkách bez jména uživatele (panic zprávy Rustu), viz vydání 2.14.0.
+# Source paths in binaries without the user name (Rust panic messages), see release 2.14.0.
 export RUSTFLAGS="--remap-path-prefix=$HOME=/build ${RUSTFLAGS:-}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/release"

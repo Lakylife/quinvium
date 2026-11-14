@@ -1,4 +1,4 @@
-// Spouštěč příkazu quintium: běží z právě používané verze, po zmizení její složky z instalace a cestu přidá jen jednou.
+// Launcher of the quintium command: runs from the version in use, after its folder disappears from the installation, and adds the path only once.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -8,7 +8,7 @@ const { execFileSync } = require('node:child_process');
 const { installPath, manualLine, writeLauncher } = require('../src/cli-launcher.cjs');
 
 const place = fs.mkdtempSync(path.join(os.tmpdir(), 'quintium-spoustec-'));
-// Složka s mezerou a uvozovkou jako "Application Support": cesta se musí v sh správně uvodit.
+// A folder with a space and a quote, like "Application Support": the path must be quoted correctly in sh.
 const data = path.join(place, 'Application Support', 'Aeth"er');
 const version = path.join(data, 'versions', '9.9.9', 'bin');
 const installed = path.join(place, 'Quinvium.app', 'Contents', 'Resources', 'bin');
@@ -22,7 +22,7 @@ const fake = (dir, label) => {
 const bundle = fake(version, 'verze');
 const fallback = fake(installed, 'instalace');
 
-test('spouštěč volá příkazovou řádku běžící verze a předá argumenty beze změny', { skip: process.platform === 'win32' }, () => {
+test("the launcher calls the running version's command line and passes arguments unchanged", { skip: process.platform === 'win32' }, () => {
   const dir = path.join(data, 'bin');
   const file = writeLauncher({ dir, execPath: process.execPath, bundle, fallback, platform: process.platform });
   assert.equal(fs.statSync(file).mode & 0o777, 0o755);
@@ -35,7 +35,7 @@ test('spouštěč volá příkazovou řádku běžící verze a předá argument
   assert.equal(JSON.parse(execFileSync(file, ['status'], { encoding: 'utf8' })).from, 'instalace', 'bez složky verze poslouží instalace');
 });
 
-test('spouštěč pro Windows: cesty přes proměnné, bez diakritiky ze jména uživatele', () => {
+test('Windows launcher: paths through variables, without diacritics from the user name', () => {
   const env = { LOCALAPPDATA: 'C:\\Users\\Lukáš\\AppData\\Local', APPDATA: 'C:\\Users\\Lukáš\\AppData\\Roaming', USERPROFILE: 'C:\\Users\\Lukáš' };
   const dir = path.join(place, 'win');
   const file = writeLauncher({
@@ -53,7 +53,7 @@ test('spouštěč pro Windows: cesty přes proměnné, bez diakritiky ze jména 
   assert.equal(fs.readFileSync(path.join(dir, 'quinvium.cmd'), 'utf8'), text, 'příkaz quinvium spouští totéž');
 });
 
-test('cesta se do profilu přidá jednou a ruční řádek dělá totéž', async () => {
+test('the path is added to the profile once and the manual line does the same', async () => {
   const profile = path.join(place, 'zshrc');
   fs.writeFileSync(profile, 'export EDITOR=vim');
   const dir = path.join(data, 'bin');
@@ -64,13 +64,13 @@ test('cesta se do profilu přidá jednou a ruční řádek dělá totéž', asyn
   const text = fs.readFileSync(profile, 'utf8');
   assert.ok(text.startsWith('export EDITOR=vim\n'), 'původní obsah zůstal');
   assert.equal(text.split('export PATH=').length, 2);
-  // Řádek z profilu v sh opravdu přidá složku do PATH, i s mezerou a uvozovkou v cestě.
+  // A line from the profile in sh really adds the folder to PATH, even with a space and a quote in the path.
   const shown = execFileSync('/bin/sh', ['-c', `. "${profile}"; printf %s "$PATH"`], { encoding: 'utf8' });
   assert.ok(shown.startsWith(`${dir}:`), shown);
   assert.match(manualLine(dir, 'darwin'), /^echo 'export PATH=".*" >> ~\/\.zshrc$|^echo 'export PATH=".*:\$PATH"' >> ~\/\.zshrc$/);
 });
 
-test('Windows: PowerShell dostane jen uživatelskou cestu a nic se nespouští přes cmd', async () => {
+test('Windows: PowerShell gets only the user path and nothing runs through cmd', async () => {
   let call;
   const run = (cmd, args, opts, done) => { call = { cmd, args }; done(null, 'added\r\n'); };
   const r = await installPath({ dir: "C:\\Users\\O'Brien\\AppData\\Roaming\\Aether\\bin", platform: 'win32', run });

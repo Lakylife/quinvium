@@ -1,4 +1,4 @@
-// HTTP a WebSocket server pro JSON-RPC, odběry událostí a statický explorer.
+// HTTP and WebSocket server for JSON-RPC, event subscriptions and the static Explorer.
 import http from 'node:http';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { extname, join, normalize, sep } from 'node:path';
@@ -17,7 +17,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 
 class Limiter {
   constructor(perMinute) { this.limit = perMinute; this.hits = new Map(); }
-  /** @param {number} n cena požadavku: dávka se počítá po položkách */
+  /** @param {number} n cost of the request: a batch counts per item */
   allow(ip, n = 1, limit = this.limit) {
     if (!limit) return true;
     const now = Date.now();
@@ -29,7 +29,7 @@ class Limiter {
   }
 }
 
-/** Limit požadavků za minutu pro volající z internetu, když je uzel otevřený do internetu. */
+/** Requests per minute for callers from the internet when the node is open to the internet. */
 export const PUBLIC_RATE_LIMIT = 1200;
 const LOCAL_CALLER = Object.freeze({ ip: null, local: true });
 
@@ -38,7 +38,7 @@ const TOO_MANY = { jsonrpc: '2.0', id: null, error: { code: -32005, message: 'p�
 export class RpcServer {
   constructor(node, { host = '127.0.0.1', port = 8545, staticDir = null, rateLimit = 0, trustProxy = false, publicMode = false, publicRateLimit = PUBLIC_RATE_LIMIT, log = () => {} }) {
     Object.assign(this, { node, host, port, staticDir, trustProxy, publicMode, log });
-    // Uzel otevřený do internetu rozdává práci jen těžařům z tohoto počítače a z místní sítě a cizím volajícím dává nižší limit.
+    // A node open to the internet hands out work only to miners from this computer and the local network and gives foreign callers a lower limit.
     this.localOnly = new Set(publicMode ? MINING_METHODS : []);
     this.publicLimit = publicMode ? (rateLimit ? Math.min(rateLimit, publicRateLimit) : publicRateLimit) : 0;
     this.limiter = new Limiter(rateLimit);
@@ -75,7 +75,7 @@ export class RpcServer {
     await new Promise((r) => this.http.close(() => r()));
   }
 
-  /** @param {{ip: string|null, local: boolean}} [caller] kdo se ptá, bez zadání uzel sám */
+  /** @param {{ip: string|null, local: boolean}} [caller] who is asking; without it, the node itself */
   async call(req, caller = LOCAL_CALLER) {
     const id = req?.id ?? null;
     if (req?.jsonrpc !== '2.0' || typeof req.method !== 'string') {
@@ -94,7 +94,7 @@ export class RpcServer {
     }
   }
 
-  /** Za reverzní proxy mají všichni stejnou adresu, skutečnou předává proxy v hlavičce. */
+  /** Behind a reverse proxy everyone has the same address; the proxy passes the real one in a header. */
   _clientIp(req) {
     if (this.trustProxy) {
       const forwarded = String(req.headers['x-forwarded-for'] ?? '').split(',').pop().trim();
@@ -104,8 +104,8 @@ export class RpcServer {
   }
 
   /**
-   * Kdo se ptá. Požadavek, který přišel přes proxy nebo tunel, má adresu proxy, tedy často 127.0.0.1.
-   * Bez --trust-proxy se proto požadavek s hlavičkou proxy bere jako cizí, i když přišel z tohoto počítače.
+   * Who is asking. A request that came through a proxy or tunnel has the proxy's address, often 127.0.0.1.
+   * Without --trust-proxy a request with a proxy header is therefore treated as foreign, even if it came from this computer.
    */
   _caller(req) {
     const ip = this._clientIp(req);
@@ -141,7 +141,7 @@ export class RpcServer {
     if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
     if (req.method === 'POST') { this._post(req, res); return; }
     if (req.method === 'GET') {
-      // Adresu posílá kdokoli, i obyčejný odkaz na cizí stránce. Chyba v ní nesmí shodit uzel.
+      // Anyone sends the path, even an ordinary link on someone else's page. An error in it must not crash the node.
       try {
         if (req.url.split('?')[0] === '/health') { this._health(req, res); return; }
         this._static(req, res);
@@ -155,9 +155,9 @@ export class RpcServer {
   }
 
   /**
-   * Zdraví uzlu pro hlídače, proxy a přepínání Exploreru mezi uzly: 200 když uzel stačí ostatním, jinak 503.
-   * Uzel, který se synchronizuje nebo zaostává za sousedy o víc než `maxBehind` bloků, data nabízet nemá.
-   * `maxAge` (sekundy) navíc chce čerstvý blok, hodí se jen pro hlídání těžby, ne pro výběr uzlu.
+   * Node health for monitors, proxies and Explorer failover: 200 when the node keeps up with the others, otherwise 503.
+   * A node that is syncing or more than `maxBehind` blocks behind its peers should not offer data.
+   * `maxAge` (seconds) additionally requires a fresh block; useful only for monitoring mining, not for choosing a node.
    */
   _health(req, res) {
     const params = new URL(req.url, 'http://uzel').searchParams;
@@ -168,8 +168,8 @@ export class RpcServer {
     const now = chain.now?.() ?? Math.floor(Date.now() / 1000);
     const tipAge = Math.max(0, Math.floor(now - Number(chain.head.timestamp)));
     const peers = network ? [...network.peers].filter((p) => p.ready) : [];
-    // Výška sousedů je jen jejich tvrzení. Jeden lhář by jinak poslal uzel do 503 a Explorer by zbytečně přepnul jinam,
-    // proto se při dvou a více sousedech bere druhá nejvyšší. Uzly na větvi za hranicí finality se nepočítají.
+    // The peers' height is only their claim. Otherwise one liar would send the node to 503 and the Explorer would switch elsewhere needlessly,
+    // so with two or more peers the second highest is used. Nodes on a branch beyond the finality boundary are not counted.
     const wallClock = Date.now();
     const heights = peers.filter((p) => !((p.deepForkUntil ?? 0) > wallClock)).map((p) => Number(p.headNumber ?? 0)).sort((a, b) => b - a);
     const claimed = heights.length >= 2 ? heights[1] : heights[0] ?? height;
@@ -245,7 +245,7 @@ export class RpcServer {
     });
   }
 
-  /** Obsah zprávy je zcela v rukou klienta, tvar se proto kontroluje před použitím. */
+  /** The message content is entirely in the client's hands, so its shape is checked before use. */
   async _wsMessage(ws, caller, data) {
     const invalid = (id = null) => this._wsSend(ws, JSON.stringify({ jsonrpc: '2.0', id, error: { code: -32600, message: 'neplatný požadavek' } }));
     let msg;
@@ -275,7 +275,7 @@ export class RpcServer {
     this._wsSend(ws, JSON.stringify(out));
   }
 
-  /** Klient, který nečte, nesmí plnit paměť uzlu. */
+  /** A client that does not read must not fill the node's memory. */
   _wsSend(ws, text) {
     if (ws.readyState !== ws.OPEN) return;
     if (ws.bufferedAmount > MAX_WS_BUFFER) { ws.terminate(); return; }

@@ -1,6 +1,6 @@
-// Hledání uzlů v místní síti. Veřejná síť spoléhá na seed uzly, doma se počítače najdou samy:
-// uzel občas ohlásí svůj port všesměrovým UDP a kdo ho slyší, odpoví přímo jemu.
-// Zpráva nic nedokazuje. Skutečné ověření proběhne při spojení a u každého bloku.
+// Finding nodes on the local network. The public network relies on seed nodes; at home computers find each other:
+// the node occasionally announces its port by UDP broadcast and whoever hears it answers it directly.
+// The message proves nothing. The real verification happens on connection and for every block.
 import dgram from 'node:dgram';
 import { networkInterfaces } from 'node:os';
 import { L } from '../lang.js';
@@ -10,13 +10,13 @@ const INTERVAL_MS = 10_000;
 const MAX_MESSAGE = 160;
 const PATTERN = /^aether-lan1 (\d{1,12}) ([0-9a-f]{64}) (\d{1,5}) ([0-9a-f]{32}) (ask|reply)$/;
 
-/** Poslední adresa rozsahu, na ni naslouchají všichni v dané síti. */
+/** The last address of the range, which everyone on the network listens on. */
 export function broadcastAddress(address, netmask) {
   const mask = netmask.split('.').map(Number);
   return address.split('.').map((b, i) => Number(b) | (~mask[i] & 255)).join('.');
 }
 
-/** @returns {[string, number][]} kam se ohlásit na všech připojených síťových rozhraních */
+/** @returns {[string, number][]} where to announce on all connected network interfaces */
 function broadcastTargets(port) {
   const hosts = new Set(['255.255.255.255']);
   for (const list of Object.values(networkInterfaces())) {
@@ -29,10 +29,10 @@ export class LanDiscovery {
   /**
    * @param {object} o
    * @param {bigint|number} o.chainId
-   * @param {string} o.genesis hash genesis bloku hexadecimálně
-   * @param {number} o.port port pro spojení mezi uzly
-   * @param {string} o.nodeId identita uzlu hexadecimálně
-   * @param {(ip: string) => boolean} o.accepts které adresy patří do místní sítě
+   * @param {string} o.genesis genesis block hash in hex
+   * @param {number} o.port port for connections between nodes
+   * @param {string} o.nodeId node identity in hex
+   * @param {(ip: string) => boolean} o.accepts which addresses belong to the local network
    * @param {(ip: string, port: number, nodeId: string) => void} o.onPeer
    */
   constructor({ chainId, genesis, port, nodeId, accepts, onPeer, listenPort = DISCOVERY_PORT, targets = () => broadcastTargets(listenPort), log = () => {} }) {
@@ -46,7 +46,7 @@ export class LanDiscovery {
   }
 
   _send(message, host, port) {
-    this.socket?.send(message, port, host, () => { /* síť bez spojení není chyba */ });
+    this.socket?.send(message, port, host, () => { /* a network without a connection is not an error */ });
   }
 
   _announce() {
@@ -61,7 +61,7 @@ export class LanDiscovery {
     const peerPort = Number(port);
     if (chainId !== this.chainId || genesis !== this.genesis || nodeId === this.nodeId || peerPort < 1 || peerPort > 65535) return;
     this.onPeer(from.address, peerPort, nodeId);
-    // Odpověď přímo odesílateli projde i přes bránu počítače, která všesměrové zprávy zvenčí blokuje.
+    // A reply directly to the sender passes even the computer's firewall, which blocks broadcasts from outside.
     if (kind === 'ask') this._send(this._message('reply'), from.address, from.port);
   }
 

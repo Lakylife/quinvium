@@ -1,4 +1,4 @@
-// Genesis blok: deterministický, bez předtěžených mincí. Předinstalují se jen systémové kontrakty.
+// Genesis block: deterministic, without premined coins. Only system contracts are predeployed.
 import { Account, createAddressFromString, hexToBytes } from '@ethereumjs/util';
 import { RLP } from '@ethereumjs/rlp';
 import { CONSENSUS } from '../params.js';

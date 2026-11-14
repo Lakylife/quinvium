@@ -1,4 +1,4 @@
-// Veřejný uzel s --no-mining-rpc práci nerozdává ani nepřijímá, ostatní RPC zůstává.
+// A public node with --no-mining-rpc neither hands out nor accepts work; the rest of RPC stays.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MINING_METHODS, RpcError, createMethods } from '../src/rpc/methods.js';
@@ -20,7 +20,7 @@ test('--no-mining-rpc vypne getWork, submitWork i submitHashrate', async () => {
   assert.equal(methods.eth_chainId(), '0xccb3', 'běžné metody fungují dál');
 });
 
-test('bez volby zůstává těžba přes RPC zapnutá', () => {
+test('without the option, mining over RPC stays enabled', () => {
   const { node, reports } = fakeNode(undefined);
   const { methods } = createMethods(node);
   assert.equal(methods.eth_submitHashrate(['0x10', '0x' + '11'.repeat(32)]), true);

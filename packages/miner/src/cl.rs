@@ -1,6 +1,6 @@
-//! Těžba přes OpenCL. Ovladače NVIDIA a AMD berou OpenCL jako výpočetní zátěž a pustí kartu na plné takty,
-//! kdežto u Vulkanu drží NVIDIA paměť v úsporném stavu P5 a výkon je desetinový. Knihovna se načítá až za běhu:
-//! na počítači bez OpenCL program normálně naběhne a použije wgpu.
+//! Mining through OpenCL. NVIDIA and AMD drivers treat OpenCL as a compute workload and run the card at full clocks,
+//! whereas with Vulkan NVIDIA keeps memory in the power-saving P5 state and performance is a tenth. The library is loaded at run time:
+//! on a computer without OpenCL the program starts normally and uses wgpu.
 use crate::{ethash, shader, Card, SearchResult};
 use libloading::Library;
 use std::ffi::{c_void, CString};
@@ -89,7 +89,7 @@ fn check(code: Int, what: &str) -> Result<(), String> {
     }
 }
 
-/// Grafická karta nabízená ovladačem OpenCL.
+/// A graphics card offered by the OpenCL driver.
 #[derive(Clone)]
 pub struct Gpu {
     api: Arc<Api>,
@@ -101,7 +101,7 @@ pub struct Gpu {
     unified: bool,
 }
 
-// Ovladač OpenCL je pro použití z jednoho vlákna v čase bezpečný, kartu vždy obsluhuje jediné vlákno.
+// The OpenCL driver is safe for use from one thread at a time; a card is always served by a single thread.
 unsafe impl Send for Gpu {}
 unsafe impl Send for Api {}
 unsafe impl Sync for Api {}
@@ -125,7 +125,7 @@ fn info_number(api: &Api, device: Handle, param: u32) -> u64 {
     u64::from_le_bytes(out)
 }
 
-/// Grafické karty s vlastní pamětí. Integrovaná karta má pomalou sdílenou paměť, nabídne se jen když nic jiného není.
+/// Graphics cards with dedicated memory. An integrated card has slow shared memory and is offered only when there is nothing else.
 pub fn list() -> Vec<Gpu> {
     let Ok(api) = Api::load().map(Arc::new) else { return Vec::new() };
     let mut count = 0u32;
@@ -161,7 +161,7 @@ pub fn list() -> Vec<Gpu> {
 }
 
 impl Gpu {
-    /// Název a rozšíření pro diagnostiku.
+    /// Name and extension for diagnostics.
     pub fn summary(&self) -> String {
         format!("{}: {}", self.title(), info_text(&self.api, self.device, DEVICE_EXTENSIONS))
     }
@@ -301,7 +301,7 @@ impl Engine {
         if self.memory < full_size + full_size / 8 {
             return Err("DAG se nevejde do paměti karty".into());
         }
-        // Jeden buffer smí být nejvýš `max_alloc`. Velikost části je mocnina dvou, aby šla stránka najít posunem.
+        // One buffer may be at most `max_alloc`. The part size is a power of two so a page can be found by shifting.
         let mut part_bytes = 1u64 << 63;
         while part_bytes > self.max_alloc {
             part_bytes >>= 1;
@@ -313,7 +313,7 @@ impl Engine {
         if full_size <= self.max_alloc {
             part_bytes = full_size.next_power_of_two();
         }
-        // Rozdělený DAG potřebují karty až v pozdějších epochách, zkouška ho vynutí i v epoše 0.
+        // Cards need a split DAG only in later epochs; the test forces it even in epoch 0.
         if let Some(mb) = std::env::var("AETHER_CL_PART_MB").ok().and_then(|v| v.parse::<u64>().ok()) {
             part_bytes = mb << 20;
         }
@@ -367,7 +367,7 @@ impl Engine {
         }
         eprintln!("[{}] DAG hotový za {:.1} s", self.name, started.elapsed().as_secs_f32());
 
-        // Chyba karty nebo ovladače se pozná hned, ne až po hodinách marné těžby.
+        // A card or driver error shows up immediately, not after hours of futile mining.
         for k in 0..16u64 {
             let item = (total as u64 / 17) * (k + 1);
             let part = (item * 64 / part_bytes) as usize;
@@ -404,7 +404,7 @@ impl Card for Engine {
 
     fn prepare(&mut self, epoch: u64, report: &dyn Fn(u32)) -> Result<(), String> {
         self.build(epoch, report)?;
-        // Jiný ovladač může výpočet přeložit jinak. Na snadném cíli se ověří, že řešení sedí s procesorem.
+        // Another driver may compile the computation differently. A solution on an easy target is checked against the CPU.
         let header = [7u8; 32];
         let easy = (0x0100_0000u32, 0xffff_ffffu32);
         let mut limit = [0xffu8; 32];
@@ -460,7 +460,7 @@ impl Card for Engine {
         let nonces = (0..found).map(|i| words[1 + i * 2] as u64 | ((words[2 + i * 2] as u64) << 32)).collect();
         let hashes = self.batch as u64;
 
-        // Dávka okolo 200 ms: karta nezamrzne a nová práce se projeví rychle.
+        // A batch of about 200 ms: the card does not freeze and new work takes effect quickly.
         let ms = t.elapsed().as_millis();
         if ms < SEARCH_MS.0 {
             self.batch = (self.batch * 2).min(1 << 26);

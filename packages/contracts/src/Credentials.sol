@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-/// @title Ověřitelné certifikáty: diplomy, licence, odborné způsobilosti, zdravotní průkazy
-/// @notice Ukládá jen otisk dokladu a kdo ho vydal. Osobní údaje zůstávají mimo řetězec.
-///         Jméno vydavatele si každý uvádí sám, důvěra patří jen jeho adrese, kterou má ověřovatel
-///         znát z oficiálního zdroje. Proto se doklad hledá vždy podle adresy vydavatele
-///         a nikdo cizí nemůže číslo dokladu obsadit dřív než skutečný vydavatel.
+/// @title Verifiable credentials: diplomas, licences, qualifications, health certificates
+/// @notice Stores only the fingerprint of a document and who issued it. Personal data stays off chain.
+///         Everyone states the issuer name themselves; trust belongs only to their address, which the verifier has
+///         know from an official source. That is why a credential is always looked up by the issuer's address
+///         and no stranger can claim a document number before the real issuer.
 contract Credentials {
     struct Issuer {
         string name;
@@ -39,8 +39,8 @@ contract Credentials {
         emit IssuerRegistered(msg.sender, name, website);
     }
 
-    /// @param id otisk dokladu, například keccak256 jeho obsahu se solí
-    /// @param expiresAt čas vypršení, nula znamená bez vypršení
+    /// @param id fingerprint of the document, for example keccak256 of its content with a salt
+    /// @param expiresAt expiry time, zero means no expiry
     function issue(bytes32 id, address subject, bytes32 schema, uint64 expiresAt) external {
         if (issuers[msg.sender].registeredAt == 0) revert NotIssuer();
         Credential storage c = credentials[msg.sender][id];

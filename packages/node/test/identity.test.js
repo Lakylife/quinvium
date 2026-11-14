@@ -1,4 +1,4 @@
-// Trvalá identita uzlů: podpis v HELLO váže klíč ke spojení, útočník uprostřed ani podvržený seed neprojde.
+// Persistent node identity: the signature in HELLO binds the key to the connection; neither an attacker in the middle nor a forged seed gets through.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import net from 'node:net';
@@ -25,7 +25,7 @@ async function node(o = {}) {
 }
 const stopAll = async (...ns) => { for (const n of ns) await n.net.stop(); };
 
-test('klíč uzlu se uloží jen pro vlastníka a po restartu zůstane stejný', () => {
+test('the node key is saved for the owner only and stays the same after a restart', () => {
   const file = join(mkdtempSync(join(tmpdir(), 'aether-id-')), 'node.key');
   const a = NodeIdentity.load(file);
   const b = NodeIdentity.load(file);
@@ -34,7 +34,7 @@ test('klíč uzlu se uloží jen pro vlastníka a po restartu zůstane stejný',
   if (process.platform !== 'win32') assert.equal(statSync(file).mode & 0o077, 0);
 });
 
-test('uzly se navzájem ověří podpisem a znají svůj klíč', async () => {
+test("nodes verify each other by signature and know each other's key", async () => {
   const a = await node(); const b = await node();
   a.net.connect('127.0.0.1', b.net.port);
   assert.ok(await until(() => a.net.peerCount === 1 && b.net.peerCount === 1));
@@ -46,9 +46,9 @@ test('uzly se navzájem ověří podpisem a znají svůj klíč', async () => {
   await stopAll(a, b);
 });
 
-test('útočník, který spojení přeposílá mezi dvěma uzly, neprojde', async () => {
+test('an attacker relaying the connection between two nodes does not get through', async () => {
   const a = await node(); const b = await node();
-  // Útočník má s každou stranou vlastní šifrované spojení a zprávy jen předává dál.
+  // The attacker has its own encrypted connection with each side and only relays messages.
   const mitm = net.createServer((socket) => {
     const inner = new SecureChannel(socket, false);
     const outer = new SecureChannel(net.connect({ host: '127.0.0.1', port: b.net.port }), true);
@@ -68,7 +68,7 @@ test('útočník, který spojení přeposílá mezi dvěma uzly, neprojde', asyn
   await stopAll(a, b);
 });
 
-test('seed s připnutým klíčem: správný klíč projde, cizí ne', async () => {
+test('seed with a pinned key: the right key passes, a foreign one does not', async () => {
   const b = await node();
   const good = await node({ seeds: [`${Buffer.from(b.net.identity.publicKey).toString('hex')}@127.0.0.1:${b.net.port}`] });
   assert.ok(await until(() => good.net.peerCount === 1), 'seed se správným klíčem se připojí');
@@ -81,7 +81,7 @@ test('seed s připnutým klíčem: správný klíč projde, cizí ne', async () 
   await stopAll(good, wrong, b);
 });
 
-test('starší uzel bez identity projde jen tam, kde se identita nevyžaduje', async () => {
+test('an older node without an identity passes only where no identity is required', async () => {
   const legacy = await node();
   legacy.net._helloBody = function legacyHello(peer) { return Network.prototype._helloBody.call(this, peer).slice(0, 11); };
   const open = await node();

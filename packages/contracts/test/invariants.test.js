@@ -1,5 +1,5 @@
-// Náhodné posloupnosti akcí proti pravidlům, která musí platit vždy. Běh je daný semínkem, chyba se dá zopakovat
-// přes AETHER_FUZZ_SEED. Délku určuje AETHER_FUZZ_STEPS, v běžných testech je krátká.
+// Random action sequences against rules that must always hold. A run is determined by a seed, so a failure can be reproduced
+// through AETHER_FUZZ_SEED. The length is set by AETHER_FUZZ_STEPS; in normal tests it is short.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -14,7 +14,7 @@ const SEED = Number(process.env.AETHER_FUZZ_SEED ?? Date.now() % 1_000_000);
 const STEPS = Number(process.env.AETHER_FUZZ_STEPS ?? 120);
 const TWO_256 = 1n << 256n;
 
-/** Mulberry32: krátký generátor se semínkem, stejné semínko dá stejné akce. */
+/** Mulberry32: a short seeded generator; the same seed gives the same actions. */
 function random(seed) {
   let a = seed >>> 0;
   const next = () => {
@@ -29,7 +29,7 @@ function random(seed) {
 
 test.after(() => { console.log(`semínko ${SEED}, kroků ${STEPS}`); });
 
-test('pool: mince nikdy nezmizí a nikdo nedostane víc, než mu patří', async () => {
+test('pool: coins never disappear and nobody gets more than they are owed', async () => {
   const rng = random(SEED);
   const people = Array.from({ length: 5 }, () => ethers.Wallet.createRandom());
   const [operator, ...miners] = people;
@@ -43,7 +43,7 @@ test('pool: mince nikdy nezmizí a nikdo nedostane víc, než mu patří', async
     const pool = new ethers.Contract(created.args.pool, artifacts.AetherPool.abi, side.connect(operator));
     const node = side.node;
     const coinbase = ethers.getBytes(pool.target);
-    let received = 0n;      // kolik mincí pool dostal od sítě
+    let received = 0n;      // how many coins the pool received from the network
     let accepted = 0;
     let withdrawn = 0n;     // kolik si vybral provozovatel
     const paidBefore = new Map();
@@ -114,11 +114,11 @@ test('pool: mince nikdy nezmizí a nikdo nedostane víc, než mu patří', async
       }
       await check(`krok ${i} akce ${action}`);
     }
-    // Závěr: všechno se vyrovná a uvízne nejvýš prach ze zaokrouhlení.
+    // Conclusion: everything balances and at most rounding dust is left over.
     for (let i = 0; i < 80; i++) await poolBlock();
     for (let i = 0; i < 8; i++) await side.ok(pool.settle(32)).catch(() => {});
     for (const m of miners) await side.ok(pool.connect(side.connect(m)).claim(m.address)).catch(() => {});
-    await check('závěr');
+    await check('conclusion');
     const paid = await pool.totalPaid();
     const settled = await pool.settledSteps();
     console.log(`pool: podílů ${accepted}, uzavřených kroků ${settled}, přijato ${ethers.formatEther(received)}, vyplaceno ${ethers.formatEther(paid)}, poplatek ${ethers.formatEther(withdrawn + await pool.operatorOwed())}`);
@@ -130,7 +130,7 @@ test('pool: mince nikdy nezmizí a nikdo nedostane víc, než mu patří', async
   }
 });
 
-test('most: krytí sedí po každém kroku a nic nejde doručit dvakrát', async () => {
+test('bridge: the backing matches after every step and nothing can be delivered twice', async () => {
   const rng = random(SEED + 1);
   const people = Array.from({ length: 4 }, () => ethers.Wallet.createRandom());
   const [admin, guardian, alice, bob] = people;
@@ -156,9 +156,9 @@ test('most: krytí sedí po každém kroku a nic nejde doručit dvakrát', async
     for (const w of [alice, bob]) await B.ok(usd.connect(B.connect(w)).approve(gateB.target, ethers.MaxUint256));
 
     const sign = (id, count = 2) => validators.slice(0, count).map((v) => new ethers.SigningKey(v.privateKey).sign(ethers.hashMessage(ethers.getBytes(id))).serialized);
-    const flying = [];        // odeslané a nedoručené
-    const finished = [];      // doručené, opakování musí selhat
-    const queued = [];        // čekající ve frontě
+    const flying = [];        // sent and not delivered
+    const finished = [];      // delivered; a repeat must fail
+    const queued = [];        // pending in the queue
     const owner = (w) => (w.address === alice.address ? alice : bob);
 
     async function check(at) {
@@ -201,7 +201,7 @@ test('most: krytí sedí po každém kroku a nic nejde doručit dvakrát', async
         await A.ok(gateA.executeQueued(f.m));
         finished.push(f);
       } else if (finished.length) {
-        // Každý pokus o opakování a podvod musí selhat.
+        // Every attempt at replay and fraud must fail.
         const f = rng.pick(finished);
         const [gate] = f.to === 'A' ? [gateA] : [gateB];
         await assert.rejects(gate.deliver.staticCall(f.m, sign(f.id)), undefined, 'opakované doručení');

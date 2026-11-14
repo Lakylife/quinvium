@@ -1,4 +1,4 @@
-// Vlákno pro eth_call, eth_estimateGas a dotazy Exploreru. Má vlastní spojení do databáze jen pro čtení.
+// Thread for eth_call, eth_estimateGas and Explorer queries. It has its own read-only database connection.
 import { parentPort, workerData } from 'node:worker_threads';
 import { forkIndex, rulesAt } from '../core/forks.js';
 import { makeCommon } from '../core/executor.js';

@@ -1,6 +1,6 @@
-// Server poolu: rozdává těžařům práci a podíly posílá do kontraktu AetherPool. Rozdělení mincí dělá jen kontrakt,
-// server neumí víc než doručit podíl a spustit výplatu. Každý těžař hashuje vlastní hlavičku se svou adresou v extraData,
-// takže podíl nejde přepsat na někoho jiného. Když server zmizí, podíly i výplatu může odeslat kdokoli jiný.
+// Pool server: hands out work to miners and submits shares to the AetherPool contract. Only the contract distributes coins,
+// the server can do no more than deliver a share and trigger a payout. Each miner hashes its own header with its address in extraData,
+// so a share cannot be redirected to someone else. When the server disappears, anyone else can submit shares and the payout.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { createFeeMarket1559Tx } from '@ethereumjs/tx';
 import { Address, privateToAddress } from '@ethereumjs/util';
@@ -11,35 +11,35 @@ import { GWEI } from '../params.js';
 import { equal, fromHex, keccak, toHex } from '../util/bytes.js';
 import { L } from '../lang.js';
 
-const SHARE_SECONDS = 20;            // jak často má jedno zařízení posílat podíl
-const SHARES_PER_BLOCK = 24;         // víc se do řetězce levně nevejde, u velkého poolu se podíly zdraží
-const MIN_SHARES_PER_BLOCK = 6;      // při plných blocích: podíly ustoupí platbám, ale rozptyl výplat zůstane snesitelný
-const BUSY_FULLNESS = 0.5;           // od poloviny bloku roste základní poplatek, síť je vytížená
+const SHARE_SECONDS = 20;            // how often one device should send a share
+const SHARES_PER_BLOCK = 24;         // no more fits into the chain cheaply; for a large pool shares get more expensive
+const MIN_SHARES_PER_BLOCK = 6;      // with full blocks: shares give way to payments, but payout variance stays bearable
+const BUSY_FULLNESS = 0.5;           // above half a block the base fee rises; the network is busy
 const FULLNESS_BLOCKS = 5;
 const BLOCK_SECONDS = 15;
-const RETARGET_SHARES = 6;           // po kolika podílech se přepočítá obtížnost
+const RETARGET_SHARES = 6;           // after how many shares difficulty is recomputed
 const MIN_SHARE_DIFFICULTY = 1n << 16n;
-const SHARES_PER_NETWORK_WORK = 4096n; // podíl musí vydělat víc, než stojí jeho gas: 4 mince / 4096 je víc než 150 000 gasu
+const SHARES_PER_NETWORK_WORK = 4096n; // a share must earn more than its gas costs: 4 coins / 4096 is more than 150,000 gas
 const CREDIT_BYTES = 12;
 const MAX_CREDIT = (1n << 96n) - 1n;
 const MAX_JOBS = 16_384;
 const MAX_SESSIONS = 16_384;
-const DEVICE_PAGE = 200;             // připojená zařízení na jednu stránku
+const DEVICE_PAGE = 200;             // connected devices per page
 const MAX_DEVICE_PAGE = 500;
 const MAX_QUEUE = 4096;
 const FLUSH_MS = 10_000;
 const PAYOUT_MS = 5 * 60_000;
 const MAX_BATCH = 32;
 const MAX_PAYOUT = 24;
-const MAX_SHARE_AGE = 32n;           // stejná mez jako v kontraktu
-const AGE_MARGIN = 4n;               // podíl musí stihnout blok, jinak se neposílá
-const BASE_GAS = 400_000n;           // uzavření několika kol a první podíl v novém kole
+const MAX_SHARE_AGE = 32n;           // the same limit as in the contract
+const AGE_MARGIN = 4n;               // the share must make it before the block, otherwise it is not sent
+const BASE_GAS = 400_000n;           // closing several rounds and the first share in a new round
 const GAS_PER_SHARE = 220_000n;
 const GAS_PER_SETTLE = 90_000n;
 const SETTLE_STEPS = 8n;
-const MAX_TX_GAS = 7_000_000n;       // uzel přijme nejvýše 8 milionů
+const MAX_TX_GAS = 7_000_000n;       // the node accepts at most 8 million
 const TIP = 2n * GWEI;
-const MIN_PAYOUT = 10n ** 17n;       // 0,1 mince: menší částky si těžař vybere sám, nebo počkají
+const MIN_PAYOUT = 10n ** 17n;       // 0.1 coin: the miner withdraws smaller amounts themselves, or they wait
 const RATE_WINDOW_MS = 10 * 60_000;
 
 const utf8 = new TextEncoder();
@@ -82,7 +82,7 @@ export function encodeBytesArray(prefix, items) {
 /** ABI: funkce(address[]) */
 export const encodeAddressArray = (prefix, items) => Buffer.concat([prefix, word(32), word(items.length), ...items.map(addressWord)]);
 
-/** Podíl nese adresu těžaře a svou obtížnost, obojí je kryté prací. */
+/** A share carries the miner's address and its difficulty, both covered by work. */
 export function shareExtra(miner, difficulty) {
   const out = new Uint8Array(32);
   out.set(miner);
@@ -101,17 +101,17 @@ export class PoolServer {
    * @param {object} o.work
    * @param {object} o.mempool
    * @param {Uint8Array} o.address adresa kontraktu poolu
-   * @param {Uint8Array} o.key klíč účtu, který platí gas za podíly a výplaty
-   * @param {(tx: object) => Promise<object>} o.send odeslání transakce do sítě
-   * @param {(params: object) => Promise<string>} o.call čtení z kontraktu
+   * @param {Uint8Array} o.key key of the account that pays gas for shares and payouts
+   * @param {(tx: object) => Promise<object>} o.send send a transaction to the network
+   * @param {(params: object) => Promise<string>} o.call read from a contract
    * @param {(params: object) => Promise<string>} o.estimate odhad gasu
-   * @param {bigint} [o.minShareDifficulty] nejnižší obtížnost podílu
-   * @param {string} [o.stateFile] seznam těžařů pro výplaty po restartu
+   * @param {bigint} [o.minShareDifficulty] lowest share difficulty
+   * @param {string} [o.stateFile] list of miners for payouts after a restart
    */
   constructor({ chain, work, mempool, address, key, send, call, estimate, minShareDifficulty = MIN_SHARE_DIFFICULTY, stateFile, log = () => {} }) {
     Object.assign(this, { chain, work, mempool, address, key, send, call, estimate, minShareDifficulty, stateFile, log });
     this.sender = privateToAddress(key);
-    this.sessions = new Map();   // adresa.zařízení -> stav
+    this.sessions = new Map();   // address.device -> state
     this.jobs = new Map();       // sealHash -> { block, session, target }
     this.queue = [];             // { header, number, parent }
     this.seen = new Set();
@@ -123,7 +123,7 @@ export class PoolServer {
     this.sending = Promise.resolve();
   }
 
-  /** Ověří, že kontrakt pochází z továrny, jinak by mince těžařů šly do neznámého kódu. */
+  /** Verifies that the contract comes from the factory; otherwise miners' coins would go to unknown code. */
   async start() {
     const data = Buffer.concat([selector('isPool(address)'), addressWord(this.address)]);
     const result = await this.call({ to: toHex(FACTORY), data: toHex(data) });
@@ -143,12 +143,12 @@ export class PoolServer {
     this._saveMiners();
   }
 
-  /** Těžař, který odešel, má dostat výplatu i po restartu serveru. */
+  /** A miner who left must get paid even after the server restarts. */
   _loadMiners() {
     if (!this.stateFile || !existsSync(this.stateFile)) return;
     try {
       for (const a of JSON.parse(readFileSync(this.stateFile, 'utf8'))) if (/^0x[0-9a-f]{40}$/.test(a)) this.miners.add(a);
-    } catch { /* poškozený seznam nevadí, těžaři si mohou vybrat sami */ }
+    } catch { /* a corrupted list does not matter; miners can choose themselves */ }
   }
 
   _saveMiners() {
@@ -179,8 +179,8 @@ export class PoolServer {
   }
 
   /**
-   * Čím víc zařízení, tím vzácnější podíly: řetězec jich do bloku pojme jen omezeně.
-   * Počítají se jen zařízení, která něco vytěžila. Žádost o práci nic nestojí, jinak by šlo podíly zdražit všem ostatním.
+   * The more devices, the rarer the shares: the chain fits only a limited number into a block.
+   * Only devices that mined something are counted. Asking for work costs nothing, otherwise shares could be made more expensive for everyone else.
    */
   _interval() {
     const now = Date.now();
@@ -190,9 +190,9 @@ export class PoolServer {
   }
 
   /**
-   * Kolik podílů za blok pool posílá. Jeden podíl stojí asi 220 000 gasu, 24 podílů tedy přes polovinu bloku.
-   * Dokud bloky nejsou plné, místo nikomu nechybí. Když se plní, podíly ustupují až na čtvrtinu, aby pooly
-   * nevytlačily platby a nezvedaly poplatky ostatním. Méně podílů znamená jen o něco větší rozptyl výplat.
+   * How many shares per block the pool submits. One share costs about 220,000 gas, so 24 shares are over half a block.
+   * As long as blocks are not full, nobody is missing space. As they fill, shares give way down to a quarter so that pools
+   * did not crowd out payments or raise fees for others. Fewer shares only mean a slightly larger payout variance.
    */
   sharesPerBlock() {
     const head = this.chain.head;
@@ -228,7 +228,7 @@ export class PoolServer {
     if (s.shares >= RETARGET_SHARES) {
       const hashes = BigInt(s.shares) * s.difficulty;
       const next = (hashes * BigInt(Math.round(interval))) / BigInt(Math.max(1, Math.round(seconds)));
-      // Velký skok by při náhodě odstřihl slabé zařízení, proto nejvýše čtyřnásobek.
+      // A big jump could cut off a weak device by chance, hence at most four times.
       s.difficulty = clamp(next > s.difficulty * 4n ? s.difficulty * 4n : next < s.difficulty / 4n ? s.difficulty / 4n : next);
     } else if (seconds >= interval * 4) {
       s.difficulty = clamp(s.shares === 0 ? s.difficulty / 2n : (BigInt(s.shares) * s.difficulty * BigInt(Math.round(interval))) / BigInt(Math.round(seconds)));
@@ -240,9 +240,9 @@ export class PoolServer {
   }
 
   /**
-   * Práce pro jedno zařízení. Hlavička je jen jeho, díky adrese v extraData.
-   * @param {Uint8Array} miner adresa výplaty
-   * @param {string} [worker] název zařízení
+   * Work for one device. The header is only its own, thanks to the address in extraData.
+   * @param {Uint8Array} miner payout address
+   * @param {string} [worker] device name
    */
   async workFor(miner, worker = 'rig') {
     const base = await this.work.getWork(this.address);
@@ -264,7 +264,7 @@ export class PoolServer {
   }
 
   /**
-   * Přijme podíl.
+   * Accepts a share.
    * @returns {Promise<{accepted: boolean, reason?: string, stale?: boolean, block?: object}>}
    */
   async submit(nonce, sealHash, mixDigest) {
@@ -307,7 +307,7 @@ export class PoolServer {
     this.queue.push(header);
 
     if (value > targetForDifficulty(h.difficulty)) return { accepted: true };
-    // Podíl je zároveň blok: jde do sítě hned a kontrakt ho dostane jako každý jiný podíl.
+    // The share is also a block: it goes to the network immediately and the contract receives it like any other share.
     this.work.templates.set(key, new Block(new Header(copy(h)), txs));
     const block = await this.work.submit(nonce, sealHash, mixDigest);
     if (block.accepted && !block.stale) {
@@ -325,7 +325,7 @@ export class PoolServer {
     return !!parent && equal(parent, header.parentHash);
   }
 
-  /** Transakce jdou po jedné: souběžné by dostaly stejné nonce. */
+  /** Transactions go one at a time: concurrent ones would get the same nonce. */
   _send(data, gasLimit) {
     const run = this.sending.then(() => this._sendNow(data, gasLimit));
     this.sending = run.catch(() => {});
@@ -349,7 +349,7 @@ export class PoolServer {
     return tx;
   }
 
-  /** Pošle dávku podílů do kontraktu. Podíl mimo řetězec nebo moc starý by jen stál gas. */
+  /** Sends a batch of shares to the contract. A share off the chain or too old would only cost gas. */
   async flush() {
     if (this.flushing || !this.queue.length) return null;
     this.flushing = true;
@@ -369,7 +369,7 @@ export class PoolServer {
     }
   }
 
-  /** Spustí výplatu těžařům, kteří mají něco k vyplacení. Mince jdou vždy přímo jim. */
+  /** Triggers payouts to miners who have something to be paid. Coins always go directly to them. */
   async payout() {
     this._saveMiners();
     const due = [];
@@ -380,12 +380,12 @@ export class PoolServer {
       if (due.length >= MAX_PAYOUT) break;
     }
     if (!due.length) {
-      // V tichém poolu nikdo kola neuzavře, výplata by jinak nepřišla.
+      // In a quiet pool nobody closes rounds; the payout would otherwise not come.
       const ready = await this.call({ to: toHex(this.address), data: toHex(READY) });
       if (BigInt(ready === '0x' ? 0 : ready) !== 1n) return null;
       return this._send(Buffer.concat([SETTLE, word(SETTLE_STEPS)]), BASE_GAS + GAS_PER_SETTLE * SETTLE_STEPS);
     }
-    // Cena výplaty závisí na tom, ve kolika kolech těžař pracoval. Když se všichni nevejdou, zbytek počká na další kolo výplat.
+    // The payout cost depends on how many rounds the miner worked in. If not everyone fits, the rest waits for the next payout round.
     for (let list = due; list.length; list = list.slice(0, list.length >> 1)) {
       const data = encodeAddressArray(PAYOUT, list);
       const gas = await this.estimate({ from: toHex(this.sender), to: toHex(this.address), data: toHex(data) }).catch(() => null);
@@ -398,7 +398,7 @@ export class PoolServer {
     throw new PoolError('výplata se nevešla do limitu transakce');
   }
 
-  /** Výkon jednoho zařízení z přijatých podílů, nula u zařízení, které se dlouho neozvalo. */
+  /** Hashrate of one device from accepted shares, zero for a device that has not reported for a long time. */
   _rate(s, now) {
     const seconds = (now - s.windowStart) / 1000;
     if (seconds <= 0 || now - s.seen > RATE_WINDOW_MS) return 0;
@@ -406,7 +406,7 @@ export class PoolServer {
     return Number(s.done + s.previous) / span;
   }
 
-  /** Odhad výkonu z přijatých podílů. */
+  /** Hashrate estimate from accepted shares. */
   hashrate() {
     const now = Date.now();
     let total = 0;
@@ -415,8 +415,8 @@ export class PoolServer {
   }
 
   /**
-   * Stav serveru poolu. Připojená zařízení jdou po stránkách a dají se zúžit na jednoho těžaře,
-   * protože u velkého poolu jich jsou tisíce. Adresa těžaře je veřejná v jeho podílech, IP adresy se neukazují.
+   * Pool server status. Connected devices come by page and can be narrowed to one miner,
+   * because a large pool has thousands of them. The miner's address is public in its shares; IP addresses are not shown.
    */
   async info({ miner = null, limit = DEVICE_PAGE, offset = 0 } = {}) {
     const account = await (await this.chain.stateAt(this.chain.head.stateRoot)).stateManager.getAccount(new Address(this.sender));

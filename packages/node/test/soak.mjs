@@ -1,6 +1,6 @@
-// Zátěžová zkouška na skutečné síti: uzly jako procesy, GPU miner a nepřetržité transakce.
-// Spuštění: node test/soak.mjs <složka> <sekundy>
-// S AETHER_SOAK_DEV=1 běží na síti dev s těžbou v procesoru, grafická karta tak zůstane volná pro skutečnou těžbu.
+// Load test on a real network: nodes as processes, a GPU miner and continuous transactions.
+// Run: node test/soak.mjs <folder> <seconds>
+// With AETHER_SOAK_DEV=1 it runs on the dev network with CPU mining, so the graphics card stays free for real mining.
 import { spawn } from 'node:child_process';
 import { mkdirSync, rmSync, openSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -115,7 +115,7 @@ console.log(JSON.stringify({
 }, null, 1));
 for (const p of Object.values(procs)) p.kill('SIGINT');
 await sleep(2000);
-// Uzel 2 dostal tvrdé ukončení. Po něm musí celý řetězec znovu projít od genesis.
+// Node 2 was hard-killed. Afterwards the whole chain must pass again from genesis.
 const audit = await auditChain({ network: NETWORKS[NETWORK], dataDir: join(dir, 'n2') });
 console.log(JSON.stringify({ kontrola: audit.ok, bloky: audit.blocks, transakce: audit.transactions, mince: audit.supply?.toString(), emise: audit.emitted.toString(), problemy: audit.problems }, null, 1));
 process.exit(same && audit.ok ? 0 : 1);

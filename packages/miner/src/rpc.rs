@@ -1,4 +1,4 @@
-//! Malý HTTP klient pro JSON-RPC uzlu. Bez závislostí na TLS: miner mluví s vlastním uzlem.
+//! Small HTTP client for the node's JSON-RPC. No TLS dependencies: the miner talks to its own node.
 use serde_json::{json, Value};
 use std::io::{Read, Write};
 use std::net::{TcpStream, ToSocketAddrs};

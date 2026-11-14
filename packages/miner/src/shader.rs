@@ -1,5 +1,5 @@
-//! Generátor výpočetních shaderů WGSL. Keccak-f1600 používá dvojice 32bitových slov,
-//! protože WGSL 64bitová čísla nemá. Rotace se generují s konstantami, ať je kód co nejrychlejší.
+//! Generator of WGSL compute shaders. Keccak-f1600 uses pairs of 32-bit words,
+//! because WGSL has no 64-bit integers. Rotations are generated with constants so the code is as fast as possible.
 
 const WORKGROUP: u32 = 64;
 const ROT: [u32; 25] = [
@@ -85,8 +85,8 @@ fn keccak() -> String {
 
 const FNV: &str = "fn fnv(a: u32, b: u32) -> u32 { return (a * 0x01000193u) ^ b; }\n";
 
-/// Keccak-f1600 rozepsaný do jednorázových hodnot. Bez polí a smyček drží překladač vše v registrech.
-/// Pole ve funkci jdou na kartách NVIDIA do pomalé lokální paměti, což výkon srazí desetinásobně.
+/// Keccak-f1600 unrolled into single-assignment values. Without arrays and loops the compiler keeps everything in registers.
+/// Arrays in a function go to slow local memory on NVIDIA cards, which cuts performance tenfold.
 fn keccak_inline(s: &mut String, tag: &str, input: Vec<String>) -> Vec<String> {
     let mut a = input;
     for (r, rc) in RC.iter().enumerate() {
@@ -139,8 +139,8 @@ fn keccak_inline(s: &mut String, tag: &str, input: Vec<String>) -> Vec<String> {
 
 pub const MAX_RESULTS: usize = 16;
 
-/// Hledání nonce. `chunks` je počet bufferů DAG, `page_bits` log2 počtu 128bajtových stránek v bufferu.
-/// Šestnáct slov se čte po čtveřicích: jedna instrukce místo čtyř, stejná šířka jako cesta do paměti.
+/// Nonce search. `chunks` is the number of DAG buffers, `page_bits` is log2 of the number of 128-byte pages in a buffer.
+/// Sixteen words are read in fours: one instruction instead of four, the same width as the memory path.
 pub fn search_shader(chunks: u32, page_bits: u32) -> String {
     let mut s = String::new();
     s += "struct Params { header: array<u32, 8>, nonce_lo: u32, nonce_hi: u32, target0: u32, target1: u32, pages: u32, pad0: u32, pad1: u32, pad2: u32 }\n";
@@ -215,7 +215,7 @@ pub fn search_shader(chunks: u32, page_bits: u32) -> String {
     s
 }
 
-/// Výpočet DAG na grafické kartě.
+/// Computing the DAG on the graphics card.
 pub fn dag_shader() -> String {
     let mut s = String::new();
     s += "struct Params { start: u32, rows: u32, out_offset: u32, pad: u32 }\n";

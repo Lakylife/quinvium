@@ -1,4 +1,4 @@
-// Stránky aplikace: těžba, Explorer, síť, nastavení a O projektu. Peněženka má vlastní kód ve wallet/popup.js.
+// App pages: mining, Explorer, network, settings and About. The wallet has its own code in wallet/popup.js.
 (() => {
   const el = (id) => document.getElementById(id);
   const d = window.desktop;
@@ -22,16 +22,16 @@
   let lastStats = null;
   let explorer = null;
 
-  // Návrat na záložku ukáže to, co odpovídá stavu peněženky, ne starou obrazovku.
+  // Returning to the tab shows what matches the wallet state, not an old screen.
   const refreshWallet = () => { if (!el('tab-wallet').hidden && !window.approvalActive()) start(); };
   window.currentTab = () => document.querySelector('nav button[data-tab].active')?.dataset.tab ?? null;
   window.openAppTab = (name) => document.querySelector(`nav button[data-tab="${name}"]`)?.click();
 
-  // Swap a most jsou stránky Exploreru. V aplikaci vypadají jako její záložky, proto bez hlavičky Exploreru.
-  // Záložka Explorer otevře vždy jeho úvod. Na konkrétní stránku vede jen odkaz, třeba „Zobrazit v Exploreru“.
+  // Swap and bridge are Explorer pages. In the app they look like its tabs, hence without the Explorer header.
+  // The Explorer tab always opens its home page. Only a link leads to a specific page, for example "View in Explorer".
   const EXPLORER_PAGES = { swap: '/swap', bridge: '/bridge', explorer: '/' };
 
-  // Pooly patří pod těžbu a O aplikaci pod nastavení: boční panel má jen to, kam se chodí každý den.
+  // Pools belong under mining and About under settings: the sidebar has only what is used every day.
   const NAV_PARENT = { pools: 'mining', about: 'settings' };
 
   window.showTab = (name, { path } = {}) => {
@@ -51,7 +51,7 @@
     };
   });
 
-  // ---- zámek aplikace: po nečinnosti heslo na celou aplikaci, těžba a uzel běží dál ------------------
+  // ---- app lock: after inactivity a password for the whole app; mining and the node keep running ------------------
   const ACTIVITY_MS = 30_000;
   const LOCK_TIMES = [5, 15, 30, 60];
   const walletStatus = async () => (await wallet('status').catch(() => null))?.result ?? {};
@@ -94,10 +94,10 @@
   };
   for (const type of ['pointerdown', 'keydown', 'wheel']) addEventListener(type, activity, { capture: true, passive: true });
 
-  /** Heslo před změnou, která určuje, kam jdou mince. Bez peněženky není co chránit. */
+  /** Password before a change that decides where coins go. Without a wallet there is nothing to protect. */
   async function askPassword(title) {
     const status = await walletStatus();
-    if (!status.initialized || status.external) return true;     // klíče drží peněženka mimo aplikaci, heslo tu žádné není
+    if (!status.initialized || status.external) return true;     // the keys are held by a wallet outside the app; there is no password here
     return new Promise((resolve) => {
       const done = (ok) => { el('pw-box').hidden = true; resolve(ok); };
       el('pw-title').textContent = title;
@@ -116,7 +116,7 @@
     });
   }
 
-  // ---- přihlášení peněženkou mimo aplikaci ------------------------------------------------------------
+  // ---- signing in with a wallet outside the app ------------------------------------------------------------
   const nodePort = () => last?.node.rpc ?? d.testRpcPort ?? (last?.node.network === 'mainnet' ? 8545 : 8546);
   const chainInfo = () => ({
     chainId: lastStats?.chainId ?? (last?.node.network === 'mainnet' ? 52401 : 52402),
@@ -130,7 +130,7 @@
     start();
   };
 
-  /** MetaMask je v prohlížeči: stránka v něm zprostředkuje přihlášení i pozdější podpisy. */
+  /** MetaMask lives in the browser: a page there handles sign-in and later signatures. */
   window.signInBrowserWallet = async () => {
     const ask = async () => { await d.walletLinkOpen({ lang: i18n.lang(), chain: chainInfo() }); };
     render(`${screenHead('MetaMask')}<p>${tr('We opened your browser. Confirm the connection in MetaMask there and keep that tab open.')}</p>
@@ -142,7 +142,7 @@
   async function browserWalletHello({ address, signature, message, name, rdns }) {
     const box = el('ext-error');
     try {
-      // Podpis dokazuje, že adresa opravdu patří této peněžence. Bez něj by šlo těžit na překlep.
+      // The signature proves the address really belongs to this wallet. Without it one could mine to a typo.
       if (ethers.verifyMessage(message, signature).toLowerCase() !== address.toLowerCase()) throw new Error('Invalid signature');
       await call('setExternal', { kind: 'browser', name, address, rdns });
       await signedIn();
@@ -169,7 +169,7 @@
     wc.on('disconnect', () => { wc = null; });
     return wc;
   }
-  /** Telefon se připojí přes QR kód. Project ID vydává zdarma dashboard.reown.com, bez něj se relay nepřipojí. */
+  /** A phone connects through a QR code. dashboard.reown.com issues a Project ID for free; without it the relay does not connect. */
   window.signInWalletConnect = async () => {
     if (!window.AETHER_CONFIG?.walletConnectProjectId && !store.get('aether.wcProject')) {
       render(`${screenHead('WalletConnect')}<p>${tr('WalletConnect needs a free Project ID from dashboard.reown.com.')}</p>
@@ -198,14 +198,14 @@
     }
   };
 
-  /** Podpisy z aplikace jdou do peněženky, kterou se uživatel přihlásil. Klíče aplikace nikdy nevidí. */
+  /** Signatures from the app go to the wallet the user signed in with. The app never sees the keys. */
   globalThis.externalRequest = async (external, method, params) => {
     if (external.kind === 'walletconnect') return (await walletConnect()).request({ method, params });
     return d.walletLinkRequest(method, params, { chain: chainInfo(), signedIn: true, rdns: external.rdns });
   };
 
   const errorText = (e) => tr(e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''));
-  /** Dokud těžař nemá DAG, ukazuje se průběh v procentech, potom skutečný výkon. */
+  /** Until the miner has the DAG, progress is shown in percent, then the real hashrate. */
   const LOAD_TEXT = { start: 'Starting the graphics card', dag: 'Loading mining data', check: 'Checking the card' };
   function showLoading(m) {
     const running = m.running ?? true;
@@ -233,14 +233,14 @@
   const append = (id, line) => { const p = el(id); p.textContent += `${line}\n`; p.scrollTop = p.scrollHeight; };
 
 
-  /** Výplata jde vždy na přihlášenou peněženku, jiná adresa se nastavit nedá. */
+  /** The payout always goes to the signed-in wallet; no other address can be set. */
   const payoutAddress = async () => (await wallet('address').catch(() => null))?.result ?? null;
   async function fillAddress() {
     const address = await payoutAddress() ?? (await d.state()).miner.address;
     el('m-address').textContent = address ?? '—';
   }
 
-  /** Jiný účet znamená jinou výplatu: běžící těžba přejde na nový účet hned, ne až po restartu. */
+  /** A different account means a different payout: running mining switches to the new account immediately, not after a restart. */
   let followingWallet = false;
   async function followWallet() {
     if (followingWallet || !last?.miner.running) return;
@@ -256,7 +256,7 @@
     fillAddress();
   }
 
-  /** Bez peněženky se těžit nedá: odměny by neměly kam dojít. */
+  /** Mining is not possible without a wallet: rewards would have nowhere to go. */
   async function requireWallet() {
     const status = (await wallet('status').catch(() => null))?.result;
     const ready = !!status?.initialized;
@@ -265,9 +265,9 @@
     return ready;
   }
 
-  /** Graf bez knihovny: jen čára, měřítko podle zobrazených hodnot. */
+  /** A chart without a library: just a line, scaled to the displayed values. */
   function chart(box, values) {
-    box.closest('.panel').hidden = values.length < 2;     // prázdný graf se neukazuje, přijde s prvními daty
+    box.closest('.panel').hidden = values.length < 2;     // an empty chart is not shown; it comes with the first data
     if (values.length < 2) return;
     const [w, h] = [480, 92];
     const max = Math.max(...values) || 1;
@@ -284,7 +284,7 @@
     return (await r.json()).result;
   }
 
-  // ---- pooly: seznam čte přímo z kontraktu továrny, proto v něm nemůže být cizí kód ---------------------
+  // ---- pools: the list is read directly from the factory contract, so it cannot contain foreign code ---------------------
   const nodeUrl = () => `http://127.0.0.1:${nodePort()}`;
   let abi = null;
   async function chain() {
@@ -298,20 +298,20 @@
   let poolQuery = '';
   let poolDraw = 0;
   const poolRow = (p) => ({ address: ethers.getAddress(p.address), name: p.name, url: p.url, fee: p.feeBps / 100, share: p.share, blocks: p.blocks, miners: p.miners });
-  /** Pooly podle uzlu: nejsilnější podle bloků za 24 hodin, nebo výsledek hledání. Uzel je řadí a stránkuje sám. */
+  /** Pools by the node: the strongest by blocks in 24 hours, or a search result. The node sorts and paginates them itself. */
   async function loadPools(query) {
     const r = await rpc('aether_pools', [{ limit: TOP_POOLS, query }]).catch(() => null);
     return r ? { total: r.total, matched: r.matched, items: r.items.map(poolRow) } : { total: 0, matched: 0, items: [] };
   }
 
-  /** Výběr, kam těžit: sólo, deset nejsilnějších poolů a vybraný pool, i když mezi nimi není. Další najde hledání. */
+  /** Where to mine: solo, the ten strongest pools and the selected pool even if it is not among them. Search finds others. */
   async function drawPools() {
     const ticket = ++poolDraw;
     const box = el('p-list');
     const chosen = last?.miner.pool?.address ?? '';
     const query = poolQuery.trim();
     const found = await loadPools(query);
-    if (ticket !== poolDraw) return;     // mezitím přišlo novější hledání
+    if (ticket !== poolDraw) return;     // a newer search arrived in the meantime
     const pools = found.items;
     if (chosen && !query && !pools.some((p) => p.address.toLowerCase() === chosen.toLowerCase())) {
       const mine = (await rpc('aether_pools', [{ query: chosen.toLowerCase(), limit: 1 }]).catch(() => null))?.items?.map(poolRow)?.[0];
@@ -377,7 +377,7 @@
     if (pending !== null) el('m-pending').textContent = `${coin(pending)} ${lastStats?.currency ?? ''}`;
   }
 
-  /** Stav vlastního poolu: účet na gas musí mít mince, jinak se podíly neodešlou. */
+  /** Status of one's own pool: the gas account must have coins, otherwise shares are not submitted. */
   async function showRunPool() {
     if (!last?.node.running) return;
     const running = last.node.runPool?.address ?? '';
@@ -406,7 +406,7 @@
     if (el('tab-mining').hidden) return;
     const s = await d.state();
     chart(el('c-rate'), s.miner.history);
-    // Graf je historie, číslo vedle něj platí pro teď: zastavený miner nemá žádný výkon.
+    // The chart is history, the number next to it is for now: a stopped miner has no hashrate.
     el('c-rate-now').textContent = s.miner.running && s.miner.history.length ? hashRate(s.miner.history.at(-1)) : '';
     if (!s.node.running) return;
     const series = await rpc('aether_charts', [120]).catch(() => null);
@@ -416,7 +416,7 @@
     }
   }
 
-  /** Adresy RPC, které se zadávají do peněženky v telefonu nebo v prohlížeči. */
+  /** RPC addresses entered into a wallet on a phone or in a browser. */
   function showEndpoints(s) {
     const e = s.node.running ? s.node.endpoints : null;
     const rows = [];
@@ -524,7 +524,7 @@
         : seedSet ? 'Connecting to the other computer. It needs the Quinvium app open on the same network.'
           : 'Looking for other computers on the local network. For now the chain is only on this one.');
       el('status').textContent = `${s.network} · ${tr('block {n}', { n: number(s.height) })}${s.syncing ? ` · ${tr('syncing')}` : ''}`;
-      // Nový blok obnoví jen přehled. Rozepsaný převod, vklad ani nastavení peněženky se pod rukama nesmí zavřít.
+      // A new block refreshes only the overview. A transfer, deposit or wallet settings being edited must not close under the user's hands.
       if (s.height !== height) { height = s.height; if (el('balance')) refreshWallet(); }
     }
   });
@@ -558,7 +558,7 @@
   const stopMining = async () => { await d.stopMiner(); refresh(); };
   el('m-start').onclick = startMining;
   el('m-stop').onclick = stopMining;
-  // Přehled ovládá těžbu přímo. Chyba se ukáže na stránce Těžba, kde je i její vysvětlení.
+  // The overview controls mining directly. An error is shown on the Mining page, which also explains it.
   el('h-start').onclick = async () => { await startMining(); if (el('m-error').textContent) window.showTab('mining'); };
   el('h-stop').onclick = stopMining;
   el('h-mining-open').onclick = () => window.showTab('mining');
@@ -571,7 +571,7 @@
   el('m-wallet').onclick = () => window.showTab('wallet');
   el('s-wallet').onclick = () => window.showTab('wallet');
 
-  // ---- Explorer přímo v aplikaci, přihlášený peněženkou z aplikace ---------------------------------
+  // ---- Explorer inside the app, signed in with the app's wallet ---------------------------------
   async function trustExplorer() {
     if (!explorer || !(await requireWallet())) return;
     const { sites = {} } = await chrome.storage.local.get('sites');
@@ -584,7 +584,7 @@
     await trustExplorer();
     el('explorer-view').src = explorerUrl();
   }
-  /** Ukáže stránku Exploreru. Swap a most jsou bez hlavičky Exploreru, jako by byly záložky aplikace. */
+  /** Shows an Explorer page. Swap and bridge have no Explorer header, as if they were app tabs. */
   async function showExplorerPage(path, solo) {
     await openExplorer();
     const view = el('explorer-view');
@@ -593,9 +593,9 @@
     if (!viewReady || view.isLoading()) view.addEventListener('did-finish-load', go, { once: true });
     else go();
   }
-  /** Konkrétní stránka Exploreru přímo v aplikaci, peněženka je tam přihlášená. Starší odkazy s #/ fungují dál. */
+  /** A specific Explorer page directly in the app, with the wallet signed in. Older links with #/ keep working. */
   window.openExplorer = (path) => window.showTab('explorer', { path: String(path).replace(/^#/, '') });
-  // Přiřazení do `src` za běžícího načítání končí chybou ERR_ABORTED. Platí poslední adresa, předchozí načtení se může přerušit.
+  // Assigning `src` while loading ends with ERR_ABORTED. The last address wins; the previous load may be aborted.
   let viewReady = false;
   el('explorer-view').addEventListener('dom-ready', () => { viewReady = true; }, { once: true });
   const reloadExplorer = () => {
@@ -617,7 +617,7 @@
   };
   el('a-update').onclick = () => window.showTab('settings');
 
-  // Po odhlášení nesmí odměny dál chodit na starou adresu: těžba se zastaví a výplata se vyplní podle nové peněženky.
+  // After signing out, rewards must not keep going to the old address: mining stops and the payout is filled from the new wallet.
   window.onWalletRemoved = async () => {
     el('m-address').textContent = '—';
     await d.stopMiner();
@@ -630,7 +630,7 @@
     reloadExplorer();
   };
 
-  // ---- nastavení a O projektu ----------------------------------------------------------------------
+  // ---- settings and About ----------------------------------------------------------------------
   function showUpdate() {
     if (!last) return;
     const u = last.update;
@@ -676,7 +676,7 @@
     drawPools();
   };
 
-  // Vzhled: podle systému, nebo napevno. Explorer v aplikaci dostane stejný.
+  // Theme: follows the system, or fixed. The Explorer in the app gets the same.
   const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* no storage */ } } };
   const themeChoice = () => store.get('aether.theme') ?? 'system';
   function shownTheme() {
@@ -694,7 +694,7 @@
   applyTheme();
 
   const shell = document.querySelector('.shell');
-  /** Sbalení panelu je poslední řádek panelu, zkratka je stejná jako ve VS Code nebo Slacku. */
+  /** Collapsing the panel is the panel's last row; the shortcut is the same as in VS Code or Slack. */
   const sideKey = /Mac/.test(navigator.platform) ? '⌘B' : 'Ctrl B';
   function setSide(closed) {
     shell.classList.toggle('collapsed', closed);
@@ -711,8 +711,8 @@
   });
 
   /**
-   * Příkaz quinvium v terminálu. Cestu přidá aplikace jen na kliknutí, sama na nastavení systému nesahá.
-   * Na Windows nikdy `setx PATH "%PATH%;…"`: zkrátí cestu na 1024 znaků a v PowerShellu %PATH% nerozbalí.
+   * The quinvium command in the terminal. The app adds the path only on a click; it never touches system settings by itself.
+   * On Windows never `setx PATH "%PATH%;…"`: it truncates the path to 1024 characters and PowerShell does not expand %PATH%.
    */
   d.cliPath().then((cli) => {
     if (!cli) return;

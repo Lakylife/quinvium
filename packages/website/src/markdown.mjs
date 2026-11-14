@@ -1,5 +1,5 @@
-// Jednoduchý převod Markdownu na HTML pro whitepaper: nadpisy, odstavce, seznamy, tabulky, bloky kódu,
-// `kód`, **tučně**, *kurzíva*. Vstup je vlastní dokument z docs/, ne obsah od uživatelů.
+// Simple Markdown to HTML conversion for the whitepaper: headings, paragraphs, lists, tables, code blocks,
+// `code`, **bold**, *italic*. The input is our own document from docs/, not user content.
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const inline = (s) => esc(s)
   .replace(/`([^`]+)`/g, '<code>$1</code>')

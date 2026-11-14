@@ -1,5 +1,5 @@
-// Průvodce připojením: skutečný Chromium a uzel, peněženka se chová jako MetaMask včetně jeho chybových kódů.
-// Skutečný MetaMask se tu nespouští, kódy -32002, 4001, 4902 a -32602 odpovídají tomu, co vrací.
+// Connection guide: real Chromium and a node; the wallet behaves like MetaMask including its error codes.
+// The real MetaMask is not run here; codes -32002, 4001, 4902 and -32602 match what it returns.
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
@@ -100,10 +100,10 @@ try {
     await page.addInitScript((known) => {
       try {
         localStorage.setItem('aether.lang', 'cs');
-        // Peněženka zvolená při minulé návštěvě, výběr má vlastní krok.
+        // The wallet chosen on the last visit; choosing has its own step.
         if (known) localStorage.setItem('aether.wallet', 'injected');
         else localStorage.removeItem('aether.wallet');
-      } catch { /* jen pro test */ }
+      } catch { /* test only */ }
     }, known);
     if (rabby) {
       await page.addInitScript(() => {
@@ -120,7 +120,7 @@ try {
   const closed = (page) => page.waitForFunction(() => !document.getElementById('wallet-dialog'));
   const dialogText = (page) => page.textContent('#wallet-dialog');
 
-  await step('bez peněženky okno řekne, co dělat, a nezmizí samo', async () => {
+  await step('without a wallet the window says what to do and does not disappear by itself', async () => {
     const page = await open(false);
     await page.click('#login-btn');
     await stepOf(page, 'pick');
@@ -136,11 +136,11 @@ try {
     await closed(page);
     await page.close();
   });
-  await step('WalletConnect: po zadání Project ID ukáže QR kód, cizí server se v testu nahrazuje', async () => {
+  await step('WalletConnect: after entering a Project ID it shows a QR code; the foreign server is replaced in the test', async () => {
     reset();
     const page = await open(false, { known: false });
     const relay = [];
-    // Relay mluví JSON-RPC přes WebSocket. Náhrada potvrzuje odběr i odeslání, víc stránka k zobrazení QR nepotřebuje.
+    // The relay speaks JSON-RPC over WebSocket. The stand-in confirms subscription and sending; the page needs no more to show the QR code.
     await page.routeWebSocket(/walletconnect|reown/, (ws) => ws.onMessage((text) => {
       const m = JSON.parse(text);
       relay.push(m.method);
@@ -161,7 +161,7 @@ try {
     await page.close();
   });
 
-  await step('výběr peněženky ukáže, co je v prohlížeči', async () => {
+  await step('wallet choice shows what is in the browser', async () => {
     reset();
     const page = await open(true, { known: false, rabby: true });
     await page.click('#login-btn');
@@ -173,7 +173,7 @@ try {
     await page.close();
   });
 
-  await step('uvízlá žádost v MetaMasku: návod zůstává a po potvrzení se stránka sama posune', async () => {
+  await step('a stuck request in MetaMask: the guide stays and the page moves on by itself after confirmation', async () => {
     reset({ mode: 'stuck' });
     const page = await open();
     await page.click('#login-btn');
@@ -184,14 +184,14 @@ try {
     if (process.env.AETHER_SHOT) await page.screenshot({ path: process.env.AETHER_SHOT.replace('.png', '-uvizla.png') });
     await page.waitForTimeout(3500);
     assert.ok(await page.isVisible('#wallet-dialog[data-step="stuck"]'), 'návod nezmizel');
-    wallet.approved = true;   // uživatel potvrdil žádost přímo v peněžence, stránka žádnou odpověď nedostane
+    wallet.approved = true;   // the user confirmed the request directly in the wallet; the page gets no answer
     await connected(page);
     await closed(page);
     assert.equal(wallet.chain, DEV_CHAIN, 'síť se sama přidala a přepnula');
     await page.close();
   });
 
-  await step('síť se přidá se správnými údaji', async () => {
+  await step('the network is added with the correct data', async () => {
     const add = wallet.calls.find((c) => c.method === 'wallet_addEthereumChain').params[0];
     assert.equal(add.chainId, DEV_CHAIN);
     assert.equal(add.chainName, 'Quinvium Dev');
@@ -199,7 +199,7 @@ try {
     assert.deepEqual(add.nativeCurrency, { name: 'Quinvium', symbol: 'dQU', decimals: 18 });
   });
 
-  await step('připojeno na jiné síti: tlačítko nabídne přepnutí a dokončí ho', async () => {
+  await step('connected on another network: the button offers switching and completes it', async () => {
     reset({ approved: true });
     const page = await open();
     await page.waitForFunction(() => document.getElementById('login-btn').classList.contains('wrong-network'));
@@ -214,7 +214,7 @@ try {
     await page.close();
   });
 
-  await step('odmítnutí připojení: jasná zpráva a nový pokus funguje', async () => {
+  await step('connection rejected: a clear message and a new attempt works', async () => {
     reset({ mode: 'reject', knows: true });
     const page = await open();
     await page.click('#login-btn');
@@ -225,7 +225,7 @@ try {
     await page.close();
   });
 
-  await step('odmítnuté přidání sítě nezamaskuje stav', async () => {
+  await step('a rejected network addition does not hide the state', async () => {
     reset({ approved: true, refuseAdd: true });
     const page = await open();
     await page.click('#login-btn');
@@ -236,19 +236,19 @@ try {
     await page.close();
   });
 
-  await step('čekající žádost o síť má stejný návod', async () => {
+  await step('a pending network request has the same guide', async () => {
     reset({ approved: true, busyNetwork: true });
     const page = await open();
     await page.click('#login-btn');
     await stepOf(page, 'stuck');
     wallet.busyNetwork = false;
-    wallet.chain = DEV_CHAIN;   // uživatel přepnul síť přímo v peněžence
+    wallet.chain = DEV_CHAIN;   // the user switched the network directly in the wallet
     await connected(page);
     await closed(page);
     await page.close();
   });
 
-  await step('peněženka odmítne lokální odkaz na explorer, síť se přesto přidá', async () => {
+  await step('the wallet refuses a local Explorer link; the network is still added', async () => {
     reset({ approved: true, refuseExplorer: true });
     const page = await open();
     await page.click('#login-btn');
@@ -259,7 +259,7 @@ try {
     await page.close();
   });
 
-  await step('neběžící síť nepřepne stránku do chyby', async () => {
+  await step('a network that is not running does not switch the page to an error', async () => {
     reset({ approved: true, chain: DEV_CHAIN });
     const page = await open();
     await page.click('#net-btn');
@@ -270,7 +270,7 @@ try {
     await page.close();
   });
 
-  await step('výpadek uzlu: srozumitelná zpráva a stránka se po návratu sama obnoví', async () => {
+  await step('node outage: an understandable message and the page recovers by itself when it returns', async () => {
     reset({ approved: true, chain: DEV_CHAIN });
     const page = await open();
     const stopped = new Promise((r) => node.once('exit', r));
@@ -285,7 +285,7 @@ try {
     await page.close();
   });
 
-  await step('neběžící uzel: průvodce to řekne a po návratu uzlu připojení dokončí', async () => {
+  await step('a node that is not running: the guide says so and completes the connection when the node returns', async () => {
     reset({ knows: true });
     const page = await open();
     const stopped = new Promise((r) => node.once('exit', r));
@@ -303,7 +303,7 @@ try {
     await page.close();
   });
 
-  await step('stránka nehlásí žádnou chybu JavaScriptu', async () => assert.deepEqual(errors, []));
+  await step('the page reports no JavaScript error', async () => assert.deepEqual(errors, []));
 } finally {
   await browser?.close();
   node.kill('SIGKILL');

@@ -1,4 +1,4 @@
-// Náhodné a vyčerpávající zkoušky: co se nedá vyjmenovat ručně, se tu zkouší ve velkém.
+// Random and exhaustive tests: what cannot be listed by hand is tried here in bulk.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import net from 'node:net';
@@ -32,7 +32,7 @@ const until = async (cond, ms = 15000) => {
 const fieldsOf = (h) => Object.fromEntries(Object.entries(h).filter(([k]) => !k.startsWith('_')));
 const flip = (b, i = 0) => { const c = new Uint8Array(b); c[i] ^= 1; return c; };
 
-test('změna kteréhokoli pole hlavičky i s platnou prací je odmítnuta a poctivý blok projde', async () => {
+test('changing any header field is rejected even with valid work, and the honest block passes', async () => {
   const a = wallet();
   const honest = await newChain({ alloc: fund(a) });
   const victim = await newChain({ alloc: fund(a) });
@@ -55,13 +55,13 @@ test('změna kteréhokoli pole hlavičky i s platnou prací je odmítnuta a poct
   assert.ok(rejected >= 11, `odmítnuto ${rejected}`);
   assert.equal(victim.head.number, 0n);
 
-  // Změněný miner dostane odměnu místo poctivého, ale stav pak nesedí.
+  // The changed miner gets the reward instead of the honest one, but then the state does not match.
   const forgedMiner = await seal(victim, new Block(new Header({ ...fieldsOf(h), miner: flip(h.miner) }), block.txs));
   await assert.rejects(victim.insertBlock(forgedMiner), /kořen stavu/);
   assert.equal((await victim.insertBlock(block)).status, 'added');
 });
 
-test('tisíce náhodných bajtů se nikdy nedekódují v platný blok a nikdy neshodí dekodér', async () => {
+test('thousands of random bytes never decode into a valid block and never crash the decoder', async () => {
   const c = await newChain();
   const { block } = await mine(c);
   const good = block.encode();
@@ -83,7 +83,7 @@ test('tisíce náhodných bajtů se nikdy nedekódují v platný blok a nikdy ne
 });
 
 for (const seedRound of [1, 2, 3]) {
-  test(`náhodné větve s konfliktními transakcemi ${seedRound}: pořadí doručení výsledek nezmění`, async () => {
+  test(`random branches with conflicting transactions ${seedRound}: the delivery order does not change the result`, async () => {
     const sender = wallet(); const other = wallet();
     const alloc = fund(sender, other);
     const A = await newChain({ alloc });
@@ -104,7 +104,7 @@ for (const seedRound of [1, 2, 3]) {
       return nonce + BigInt(txs.length);
     };
     const exchange = async () => {
-      // Hodiny obou stran se srovnají, jinak by bloky druhé větve byly „v budoucnosti“.
+      // Both sides' clocks are aligned, otherwise blocks of the other branch would be "in the future".
       const t = Math.max(A.now(), B.now()) + 1;
       A.setClock(t); B.setClock(t);
       for (const b of all) {
@@ -121,7 +121,7 @@ for (const seedRound of [1, 2, 3]) {
       if (round % 2) await exchange();
     }
     await exchange();
-    await extend(A, minerA, nonceA);        // jednoznačně nejtěžší špička
+    await extend(A, minerA, nonceA);        // clearly the heaviest tip
     await exchange();
     assert.deepEqual(A.head.hash(), B.head.hash());
 
@@ -139,7 +139,7 @@ for (const seedRound of [1, 2, 3]) {
     assert.deepEqual(C.head.hash(), A.head.hash(), 'stejná špička');
     assert.deepEqual(C.head.stateRoot, A.head.stateRoot, 'stejný stav');
 
-    // Indexy po všech reorganizacích odpovídají skutečnému stavu a kanonickému řetězci.
+    // After all reorganisations the indexes match the actual state and the canonical chain.
     let confirmed = 0;
     for (let n = 0n; n <= C.head.number; n++) confirmed += C.getBlockByNumber(n).txs.length;
     assert.equal(C.store.db.prepare('SELECT COUNT(*) AS c FROM txs').get().c, confirmed, 'index transakcí');
@@ -158,7 +158,7 @@ for (const seedRound of [1, 2, 3]) {
   });
 }
 
-test('smetí v každém typu zprávy uzel nezastaví a poctivý uzel zůstane připojený', async () => {
+test('garbage in every message type does not stop the node and an honest node stays connected', async () => {
   const chain = await newChain();
   const victim = new Network({ chain, mempool: chain.mempool, port: 0, host: '127.0.0.1', allowPrivate: true });
   await victim.start();
@@ -189,7 +189,7 @@ test('smetí v každém typu zprávy uzel nezastaví a poctivý uzel zůstane p�
       const body = i % 2 ? randomBytes(randomInt(0, 300)) : Buffer.from(RLP.encode([randomBytes(randomInt(0, 40)), [randomBytes(8)], randomBytes(4)]));
       ch.send(type, body);
     }
-    if (round % 5 === 0) socket.write(randomBytes(randomInt(1, 2000)));   // smetí mimo šifrovaný kanál
+    if (round % 5 === 0) socket.write(randomBytes(randomInt(1, 2000)));   // garbage outside the encrypted channel
     await sleep(5);
     ch.close('konec');
   }
@@ -203,7 +203,7 @@ test('smetí v každém typu zprávy uzel nezastaví a poctivý uzel zůstane p�
   await victim.stop(); await honest.stop();
 });
 
-test('tvrdý pád uprostřed práce nepoškodí databázi', async () => {
+test('a hard crash in the middle of work does not damage the database', async () => {
   const dir = tmpData();
   const key = '0x000000000000000000000000000000000000aaaa';
   const run = () => spawn(process.execPath, ['--no-warnings', join(here, '..', 'src', 'cli.js'), '--network', 'dev', '--data-dir', dir, '--dev-mine', '--miner-address', key,
@@ -217,7 +217,7 @@ test('tvrdý pád uprostřed práce nepoškodí databázi', async () => {
   const c = await Chain.open({ network: NETWORKS.dev, dataDir: dir, powDir: POW_DIR, alloc: (await import('../src/node.js')).loadAlloc() });
   const head = c.head;
   assert.equal(c.store.db.prepare('PRAGMA integrity_check').get().integrity_check, 'ok');
-  // Každý kanonický blok musí mít stav a navazovat na předka.
+  // Every canonical block must have a state and follow its ancestor.
   for (let n = head.number; n > 0n; n--) {
     const h = c.getHeaderByNumber(n);
     assert.deepEqual(h.parentHash, c.getHeaderByNumber(n - 1n).hash());

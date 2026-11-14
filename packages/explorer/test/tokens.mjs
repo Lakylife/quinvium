@@ -1,5 +1,5 @@
-// Tokeny, grafy a nová navigace ve skutečném Chromiu nad skutečným uzlem a kontrakty.
-// Čísla se ověřují proti kontraktům: stránka nesmí ukazovat nic, co v řetězci není.
+// Tokens, charts and the new navigation in real Chromium over a real node and contracts.
+// Numbers are checked against the contracts: the page must not show anything that is not on chain.
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { dirname, join } from 'node:path';
@@ -63,16 +63,16 @@ try {
   const go = async (hash) => { await page.goto(`${url}/${hash}`); await page.reload(); await settled(); };
   const rowOf = (text) => page.locator('tbody tr', { hasText: text }).first().innerText();
 
-  await step('seznam tokenů ukazuje cenu z poolu, oběh, držitele a převody', async () => {
+  await step('the token list shows the price from the pool, circulation, holders and transfers', async () => {
     await go('#/tokens');
     await page.locator('tbody tr').nth(2).waitFor();
     assert.equal(await page.locator('tbody tr').count(), 3, 'nativní mince a dva ověřené tokeny');
     const row = (await rowOf('tUSD')).replace(/\s+/g, ' ');
-    // 1000 QU proti 2000 tUSD: jeden token stojí 0,5 a likvidita se počítá za obě strany poolu.
+    // 1000 QU against 2000 tUSD: one token costs 0.5 and liquidity counts both sides of the pool.
     assert.match(row, /0,5 \w*QU/, row);
     assert.match(row, /2 000 \w*QU/, row);
     assert.match(row, /1 000 000 000/, row);
-    const holders = HOLDERS + 2;      // lidé, správce a pool
+    const holders = HOLDERS + 2;      // people, administrator and pool
     const info = await A.provider.send('aether_tokenInfo', [usd.target]);
     assert.equal(info.holders, holders);
     assert.equal(info.transfers, TRANSFERS + 2);
@@ -82,7 +82,7 @@ try {
     assert.match((await rowOf('Quinvium')).replace(/\s+/g, ' '), /QU/);
   });
 
-  await step('tokeny jdou hledat, řadit a filtrovat podle druhu', async () => {
+  await step('tokens can be searched, sorted and filtered by kind', async () => {
     await page.fill('#token-search', 'nic');
     await page.waitForFunction(() => document.querySelectorAll('#token-table tbody tr').length === 1);
     assert.match(await page.locator('#token-table tbody').innerText(), /tNIC/);
@@ -99,7 +99,7 @@ try {
     assert.match(await page.locator('#token-table tbody').innerText(), /tNIC/, 'jen přemostěné');
   });
 
-  await step('největší držitelé sedí se zůstatky v kontraktu', async () => {
+  await step('the largest holders match the balances in the contract', async () => {
     const { top } = await A.provider.send('aether_tokenInfo', [usd.target]);
     for (const h of top) assert.equal(BigInt(h.balance), await usd.balanceOf(h.address), h.address);
     const list = top.map((h) => BigInt(h.balance));
@@ -108,7 +108,7 @@ try {
     assert.equal(sum, await usd.totalSupply(), 'součet všech držitelů je celý oběh');
   });
 
-  await step('stránka tokenu: převody po stranách a držitelé', async () => {
+  await step('token page: transfers by page and holders', async () => {
     await go(`#/token/${usd.target}`);
     await page.getByRole('heading', { name: 'Test USD (tUSD)' }).waitFor();
     assert.equal(await page.locator('tbody tr').count(), 25, 'první strana převodů');
@@ -126,7 +126,7 @@ try {
     assert.equal(await page.locator('tbody tr').count(), HOLDERS + 2);
   });
 
-  await step('pooly: podíl na výkonu v procentech sedí s vytěženými bloky', async () => {
+  await step('pools: the hashrate share in percent matches mined blocks', async () => {
     const factory = A.at('PoolFactory', artifacts.PoolFactory.address, admin);
     await A.ok(factory.createPool('Rudný pool', 'http://127.0.0.1:1', 100, 32, 16));
     const [pool] = await factory.list(0, 1);
@@ -137,7 +137,7 @@ try {
     assert.equal(part.blocks, 10);
     assert.ok(Math.abs(shares.items.reduce((sum, x) => sum + x.work, 0) - shares.work) < 1e-6);
     await go('#/pools?range=all');
-    // První tabulka je rozdělení výkonu, druhá celý seznam poolů po stránkách.
+    // The first table is the hashrate split, the second the whole pool list by page.
     const row = page.locator('.card:not(#all-pools) tbody tr', { hasText: 'Rudný pool' });
     await row.waitFor();
     const expected = ((part.work / shares.work) * 100).toLocaleString('cs-CZ', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
@@ -150,12 +150,12 @@ try {
     await page.getByRole('heading', { name: 'Rudný pool' }).waitFor();
   });
 
-  await step('mint v převodech je označený a nevypadá jako nulová adresa', async () => {
+  await step('a mint is marked in transfers and does not look like the zero address', async () => {
     await go(`#/token/${lonely.target}`);
     await page.locator('tbody .badge', { hasText: 'Vydání' }).waitFor();
   });
 
-  await step('název tokenu z cizího kontraktu se nikdy nevykoná', async () => {
+  await step('a token name from a foreign contract is never executed', async () => {
     await go(`#/token/${hostile.target}`);
     await page.locator('.notice').waitFor();
     assert.equal(await page.locator('#app img').count(), 0);
@@ -164,7 +164,7 @@ try {
     assert.ok(await page.locator('.badge.bad', { hasText: 'Neověřený' }).count(), 'cizí token je označený');
   });
 
-  await step('adresa kontraktu vede na stránku tokenu, neplatná adresa stránku neshodí', async () => {
+  await step('the contract address leads to the token page; an invalid address does not crash the page', async () => {
     await go(`#/address/${usd.target}`);
     await page.locator('.kv a', { hasText: 'tUSD' }).click();
     await page.getByRole('heading', { name: 'Test USD (tUSD)' }).waitFor();
@@ -174,7 +174,7 @@ try {
     await page.getByText('Nic nenalezeno').waitFor();
   });
 
-  await step('grafy: přepínač ukáže tabulku místo grafů a zpět, období zůstane', async () => {
+  await step('charts: the switch shows a table instead of charts and back; the period stays', async () => {
     await go('#/charts?range=all');
     await page.locator('#plot-time svg').waitFor();
     assert.equal(await page.locator('.plot').count(), 14, 'všechny grafy, které rejstřík umí');
@@ -189,7 +189,7 @@ try {
     assert.equal(await page.locator('#chart-table').count(), 0);
   });
 
-  await step('jediný úsek v grafu je vidět a netvrdí, že bloky nejsou', async () => {
+  await step('a single interval in the chart is visible and does not claim there are no blocks', async () => {
     const one = await page.evaluate(async (rpc) => {
       const r = await fetch(rpc, { method: 'POST', body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'aether_chartSeries', params: [{ points: 10 }] }) });
       return (await r.json()).result;
@@ -200,7 +200,7 @@ try {
     assert.equal(one.items.reduce((sum, p) => sum + p.blocks, 0), Number(A.node.chain.head.number));
   });
 
-  await step('přehled: stuha bloků a výzva, když nikdo netěží', async () => {
+  await step('overview: the block ribbon and a prompt when nobody is mining', async () => {
     await go('#/');
     await page.locator('.ribbon-item').nth(3).waitFor();
     assert.ok(await page.locator('.metric-grid').count());
@@ -208,7 +208,7 @@ try {
     assert.match(await page.locator('.ribbon-item').first().innerText(), new RegExp(`#${A.node.chain.head.number}`));
   });
 
-  await step('běžící síť výzvu neukazuje', async () => {
+  await step('a running network does not show the prompt', async () => {
     const clock = (A.state.clock + 30) * 1000;
     const live = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     await live.addInitScript((now) => { Date.now = () => now; localStorage.setItem('aether.lang', 'cs'); }, clock);
@@ -218,7 +218,7 @@ try {
     await live.close();
   });
 
-  await step('rozepsané hledání přežije nový blok a hledání na přehledu funguje', async () => {
+  await step('a search being typed survives a new block and search on the overview works', async () => {
     await go('#/');
     const input = page.locator('.hero-search input');
     await input.fill('1');
@@ -231,7 +231,7 @@ try {
     assert.ok(await page.locator('.nav-group.active', { hasText: 'Blockchain' }).count());
   });
 
-  await step('hlavní nabídka: skupina se otevře, po výběru zavře a Escape ji zruší', async () => {
+  await step('main menu: a group opens, closes after a choice and Escape dismisses it', async () => {
     await go('#/blocks');
     const group = page.locator('.nav-group', { hasText: 'Síť' });
     const menu = group.locator('.nav-menu');
@@ -249,7 +249,7 @@ try {
     await menu.waitFor({ state: 'hidden' });
   });
 
-  await step('úzká obrazovka: celá nabídka je pod jedním tlačítkem a stránka nepřetéká', async () => {
+  await step('narrow screen: the whole menu is behind one button and the page does not overflow', async () => {
     const small = await browser.newPage({ viewport: { width: 390, height: 800 } });
     await small.route('**/deployments.json', (r) => r.fulfill({ json: deployments }));
     await small.goto(`${url}/#/tokens`);
@@ -268,7 +268,7 @@ try {
     await small.close();
   });
 
-  await step('stránka běží bez chyb JavaScriptu', async () => assert.deepEqual(errors, []));
+  await step('the page runs without JavaScript errors', async () => assert.deepEqual(errors, []));
 } finally {
   await browser?.close().catch(() => {});
   await A.stop().catch(() => {});

@@ -1,5 +1,5 @@
-// Skript scripts/nasadit-most.mjs na dvou místních řetězcích: jeden má chainId testnetu Quinvia, druhý Sepolie.
-// Nasazení proběhne celé, validátoři s vytvořeným nastavením převedou ETH na qETH a zpátky a Explorer dostane trasu.
+// The scripts/nasadit-most.mjs script on two local chains: one has the Quinvium testnet chainId, the other Sepolia's.
+// The deployment completes, validators with the generated configuration convert ETH to qETH and back, and the Explorer gets the route.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
@@ -42,14 +42,14 @@ test.before(async () => {
 });
 test.after(async () => { mining = false; await Q.stop(); await S.stop(); });
 
-test('nasazení testovacího mostu projde a převod ETH ↔ qETH funguje oběma směry', async () => {
+test('the test bridge deployment passes and an ETH ↔ qETH transfer works in both directions', async () => {
   const loop = keepMining();
   const qRpc = `http://127.0.0.1:${Q.node.rpc.port}`;
   const sRpc = `http://127.0.0.1:${S.node.rpc.port}`;
   let out;
   try {
     out = await script(qRpc, sRpc);
-    // Druhé spuštění nic nového nenasadí, jen pokračuje podle uloženého postupu.
+    // A second run deploys nothing new; it only continues from the saved progress.
     const again = await script(qRpc, sRpc);
     assert.equal(again.match(/Brána na Quinviu: (0x\w+)/)[1], out.match(/Brána na Quinviu: (0x\w+)/)[1], 'opakované spuštění nasazuje znovu');
   } finally {
@@ -72,7 +72,7 @@ test('nasazení testovacího mostu projde a převod ETH ↔ qETH funguje oběma 
     assert.ok(await Q.provider.getBalance(keys[name].address) > 0n && await S.provider.getBalance(keys[name].address) > 0n, `${name} má plyn`);
   }
 
-  // Validátoři s nastavením ze skriptu: jen RPC se v testu bere z místních řetězců.
+  // Validators with the configuration from the script: only the RPC is taken from the local chains in the test.
   const relayers = ['validator-1', 'validator-2', 'validator-3'].map((name) => {
     const config = JSON.parse(readFileSync(join(dir, `${name}.json`), 'utf8'));
     assert.equal(config.chains.length, 2);

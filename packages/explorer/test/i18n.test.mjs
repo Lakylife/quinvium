@@ -1,4 +1,4 @@
-// Každý text Exploreru musí mít všechny jazyky a stejné proměnné jako angličtina.
+// Every Explorer text must exist in all languages with the same variables as English.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -12,11 +12,11 @@ const { keys, texts } = window.AetherExplorerText;
 const vars = (s) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
 const pairs = [...app.slice(app.indexOf('const L = (cs, en)')).matchAll(/L\('((?:[^'\\]|\\.)*)',\s*'((?:[^'\\]|\\.)*)'\)/g)].map((m) => m[2]);
 
-test('čeština a angličtina mají stejné klíče', () => {
+test('Czech and English have the same keys', () => {
   assert.deepEqual(Object.keys(I18N.cs).sort(), Object.keys(I18N.en).sort());
 });
 
-test('každý klíč má němčinu, španělštinu a francouzštinu se stejnými proměnnými', () => {
+test('every key has German, Spanish and French with the same variables', () => {
   const missing = Object.keys(I18N.en).filter((k) => !keys[k]);
   assert.deepEqual(missing, []);
   for (const [k, list] of Object.entries(keys)) {
@@ -29,7 +29,7 @@ test('každý klíč má němčinu, španělštinu a francouzštinu se stejnými
   }
 });
 
-test('texty nástrojů a chyb mají všechny jazyky', () => {
+test('tool and error texts have all languages', () => {
   assert.ok(pairs.length > 100, 'hledání textů v kódu funguje');
   const missing = [...new Set(pairs)].filter((en) => !texts[en]);
   assert.deepEqual(missing, []);
@@ -39,7 +39,7 @@ test('texty nástrojů a chyb mají všechny jazyky', () => {
   }
 });
 
-test('každý klíč použitý v kódu existuje', () => {
+test('every key used in the code exists', () => {
   const used = new Set([...app.matchAll(/\b(?:t|fill)\('([a-zA-Z]+\.[\w]+)'/g)].map((m) => m[1]));
   for (const m of read('index.html').matchAll(/data-t(?:-ph)?="([^"]+)"/g)) used.add(m[1]);
   assert.ok(used.size > 100);

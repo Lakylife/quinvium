@@ -1,5 +1,5 @@
-// Zabalí plný uzel a příkazovou řádku do jednoho souboru pro desktopovou aplikaci i samostatné .exe.
-// Vedle něj vznikne vm-worker.cjs, vlákno pro eth_call a eth_estimateGas.
+// Packs the full node and the command line into one file for the desktop app and the standalone .exe.
+// vm-worker.cjs is created next to it, the thread for eth_call and eth_estimateGas.
 import { build } from 'esbuild';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,7 +10,7 @@ const out = join(here, '..', 'build');
 const src = join(here, '..', '..', 'node', 'src');
 mkdirSync(out, { recursive: true });
 
-// tiny-secp256k1 čte .wasm ze souboru vedle sebe. V jednom souboru žádný vedle není, proto se vloží přímo.
+// tiny-secp256k1 reads .wasm from a file next to it. In a single file there is none, so it is embedded directly.
 const embedWasm = {
   name: 'embed-secp256k1-wasm',
   setup(b) {

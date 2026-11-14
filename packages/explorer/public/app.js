@@ -1,4 +1,4 @@
-/* Quinvium Explorer: jednostránková aplikace bez závislostí kromě ethers.js. */
+/* Quinvium Explorer: a single-page app without dependencies except ethers.js. */
 (() => {
   'use strict';
   const I18N = {
@@ -93,15 +93,15 @@
   };
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
-    set(k, v) { try { localStorage.setItem(k, v); } catch { /* soukromé okno */ } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch { /* private window */ } },
   };
-  // Němčina, španělština a francouzština jsou v i18n.js. Kód jazyka nastavuje i aplikace Quinvium.
+  // German, Spanish and French are in i18n.js. The Quinvium app also sets the language code.
   const LANGUAGES = { en: 'English', cs: 'Čeština', de: 'Deutsch', es: 'Español', fr: 'Français' };
   const LOCALES = { en: 'en-US', cs: 'cs-CZ', de: 'de-DE', es: 'es-ES', fr: 'fr-FR' };
   const FOREIGN = ['de', 'es', 'fr'];
   const EXTRA = window.AetherExplorerText ?? { keys: {}, texts: {} };
   FOREIGN.forEach((code, i) => { I18N[code] = Object.fromEntries(Object.entries(EXTRA.keys).map(([k, v]) => [k, v[i]])); });
-  // Aplikace Quinvium řídí jazyk a vzhled sama a předá je v adrese stránky.
+  // The Quinvium app controls the language and theme itself and passes them in the page address.
   const params = new URLSearchParams(location.search);
   const embedded = !!window.aether?.isDesktop || params.has('embedded');
   if (params.get('lang')) store.set('aether.lang', params.get('lang'));
@@ -110,7 +110,7 @@
   let lang = LANGUAGES[saved] ? saved : 'en';
   const locale = () => LOCALES[lang];
   const t = (k) => I18N[lang]?.[k] ?? I18N.en[k] ?? I18N.cs[k] ?? k;
-  /** Texty nástrojů a chyb jsou páry česky a anglicky, ostatní jazyky se hledají podle angličtiny. */
+  /** Tool and error texts are Czech and English pairs; other languages fall back to English. */
   const pick = (o) => {
     const i = FOREIGN.indexOf(lang);
     return (i >= 0 ? EXTRA.texts[o.en]?.[i] : o[lang]) ?? o.en ?? o.cs;
@@ -158,7 +158,7 @@
     return fill('time.ago', { t: span });
   }
   const when = (sec) => new Date(Number(sec) * 1000).toLocaleString(locale());
-  /** Barevný čtverec odvozený z adresy: stejná adresa vypadá vždy stejně. */
+  /** A coloured square derived from the address: the same address always looks the same. */
   const avatar = (a, cls = '') => {
     const h1 = parseInt(String(a).slice(2, 8), 16) % 360;
     const h2 = parseInt(String(a).slice(-6), 16) % 360;
@@ -176,7 +176,7 @@
   const head = (title, sub = '', right = '') => `<div class="page-head"><div style="min-width:0"><h1>${title}</h1>${sub ? `<p class="sub">${sub}</p>` : ''}</div>${right ? `<div class="page-head-right">${right}</div>` : ''}</div>`;
   const metric = (label, value, sub = '') => `<div class="metric-card"><span>${label}</span><strong>${value}</strong>${sub ? `<small>${sub}</small>` : ''}</div>`;
   let pageFailed = false;
-  /** Chybová stránka se po návratu uzlu obnoví sama, viz refreshStats. */
+  /** The error page recovers by itself when the node is back, see refreshStats. */
   const errorBox = (m) => {
     pageFailed = true;
     const down = /failed to fetch|networkerror|load failed/i.test(m);
@@ -194,10 +194,10 @@
     if (row && !e.target.closest('a,button')) navigate(row.dataset.href);
   });
 
-  // ------------------------------------------------------------- spojení s uzlem
+  // ------------------------------------------------------------- connection to the node
   const PORTS = { mainnet: 8545, testnet: 8546 };
-  // Explorer na doméně může mít v config.js víc uzlů (rpc: [...]). Vybere ten, který odpovídá a nezaostává,
-  // a při výpadku přejde na další. Stránka tak běží, dokud běží aspoň jeden z nich.
+  // An Explorer on a domain can have several nodes in config.js (rpc: [...]). It picks the one that answers and is not behind,
+  // and switches to the next one on failure. The page keeps working as long as at least one of them runs.
   const NODES = [...new Set((window.AETHER_CONFIG?.rpc ?? []).map((u) => String(u).trim().replace(/\/+$/, '')).filter(Boolean))];
   const MAX_BEHIND = 3;
   const NODE_PROBE_MS = 4000;
@@ -208,7 +208,7 @@
   let reqId = 1;
   let picking = null;
 
-  /** Ze seznamu uzlů vezme ten s nejvyšším blokem. Stávající zůstává, dokud odpovídá a nezaostává. */
+  /** Takes the node with the highest block from the list. The current one stays while it answers and is not behind. */
   function pickNode() {
     if (NODES.length < 2) return Promise.resolve(false);
     picking ??= (async () => {
@@ -230,7 +230,7 @@
     let res;
     try {
       res = await call();
-      // Přetížený nebo rozbitý uzel: zkusí se jiný ze seznamu, pokud nějaký je.
+      // An overloaded or broken node: another one from the list is tried, if there is one.
       if ((res.status >= 500 || res.status === 429) && await pickNode()) res = await call();
     } catch (e) {
       if (!(await pickNode())) throw e;
@@ -241,15 +241,15 @@
     return data.result;
   }
   const provider = () => new ethers.JsonRpcProvider(rpcBase, undefined, { staticNetwork: true });
-  // Zkratka podle sítě: QU na mainnetu, tQU na testnetu, testovací mince se tak nesplete se skutečnou.
+  // Ticker by network: QU on mainnet, tQU on testnet, so a test coin is not confused with a real one.
   const coin = () => stats?.currency ?? 'QU';
-  // Názvy kontraktů jsou uložené v genesis. Uživatel vidí jméno sítě, ne vnitřní název.
+  // Contract names are stored in genesis. The user sees the network's name, not the internal name.
   const CONTRACT_LABELS = { WAET: 'Wrapped QU', AetherNames: 'Quinvium Names' };
-  // Kontrakty nasazené po spuštění sítě (Swap, most, seznam tokenů) mají adresu v deployments.json, ne v genesis.
+  // Contracts deployed after the network started (Swap, bridge, token list) have their address in deployments.json, not in genesis.
   const extraLabels = new Map();
   /**
-   * Obalená mince sítě má v genesis ještě starý název a zkratku. Ukazuje se pod jménem sítě: Wrapped QU (WQU),
-   * na testnetu Wrapped tQU (WtQU). Ostatní tokeny mají název a zkratku přesně podle svého kontraktu.
+   * The network's wrapped coin still has the old name and symbol in genesis. It is shown under the network's name: Wrapped QU (WQU),
+   * on testnet Wrapped tQU (WtQU). Other tokens have a name and symbol exactly as in their contract.
    */
   const tokenFace = (address, name, symbol) => (contracts.WAET && String(address).toLowerCase() === contracts.WAET.address.toLowerCase()
     ? { name: `Wrapped ${coin()}`, symbol: `W${coin()}` } : { name, symbol });
@@ -260,7 +260,7 @@
   };
 
   let nodeDown = false;
-  let pageTick = null;      // stránka si sem dá, co se má obnovit při novém bloku
+  let pageTick = null;      // a page puts here what should refresh on a new block
   async function refreshStats() {
     try {
       stats = await rpc('aether_stats');
@@ -287,7 +287,7 @@
 
   let ws = null;
   function live() {
-    try { ws?.close(); } catch { /* zavřeno */ }
+    try { ws?.close(); } catch { /* closed */ }
     ws = new WebSocket(rpcBase.replace(/^http/, 'ws'));
     const mine = ws;
     ws.onopen = () => {
@@ -301,8 +301,8 @@
       if (m.method !== 'eth_subscription') return;
       await refreshStats();
       if (route().name === 'home') pageHome(true);
-      // Obnova patří stránce, která už mohla zmizet. Její chyba nemá co ukázat.
-      try { await pageTick?.(); } catch { /* stránka mezitím odešla */ }
+      // The refresh belongs to a page that may already be gone. Its error has nothing to show.
+      try { await pageTick?.(); } catch { /* the page has left in the meantime */ }
     };
   }
 
@@ -317,10 +317,10 @@
     while (box.children.length > 3) box.firstChild.remove();
   }
 
-  // ------------------------------------------------------------- peněženka
+  // ------------------------------------------------------------- wallet
   let account = null;
   let walletChain = null;
-  // Peněženky v prohlížeči se hlásí samy (EIP-6963), starší jen přes window.ethereum. Mobilní se připojí přes WalletConnect.
+  // Browser wallets announce themselves (EIP-6963), older ones only through window.ethereum. Mobile ones connect through WalletConnect.
   let chosen = null;
   const announced = new Map();
   window.addEventListener('eip6963:announceProvider', (e) => { announced.set(e.detail.info.uuid, e.detail); });
@@ -340,7 +340,7 @@
     entry.provider.on?.('chainChanged', (c) => { walletChain = c; renderWallet(); });
   }
 
-  /** Dříve zvolená peněženka se po načtení stránky připojí bez ptaní. */
+  /** A previously chosen wallet connects without asking after the page loads. */
   function restoreWallet() {
     if (chosen) return;
     if (embedded && window.aether) { useWallet({ id: 'aether', name: 'Quinvium Wallet', provider: window.aether }); return; }
@@ -375,7 +375,7 @@
     if ($('account-off')) $('account-off').onclick = disconnect;
   }
 
-  /** Stránka zapomene spojení. Peněženka, která to umí, zruší i své povolení. */
+  /** The page forgets the connection. A wallet that supports it also revokes its permission. */
   async function disconnect() {
     await wallet()?.request({ method: 'wallet_revokePermissions', params: [{ eth_accounts: {} }] }).catch(() => {});
     await wallet()?.disconnect?.().catch(() => {});
@@ -386,10 +386,10 @@
     if (route().name === 'address') render();
   }
 
-  // První zjištění peněženky po načtení. Stránky, které ukazují vlastní adresu (návod k připojení poolu), na něj krátce počkají.
+  // The wallet's first detection after load. Pages that show their own address (pool connection guide) briefly wait for it.
   let walletReady = Promise.resolve();
   const walletKnown = () => Promise.race([walletReady, new Promise((r) => { setTimeout(r, 1500); })]);
-  /** Zjistí stav peněženky bez jakéhokoli okna. */
+  /** Finds out the wallet state without any window. */
   async function syncWallet() {
     restoreWallet();
     const w = wallet();
@@ -399,7 +399,7 @@
       account = list?.[0] ?? null;
       walletChain = chain;
       renderWallet();
-    } catch { /* peněženka teď neodpovídá, stav zůstává */ }
+    } catch { /* the wallet is not answering now; the state stays */ }
   }
 
   async function addNetwork() {
@@ -412,7 +412,7 @@
     try {
       await w.request({ method: 'wallet_addEthereumChain', params: [{ ...chain, blockExplorerUrls: [location.origin] }] });
     } catch (e) {
-      // Peněženka může odkaz na lokální explorer odmítnout, kvůli tomu nesmí zůstat bez sítě.
+      // The wallet may refuse a link to the local Explorer; it must not be left without a network because of that.
       if (e.code !== -32602) throw e;
       await w.request({ method: 'wallet_addEthereumChain', params: [chain] });
     }
@@ -422,13 +422,13 @@
     try {
       await wallet().request({ method: 'wallet_switchEthereumChain', params: [{ chainId: chainHex() }] });
     } catch (e) {
-      // Odmítnutí nebo už čekající žádost neznamená, že peněženka síť nezná.
+      // A rejection or an already pending request does not mean the wallet does not know the network.
       if (e.code === 4001 || e.code === -32002) throw e;
       await addNetwork();
     }
   }
 
-  // Připojení je průvodce. Okno zůstává otevřené a říká, co udělat, dokud se to nepovede nebo ho uživatel nezavře.
+  // Connecting is a guide. The window stays open and says what to do until it succeeds or the user closes it.
   const WALLET_POLL_MS = 1500;
   let walletFlow = null;
 
@@ -539,7 +539,7 @@
     }
   }
 
-  /** Další krok podle skutečného stavu peněženky, takže se pozná i schválení žádosti z dřívějška. */
+  /** The next step according to the actual state of the wallet, so an approval of an earlier request is also recognised. */
   async function walletAdvance() {
     const flow = walletFlow;
     if (!flow) return;
@@ -574,7 +574,7 @@
       else await switchNetwork();
     } catch (e) {
       if (walletFlow !== flow || flow.step !== step) return;
-      // Peněženka už má žádost z dřívějška a nové okno neotevře. Počkáme, až ji uživatel vyřídí.
+      // The wallet already has a request from earlier and will not open a new window. We wait until the user handles it.
       if (e.code === -32002) { walletShow('stuck'); return; }
       clearInterval(flow.timer);
       walletShow(e.code === 4001 ? 'rejected' : 'failed', e.message);
@@ -600,7 +600,7 @@
     return new ethers.BrowserProvider(wallet()).getSigner();
   }
 
-  // ------------------------------------------------------------- přehled
+  // ------------------------------------------------------------- overview
   const blockRows = (list) => (list.length ? `<div class="activity-list">${list.map((b) => `
     <div class="activity-row rowlink" data-href="/block/${b.number}">
       <span class="row-icon">${BLOCK_ICON}</span>
@@ -612,8 +612,8 @@
 
 
   // ------------------------------------------------------------- typ transakce
-  // Co transakce udělala, srozumitelně: podle cílového kontraktu a volané funkce. Stačí transakce, nasazené kontrakty
-  // a seznam poolů, obojí z mezipaměti. U převodu se ukáže směr vůči prohlížené adrese.
+  // What a transaction did, in plain words: by the target contract and the called function. The transaction is enough; deployed contracts
+  // and the pool list, both from the cache. For a transfer the direction relative to the viewed address is shown.
   const CALL_TYPES = {
     SwapRouter: { swapExactTokensForTokens: 'swap', swapExactNativeForTokens: 'swap', swapExactTokensForNative: 'swap', addLiquidity: 'liqAdd', addLiquidityNative: 'liqAdd', removeLiquidity: 'liqRemove', removeLiquidityNative: 'liqRemove' },
     BridgeGateway: { send: 'bridgeOut', requestBitcoinDeposit: 'bridgeOut', deliver: 'bridgeIn', executeQueued: 'bridgeIn', cancelDelivery: 'bridgeCancel', cancelQueued: 'bridgeCancel', attest: 'bridgeSign', post: 'bridgeSign' },
@@ -637,7 +637,7 @@
   };
   let tokenCalls = null;
   let typeCtx = {};
-  /** Nasazené kontrakty sítě a pooly pro určení typu. Seznamy na stránce pak typ určí bez dalšího dotazu. */
+  /** Deployed network contracts and pools for determining the type. The page lists can then determine the type without another query. */
   async function typeContext() {
     const [d, pools] = await Promise.all([deployment().catch(() => null), poolNames().catch(() => new Map())]);
     typeCtx = { d, pools };
@@ -657,16 +657,16 @@
         const call = callInterface(contract)?.parseTransaction({ data: input, value: x.value });
         const kind = call && (CALL_TYPES[contract][call.name] ?? CALL_TYPES[contract]['*']);
         if (kind) return { kind, call, contract };
-      } catch { /* jiná funkce */ }
+      } catch { /* another function */ }
     }
     tokenCalls ??= new ethers.Interface(['function transfer(address to, uint256 amount)', 'function approve(address spender, uint256 amount)', 'function transferFrom(address from, address to, uint256 amount)', 'function mint(address to, uint256 amount)']);
     try {
       const call = tokenCalls.parseTransaction({ data: input });
       if (call && TOKEN_TYPES[call.name]) return { kind: TOKEN_TYPES[call.name], call };
-    } catch { /* není token */ }
+    } catch { /* not a token */ }
     return { kind: 'call' };
   }
-  /** Směr vůči prohlížené adrese. U převodu tokenu rozhodují odesílatel a příjemce tokenu, ne adresa kontraktu. */
+  /** Direction relative to the viewed address. For a token transfer the token's sender and recipient decide, not the contract address. */
   function txDirection(x, type, viewer) {
     if (!viewer) return null;
     const v = viewer.toLowerCase();
@@ -680,7 +680,7 @@
     if (from && to) return 'self';
     return from ? 'out' : to ? 'in' : null;
   }
-  /** Metoda jako v Etherscanu: název volané funkce, u převodu Převod, u nasazení Nasazení kontraktu. */
+  /** Method as on Etherscan: the called function name, Transfer for a transfer, Contract deployment for a deployment. */
   const humanize = (name) => name.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
   let methodInterfaces = null;
   function methodName(x) {
@@ -694,15 +694,15 @@
       try {
         const f = i.getFunction(input.slice(0, 10));
         if (f) return humanize(f.name);
-      } catch { /* jiný kontrakt */ }
+      } catch { /* another contract */ }
     }
     return input.slice(0, 10);
   }
-  /** Zaplacený poplatek: spotřebovaný gas krát skutečná cena. Čekající transakce ho ještě nemá. */
+  /** Fee paid: gas used times the actual price. A pending transaction does not have it yet. */
   const txFee = (x) => (x.gasUsed !== undefined && x.gasUsed !== null && x.gasPrice ? BigInt(x.gasUsed) * BigInt(x.gasPrice) : null);
   const previews = new Map();
   const eyeButton = (hash) => `<button type="button" class="eye-btn" data-preview="${esc(hash)}" title="${t('tx.preview')}" aria-label="${t('tx.preview')}">${EYE_ICON}</button>`;
-  /** Rychlý náhled transakce z řádku seznamu, bez dalšího dotazu na uzel. */
+  /** Quick transaction preview from a list row, without another node query. */
   function previewHtml(x) {
     const fee = txFee(x);
     const status = x.status === undefined || x.status === null ? (x.blockNumber ? '' : `<span class="badge pending">${t('b.pending')}</span>`) : txStatus(x);
@@ -765,22 +765,22 @@
       <span class="row-age">${x.timestamp ? ago(x.timestamp) : t('b.pending')}</span>
     </div>`).join('')}</div>` : `<div class="empty">${t('x.noTxs')}</div>`);
 
-  // Bez těžaře se bloky netvoří. Přehled to řekne rovnou, stejná mez platí pro odhad výkonu v uzlu.
+  // Without a miner no blocks are created. The overview says so directly; the same limit applies to the node's hashrate estimate.
   const STALLED_S = 180;
   const RIBBON_BLOCKS = 6;
   const HOME_ROWS = 6;
 
   const ribbon = (blocks) => `<div class="ribbon" aria-label="${t('nav.blocks')}">${blocks.map((b) => `<a class="ribbon-item" href="/block/${b.number}"><strong>#${num(b.number)}</strong><span>${ago(b.timestamp)} · ${num(b.txCount)} tx</span></a>`).join('')}</div>`;
 
-  /** Pás pod vyhledáváním: co se mění s každým blokem. Vyhledávání zůstává mimo, rozepsaný dotaz tak nezmizí. */
+  /** The band below the search: what changes with every block. The search stays outside so a query being typed does not disappear. */
   function homeRibbon(blocks) {
     const tip = blocks[0];
     const stalled = tip && Date.now() / 1000 - tip.timestamp > STALLED_S;
     return `${stalled ? `<p class="notice">${esc(fill('home.stalled', { t: ago(tip.timestamp) }))}</p>` : ''}${ribbon(blocks)}`;
   }
 
-  /** Souhrn jako v Etherscanu: transakce, poplatek teď, bezpečný blok a graf transakcí za 14 dní. */
-  /** Cena gasu se mění podle zaplnění bloků (EIP-1559). V klidné síti je na minimu, úvod to řekne, aby nevypadala pevná. */
+  /** Summary as on Etherscan: transactions, fee now, safe block and a 14-day transaction chart. */
+  /** The gas price changes with block utilisation (EIP-1559). In a quiet network it is at the minimum; the home page says so, so it does not look fixed. */
   const gasState = (s) => (s.fullness === undefined ? '' : `<small>${esc(s.congested ? t('home.gasBusy')
     : fill('home.gasCalm', { p: (s.fullness * 100).toLocaleString(locale(), { maximumFractionDigits: 1 }) }))}</small>`);
   function homeStats(s, a) {
@@ -794,7 +794,7 @@
     </div>`;
   }
 
-  /** Poslední bloky jako v Etherscanu: kdo vytěžil, kolik transakcí, za kolik sekund a skutečná odměna i s poplatky. */
+  /** Latest blocks as on Etherscan: who mined it, how many transactions, in how many seconds and the actual reward including fees. */
   const latestBlocks = (list) => (list.length ? `<div class="latest-list">${list.slice(0, HOME_ROWS).map((b, i) => {
     const prev = list[i + 1];
     const solve = prev ? b.timestamp - prev.timestamp : null;
@@ -806,7 +806,7 @@
     </div>`;
   }).join('')}</div>` : `<div class="empty">${t('x.noBlocks')}</div>`);
 
-  /** Poslední transakce jako v Etherscanu: od, komu, částka a metoda. */
+  /** Latest transactions as on Etherscan: from, to, amount and method. */
   const latestTxs = (list) => {
     for (const x of list) previews.set(x.hash.toLowerCase(), x);
     return list.length ? `<div class="latest-list">${list.map((x) => `<div class="latest-row rowlink" data-href="/tx/${esc(x.hash)}">
@@ -868,13 +868,13 @@
   const select = (name, label, options, q) => `<label>${label}<select name="${name}">${options.map(([v, l]) => `<option value="${esc(v)}" ${v === (q.get(name) ?? '') ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
   const rangeFields = (q) => `${select('range', t('f.range'), rangeOptions(), q)}${q.get('range') === 'custom' ? `<label>${t('f.from')}<input type="date" name="from" value="${esc(q.get('from') ?? '')}"></label><label>${t('f.to')}<input type="date" name="to" value="${esc(q.get('to') ?? '')}"></label>` : ''}`;
   const orderField = (q) => select('order', t('f.order'), [['', t('f.newest')], ['asc', t('f.oldest')]], q);
-  /** Filtry jsou schované, dokud je někdo nepotřebuje. Otevřené zůstanou, jen když některý platí. */
+  /** Filters stay hidden until someone needs them. They stay open only when one of them is active. */
   const filterForm = (fields, q) => {
     const active = [...q.keys()].some((k) => k !== 'tab' && k !== 'page');
     return `<details class="filter-box"${active ? ' open' : ''}><summary>${t('f.filter')}${CHEVRON}</summary><form class="filters" id="filters">${fields}<button type="submit" class="primary-btn">${t('f.apply')}</button>${active ? `<button type="button" class="ghost-btn" id="filters-reset">${t('f.reset')}</button>` : ''}</form></details>`;
   };
 
-  /** Filtry žijí v adrese stránky, takže jdou uložit, poslat dál a tlačítko zpět funguje. */
+  /** Filters live in the page address, so they can be bookmarked, shared and the back button works. */
   function bindFilters(base, keep = {}) {
     const form = $('filters');
     if (!form) return;
@@ -889,7 +889,7 @@
     if ($('filters-reset')) $('filters-reset').onclick = () => { const p = new URLSearchParams(keep).toString(); navigate(`${base}${p ? `?${p}` : ''}`); };
   }
 
-  /** Stránkování. Žebříčky a fronta nemají „novější a starší“, proto mají neutrální popisky. */
+  /** Pagination. Rankings and the queue have no "newer and older", so they have neutral labels. */
   function pagerLinks(base, q, total, neutral = false) {
     const page = pageOf(q);
     const link = (n) => { const p = new URLSearchParams(q); if (n > 1) p.set('page', n); else p.delete('page'); const text = p.toString(); return `${base}${text ? `?${text}` : ''}`; };
@@ -899,9 +899,9 @@
     return `<div class="pager">${page > 1 ? `<a class="ghost-btn" href="${esc(link(page - 1))}">${prev}</a>` : ''}<span class="hint">${fill('x.page', { n: num(page), of: num(last) })}</span>${page < last ? `<a class="ghost-btn" href="${esc(link(page + 1))}">${next}</a>` : ''}</div>`;
   }
 
-  /** Uzel počítá výsledky jen do 100 000, víc stránkování nepotřebuje. Nad touto hranicí to stránka řekne. */
+  /** The node counts results only up to 100,000; pagination needs no more. Above this limit the page says so. */
   const countLine = (n, capped = false) => `<p class="result-count">${fill(capped ? 'f.resultsMore' : 'f.results', { n: num(n) })}</p>`;
-  /** Bloky jako v Etherscanu: těžař se jménem poolu, spotřeba gasu s vytížením, základní poplatek a skutečná odměna i s poplatky. */
+  /** Blocks like on Etherscan: miner with the pool name, gas used with utilisation, base fee and the actual reward including fees. */
   const blockTable = (list) => `<div class="table-wrap"><table><thead><tr><th>${t('t.block')}</th><th>${t('t.age')}</th><th class="num">${t('t.tx')}</th><th>${t('t.miner')}</th><th>${t('blk.gasUsed')}</th><th class="num">${t('blk.gasLimit')}</th><th class="num">${t('blk.baseFee')}</th><th class="num" title="${esc(t('home.rewardTitle'))}">${t('blk.minerReward')}</th></tr></thead><tbody>
     ${list.map((b) => {
       const used = Number(b.gasUsed ?? 0);
@@ -914,8 +914,8 @@
     }).join('')}</tbody></table></div>`;
   const txStatus = (x) => (x.status === 0 ? `<span class="badge bad">${t('b.fail')}</span>` : `<span class="badge ok">${t('b.ok')}</span>`);
   /**
-   * Transakce jako v Etherscanu: oko s rychlým náhledem, metoda, blok, stáří, od, komu, částka a poplatek.
-   * @param {string} [viewer] adresa, jejíž stránka seznam ukazuje: u každé transakce je pak vidět, jestli odešla, nebo přišla
+   * Transactions as on Etherscan: an eye with a quick preview, method, block, age, from, to, amount and fee.
+   * @param {string} [viewer] address whose page shows the list: each transaction then shows whether it was sent or received
    */
   const txTable = (list, viewer) => {
     for (const x of list) previews.set(x.hash.toLowerCase(), x);
@@ -953,7 +953,7 @@
 
   const kv = (rows) => `<div class="kv">${rows.filter(Boolean).map(([k, v]) => `<div class="kv-row"><span>${k}</span><div>${v}</div></div>`).join('')}</div>`;
 
-  /** Text v doplňujících datech bloku, pokud je čitelný. */
+  /** Text in the block's extra data, if it is readable. */
   const extraText = (hex) => {
     try {
       const text = ethers.toUtf8String(hex);
@@ -963,7 +963,7 @@
   const pctOf = (part, whole) => `${(whole ? (Number(part) / Number(whole)) * 100 : 0).toLocaleString(locale(), { maximumFractionDigits: 2 })} %`;
   const hashRow = (label, h) => h && [label, `<span class="hash">${esc(h)}</span>${copyBtn(h)}`];
 
-  // Názvy poolů z továrny. Pool je pro těžaře jen adresa příjemce odměny, jméno pomůže ho poznat.
+  // Pool names from the factory. To miners a pool is just the reward recipient address; the name helps recognise it.
   let poolCache = null;
   async function poolNames() {
     if (poolCache && Date.now() - poolCache.at < 60_000) return poolCache.names;
@@ -972,11 +972,11 @@
       const list = await contract('PoolFactory').list(0, 200);
       const rows = await Promise.all([...list].map((a) => poolContract(a).name().then((n) => [a.toLowerCase(), n], () => null)));
       names = new Map(rows.filter(Boolean));
-    } catch { /* na této síti pooly nejsou */ }
+    } catch { /* there are no pools on this network */ }
     poolCache = { at: Date.now(), names };
     return names;
   }
-  /** Adresa se jménem poolu nebo systémového kontraktu, jinak zkrácená. */
+  /** An address with the name of a pool or system contract, otherwise shortened. */
   const whoLink = (a, names, suffix = '') => {
     const name = names?.get(a.toLowerCase()) ?? labelOf(a);
     return name ? `<a href="/address/${esc(a)}${suffix}">${esc(name)}</a> <span class="hash muted">${esc(short(a, 8))}</span>` : `<a class="hash" href="/address/${esc(a)}${suffix}">${esc(short(a, 10))}</a>`;
@@ -989,7 +989,7 @@
     if (!b) { app.innerHTML = `<div class="empty">${t('search.none')} ${esc(id)}</div>`; return; }
     const n = Number(b.number);
     const page = pageOf(q);
-    // Seznam transakcí bloku jde po stránkách z rejstříku: blok jich může mít přes tisíc.
+    // The block's transaction list comes by page from the index: a block can have over a thousand.
     const [income, parent, final, list, pools] = await Promise.all([
       rpc('aether_blockIncome', [`0x${n.toString(16)}`]),
       n > 0 ? rpc('eth_getBlockByHash', [b.parentHash, false]) : null,
@@ -1048,14 +1048,14 @@
     };
   }
 
-  /** Souhrn provozu za 24 hodin nad seznamem transakcí, jako v Etherscanu. */
+  /** 24-hour traffic summary above the transaction list, as on Etherscan. */
   const txSummary = (a) => (a ? `<div class="metric-grid">
       ${metric(t('m.txs24'), num(a.txs), esc(fill('m.tps', { tps: a.tps.toLocaleString(locale(), { maximumFractionDigits: 3 }) })))}
       ${metric(t('m.pending1h'), num(a.pendingHour), esc(fill('m.pendingAll', { n: num(a.pending) })))}
       ${metric(t('m.fees24'), `${aet(a.fees, 6)} <em>${esc(coin())}</em>`)}
       ${metric(t('m.avgFee24'), `${aet(a.avgFee, 8)} <em>${esc(coin())}</em>`)}
     </div>` : '');
-  /** Souhrn bloků za 24 hodin: vytížení, bezpečný blok, odměny a bloky poolů místo MEV, které tu není. */
+  /** 24-hour block summary: utilisation, safe block, rewards and pool blocks instead of MEV, which does not exist here. */
   const blockSummary = (a) => (a ? `<div class="metric-grid">
       ${metric(t('m.util24'), pctOf(a.utilization, 1), esc(fill('m.blocks24', { n: num(a.blocks) })))}
       ${metric(t('m.safe'), blockLink(a.safe), esc(fill('m.finalNote', { n: `#${num(a.finalized)}` })))}
@@ -1089,7 +1089,7 @@
   const ERC20_EVENTS = ['event Transfer(address indexed from, address indexed to, uint256 value)', 'event Approval(address indexed owner, address indexed spender, uint256 value)'];
   const ERC20_CALLS = new ethers.Interface(['function transfer(address to, uint256 amount)', 'function approve(address spender, uint256 amount)', 'function transferFrom(address from, address to, uint256 amount)']);
   const tokenMeta = new Map();
-  /** Zkratka a desetinná místa tokenu, jednou za načtení stránky. Kontrakt, který token není, vrátí null. */
+  /** Token symbol and decimals, once per page load. A contract that is not a token returns null. */
   function tokenInfo(address) {
     const key = address.toLowerCase();
     if (!tokenMeta.has(key)) {
@@ -1100,7 +1100,7 @@
   }
   const tokenAmount = (value, info) => (value >= UNLIMITED ? t('tx.unlimited') : info ? units(value, info.decimals, 6) : value.toString());
 
-  /** Převody tokenů z událostí Transfer. ERC-721 má čtyři témata a sem nepatří. */
+  /** Token transfers from Transfer events. ERC-721 has four topics and does not belong here. */
   async function tokenTransfers(logs) {
     const list = logs.filter((l) => l.topics[0] === TRANSFER_TOPIC && l.topics.length === 3);
     return Promise.all(list.map(async (l) => ({
@@ -1112,14 +1112,14 @@
     <span class="transfer-amount"><b>${tokenAmount(x.value, x.info)}</b> <a href="/token/${esc(x.token)}">${esc(x.info?.symbol ?? short(x.token, 6))}</a></span></li>`).join('')}</ul>`;
 
   let eventInterfaces = null;
-  /** Událost podle známých kontraktů. Stejný otisk může mít víc kontraktů, rozhodne, kdo ji umí přečíst. */
+  /** An event by known contracts. Several contracts can have the same signature; whoever can decode it decides. */
   function parseEvent(log) {
     eventInterfaces ??= [ERC20_EVENTS, ...Object.values(contracts).map((c) => c.abi).filter(Boolean)].map((abi) => { try { return new ethers.Interface(abi); } catch { return null; } }).filter(Boolean);
     for (const i of eventInterfaces) {
       try {
         const p = i.parseLog({ topics: log.topics, data: log.data });
         if (p) return p;
-      } catch { /* jiný kontrakt */ }
+      } catch { /* another contract */ }
     }
     return null;
   }
@@ -1132,7 +1132,7 @@
     return `<li><div class="log-head"><span class="log-index">${num(Number(l.logIndex))}</span>${addrLink(l.address)}${ev ? `<b>${esc(ev.name)}</b>` : ''}</div>${body}</li>`;
   }).join('')}</ol>`;
 
-  /** Co transakce volá, srozumitelně: známé kontrakty, směrovač Swapu a převody tokenů. Jinak aspoň otisk funkce. */
+  /** What a transaction calls, in plain words: known contracts, the Swap router and token transfers. Otherwise at least the function selector. */
   async function describeCall(x) {
     if (!x.input || x.input === '0x' || !x.to) return null;
     const known = decodeCall(x);
@@ -1144,7 +1144,7 @@
         const path = call.fragment.inputs.findIndex((i) => i.name === 'path');
         const names = path >= 0 ? await Promise.all([...call.args[path]].map(async (a) => (a.toLowerCase() === contracts.WAET?.address?.toLowerCase() ? coin() : (await tokenInfo(a))?.symbol ?? short(a, 6)))) : [];
         return `<span class="hash">SwapRouter.${esc(call.name)}</span>${names.length ? `<span class="muted">${names.map(esc).join(' → ')}</span>` : ''}`;
-      } catch { /* jiná funkce */ }
+      } catch { /* another function */ }
     }
     let call = null;
     try { call = ERC20_CALLS.parseTransaction({ data: x.input }); } catch { call = null; }
@@ -1160,13 +1160,13 @@
   const fillHtml = (k, vars) => esc(t(k)).replace(/\{(\w+)\}/g, (_, name) => vars[name] ?? '');
   const CHAIN_NAMES = { 1: 'Ethereum', 11155111: 'Sepolia', 52401: 'Quinvium', 52402: 'Quinvium Testnet', 52403: 'Quinvium Dev' };
   const isNativeToken = (token) => !token || BigInt(token) === 0n || token.toLowerCase() === contracts.WAET?.address?.toLowerCase();
-  /** Částka tokenu se zkratkou. Zabalená mince a nulová adresa jsou mince sítě. */
+  /** Token amount with its symbol. The wrapped coin and the zero address are the network coin. */
   async function amountOf(token, value) {
     if (isNativeToken(token)) return `${aet(value, 6)} ${esc(coin())}`;
     const info = await tokenInfo(token);
     return `${tokenAmount(BigInt(value), info)} ${esc(info?.symbol ?? short(token, 6))}`;
   }
-  /** Jedna věta, co transakce udělala. Částky bere z převodů v účtence, u čekající z volání. */
+  /** One sentence about what a transaction did. Amounts come from transfers in the receipt, or from the call for a pending one. */
   async function typeSummary(x, type, transfers) {
     const args = type.call?.args;
     switch (type.kind) {
@@ -1192,7 +1192,7 @@
     }
   }
 
-  /** Proč transakce ještě čeká. Jen skutečný problém je zvýrazněný, běžné čekání na blok ne. */
+  /** Why a transaction is still pending. Only a real problem is highlighted, not ordinary waiting for a block. */
   function pendingReason(entry) {
     if (entry && entry.waitingFor !== null && entry.waitingFor !== undefined) return { warn: true, text: fill('tx.gap', { n: num(entry.waitingFor) }) };
     if (entry?.underpriced) return { warn: true, text: t('tx.low') };
@@ -1200,9 +1200,9 @@
     return { warn: false, text: fill('tx.next', { n: num(stats?.blockTimeTarget ?? 15) }) };
   }
 
-  // Rady k nejčastějším chybám: co se stalo a jak se tomu příště vyhnout.
+  // Advice for the most common errors: what happened and how to avoid it next time.
   const FAIL_TIPS = { SlippageExceeded: 'tx.tipSlippage', ERC20InsufficientAllowance: 'tx.tipAllowance', ERC20InsufficientBalance: 'tx.tipBalance', Expired: 'tx.tipExpired' };
-  /** Důvod selhání z přehrané transakce: chyba kontraktu, zpráva revertu, vnitřní chyba nebo došlý gas. */
+  /** Reason for failure from the replayed transaction: contract error, revert message, internal error or out of gas. */
   function failureText(res, x) {
     if (!res) return null;
     if (res.error && res.error !== 'revert') {
@@ -1214,10 +1214,10 @@
     try {
       if (data.startsWith('0x08c379a0')) return { text: coder.decode(['string'], `0x${data.slice(10)}`)[0], code: 'Error(string)' };
       if (data.startsWith('0x4e487b71')) return { text: fill('tx.panic', { code: `0x${coder.decode(['uint256'], `0x${data.slice(10)}`)[0].toString(16)}` }), code: 'Panic' };
-    } catch { /* poškozená data, níže obecná zpráva */ }
+    } catch { /* corrupted data, generic message below */ }
     let name = null;
     for (const i of errorInterfaces()) {
-      try { name = i.parseError(data)?.name ?? null; } catch { /* zkusíme další kontrakt */ }
+      try { name = i.parseError(data)?.name ?? null; } catch { /* we try the next contract */ }
       if (name) break;
     }
     if (!name) return { text: t(data.length > 2 ? 'tx.revertUnknown' : 'tx.revertEmpty'), code: data.length > 2 ? data.slice(0, 10) : null };
@@ -1227,7 +1227,7 @@
   async function pageTx(hash) {
     app.innerHTML = skeleton();
     const [x, r] = await Promise.all([rpc('eth_getTransactionByHash', [hash]), rpc('eth_getTransactionReceipt', [hash])]);
-    // Neznámá transakce není chyba stránky: buď ještě nedorazila, nebo ji fronta zahodila. Mince zůstaly odesílateli.
+    // An unknown transaction is not a page error: either it has not arrived yet or the queue dropped it. The coins stayed with the sender.
     if (!x) {
       app.innerHTML = `${head(t('tx.title'), `<span class="hash">${esc(hash)}</span>${copyBtn(hash)}`, `<span class="badge pending">${t('tx.unknown')}</span>`)}
         <div class="notice">${t('tx.unknownNote')}</div>`;
@@ -1240,7 +1240,7 @@
       r ? null : rpc('eth_getTransactionCount', [x.from, 'pending']).catch(() => null),
       r ? tokenTransfers(r.logs) : [],
       describeCall(x),
-      // U neúspěšné transakce uzel přehraje blok až po ni a řekne, čím skončila.
+      // For a failed transaction the node replays the block up to it and says how it ended.
       r && Number(r.status) !== 1 ? rpc('aether_txError', [hash]).catch(() => null) : null,
       typeContext(),
     ]);
@@ -1250,7 +1250,7 @@
     const unit = esc(coin());
     const ok = r && Number(r.status) === 1;
     const status = !r ? `<span class="badge pending">${t('b.pending')}</span>` : ok ? `<span class="badge ok">${t('b.ok')}</span>` : `<span class="badge bad">${t('b.fail')}</span>`;
-    // Bez rozšířené fronty (starší uzel) se mezera pozná z pořadí: uzel počítá jen souvislou řadu čekajících transakcí.
+    // Without the extended queue (older node) a gap is recognised from the order: the node counts only a contiguous run of pending transactions.
     let entry = queue?.items.find((i) => i.hash.toLowerCase() === hash.toLowerCase());
     if (!entry && next !== null && BigInt(x.nonce) > BigInt(next)) entry = { waitingFor: Number(BigInt(next)) };
     const why = r ? null : pendingReason(entry);
@@ -1282,7 +1282,7 @@
       ])}</div>
       ${r?.logs.length ? `<details class="card fold"><summary><h2>${t('tx.events')}</h2><span class="muted">${num(r.logs.length)}</span>${CHEVRON}</summary>${logList(r.logs)}</details>` : ''}
       ${x.input && x.input !== '0x' ? `<details class="card fold"><summary><h2>${t('tx.input')}</h2><span class="muted">${num((x.input.length - 2) / 2)} B</span>${CHEVRON}</summary><div class="cmd-block">${esc(x.input)}${copyBtn(x.input)}</div></details>` : ''}`;
-    // Čekající transakce se po vytěžení sama přepne na potvrzenou.
+    // A pending transaction switches to confirmed by itself after it is mined.
     if (!r) pageTick = () => { if (route().name === 'tx') pageTx(hash); };
   }
 
@@ -1315,7 +1315,7 @@
     app.innerHTML = skeleton();
     const tab = q.get('tab') ?? 'txs';
     const [info] = await Promise.all([rpc('aether_addressInfo', [a]), typeContext()]);
-    // Pool dostává odměny za bloky od sítě a vyplácí uvnitř kontraktu: v transakcích to vidět není, stránka to řekne.
+    // A pool receives block rewards from the network and pays out inside the contract: this is not visible in transactions; the page says so.
     const [isPool, operated] = await Promise.all([
       info.isContract ? contract('PoolFactory').isPool(a).catch(() => false) : false,
       info.isContract ? [] : rpc('aether_poolsOf', [a]).catch(() => []),
@@ -1323,7 +1323,7 @@
     const poolInfo = isPool ? await poolSummary(a).catch(() => null) : null;
     const owned = await Promise.all(operated.map(async (x) => ({ ...x, ...(await poolSummary(x.pool).catch(() => ({}))), owed: await poolContract(x.pool).operatorOwed().catch(() => 0n) })));
     let name = '';
-    try { name = await new ethers.Contract(contracts.AetherNames.address, contracts.AetherNames.abi, provider()).nameOf(a); } catch { /* bez jména */ }
+    try { name = await new ethers.Contract(contracts.AetherNames.address, contracts.AetherNames.abi, provider()).nameOf(a); } catch { /* no name */ }
     const symbol = info.isContract ? await new ethers.Contract(a, TOKEN_ABI, provider()).symbol().catch(() => null) : null;
     const label = labelOf(a);
     const kind = label ? t('addr.system') : info.isContract ? t('addr.contract') : t('addr.account');
@@ -1340,7 +1340,7 @@
       body = `<p class="result-count">${t('addr.poolTotal')}: <strong>${aet(res.sum, 4)} ${unit}</strong></p><div class="card">${res.items.length ? `<div class="table-wrap"><table><thead><tr><th>${t('t.hash')}</th><th>${t('t.age')}</th><th>${t('t.block')}</th><th>${t('nav.pools')}</th><th>${t('t.value')}</th></tr></thead><tbody>
         ${res.items.map((r) => `<tr class="rowlink" data-href="/tx/${esc(r.hash)}"><td>${txLink(r.hash)}</td><td title="${esc(when(r.timestamp))}">${ago(r.timestamp)}</td><td>${blockLink(r.number)}</td><td><a class="hash" href="/pool/${esc(r.pool)}">${esc(short(r.pool, 10))}</a></td><td>${aet(r.amount, 4)} ${unit}</td></tr>`).join('')}</tbody></table></div>` : noResults()}${pagerLinks(base, q, res.total)}</div>`;
     } else if (tab === 'transfers') {
-      // Co adresa poslala a dostala v tokenech, i z cizích transakcí: výstup swapu, výplata, převod od někoho jiného.
+      // What the address sent and received in tokens, including from foreign transactions: swap output, payout, a transfer from someone else.
       const res = await rpc('aether_addressTransfers', [a, PAGE, (pageOf(q) - 1) * PAGE]);
       const me = a.toLowerCase();
       const rows = await Promise.all(res.items.map(async (r) => ({ ...r, info: r.tokenId === undefined ? await tokenInfo(r.token) : null })));
@@ -1407,7 +1407,7 @@
     if (a >= 1e3) return `${(v / 1e3).toFixed(1)} k`;
     return v.toLocaleString(locale(), { maximumFractionDigits: a < 10 ? 1 : 0 });
   };
-  /** Horní mez osy na kulaté číslo, aby popisky byly čitelné. */
+  /** Upper bound of the axis rounded to a round number so labels are readable. */
   const niceTop = (v) => {
     if (v <= 0) return 1;
     const unit = 10 ** Math.floor(Math.log10(v));
@@ -1416,7 +1416,7 @@
   };
   const timeLabel = (sec, span) => new Date(sec * 1000).toLocaleString(locale(), span > 172800 ? { day: 'numeric', month: 'numeric' } : span > 7200 ? { hour: '2-digit', minute: '2-digit' } : { hour: '2-digit', minute: '2-digit' });
 
-  /** Čára s kříži a popiskem. Hodnoty jdou přes textContent, popisky nikdy přes innerHTML. */
+  /** A line with crosses and a label. Values go through textContent, labels never through innerHTML. */
   function lineChart(box, all, bucket, read, format, o = {}) {
     box.textContent = '';
     const items = all.filter((p) => read(p) !== null);
@@ -1434,14 +1434,14 @@
     const values = items.map(read);
     const t0 = times[0];
     const t1 = times.at(-1);
-    // Cena se hýbe v úzkém pásmu, od nuly by byla rovná čára. Výkon a obtížnost se od nuly číst mají.
+    // The price moves in a narrow band; from zero it would be a flat line. Hashrate and difficulty should be read from zero.
     const spread = Math.max(...values) - Math.min(...values);
     const low = o.fit ? Math.min(...values) - (spread || Math.abs(values[0]) * 0.1 || 1) * 0.15 : 0;
     const top = o.fit ? Math.max(...values) + (spread || Math.abs(values[0]) * 0.1 || 1) * 0.15 : niceTop(Math.max(...values));
     const x = (v) => pad.l + ((v - t0) / (t1 - t0 || 1)) * (w - pad.l - pad.r);
     const y = (v) => h - pad.b - ((v - low) / (top - low)) * (h - pad.t - pad.b);
     const svg = svgEl('svg', { viewBox: `0 0 ${w} ${h}`, role: 'img' }, box);
-    // Graf přiblížený na úzký rozsah (cena) potřebuje tolik desetinných míst, aby se popisky os lišily.
+    // A chart zoomed into a narrow range (price) needs enough decimals for the axis labels to differ.
     const step = (top - low) / 3;
     const digits = Math.min(8, Math.max(0, Math.ceil(-Math.log10(step || 1)) + 1));
     const fitTick = (v) => v.toLocaleString(locale(), { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -1456,7 +1456,7 @@
       const at = t0 + ((t1 - t0) * i) / labels;
       svgEl('text', { class: 'tick', x: x(at), y: h - 6, 'text-anchor': i === 0 ? 'start' : i === labels ? 'end' : 'middle' }, svg).textContent = timeLabel(at, t1 - t0);
     }
-    // Díra v čase zůstane dírou: čára nesmí předstírat data, která neexistují.
+    // A gap in time stays a gap: the line must not pretend data that does not exist.
     const paths = [];
     items.forEach((p, i) => {
       const gap = i && p.time - items[i - 1].time > bucket * 2.5;
@@ -1517,11 +1517,11 @@
     };
   }
 
-  /** Grafy a tabulka jsou dva pohledy na stejná data. Oba žijí v adrese, takže přežijí obnovení stránky i změnu období. */
+  /** Charts and the table are two views of the same data. Both live in the address, so they survive a page reload and a change of period. */
   async function pageCharts(q) {
     const range = CHART_RANGES.some(([id]) => id === q.get('range')) ? q.get('range') : '24h';
     const table = q.get('view') === 'table';
-    // Malá čísla, třeba poplatky v desetinách mince: popisky os se zaokrouhlí na platné číslice, ne na nulu.
+    // Small numbers, for example fees in tenths of a coin: axis labels are rounded to significant digits, not to zero.
     const small = (v) => (v === 0 ? '0' : v.toLocaleString(locale(), { maximumSignificantDigits: 2 }));
     const metrics = [
       ['time', t('charts.time'), (p) => p.blockTime, (v) => `${v.toLocaleString(locale(), { maximumFractionDigits: 1 })} s`],
@@ -1565,7 +1565,7 @@
         if (!box) return;
         lineChart(box, s.items, s.bucket, read, format, tick ? { tick } : {});
         const last = read(s.items.at(-1));
-        // Graf je historie, číslo nahoře platí pro teď: po zastavení těžby nesmí ukazovat poslední známý výkon.
+        // The chart is history, the number on top is for now: after mining stops it must not show the last known hashrate.
         $(`now-${id}`).textContent = id === 'rate' ? rate(stats?.hashrate ?? 0) : last === null ? '' : format(last);
       }
     };
@@ -1574,7 +1574,7 @@
     resize.observe($('app'));
   }
 
-  /** Odkaz na tutéž stránku s jinou hodnotou jednoho parametru, stránkování se vrátí na začátek. */
+  /** A link to the same page with a different value of one parameter; pagination returns to the start. */
   const withParam = (base, q, key, value, fallback) => {
     const p = new URLSearchParams(q);
     p.delete('page');
@@ -1584,7 +1584,7 @@
   };
   const sharePct = (v) => `${(v * 100).toLocaleString(locale(), { maximumFractionDigits: v < 0.01 ? 3 : v < 0.1 ? 2 : 1 })} %`;
 
-  /** Žebříček všech těžařů za celou historii. Uzel ho drží průběžně, takže stránka je stejně rychlá u deseti i u milionu těžařů. */
+  /** Ranking of all miners over the whole history. The node maintains it continuously, so the page is equally fast with ten or a million miners. */
   async function pageMiners(q = new URLSearchParams()) {
     app.innerHTML = skeleton();
     const order = q.get('order') === 'last' ? 'last' : 'blocks';
@@ -1625,7 +1625,7 @@
     };
   }
 
-  // Příkazy ukazují zástupný text, ne adresu připojené peněženky: návod je stejný pro každého a nic osobního neprozradí.
+  // Commands show placeholder text, not the connected wallet's address: the guide is the same for everyone and reveals nothing personal.
   function pageMining() {
     const addr = t('mine.yourAddr');
     const host = location.hostname;
@@ -1652,7 +1652,7 @@
   const need = (v, ...names) => { for (const n of names) if (!v[n]) throw Object.assign(new Error(`${t('tool.missing')}: ${n}`), { missing: n }); };
   const L = (cs, en) => ({ cs, en });
 
-  // Vlastní chyby kontraktů. Bez překladu by uživatel viděl jen kód.
+  // Custom contract errors. Without translation the user would see only a code.
   const ERRORS = {
     InvalidSettings: L('Neplatné nastavení. Poplatek smí být nejvýše 5 %, kolo 16 až 5760 bloků a okno 1 až 256 kol.', 'Invalid settings. The fee can be at most 5%, a round 16 to 5760 blocks and the window 1 to 256 rounds.'),
     NothingToPay: L('Není co vybrat.', 'Nothing to withdraw.'),
@@ -1719,7 +1719,7 @@
     let name = e.revert?.name;
     if (!name && typeof data === 'string' && data.length >= 10) {
       for (const i of errorInterfaces()) {
-        try { name = i.parseError(data)?.name; } catch { /* zkusíme další */ }
+        try { name = i.parseError(data)?.name; } catch { /* we try the next one */ }
         if (name) break;
       }
     }
@@ -1727,7 +1727,7 @@
     return e.shortMessage ?? e.message;
   }
 
-  /** Registrace jména má dva kroky, aby ji nešlo předběhnout. */
+  /** Name registration has two steps so it cannot be front-run. */
   async function registerName(v, s, progress) {
     need(v, 'name');
     const c = contract('AetherNames', s);
@@ -1751,7 +1751,7 @@
     return c.register(v.name, 1, target, secret, { value: await c.pricePerYear(v.name) });
   }
 
-  // Řádky výsledku: popisek a hodnota. Adresa je odkaz, stav barevný štítek, seznam řádky pod sebou.
+  // Result rows: label and value. An address is a link, status a coloured label, a list rows below each other.
   const line = (label, value) => ({ label, value });
   const addrLine = (label, address) => ({ label, address });
   const stateLine = (label, value, tone = '') => ({ label, value, tone });
@@ -1760,7 +1760,7 @@
   const NOT_FOUND = L('Nenalezeno', 'Not found');
   const coinAmount = (wei) => `${units(wei, 18, 6)} ${coin()}`;
   const noZero = (a) => a && a !== ethers.ZeroAddress;
-  /** Nový záznam z události: číslo nebo adresu ukáže a doplní do formuláře, další kroky s ním rovnou počítají. */
+  /** A new record from an event: shows the number or address and fills it into the form; the next steps use it directly. */
   const created = (events, name, field, label, key = 0) => {
     const e = events.find((x) => x.name === name);
     if (!e) return {};
@@ -1769,8 +1769,8 @@
   };
 
   /**
-   * Aplikace pro obory. Každá má úkoly (zapsat, ověřit, odvolat…) a každý úkol ukáže jen svá pole. Hodnoty polí
-   * zůstávají při přepnutí úkolu, takže číslo nové položky nebo adresa nové sbírky rovnou slouží dalším krokům.
+   * Apps for various fields. Each has tasks (record, verify, revoke…) and each task shows only its own fields. Field values
+   * stay when switching tasks, so the number of a new item or the address of a new collection serves the next steps directly.
    */
   const TOOLS = [
     { key: 'notary', tag: L('Právo · Zdravotnictví · Archivace', 'Legal · Health · Archives'), title: L('Notář', 'Notary'),
@@ -2067,7 +2067,7 @@
       ] },
   ];
 
-  /** Události z účtenky. Kontrakt z genesis se pozná podle adresy, kontrakt z továrny (token, sbírka, peněženka) podle ABI aplikace. */
+  /** Events from a receipt. A genesis contract is recognised by its address, a factory contract (token, collection, wallet) by the app's ABI. */
   function receiptEvents(receipt, abi) {
     const known = new Map(Object.entries(contracts).filter(([, c]) => c.address).map(([name, c]) => [c.address.toLowerCase(), name]));
     return receipt.logs.map((log) => {
@@ -2076,7 +2076,7 @@
         try {
           const event = new ethers.Interface(contracts[name].abi).parseLog(log);
           if (event) return event;
-        } catch { /* jiné ABI */ }
+        } catch { /* another ABI */ }
       }
       return null;
     }).filter(Boolean);
@@ -2178,7 +2178,7 @@
   const percent = (bps) => `${(Number(bps) / 100).toLocaleString(locale())} %`;
   const windowMinutes = (round, windowRounds) => Math.round(Number(round) * Number(windowRounds) * BLOCK_MINUTES);
 
-  /** Výška, od které síť pooly umí. Před ní továrna v řetězci ještě není. */
+  /** The height from which the network supports pools. Before it the factory is not on chain yet. */
   const poolsFrom = () => stats?.forks?.find((f) => f.name === 'pools')?.block ?? 0;
 
   async function poolSummary(address) {
@@ -2188,8 +2188,8 @@
   }
 
   /**
-   * Další směnu, vklad ani převod nepustí, dokud z účtu čeká předchozí transakce. Odhad kurzu i zůstatek
-   * by počítaly se stavem před ní a druhá stejná směna by selhala, jako když se odešle dvakrát rychle za sebou.
+   * No further swap, deposit or transfer is allowed while a previous transaction from the account is pending. The rate estimate and the balance
+   * would compute with the state before it and a second identical swap would fail, as when sent twice in quick succession.
    */
   async function nothingPending(s) {
     const me = await s.getAddress();
@@ -2197,7 +2197,7 @@
     if (BigInt(all) > BigInt(done)) throw new Error(t('swap.waitPrevious'));
   }
 
-  /** Transakce z formuláře s průběhem pod ním. */
+  /** Transaction from a form with its progress below it. */
   function txButton(button, out, send, done) {
     const show = (text, cls = '') => { out.textContent = text; out.className = `tool-output ${cls}`; };
     button.addEventListener('click', async () => {
@@ -2209,7 +2209,7 @@
         show(`${t('tool.sent')}: ${tx.hash}`);
         const r = await tx.wait();
         if (!r.status) throw new Error(t('tool.failed'));
-        // Výsledek je text, nebo text a tlačítko pro další krok, například přidání tokenu do peněženky.
+        // The result is text, or text and a button for the next step, for example adding a token to the wallet.
         const result = await done(r);
         show(typeof result === 'string' ? result : result.text, 'good');
         if (result?.node) out.append(' ', result.node);
@@ -2217,7 +2217,7 @@
     });
   }
 
-  /** Přidá token do peněženky (EIP-747), jinak ho MetaMask v cizí síti sám nenajde. Aplikace Quinvium ověřené tokeny ukazuje sama. */
+  /** Adds the token to the wallet (EIP-747); otherwise MetaMask will not find it on a foreign network. The Quinvium app shows verified tokens itself. */
   async function watchToken({ address, symbol, decimals }) {
     await connect();
     if (wrongNetwork()) await switchNetwork();
@@ -2240,7 +2240,7 @@
   };
 
   const SHARE_RANGES = [['24h', 86400], ['7d', 604800], ['30d', 2592000], ['all', 0]];
-  const SHARE_SLOTS = 8;              // víc barev by nešlo rozeznat, další pooly se složí do Ostatní
+  const SHARE_SLOTS = 8;              // more colours could not be told apart; further pools are folded into Other
   const MAJORITY = 0.5;
   const SOLO_ROWS = 5;
 
@@ -2248,8 +2248,8 @@
   const POOL_PAGE = PAGE;
 
   /**
-   * Podíly jsou z vytěžených bloků: příjemce odměny je přímo v bloku, takže si ho nikdo nevymyslí. Graf ukáže
-   * deset nejsilnějších poolů a zbytek složí, celý seznam poolů je níž po stránkách a s hledáním.
+   * Shares come from mined blocks: the reward recipient is right in the block, so nobody can invent it. The chart shows
+   * the ten strongest pools and folds the rest; the whole pool list is further down by page and with search.
    */
   async function pagePools(q) {
     await refreshStats();
@@ -2268,7 +2268,7 @@
     const total = shares.work || 1;
     const part = (x) => ({ blocks: x?.blocks ?? 0, work: x?.work ?? 0, hashrate: x?.hashrate ?? 0, share: (x?.work ?? 0) / total });
     const sumOf = (list, key) => list.reduce((sum, x) => sum + x[key], 0);
-    // Barva patří poolu podle pořadí založení, ne podle místa v žebříčku: změna období ho nepřebarví.
+    // A pool's colour follows the order of creation, not its place in the ranking: changing the period does not recolour it.
     const slotOf = (order) => (order < SHARE_SLOTS - 1 ? order + 1 : 0);
     const shownPools = top.items.filter((p) => p.work > 0);
     const rows = shownPools.map((p) => ({ ...p, slot: slotOf(p.order), ...part(p) }));
@@ -2282,7 +2282,7 @@
       ...(restSolo.length ? [{ others: restSolo.length, slot: 0, ...part({ blocks: sumOf(restSolo, 'blocks'), work: sumOf(restSolo, 'work'), hashrate: sumOf(restSolo, 'hashrate') }) }] : []),
     ];
     const ranked = [...rows, ...shownSolo, ...folded].sort((a, b) => b.work - a.work);
-    // Největší podíl se počítá po jednotlivých adresách: sólo těžaři ani ostatní pooly nejsou jeden hráč.
+    // The largest share is computed per address: solo miners and other pools are not one player.
     const entities = shares.items.map((x) => ({ name: top.items.find((p) => p.address.toLowerCase() === x.address.toLowerCase())?.name ?? short(x.address, 8), share: x.work / total })).sort((a, b) => b.share - a.share);
     const leader = entities[0]?.share ? entities[0] : null;
     const pct = (v) => (v * 100).toLocaleString(locale(), { minimumFractionDigits: v > 0 && v < 0.1 ? 2 : 1, maximumFractionDigits: v > 0 && v < 0.1 ? 2 : 1 });
@@ -2374,12 +2374,12 @@
   const DEVICE_PAGE = PAGE;
 
   /**
-   * Návod k připojení jako u velkých poolů: adresa serveru, přihlašovací jméno, heslo a hotové příkazy pro
-   * běžné programy. Stratum uzlu umí EthereumStratum/1.0.0 i ETHPROXY a algoritmus je standardní Ethash.
+   * Connection instructions like large pools: server address, login name, password and ready-made commands for
+   * common programs. The node's Stratum supports EthereumStratum/1.0.0 and ETHPROXY and the algorithm is standard Ethash.
    */
   function connectCard(address, url, p) {
     let host = null;
-    try { host = new URL(url).hostname; } catch { /* adresa serveru není povinná */ }
+    try { host = new URL(url).hostname; } catch { /* the server address is optional */ }
     if (!host) return `<div class="card connect-card" id="connect"><div class="card-header"><h2>${t('pool.connect')}</h2><span class="badge pending">${t('pools.noServerShort')}</span></div><p class="muted">${t('pool.noServer')}</p></div>`;
     const port = STRATUM_PORTS[stats?.network] ?? 3333;
     const stratum = `stratum+tcp://${host}:${port}`;
@@ -2429,7 +2429,7 @@
       rpc('aether_contractLogs', [address, FEE_PAID_TOPIC, 200, 0]).catch(() => ({ items: [] })),
       rpc('aether_pools', [{ query: address.toLowerCase(), limit: 1 }]).catch(() => null),
     ]);
-    // Těžaři v okně poolu po stránkách: počty podílů z řetězce, práce a výplaty přímo z kontraktu jen pro zobrazené.
+    // Miners in the pool window by page: share counts from the chain, work and payouts directly from the contract only for the displayed ones.
     const height = stats?.height ?? Number(await rpc('eth_blockNumber'));
     const windowBlocks = Number(p.roundBlocks) * Number(p.windowRounds);
     const minerList = await rpc('aether_poolMiners', [address, Math.max(0, height - windowBlocks), { limit: MINER_PAGE, offset: (page - 1) * MINER_PAGE, miner: sought ?? undefined }])
@@ -2441,7 +2441,7 @@
     }));
     const withdrawn = fees.items.reduce((sum, l) => sum + BigInt(l.data), 0n);
     const minersOwed = reserved > opFee ? reserved - opFee : 0n;
-    // Připojená zařízení zná jen uzel, na kterém běží server tohoto poolu.
+    // Only the node running this pool's server knows the connected devices.
     const local = live && live.address?.toLowerCase() === address.toLowerCase() ? live : null;
     const day = ranking?.items?.[0]?.address?.toLowerCase() === address.toLowerCase() ? ranking.items[0] : null;
     const unit = esc(coin());
@@ -2541,7 +2541,7 @@
     window.AetherDocs.render({ app, lang, rpcBase, stats, contracts, rpc, esc, head, copyBtn, section });
   }
 
-  /** Fronta čekajících transakcí po stránkách. U každé je vidět, jestli půjde do dalšího bloku, a když ne, proč. */
+  /** The pending transaction queue by page. Each shows whether it will enter the next block and, if not, why. */
   async function pageMempool(q = new URLSearchParams()) {
     app.innerHTML = skeleton();
     const order = q.get('order') === 'time' ? 'time' : 'fee';
@@ -2579,7 +2579,7 @@
 
   async function pageNetwork() {
     app.innerHTML = skeleton();
-    // Starší uzel metodu aether_endpoints nezná, stránka pak ukáže jen adresu, ze které je otevřená.
+    // An older node does not know aether_endpoints; the page then shows only the address it was opened from.
     const [s, peers, ends] = await Promise.all([rpc('aether_stats'), rpc('aether_peers'), rpc('aether_endpoints').catch(() => null)]);
     const url = (u) => `<span class="hash">${esc(u)}</span>${copyBtn(u)}`;
     const rpcRows = [['RPC', url(rpcBase)]];
@@ -2597,13 +2597,13 @@
   // ------------------------------------------------------------- tokeny a most
   const TOKEN_ABI = ['function name() view returns (string)', 'function symbol() view returns (string)', 'function decimals() view returns (uint8)', 'function totalSupply() view returns (uint256)',
     'function balanceOf(address) view returns (uint256)', 'function allowance(address,address) view returns (uint256)', 'function approve(address,uint256) returns (bool)'];
-  const HISTORY_BLOCKS = 9000;     // uzel vrací logy z nejvýše 10 000 bloků najednou
+  const HISTORY_BLOCKS = 9000;     // the node returns logs from at most 10,000 blocks at a time
   const BRIDGE_DOMAIN = ethers.id('AetherBridge.v1');
   const BECH32 = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
   const BTC_PREFIX = { mainnet: 'bc', testnet: 'tb', regtest: 'bcrt' };
   let deployments = null;
 
-  /** Adresy kontraktů mostu a tokenů pro síť, ke které je stránka připojená. */
+  /** Bridge and token contract addresses for the network the page is connected to. */
   async function deployment() {
     await refreshStats();
     deployments ??= await fetch('/deployments.json').then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
@@ -2623,10 +2623,10 @@
   const tokenBadge = (kind) => `<span class="badge ${['ok', 'pending', ''][kind] ?? ''}">${t(`tokens.kind${kind}`)}</span>`;
   const COIN_ICON = '<svg class="coin-icon" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#F2B544"/><path fill="#0B1622" d="M32 12.4L50.55 25.87L43.46 47.68L20.54 47.68L13.45 25.87ZM22.73 28.89L26.27 39.79L37.73 39.79L41.27 28.89L32 22.15ZM36.96 33.28L47.63 47.97L42.45 51.73L31.78 37.05Z"/></svg>';
   const tintOf = (symbol) => [...String(symbol)].reduce((sum, c) => sum + c.charCodeAt(0), 0) % 6;
-  /** Ikona tokenu vzniká ze zkratky. Cizí loga se nepřebírají, ochranné známky patří jejich majitelům. */
+  /** A token icon is generated from its symbol. Foreign logos are not taken over; trademarks belong to their owners. */
   const tokenIcon = (x) => (x.native ? COIN_ICON : `<i class="token-icon tint-${tintOf(x.symbol)}" aria-hidden="true">${esc(String(x.symbol).replace(/^t(?=[A-Z])/, '').slice(0, 4))}</i>`);
 
-  /** Cena tokenu je to, co za něj dnes dá pool s Quinviem. Bez poolu cena není a stránka si ji nevymýšlí. */
+  /** A token's price is what the pool with Quinvium gives for it today. Without a pool there is no price and the page does not invent one. */
   async function tokenPool(d, token) {
     if (!d?.swap?.factory) return null;
     const hub = contracts.WAET.address;
@@ -2639,7 +2639,7 @@
     return { address, reserveToken: own, reserveCoin: other, price: (other * 10n ** BigInt(token.decimals)) / own };
   }
 
-  /** Ověřený seznam a vše, co o tokenech ví řetězec. Chyba jednoho tokenu nesmí shodit celou tabulku. */
+  /** The verified list and everything the chain knows about tokens. An error in one token must not bring down the whole table. */
   async function tokenList(d) {
     const registry = d?.registry ? at('TokenRegistry', d.registry) : null;
     const entries = registry ? await registry.all() : [];
@@ -2723,7 +2723,7 @@
     });
   }
 
-  /** Detail jednoho tokenu. Název a zkratka jsou text z cizího kontraktu, proto vždy projdou přes esc. */
+  /** Details of one token. The name and symbol are text from a foreign contract, so they always go through esc. */
   async function pageToken(address, q) {
     app.innerHTML = skeleton();
     const missing = () => { app.innerHTML = `<div class="empty">${t('search.none')} ${esc(address)}</div>`; };
@@ -2769,7 +2769,7 @@
     if ($('watch-token')) $('watch-token').onclick = () => watchToken({ address, symbol, decimals }).catch((e) => toast(esc(errorText(e))));
   }
 
-  /** Stejná adresa, jakou spočítají validátoři: skript s adresou příjemce a klíči úschovy, P2WSH v bech32. */
+  /** The same address the validators compute: the script with the recipient address and the custody keys, P2WSH in bech32. */
   function depositAddress(net, recipient) {
     const keys = [...net.keys].sort().map((k) => [...ethers.getBytes(`0x${k}`)]);
     const script = new Uint8Array([0x14, ...ethers.getBytes(recipient), 0x75, 0x50 + net.threshold, ...keys.flatMap((k) => [k.length, ...k]), 0x50 + keys.length, 0xae]);
@@ -2802,13 +2802,13 @@
   }
 
   const bridgeRouteKey = (chain, token) => ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(['uint64', 'bytes32'], [chain, token]));
-  /** Stejné číslo vrácení jako u validátorů: prvních 8 bajtů SHA-256 z textu. */
+  /** The same refund number as the validators use: the first 8 bytes of the SHA-256 of the text. */
   const bridgeNonce = (text) => BigInt(ethers.dataSlice(ethers.sha256(ethers.toUtf8Bytes(text)), 0, 8));
   const bridgeId = (gateway, m) => ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(
     ['bytes32', 'address', 'uint64', 'uint64', 'uint64', 'bytes32', 'address', 'uint256'], [BRIDGE_DOMAIN, gateway, m.srcChain, m.dstChain, m.nonce, m.srcToken, m.recipient, m.amount],
   ));
 
-  /** Peněženka přepnutá na druhou síť. Po převodu se vrací zpět na Quinvium. */
+  /** Wallet switched to the other network. After the transfer it returns to Quinvium. */
   async function switchChain(id, net) {
     const w = wallet();
     const chainId = ethers.toQuantity(id);
@@ -2842,7 +2842,7 @@
         const [done, cancelled] = await Promise.all([other.delivered(id).catch(() => false), other.cancelled(id).catch(() => false)]);
         if (done) status = `<span class="badge ok">${t('bridge.done')}</span>`;
         else if (cancelled) {
-          // Zrušený převod vrátí validátoři zprávou opačným směrem, stejně jako to dělá relayer (refundMessage).
+          // Validators refund a cancelled transfer with a message in the opposite direction, as the relayer does (refundMessage).
           const route = await other.routes(bridgeRouteKey(stats.chainId, m.srcToken)).catch(() => null);
           const back = route && { srcChain: l.args.dstChain, dstChain: stats.chainId, nonce: bridgeNonce(`refund:${l.args.id}`), srcToken: ethers.zeroPadValue(route.local, 32), recipient: ethers.getAddress(l.args.sender), amount: l.args.amount };
           const refunded = back ? await gate.delivered(bridgeId(d.gateway, back)).catch(() => false) : false;
@@ -2870,8 +2870,8 @@
     back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>',
   };
   /**
-   * Jak most funguje: tři kroky s ikonami a pod nimi odpovědi na to, na co se lidé ptají nejdřív.
-   * Počet validátorů je skutečný z kontraktu, u mostu, který ještě neběží, se neuvádí.
+   * How the bridge works: three steps with icons and below them answers to what people ask first.
+   * The number of validators comes from the contract; for a bridge that is not running yet it is not shown.
    */
   const bridgeHow = (threshold, count) => {
     const steps = [[t('bridge.step1'), t('bridge.how1')], [t('bridge.step2'), threshold ? fill('bridge.how2n', { threshold: num(threshold), count: num(count) }) : t('bridge.how2')], [t('bridge.step3'), t('bridge.how3')]];
@@ -2883,7 +2883,7 @@
   };
   const netBox = (id, label, name) => `<div class="bridge-net"><small>${label}</small><strong id="${id}">${esc(name)}</strong></div>`;
 
-  /** Most zatím neběží: stránka ukáže, jak bude vypadat a co na něm chybí, a nic nejde odeslat. */
+  /** The bridge is not running yet: the page shows how it will look and what is missing, and nothing can be sent. */
   function bridgePlanned(title) {
     const rows = BRIDGE_PLANNED.map(([net, symbol, wrapped]) => `<tr><td><div class="token-cell">${tokenIcon({ symbol })}<div><strong>${esc(symbol)}</strong><span class="dim-text">${esc(net)}</span></div></div></td><td>${esc(wrapped)}</td><td><span class="badge pending">${t('bridge.needsValidators')}</span></td></tr>`).join('');
     app.innerHTML = `<div class="trade-page">${title}
@@ -2993,7 +2993,7 @@
           }
           const native = asset.remoteToken === ethers.ZeroAddress;
           const tx = await gateway.send(asset.remoteToken, amount, stats.chainId, target, native ? { value: amount } : {});
-          // Peněženka se vrací na hlavní síť až po potvrzení, jinak by se čekání na blok přerušilo změnou sítě.
+          // The wallet returns to the main network only after confirmation, otherwise waiting for the block would be interrupted by a network change.
           const receipt = await tx.wait();
           return { hash: tx.hash, wait: async () => receipt };
         } finally {
@@ -3009,17 +3009,17 @@
 
   // ------------------------------------------------------------- swap
   const SWAP_DEADLINE_S = 1200;
-  const SLIPPAGES = [10, 50, 100];   // v setinách procenta: 0,1 %, 0,5 % a 1 %
+  const SLIPPAGES = [10, 50, 100];   // in hundredths of a percent: 0.1 %, 0.5 % and 1 %
   const HIGH_IMPACT = 0.05;
-  // Nad touto hranicí swap jedním kliknutím neodejde: kdo by směnil celý zůstatek do malého poolu, přijde skoro o všechno.
+  // Above this threshold a swap does not go out with one click: whoever swapped their whole balance into a small pool would lose almost everything.
   const CONFIRM_IMPACT = 0.15;
   let slippageBps = 50;
   const parseAmount = (text, decimals) => {
     try { return ethers.parseUnits(String(text).trim().replace(',', '.') || '0', decimals); } catch { return 0n; }
   };
-  const SWAP_PAIR_SCAN = 200;       // kolik nejnovějších poolů se při načtení stránky prohlédne
+  const SWAP_PAIR_SCAN = 200;       // how many of the newest pools are scanned when the page loads
   let swapTokenCache = null;
-  /** Údaje tokenu přímo z kontraktu. Jméno a zkratka jsou cizí text, proto se zkracují. */
+  /** Token data directly from the contract. The name and symbol are foreign text, so they are shortened. */
   async function swapTokenMeta(address) {
     const c = new ethers.Contract(address, TOKEN_ABI, provider());
     const [name, symbol, decimals] = await Promise.all([c.name(), c.symbol(), c.decimals()]);
@@ -3027,8 +3027,8 @@
     return { address: ethers.getAddress(address), name: String(name).slice(0, 40), symbol: String(symbol).slice(0, 12), decimals: Number(decimals) };
   }
   /**
-   * Tokeny Swapu: výchozí seznam z deployments.json a k němu každý token, který má pool s QU ve Swap factory.
-   * Autoři tokenů si pool zakládají sami, takže pevný seznam nestačí. Tokeny mimo ověřený seznam nesou značku.
+   * Swap tokens: the default list from deployments.json plus every token that has a pool with QU in the Swap factory.
+   * Token authors create pools themselves, so a fixed list is not enough. Tokens outside the verified list carry a badge.
    */
   async function discoverSwapTokens(d) {
     const hub = contracts.WAET.address.toLowerCase();
@@ -3047,7 +3047,7 @@
       return t1?.toLowerCase() === hub ? t0 : null;
     }));
     const fresh = [];
-    for (const address of sides.reverse()) {     // nejnovější pool první
+    for (const address of sides.reverse()) {     // newest pool first
       if (!address || seen.has(address.toLowerCase())) continue;
       seen.add(address.toLowerCase());
       fresh.push(address);
@@ -3055,7 +3055,7 @@
     const found = await Promise.all(fresh.map((address) => swapTokenMeta(address).then((x) => ({ ...x, listed: verified.has(address.toLowerCase()) })).catch(() => null)));
     return [...out, ...found.filter(Boolean).sort((x, y) => Number(y.listed) - Number(x.listed))];
   }
-  /** Seznam se načte jednou za načtení stránky. Každé volání dostane vlastní pole, formulář do něj přidává tokeny podle adresy. */
+  /** The list is loaded once per page load. Each call gets its own array; the form adds tokens to it by address. */
   async function swapTokens(d) {
     const key = `${stats.chainId}:${d.swap.factory}`;
     if (swapTokenCache?.key !== key) {
@@ -3074,7 +3074,7 @@
     if (!me) return null;
     return token.native ? provider().getBalance(me) : new ethers.Contract(token.address, TOKEN_ABI, provider()).balanceOf(me);
   }
-  /** Přímý pool, jinak cesta přes QU, kde bývá likvidita nejhlubší. */
+  /** A direct pool, otherwise the path through QU, where liquidity tends to be deepest. */
   async function swapRoute(router, a, b, amount) {
     const hub = contracts.WAET.address;
     const paths = [[a.address, b.address]];
@@ -3094,13 +3094,13 @@
   const DAY_S = 86400;
   const SPANS = [['24h', DAY_S], ['7d', 7 * DAY_S], ['all', 0]];
   const PARTS = [25, 50, 100];
-  const FEE_RESERVE = '0.01';       // u hlavní mince zůstane rezerva na poplatek sítě
+  const FEE_RESERVE = '0.01';       // for the main coin a reserve for the network fee remains
   const GEAR_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2"/></svg>';
   const DOWN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>';
   const tokenButton = (id, x) => `<button type="button" class="token-btn" id="${id}">${tokenIcon(x)}<span>${esc(x.symbol)}</span>${CHEVRON}</button>`;
   const priceText = (v) => v.toLocaleString(locale(), { maximumSignificantDigits: 6 });
 
-  /** Výběr tokenu nebo trasy v okně: s hledáním a zůstatky místo holého rozbalovacího seznamu. */
+  /** Choosing a token or route in a window: with search and balances instead of a bare dropdown. */
   function pickerDialog(title, items, onPick, byAddress = null) {
     const box = document.createElement('div');
     box.className = 'modal-backdrop';
@@ -3142,9 +3142,9 @@
     return { balance: (i, text) => { const el = box.querySelector(`[data-balance="${i}"]`); if (el) el.textContent = text; } };
   }
 
-  /** Okno s tokeny Swapu a se zůstatky, pokud je připojená peněženka. */
+  /** Window with Swap tokens and balances, if a wallet is connected. */
   function pickToken(tokens, onPick) {
-    // Token, který ještě nemá pool, jde vybrat vložením adresy do hledání. Tak si autor tokenu založí první pool.
+    // A token that has no pool yet can be selected by pasting its address into the search. That is how a token author creates the first pool.
     const byAddress = async (address) => {
       const known = tokens.findIndex((x) => x.address.toLowerCase() === address.toLowerCase());
       if (known >= 0) return null;
@@ -3158,7 +3158,7 @@
     });
   }
 
-  /** Stav poolu a jeho historie přímo z událostí kontraktu. Pool bez přímé dvojice se bere přes minci sítě. */
+  /** Pool state and its history directly from contract events. A pool without a direct pair goes through the network coin. */
   async function marketData(d, a, b, coinToken) {
     const factory = at('SwapFactory', d.swap.factory);
     let [base, quote] = [a, b];
@@ -3243,7 +3243,7 @@
     let marketTicket = 0;
     const router = at('SwapRouter', d.swap.router);
     const box = $('swap-body');
-    // Formulář je vpravo a zůstává na místě, trh s grafem a posledními směnami je vedle něj, ne pod ním.
+    // The form is on the right and stays in place; the market with chart and latest swaps is next to it, not below it.
     box.innerHTML = `<div class="trade-layout">
       <div class="trade-main" id="market"><div class="card">${'<div class="skel skel-row"></div>'.repeat(6)}</div></div>
       <aside class="trade-side"><div class="card trade-card">
@@ -3295,7 +3295,7 @@
     async function quote() {
       const ticket = ++drawn;
       const go = $('swap-go');
-      if (!go) return;        // uživatel mezitím odešel na jinou stránku
+      if (!go) return;        // the user has gone to another page in the meantime
       $('swap-msg').className = 'tool-output hidden';
       $('swap-warn').innerHTML = '';
       const [a, b] = [tokens[from], tokens[to]];
@@ -3327,12 +3327,12 @@
         [t('swap.route'), names.map(esc).join(' → ')],
       ]);
       if (have !== null && have < amount) { go.textContent = fill('swap.noFunds', { symbol: a.symbol }); return; }
-      // Do tlačítka se vejde jen krátký nápis. Vysvětlení, proč je dopad velký, je ve varování nad ním.
+      // Only a short label fits into the button. The explanation of why the impact is large is in the warning above it.
       go.textContent = impact > HIGH_IMPACT ? t('swap.goHigh') : t('swap.go');
       go.disabled = false;
       if (impact > HIGH_IMPACT && impact <= CONFIRM_IMPACT) $('swap-warn').innerHTML = `<div class="impact-warn"><p>${t('swap.high')}</p></div>`;
       if (impact > CONFIRM_IMPACT) {
-        // Odhad, kolik se vejde do 5 %: u poolu s konstantním součinem roste dopad s podílem částky na zásobě.
+        // Estimate of how much fits into 5 %: for a constant-product pool the impact grows with the amount's share of the reserve.
         const fit = Number(amount) * (HIGH_IMPACT / (1 - HIGH_IMPACT)) * ((1 - impact) / impact);
         const max = (fit / 10 ** a.decimals).toLocaleString(locale(), { maximumSignificantDigits: 3 });
         const share = `${(impact * 100).toLocaleString(locale(), { maximumFractionDigits: impact > 0.99 ? 2 : 1 })} %`;
@@ -3390,9 +3390,9 @@
   const LINK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54 0.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-0.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
 
   /**
-   * Likvidita: vlevo moje vklady a všechny pooly, vpravo formulář vkladu. Částky obou tokenů jsou svázané
-   * kurzem poolu, proto mezi nimi není „+“, ale řádek s kurzem. Rychlé částky 20 %, 50 % a Max počítají
-   * s oběma zůstatky: Max je největší vklad, který v existujícím poolu opravdu projde.
+   * Liquidity: my deposits and all pools on the left, the deposit form on the right. The amounts of both tokens are linked
+   * by the pool rate, so between them there is not a "+" but a line with the rate. Quick amounts 20 %, 50 % and Max are computed
+   * with both balances: Max is the largest deposit that really passes in an existing pool.
    */
   async function poolsForm(d, tokens) {
     const box = $('swap-body');
@@ -3427,7 +3427,7 @@
     const value = (r) => (coinSide(r) === null ? '—' : `${units(coinSide(r) * 2n, 18, 2)} ${esc(coin())}`);
     const shareOf = (r) => (r.supply ? `${(Number((r.mine * 10000n) / r.supply) / 100).toLocaleString(locale())} %` : '—');
     const pairIcons = (r) => `<div class="pair-icons small">${tokenIcon(r.a)}${tokenIcon(r.b)}</div>`;
-    // Kolik by vybrání dané části vrátilo: podíl na obou zásobách poolu.
+    // What withdrawing the given part would return: the share of both pool reserves.
     const back = (r, part) => [(r.reserves[0] * r.mine * BigInt(part)) / (100n * (r.supply || 1n)), (r.reserves[1] * r.mine * BigInt(part)) / (100n * (r.supply || 1n))];
     const positionHtml = (r) => {
       const [x, y] = back(r, 100);
@@ -3469,7 +3469,7 @@
       }));
       $('pool-more')?.addEventListener('click', () => { shown += POOL_ROWS; drawTable(); });
     }
-    /** Obnoví jen seznamy: rozepsaný vklad a zpráva o výsledku zůstanou. */
+    /** Refreshes only the lists: a deposit being typed and the result message stay. */
     async function drawList() {
       const me = await connectedAddress();
       const pairs = await at('SwapFactory', d.swap.factory).list(0, 200);
@@ -3505,7 +3505,7 @@
           const address = await s.getAddress();
           const deadline = Math.floor(Date.now() / 1000) + SWAP_DEADLINE_S;
           const part = (row.mine * BigInt(cut)) / 100n;
-          // Nejmenší vrácené částky podle tolerance kurzu: když se pool mezitím pohne, transakce raději selže.
+          // Minimum returned amounts by rate tolerance: if the pool moves in the meantime, the transaction rather fails.
           const floor = (v) => v - (v * BigInt(slippageBps)) / 10000n;
           const [x, y] = back(row, cut).map(floor);
           await approveToken({ address: row.address }, d.swap.router, part, s);
@@ -3530,15 +3530,15 @@
       $('add-a-balance').textContent = x === null ? '—' : units(x, tokens[a].decimals, 6);
       $('add-b-balance').textContent = y === null ? '—' : units(y, tokens[b].decimals, 6);
     };
-    /** Zásoby poolu ve stejném pořadí jako formulář: [první token, druhý token]. */
+    /** Pool reserves in the same order as the form: [first token, second token]. */
     const ratio = () => {
       const row = currentRow();
       if (!row || row.reserves[0] === 0n || row.reserves[1] === 0n) return null;
       return row.a === tokens[a] ? [row.reserves[0], row.reserves[1]] : [row.reserves[1], row.reserves[0]];
     };
     /**
-     * Částka do pole: nejvýš šest desetinných míst, u částek pod 1 šest platných číslic. Zaokrouhluje se dolů,
-     * takže dopočtená částka nikdy nepřesáhne zůstatek. Rozdíl v posledním místě pool vyrovná sám.
+     * Amount for a field: at most six decimals, for amounts below 1 six significant digits. Rounded down,
+     * so the computed amount never exceeds the balance. The pool settles a difference in the last digit itself.
      */
     const trimmed = (v, decimals) => {
       let keep = Math.min(decimals, 6);
@@ -3547,9 +3547,9 @@
       const text = ethers.formatUnits((v / step) * step, decimals);
       return text.includes('.') ? text.replace(/0+$/, '').replace(/\.$/, '') : text;
     };
-    // Který zůstatek omezil rychlou částku. Poznámka pod formulářem to řekne, jinak působí Max záhadně.
+    // Which balance limited the quick amount. The note below the form says so; otherwise Max looks mysterious.
     let limit = null;
-    /** U existujícího poolu dopočítá druhou částku podle kurzu, jinak by přebytek zůstal ležet u uživatele. */
+    /** For an existing pool computes the second amount from the rate, otherwise the surplus would stay with the user. */
     const follow = (from) => {
       const [x, y] = [tokens[a], tokens[b]];
       const r = ratio();
@@ -3565,7 +3565,7 @@
         }
         const price = Number(ethers.formatUnits(rb, y.decimals)) / Number(ethers.formatUnits(ra, x.decimals));
         $('add-rate').textContent = fill('swap.linkedRate', { a: x.symbol, rate: priceText(price), b: y.symbol });
-        // Opačný směr kurzu: u nevyrovnaného poolu je jedno z čísel velké a druhé skoro nula, oba pomůžou.
+        // The reverse direction of the rate: in an unbalanced pool one number is large and the other almost zero; both help.
         rows.push([t('swap.rate'), `1 ${esc(y.symbol)} = ${priceText(1 / price)} ${esc(x.symbol)}`]);
         const amountA = parseAmount(form.amountA.value, x.decimals);
         if (amountA > 0n) rows.push([t('swap.poolShare'), `${((Number(amountA) / Number(ra + amountA)) * 100).toLocaleString(locale(), { maximumFractionDigits: 2 })} %`]);
@@ -3577,7 +3577,7 @@
       const [amountA, amountB] = [parseAmount(form.amountA.value, x.decimals), parseAmount(form.amountB.value, y.decimals)];
       const notes = [];
       if (limit && r) notes.push(fill('swap.limitBy', { symbol: limit.by.symbol, other: limit.other.symbol }));
-      // Hlavní mince skoro celá do poolu: řekne, kolik jí zůstane na poplatky.
+      // Almost all of the main coin goes into the pool: says how much is left for fees.
       const [coinAmount, coinHave] = x.native ? [amountA, bal.a] : y.native ? [amountB, bal.b] : [0n, null];
       if (coinHave && coinAmount > 0n && coinAmount <= coinHave && coinAmount * 10n >= coinHave * 9n) notes.push(fill('swap.coinLeft', { left: units(coinHave - coinAmount, 18, 6), coin: coin() }));
       $('add-note').textContent = notes.join(' ');
@@ -3603,7 +3603,7 @@
       const r = ratio();
       const otherHave = spendable(other, bal[side === 'a' ? 'b' : 'a']);
       if (r && otherHave !== null) {
-        // V existujícím poolu se vloží jen tolik, kolik dovolí i zůstatek druhého tokenu.
+        // An existing pool takes only as much as the balance of the other token allows.
         const [mine, theirs] = side === 'a' ? r : [r[1], r[0]];
         const cap = (otherHave * mine) / theirs;
         if (cap < base) {
@@ -3612,7 +3612,7 @@
         }
       }
       const amount = (base * BigInt(button.dataset.part)) / 100n;
-      // Celý zůstatek tokenu jde do pole přesně, aby po vkladu nezůstal drobný zbytek. Ostatní částky se zaokrouhlí.
+      // The whole token balance goes into the field exactly, so no tiny remainder is left after a deposit. Other amounts are rounded.
       const exact = button.dataset.part === '100' && !limit && !x.native;
       (side === 'a' ? form.amountA : form.amountB).value = amount > 0n ? (exact ? ethers.formatUnits(amount, x.decimals).replace(/\.0$/, '') : trimmed(amount, x.decimals)) : '';
       follow(side);
@@ -3669,8 +3669,8 @@
   }
 
   // ------------------------------------------------------------- navigace
-  // Stránky mají obyčejné adresy jako /tx/0x…, úvod je samotné /. Starší odkazy s #/ z aplikace, peněženky
-  // a uložených záložek se při otevření převedou samy, takže dál fungují.
+  // Pages have plain addresses like /tx/0x…, the home page is just /. Older links with #/ from the app, the wallet
+  // and saved bookmarks convert themselves on opening, so they keep working.
   function legacyHash() {
     if (!location.hash.startsWith('#/')) return false;
     history.replaceState(null, '', location.hash.slice(1) || '/');
@@ -3680,7 +3680,7 @@
     const parts = location.pathname.replace(/^\/+|\/+$/g, '').split('/');
     return { name: parts[0] || 'home', arg: parts[1] ? decodeURIComponent(parts[1]) : undefined, query: new URLSearchParams(location.search) };
   }
-  /** Přechod na jinou stránku bez nového načtení. Tlačítko zpět vrací na předchozí. */
+  /** Navigating to another page without a reload. The back button returns to the previous one. */
   function navigate(path, { replace = false } = {}) {
     const target = path.startsWith('#/') ? path.slice(1) : path;
     if (target === `${location.pathname}${location.search}`) { render(); return; }
@@ -3689,15 +3689,15 @@
     render();
   }
   const NAV_PARENT = { pool: 'pools', block: 'blocks', tx: 'txs', token: 'tokens' };
-  const NAV_WIDTH = 1120;           // pod touto šířkou se nabídka do hlavičky nevejde
-  const NAV_WIDTH_EMBEDDED = 860;   // v aplikaci značka a její název chybí, vejde se i do užšího okna
+  const NAV_WIDTH = 1120;           // below this width the menu does not fit into the header
+  const NAV_WIDTH_EMBEDDED = 860;   // in the app the brand and its name are missing, so it fits even into a narrower window
   function closeNav() {
     $('main-nav').classList.remove('open');
     $('menu-btn').setAttribute('aria-expanded', 'false');
     document.querySelectorAll('.nav-group.open').forEach((g) => { g.classList.remove('open'); g.querySelector('button').setAttribute('aria-expanded', 'false'); });
   }
-  // Každé vykreslení má své pořadí. Stránka, kterou uživatel mezitím opustil, už neukáže chybu
-  // (třeba „Cannot set properties of null“ z prvku, který zmizel) a když přesto doběhne později, nová se vykreslí znovu.
+  // Each render has its own sequence number. A page the user has left in the meantime no longer shows an error
+  // (for example "Cannot set properties of null" from an element that disappeared) and if it still finishes later, the new one is drawn again.
   let renderSeq = 0;
   let renderDone = 0;
   async function render() {
@@ -3755,7 +3755,7 @@
     document.querySelectorAll('[data-theme-set]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.themeSet === v)));
   }
 
-  /** Nabídky v hlavičce: otevřená je vždy jen jedna, zavře ji kliknutí mimo i Escape. */
+  /** Header menus: only one is open at a time; a click outside or Escape closes it. */
   function menus() {
     const pairs = [['net-btn', 'net-pop'], ['lang-btn', 'lang-pop']];
     const closeAll = () => {
@@ -3785,7 +3785,7 @@
   }
 
   async function init() {
-    // Aplikace Quinvium přepíná stránky Exploreru přímo touto cestou, bez staré adresy s #. Platí hned od načtení.
+    // The Quinvium app switches Explorer pages directly through this path, without the old # address. Applies right from load.
     window.explorerGo = (path) => navigate(String(path).replace(/^#/, '') || '/');
     document.body.classList.toggle('embedded', embedded);
     $('lang-pop').innerHTML = Object.entries(LANGUAGES).map(([code, name]) => `<button role="menuitemradio" data-lang="${code}">${name}</button>`).join('');
@@ -3798,7 +3798,7 @@
     $('to-top').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
     $('login-btn').onclick = () => (account && !wrongNetwork() ? $('account-pop').classList.toggle('open') : connect().catch(() => { /* průvodce už vše řekl */ }));
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') walletCancel(); });
-    // Na úzké obrazovce je celá nabídka pod jedním tlačítkem. Skupiny se otevírají kliknutím, s myší i najetím.
+    // On a narrow screen the whole menu is behind one button. Groups open on click, and with a mouse also on hover.
     const narrow = matchMedia(`(max-width: ${embedded ? NAV_WIDTH_EMBEDDED : NAV_WIDTH}px)`);
     const compactNav = () => { document.body.classList.toggle('compact-nav', narrow.matches); closeNav(); };
     narrow.addEventListener('change', compactNav);
@@ -3823,7 +3823,7 @@
       b.onclick = async () => {
         const port = PORTS[b.dataset.net];
         const target = location.port === String(port) ? location.origin : `${location.protocol}//${location.hostname}:${port}`;
-        // Síť bez běžícího uzlu by ukázala jen chybu, zůstává se na té, která funguje.
+        // A network without a running node would show only an error; we stay on the one that works.
         const alive = await fetch(target, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_chainId', params: [] }), signal: AbortSignal.timeout(2000) }).then((r) => r.ok, () => false);
         if (!alive) { toast(fill('net.off', { net: esc(b.textContent) })); return; }
         rpcBase = target;
@@ -3833,7 +3833,7 @@
         render();
       };
     });
-    // Vyhledávání je v hlavičce a na přehledu, obě pole chodí stejnou cestou.
+    // Search is in the header and on the overview; both fields go the same way.
     document.addEventListener('submit', async (e) => {
       const form = e.target.closest('.js-search');
       if (!form) return;
@@ -3846,7 +3846,7 @@
       input.value = '';
       navigate(`/${hit.type}/${hit.id}`);
     });
-    // Odkaz uvnitř Exploreru se otevře bez nového načtení. Soubory, nové karty a odkazy ven nechává prohlížeči.
+    // A link inside the Explorer opens without a reload. Files, new tabs and external links are left to the browser.
     document.addEventListener('click', (e) => {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       const a = e.target.closest('a[href]');
@@ -3860,14 +3860,14 @@
     window.addEventListener('hashchange', () => { if (legacyHash()) render(); });
     legacyHash();
     await refreshStats();
-    deployment().catch(() => { /* bez nasazení se popisky kontraktů neukážou */ });
+    deployment().catch(() => { /* without a deployment the contract labels are not shown */ });
     walletReady = syncWallet();
     if (!stats && NODES.length && await pickNode()) await refreshStats();
     if (!stats && !NODES.length && rpcBase !== location.origin) { rpcBase = location.origin; store.set('aether.rpc', rpcBase); await refreshStats(); }
     live();
     render();
     setInterval(refreshStats, 15000);
-    // Uzel, který odpovídá, ale zaostává, by sám chybu nevyvolal. Jednou za minutu se porovná s ostatními.
+    // A node that answers but lags would not raise an error by itself. Once a minute it is compared with the others.
     if (NODES.length > 1) setInterval(() => { pickNode().then((moved) => { if (moved) refreshStats(); }); }, 60000);
   }
   init();

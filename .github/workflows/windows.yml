@@ -1,5 +1,5 @@
-# Ověření na skutečných Windows: testy uzlu, kontrakty a sestavení mineru. Na Linuxu navíc most a testy bez prohlížeče.
-# Akce jsou připnuté na otisk commitu: značka v4 se dá přesunout, otisk ne.
+# Verification on real Windows: node tests, contracts and the miner build. On Linux additionally the bridge and tests without a browser.
+# Actions are pinned to a commit hash: the v4 tag can be moved, the hash cannot.
 name: windows
 on: [push, workflow_dispatch]
 permissions:

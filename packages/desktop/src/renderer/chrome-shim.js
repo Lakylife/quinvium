@@ -1,5 +1,5 @@
-// Peněženka je stejný kód jako rozšíření pro Chrome. Tahle vrstva mu nahrazuje rozhraní prohlížeče:
-// šifrovaný trezor se ukládá do souboru aplikace, odemčená fráze jen do paměti okna.
+// The wallet is the same code as the Chrome extension. This layer replaces the browser interface for it:
+// the encrypted vault is saved to the app's file; the unlocked phrase only to the window's memory.
 (() => {
   const listeners = { message: [], alarm: [], connect: [] };
   const sessionData = {};
@@ -15,10 +15,10 @@
   const persist = () => { saving = saving.then(() => window.desktop.saveWallet(localData)); return saving; };
   const ready = window.desktop.loadWallet().then((d) => { localData = d ?? {}; });
   const SENDER = { id: 'aether-desktop', url: 'chrome-extension://aether-desktop/desktop.html' };
-  // Jen testy: zkušební aplikace má uzel na vlastním portu a peněženka se musí ptát jeho, ne skutečného uzlu.
+  // Tests only: the test app has its node on its own port and the wallet must ask it, not the real node.
   if (window.desktop.testRpcPort) self.AETHER_TEST_RPC = `http://127.0.0.1:${window.desktop.testRpcPort}`;
 
-  // Okno Exploreru mluví s peněženkou stejně jako stránka s rozšířením, místo portu prohlížeče jde přes hlavní proces.
+  // The Explorer window talks to the wallet just as a page talks to the extension; instead of a browser port it goes through the main process.
   const ports = new Map();
   function dappPort(origin) {
     if (ports.has(origin)) return ports.get(origin);
@@ -39,12 +39,12 @@
     if (e.type === 'wallet-request') ready.then(() => dappPort(e.origin).deliver(e));
   });
 
-  // Rozšíření otevírá na každé schválení okno, aplikace je ukazuje v hlavním okně jedno po druhém.
+  // The extension opens a window for each approval; the app shows them in the main window one after another.
   const approvalQueue = [];
-  // Po schválení se uživatel vrátí tam, odkud žádost přišla, třeba do Swapu.
+  // After approval the user returns to where the request came from, for example Swap.
   let returnTab = null;
   const showApproval = () => {
-    if (window.appLocked?.()) return;     // počká na heslo, pak ji spustí resumeApproval
+    if (window.appLocked?.()) return;     // waits for the password, then resumeApproval starts it
     returnTab ??= window.currentTab?.() ?? null;
     window.showTab('wallet');
     approval(approvalQueue[0]);

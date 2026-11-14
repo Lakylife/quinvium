@@ -1,4 +1,4 @@
-// Žádný text v rozhraní nesmí zůstat bez překladu ani ztratit proměnnou.
+// No interface text may remain untranslated or lose a variable.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -29,15 +29,15 @@ function usedKeys() {
   return [...keys];
 }
 
-test('angličtina je výchozí jazyk', () => assert.equal(lang(), 'en'));
+test('English is the default language', () => assert.equal(lang(), 'en'));
 
-test('každý použitý text má překlad do všech jazyků', () => {
+test('every text used has a translation into all languages', () => {
   const missing = usedKeys().filter((k) => !TEXT[k]);
   assert.deepEqual(missing, []);
   assert.ok(usedKeys().length > 150, 'hledání textů v kódu funguje');
 });
 
-test('každý překlad má všechny jazyky a stejné proměnné jako originál', () => {
+test('every translation has all languages and the same variables as the original', () => {
   const vars = (s) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
   for (const [key, row] of Object.entries(TEXT)) {
     assert.equal(row.length, ORDER.length, key);
@@ -48,12 +48,12 @@ test('každý překlad má všechny jazyky a stejné proměnné jako originál',
   }
 });
 
-test('v kódu nezůstaly české texty pro uživatele', () => {
+test('no Czech user-facing texts remained in the code', () => {
   const strip = (s) => s.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).map((l) => l.replace(/\s\/\/ .*$/, '')).join('\n');
   for (const file of [popup, desktop]) assert.doesNotMatch(strip(file), /[ěščřžůňťď]/i);
 });
 
-test('přepnutí jazyka a desetinná čárka', () => {
+test('switching the language and the decimal comma', () => {
   setLang('cs');
   assert.equal(t('Send'), 'Odeslat');
   assert.equal(t('Word no. {n}', { n: 3 }), 'Slovo č. 3');

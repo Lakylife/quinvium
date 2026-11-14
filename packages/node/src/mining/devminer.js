@@ -1,5 +1,5 @@
-// Pomalý procesorový miner pro vývojářskou síť. Na mainnetu a testnetu se nepoužívá,
-// k těžbě slouží GPU miner nebo běžné Stratum minery.
+// A slow CPU miner for the development network. It is not used on mainnet or testnet,
+// mining is done by the GPU miner or common Stratum miners.
 import { randomBytes } from 'node:crypto';
 import { bytesToBigInt } from '../crypto/ethash.js';
 

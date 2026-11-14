@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Spuštění plného uzlu Quinvium z příkazové řádky.
+// Starting a full Quinvium node from the command line.
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -93,7 +93,7 @@ if (v.help) {
 
 const num = (s) => (s === undefined ? undefined : Number(s));
 
-/** Klíč poolu slouží jen na gas za podíly. Vznikne při prvním spuštění a nikam se nevypisuje. */
+/** The pool key is only for gas for shares. It is created on first start and never printed. */
 function poolKey() {
   const dir = v['data-dir'] ?? join(homedir(), '.aether', NETWORKS[v.network]?.folder ?? v.network);
   const file = v['pool-key-file'] ?? join(dir, 'pool.key');
@@ -114,8 +114,8 @@ const node = new AetherNode({
   publicAccess: v.public || !!v['public-host'], publicHost: v['public-host'],
 });
 
-// Chyba při obsluze jednoho požadavku nesmí ukončit celý uzel. Databáze je po každém bloku konzistentní.
-// Když se ale chyby sypou, je něco špatně a správce služby uzel raději restartuje čistý.
+// An error while handling one request must not end the whole node. The database is consistent after every block.
+// But when errors keep coming, something is wrong and the service manager had better restart the node clean.
 const FATAL_PER_MINUTE = 60;
 let faults = [];
 const fault = (e) => {
@@ -133,7 +133,7 @@ await node.start();
 const n = node.chain.network;
 node.log(L(`${VERSION}, síť ${n.name}, chainId ${n.chainId}, výška ${node.chain.head.number}`, `${VERSION}, network ${n.name}, chainId ${n.chainId}, height ${node.chain.head.number}`));
 node.log(`RPC http://${node.rpc.host}:${node.rpc.port}  P2P ${node.network.port}  Stratum ${node.stratum.host}:${node.stratum.port}`);
-// 0.0.0.0 je jen adresa, na které uzel naslouchá. Peněženka potřebuje skutečnou adresu tohoto počítače.
+// 0.0.0.0 is only the address the node listens on. The wallet needs the real address of this computer.
 {
   const ends = node.endpoints();
   node.log(`${L('RPC pro peněženky na tomto počítači', 'RPC for wallets on this computer')}: ${ends.local}`);

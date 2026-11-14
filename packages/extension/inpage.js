@@ -1,4 +1,4 @@
-// Poskytovatel EIP-1193 a EIP-6963 na stránce. Nezná žádné klíče, jen předává požadavky.
+// EIP-1193 and EIP-6963 provider on the page. It knows no keys; it only relays requests.
 (() => {
   if (window.quinvium || window.quintium || window.aether) return;
   const pending = new Map();
@@ -44,12 +44,12 @@
     const p = pending.get(m.id);
     if (!p) return;
     pending.delete(m.id);
-    // Pole data nese kód chyby kontraktu, stránka podle něj ukáže srozumitelný důvod.
+    // The data field carries the contract's error code; the page shows an understandable reason based on it.
     if (m.error) p.reject(Object.assign(new Error(m.error.message), { code: m.error.code ?? -32603, data: m.error.data }));
     else p.resolve(m.result);
   });
 
-  // Peněženka Quinvium má vlastní objekt window.quinvium. Dřívější názvy window.quintium a window.aether zůstávají kvůli starším stránkám.
+  // The Quinvium wallet has its own window.quinvium object. The earlier names window.quintium and window.aether remain for older pages.
   const frozen = Object.freeze(provider);
   Object.defineProperty(window, 'quinvium', { value: frozen, writable: false, configurable: false });
   Object.defineProperty(window, 'quintium', { value: frozen, writable: false, configurable: false });

@@ -1,4 +1,4 @@
-// Most mezi dvěma skutečnými uzly s různým chain ID, stablecoin vydavatele a seznam ověřených tokenů, včetně pokusů o krádež.
+// The bridge between two real nodes with different chain IDs, an issuer's stablecoin and the verified token list, including theft attempts.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -53,9 +53,9 @@ const A = chain(52403n, 'aether');
 const B = chain(1115511n, 'ethereum');
 let gateA;
 let gateB;
-let usdc;        // originál na B
-let usdcA;       // přemostěný na A
-let aetB;       // přemostěný na B
+let usdc;        // original on B
+let usdcA;       // bridged on A
+let aetB;       // bridged on B
 const ZERO32 = ethers.ZeroHash;
 const pad = (a) => ethers.zeroPadValue(a, 32);
 const iface = new ethers.Interface(artifacts.BridgeGateway.abi);
@@ -67,7 +67,7 @@ const fails = (pending, name) => assert.rejects(pending, (e) => { assert.equal(e
 const sign = (id, keys = validators) => keys.map((v) => ethers.Signature.from(new ethers.SigningKey(v.privateKey).sign(ethers.hashMessage(ethers.getBytes(id)))).serialized);
 const msg = (o) => ({ srcChain: Number(B.id), dstChain: Number(A.id), nonce: 1, srcToken: ZERO32, recipient: bob.address, amount: 1n, ...o });
 
-/** Přenese událost Sent na druhou stranu stejně jako relayer: postaví zprávu a podepíše ji validátory. */
+/** Carries a Sent event to the other side like the relayer: builds the message and has the validators sign it. */
 async function relay(src, dst, gateSrc, gateDst, receipt, signers = validators.slice(0, 2)) {
   const log = receipt.logs.map((l) => { try { return iface.parseLog(l); } catch { return null; } }).find((l) => l?.name === 'Sent');
   const m = { srcChain: Number(src.id), dstChain: Number(log.args.dstChain), nonce: log.args.nonce, srcToken: pad(log.args.token), recipient: ethers.getAddress(log.args.recipient), amount: log.args.amount };
@@ -88,7 +88,7 @@ test.before(async () => {
   await B.ok(usdc.configureMinter(admin.address, 10n ** 15n));
   await B.ok(usdc.mint(alice.address, 5_000_000_000n));
 
-  // Trasy: USDC z B se na A razí, zpět se uvolní. AET z A se na B razí, zpět se uvolní.
+  // Routes: USDC from B is minted on A and released on the way back. QU from A is minted on B and released on the way back.
   const r = await A.ok(gateA.createWrapped('USD Coin (bridged)', 'USDC.a', 6, Number(B.id), pad(await usdc.getAddress()), 1_000_000_000n, 500_000_000n));
   usdcA = new ethers.Contract(iface.parseLog(r.logs.find((l) => l.topics[0] === iface.getEvent('WrappedCreated').topicHash)).args.token, artifacts.WrappedAsset.abi, A.provider);
   const r2 = await B.ok(gateB.createWrapped('Aether (bridged)', 'AET.e', 18, Number(A.id), ZERO32, 100n * WEI, 50n * WEI));
@@ -105,7 +105,7 @@ test.after(async () => {
   for (const side of [A, B]) { side.provider.destroy(); await side.node.stop(); }
 });
 
-test('USDC jde tam i zpět a krytí sedí', async () => {
+test('USDC goes there and back and the backing matches', async () => {
   const b = gateB.connect(B.connect(alice));
   const token = usdc.connect(B.connect(alice));
   const gateAddress = await gateB.getAddress();
@@ -126,7 +126,7 @@ test('USDC jde tam i zpět a krytí sedí', async () => {
   assert.equal(await usdc.balanceOf(gateAddress), await usdcA.totalSupply(), 'uzamčeno je přesně tolik, kolik je přemostěno');
 });
 
-test('hlavní mince AET jde na druhý řetězec a zpět', async () => {
+test('the main coin QU goes to the other chain and back', async () => {
   const before = await A.provider.getBalance(bob.address);
   const sent = await A.ok(gateA.connect(A.connect(bob)).send(ethers.ZeroAddress, 10n * WEI, Number(B.id), bob.address, { value: 10n * WEI }));
   assert.equal(await gateA.locked(ethers.ZeroAddress), 10n * WEI);
@@ -142,7 +142,7 @@ test('hlavní mince AET jde na druhý řetězec a zpět', async () => {
   await fails(gateA.connect(A.connect(bob)).send.staticCall(ethers.ZeroAddress, 1n, 999, bob.address, { value: 1n }), 'RouteClosed');
 });
 
-test('podvržené doručení neprojde', async () => {
+test('a forged delivery does not pass', async () => {
   const srcToken = pad(await usdc.getAddress());
   const m = msg({ nonce: 77, srcToken, recipient: mallory.address, amount: 1000n });
   const id = await gateA.messageId(m);
@@ -151,11 +151,11 @@ test('podvržené doručení neprojde', async () => {
   await fails(gateA.deliver.staticCall(m, sign(id, [validators[0], validators[0]])), 'BadSignature');
   await fails(gateA.deliver.staticCall(m, sign(id, [validators[1], validators[0]])), 'BadSignature');
   await fails(gateA.deliver.staticCall(m, sign(id, [validators[0], mallory].sort((a, b) => (a.address.toLowerCase() < b.address.toLowerCase() ? -1 : 1)))), 'BadSignature');
-  // Podpis zprávy na malou částku nesmí platit pro velkou ani pro jiného příjemce.
+  // A message signature for a small amount must not be valid for a large one or for another recipient.
   const small = sign(id, validators.slice(0, 2));
   await fails(gateA.deliver.staticCall({ ...m, amount: 999_999n }, small), 'BadSignature');
   await fails(gateA.deliver.staticCall({ ...m, recipient: alice.address }, small), 'BadSignature');
-  // Podpis pro cizí bránu.
+  // Signature for a foreign gateway.
   const other = await gateB.messageId({ ...m, dstChain: Number(B.id), srcChain: Number(A.id) });
   await fails(gateA.deliver.staticCall({ ...m, dstChain: Number(B.id), srcChain: Number(A.id) }, sign(other, validators.slice(0, 2))), 'WrongChain');
   const unknown = msg({ nonce: 78, srcToken: pad(alice.address) });
@@ -165,7 +165,7 @@ test('podvržené doručení neprojde', async () => {
   await A.ok(gateA.attest(id, small[0]));
 });
 
-test('velký převod čeká a strážce ho může zastavit', async () => {
+test('a large transfer waits and the guardian can stop it', async () => {
   const srcToken = pad(await usdc.getAddress());
   const big = msg({ nonce: 100, srcToken, recipient: alice.address, amount: 600_000_000n });
   const signatures = sign(await gateA.messageId(big), validators.slice(0, 2));
@@ -189,16 +189,16 @@ test('velký převod čeká a strážce ho může zastavit', async () => {
   assert.equal(await usdcA.balanceOf(mallory.address), 0n);
 });
 
-test('zrušený převod už nikdy neprojde a zrušit ho smí jen strážce, správce nebo příjemce', async () => {
+test('a cancelled transfer never goes through and only the guardian, the administrator or the recipient may cancel it', async () => {
   const srcToken = pad(await usdc.getAddress());
   const m = msg({ nonce: 120, srcToken, recipient: alice.address, amount: 5_000_000n });
   const id = await gateA.messageId(m);
   const signatures = sign(id, validators.slice(0, 2));
   assert.equal(await gateA.cancelled(id), false);
   await fails(gateA.connect(A.connect(mallory)).cancelDelivery.staticCall(m), 'NotGuardian');
-  // Zpráva pro jinou síť se v této bráně zrušit nedá ani příjemcem.
+  // A message for another network cannot be cancelled in this gateway, not even by the recipient.
   await fails(gateA.connect(A.connect(alice)).cancelDelivery.staticCall({ ...m, dstChain: Number(B.id) }), 'WrongChain');
-  // Příjemce převod odmítne: na zdrojové síti ho pak validátoři vrátí odesílateli.
+  // The recipient rejects the transfer: on the source network the validators then refund it to the sender.
   await A.ok(gateA.connect(A.connect(alice)).cancelDelivery(m));
   assert.equal(await gateA.cancelled(id), true);
   await fails(gateA.deliver.staticCall(m, signatures), 'AlreadyDelivered');
@@ -207,14 +207,14 @@ test('zrušený převod už nikdy neprojde a zrušit ho smí jen strážce, spr�
   await A.mine(DAY + 60);
   await fails(gateA.deliver.staticCall(m, signatures), 'AlreadyDelivered');
 
-  // Doručený převod zrušit nejde: vrácení by pak zaplatilo podruhé.
+  // A delivered transfer cannot be cancelled: a refund would then pay twice.
   const paid = msg({ nonce: 121, srcToken, recipient: alice.address, amount: 1_000_000n });
   const paidId = await gateA.messageId(paid);
   await A.ok(gateA.deliver(paid, sign(paidId, validators.slice(0, 2))));
   await fails(gateA.connect(A.connect(guardian)).cancelDelivery.staticCall(paid), 'AlreadyDelivered');
   assert.equal(await gateA.cancelled(paidId), false);
 
-  // Převod ve frontě zruší strážce i touto cestou a z fronty už nevyjde.
+  // The guardian cancels a queued transfer this way too, and it never leaves the queue.
   const big = msg({ nonce: 122, srcToken, recipient: alice.address, amount: 600_000_000n });
   const bigId = await gateA.messageId(big);
   await A.ok(gateA.deliver(big, sign(bigId, validators.slice(0, 2))));
@@ -222,7 +222,7 @@ test('zrušený převod už nikdy neprojde a zrušit ho smí jen strážce, spr�
   await A.mine(DAY + 60);
   await fails(gateA.executeQueued.staticCall(big), 'NotQueued');
   assert.equal(await gateA.cancelled(bigId), true);
-  // Po dokončení z fronty už zrušení nejde.
+  // After completion from the queue, cancelling is no longer possible.
   const late = msg({ nonce: 123, srcToken, recipient: alice.address, amount: 600_000_000n });
   const lateId = await gateA.messageId(late);
   await A.ok(gateA.deliver(late, sign(lateId, validators.slice(0, 2))));
@@ -232,7 +232,7 @@ test('zrušený převod už nikdy neprojde a zrušit ho smí jen strážce, spr�
   assert.equal(await gateA.cancelled(lateId), false);
 });
 
-test('denní limit pošle další převody do fronty a nový den ho obnoví', async () => {
+test('the daily limit sends further transfers to the queue and a new day resets it', async () => {
   await A.mine(DAY);
   const srcToken = pad(await usdc.getAddress());
   const go = async (nonce, amount) => {
@@ -249,7 +249,7 @@ test('denní limit pošle další převody do fronty a nový den ho obnoví', as
   assert.equal(await usdcA.balanceOf(bob.address), start + 1_350_000_000n);
 });
 
-test('nouzové zastavení a změna validátorů', async () => {
+test('emergency stop and validator change', async () => {
   const srcToken = pad(await usdc.getAddress());
   const m = msg({ nonce: 300, srcToken, recipient: bob.address, amount: 1n });
   const signatures = sign(await gateA.messageId(m), validators.slice(0, 2));
@@ -274,7 +274,7 @@ test('nouzové zastavení a změna validátorů', async () => {
   await fails(gateA.deliver.staticCall(m, signatures), 'BadSignature');
 });
 
-test('token s poplatkem z převodu a nepřátelský příjemce bránu nepoškodí', async () => {
+test('a token with a transfer fee and a hostile recipient do not damage the gateway', async () => {
   const solc = createRequire(import.meta.url)('solc');
   const source = `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
@@ -302,7 +302,7 @@ contract Thief {
   await B.ok(gateB.setOutbound(await fee.getAddress(), Number(A.id), true, false, 1n));
   await fails(gateB.send.staticCall(await fee.getAddress(), 1000n, Number(A.id), alice.address), 'BadValue');
 
-  // Uvolnění AET nepřátelskému kontraktu: pokus o opětovný vstup během platby selže.
+  // Releasing QU to a hostile contract: an attempt at re-entrancy during the payment fails.
   const thief = await deploy(A, 'Thief', await gateA.getAddress());
   const thiefAddress = await thief.getAddress();
   const source2 = pad(await aetB.getAddress());
@@ -310,13 +310,13 @@ contract Thief {
   const list = [...validators.slice(1)];
   const id = await gateA.messageId(m);
   await A.ok(thief.prepare(iface.encodeFunctionData('deliver', [{ ...m, nonce: 401 }, []])));
-  // Skupina se změnila v předchozím testu, podepisují zbývající dva původní validátoři.
+  // The group changed in the previous test; the two remaining original validators sign.
   await A.ok(gateA.deliver(m, sign(id, list), { gasLimit: 2_000_000 }));
   assert.equal(await thief.hits(), 1n);
   assert.equal(await A.provider.getBalance(thiefAddress), WEI);
 });
 
-test('stablecoin vydavatele: limity razení, blokace, zastavení a podpis bez gasu', async () => {
+test('issuer stablecoin: minting limits, blocking, pausing and gasless signatures', async () => {
   const token = usdc.connect(B.connect(admin));
   await fails(usdc.connect(B.connect(mallory)).mint.staticCall(mallory.address, 1n), 'MintAllowanceExceeded');
   await B.ok(token.configureMinter(bob.address, 100n));
@@ -342,7 +342,7 @@ test('stablecoin vydavatele: limity razení, blokace, zastavení a podpis bez ga
   assert.equal(await usdc.allowance(owner.address, spender.address), 5n);
 });
 
-test('seznam ověřených tokenů smí měnit jen vlastník', async () => {
+test('only the owner may change the verified token list', async () => {
   const r = await A.deploy('TokenRegistry', admin.address);
   const address = await usdcA.getAddress();
   await assert.rejects(r.connect(A.connect(mallory)).add.staticCall(address, 1, 'Podvod', ''));
@@ -355,7 +355,7 @@ test('seznam ověřených tokenů smí měnit jen vlastník', async () => {
   assert.equal(await r.listed(address), false);
 });
 
-test('nová brána na stejném řetězci nevydá číslo ani ID, které vydala stará', async () => {
+test('a new gateway on the same chain does not issue a number or ID the old one issued', async () => {
   const list = validators.map((v) => v.address);
   const fresh = await A.deploy('BridgeGateway', admin.address, guardian.address, list, 2);
   await A.ok(fresh.setOutbound(ethers.ZeroAddress, Number(B.id), true, false, 1n));
@@ -365,12 +365,12 @@ test('nová brána na stejném řetězci nevydá číslo ani ID, které vydala s
   assert.equal(await fresh.nextNonce() & 0xffffffffn, 2n, 'dolní polovina počítá od jedné');
   assert.notEqual(a.args.nonce >> 32n, b.args.nonce >> 32n, 'horní polovina čísla je podle adresy brány');
   assert.notEqual(a.args.id, b.args.id);
-  // Stejná zpráva z obou bran dává v cílové bráně různá ID, doručení jedné druhou nezablokuje.
+  // The same message from both gateways gives different IDs in the target gateway; delivering one does not block the other.
   const at = (log) => gateB.messageId({ srcChain: Number(A.id), dstChain: Number(B.id), nonce: log.args.nonce, srcToken: ZERO32, recipient: bob.address, amount: 5n });
   assert.notEqual(await at(a), await at(b));
 });
 
-test('podpis holého ID bez předpony brána nepřijme', async () => {
+test('the gateway does not accept a signature of the bare ID without the prefix', async () => {
   const m = msg({ nonce: 500, srcToken: pad(await usdc.getAddress()), recipient: bob.address, amount: 1n });
   const id = await gateA.messageId(m);
   const raw = validators.slice(0, 2).map((v) => new ethers.SigningKey(v.privateKey).sign(id).serialized);

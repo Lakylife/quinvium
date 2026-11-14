@@ -1,4 +1,4 @@
-// Síť: jak rychle projde blok řetězem uzlů, jak rychle se nový uzel dožene a kolik stojí ověření práce.
+// Network: how fast a block passes through a chain of nodes, how fast a new node catches up and what verifying work costs.
 import { spawn } from 'node:child_process';
 import { mkdtempSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';

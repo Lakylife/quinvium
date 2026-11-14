@@ -1,10 +1,10 @@
-// Jediné rozhraní mezi oknem a systémem. Okno nemá přístup k souborům ani procesům.
+// The only interface between the window and the system. The window has no access to files or processes.
 const { contextBridge, ipcRenderer } = require('electron');
 
 const invoke = (ch, ...a) => ipcRenderer.invoke(ch, ...a);
 contextBridge.exposeInMainWorld('desktop', {
   platform: process.platform,
-  testRpcPort: Number(process.env.AETHER_RPC_PORT) || null,   // jen testy vedle běžící aplikace
+  testRpcPort: Number(process.env.AETHER_RPC_PORT) || null,   // tests only, next to a running app
   state: () => invoke('state'),
   startNode: (network) => invoke('node:start', network),
   stopNode: () => invoke('node:stop'),

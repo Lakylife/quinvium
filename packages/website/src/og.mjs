@@ -1,4 +1,4 @@
-// Vytvoří src/og.png (náhled pro sociální sítě 1200×630) a src/apple-touch-icon.png (180×180). Potřebuje Playwright.
+// Creates src/og.png (social preview 1200×630) and src/apple-touch-icon.png (180×180). Needs Playwright.
 import { chromium } from 'playwright';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

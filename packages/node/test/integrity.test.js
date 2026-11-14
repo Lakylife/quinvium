@@ -1,4 +1,4 @@
-// Může někdo změnit data a získat tím mince? Každý test takový pokus provede a ověří, že neprojde a že se prozradí.
+// Can someone change data and gain coins by it? Each test performs such an attempt and verifies that it fails and is detected.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
@@ -20,7 +20,7 @@ const opening = (...ws) => BigInt(ws.length) * 1000n * WEI;
 const fields = (h) => Object.fromEntries(Object.entries(h).filter(([k]) => !k.startsWith('_')));
 const audit = (dataDir, network, alloc, extra = {}) => auditChain({ network, dataDir, powDir: POW_DIR, alloc, now: () => Number(network.genesisTimestamp) + 10 ** 7, ...extra });
 
-/** Řetězec na disku s převody, aby bylo co falšovat. */
+/** A chain on disk with transfers, so there is something to forge. */
 async function sampleChain() {
   const a = wallet();
   const b = wallet();
@@ -39,7 +39,7 @@ const edit = (dataDir, fn) => {
   db.close();
 };
 
-test('čistý řetězec projde a všechny mince mají původ', async () => {
+test('a clean chain passes and all coins have an origin', async () => {
   const { a, b, alloc, dataDir, head } = await sampleChain();
   const r = await audit(dataDir, NETWORKS.dev, alloc);
   assert.deepEqual(r.problems, []);
@@ -52,7 +52,7 @@ test('čistý řetězec projde a všechny mince mají původ', async () => {
   assert.ok(r.stateNodes > 0);
 });
 
-test('přepsaný zůstatek v databázi se prozradí, i když uzel běží dál', async () => {
+test('a balance overwritten in the database is detected even while the node keeps running', async () => {
   const { alloc, dataDir } = await sampleChain();
   edit(dataDir, (db) => {
     const row = db.prepare('SELECT k, v FROM kv WHERE length(v) > 60 LIMIT 1').get();
@@ -65,7 +65,7 @@ test('přepsaný zůstatek v databázi se prozradí, i když uzel běží dál',
   assert.match(r.problems[0], /nesouhlasí se svým hashem/);
 });
 
-test('změněná transakce v uloženém bloku se prozradí', async () => {
+test('a changed transaction in a stored block is detected', async () => {
   const { alloc, dataDir } = await sampleChain();
   edit(dataDir, (db) => {
     const row = db.prepare("SELECT hash, body FROM blocks WHERE number=3").get();
@@ -78,7 +78,7 @@ test('změněná transakce v uloženém bloku se prozradí', async () => {
   assert.match(r.problems[0], /blok 3|bloku 3/);
 });
 
-test('změněná hlavička se prozradí, hash ji chrání', async () => {
+test('a changed header is detected; the hash protects it', async () => {
   const { alloc, dataDir } = await sampleChain();
   edit(dataDir, (db) => {
     const row = db.prepare('SELECT hash, header FROM blocks WHERE number=2').get();
@@ -91,7 +91,7 @@ test('změněná hlavička se prozradí, hash ji chrání', async () => {
   assert.match(r.problems[0], /hlavička bloku 2|bloku 2/);
 });
 
-test('blok podstrčený do kanonického řetězce se prozradí', async () => {
+test('a block slipped into the canonical chain is detected', async () => {
   const { alloc, dataDir } = await sampleChain();
   edit(dataDir, (db) => {
     const other = db.prepare('SELECT hash FROM canonical WHERE number=4').get();
@@ -101,7 +101,7 @@ test('blok podstrčený do kanonického řetězce se prozradí', async () => {
   assert.equal(r.ok, false);
 });
 
-test('falešný zůstatek v rejstříku Exploreru se prozradí', async () => {
+test('a fake balance in the Explorer index is detected', async () => {
   const { a, alloc, dataDir } = await sampleChain();
   edit(dataDir, (db) => db.prepare('UPDATE accounts SET balance_hex=? WHERE addr=?').run('ffffffffffff', Buffer.from(a.address)));
   const r = await audit(dataDir, NETWORKS.dev, alloc);
@@ -109,13 +109,13 @@ test('falešný zůstatek v rejstříku Exploreru se prozradí', async () => {
   assert.ok(r.problems.some((p) => /rejstřík zůstatků lže/.test(p)), r.problems.join('; '));
 });
 
-test('těžař si nepřipíše mince navíc: blok s padělaným stavem síť odmítne', async () => {
+test('a miner cannot credit itself extra coins: the network rejects a block with a forged state', async () => {
   const thief = wallet();
   const chain = await newChain({ alloc: fund(wallet()) });
   await mineMany(chain, 2);
   chain.tick();
   const template = await chain.buildTemplate({ miner: thief.address, budgetMs: Infinity });
-  // Zlý těžař spočítá stav, ve kterém má o 1000 QU víc, a poctivě na něj vytěží blok.
+  // A bad miner computes a state in which it has 1000 QU more and honestly mines a block on it.
   const { db, stateManager } = await openState(chain.store, chain.common, chain.head.stateRoot);
   const address = new Address(thief.address);
   await stateManager.putAccount(address, new Account(0n, blockReward(3n) + 1000n * WEI));
@@ -128,7 +128,7 @@ test('těžař si nepřipíše mince navíc: blok s padělaným stavem síť odm
   assert.equal(chain.head.number, 2n, 'řetězec se nepohnul');
 });
 
-test('cizí mince nejde utratit: změněná částka po podpisu ukáže na jiného odesílatele', async () => {
+test('foreign coins cannot be spent: an amount changed after signing points to another sender', async () => {
   const victim = wallet();
   const chain = await newChain({ alloc: fund(victim) });
   await mineMany(chain, 1);
@@ -140,7 +140,7 @@ test('cizí mince nejde utratit: změněná částka po podpisu ukáže na jiné
   await assert.rejects(chain.mempool.add(tampered), /./);
 });
 
-test('stejnou transakci nejde započítat dvakrát', async () => {
+test('the same transaction cannot be counted twice', async () => {
   const a = wallet();
   const chain = await newChain({ alloc: fund(a) });
   const tx = transfer(chain, a, wallet().address, WEI, 0n);
@@ -154,7 +154,7 @@ test('stejnou transakci nejde započítat dvakrát', async () => {
   assert.equal(chain.head.number, 1n);
 });
 
-test('emise nikdy nepřekročí strop 64 milionů', () => {
+test('issuance never exceeds the 64 million cap', () => {
   assert.equal(emitted(0n), 0n);
   assert.equal(emitted(1n), 4n * WEI);
   assert.equal(emitted(8_000_000n), 32_000_000n * WEI);
@@ -163,7 +163,7 @@ test('emise nikdy nepřekročí strop 64 milionů', () => {
   assert.equal(emitted(10n ** 12n), emitted(10n ** 13n), 'po posledním půlení už nic nevzniká');
 });
 
-test('kontrolní bod: cizí větev na dané výšce síť odmítne, i když má víc práce', async () => {
+test('checkpoint: the network rejects a foreign branch at the given height even with more work', async () => {
   const honest = await newChain();
   await mineMany(honest, 4);
   const network = { ...NETWORKS.dev, checkpoints: [{ number: 3n, hash: toHex(honest.getHeaderByNumber(3n).hash()) }] };
@@ -178,7 +178,7 @@ test('kontrolní bod: cizí větev na dané výšce síť odmítne, i když má 
   assert.equal(chain.head.hash().toString(), honest.head.hash().toString(), 'řetězec zůstal na poctivé větvi');
 });
 
-test('kontrolní bod: nový uzel odmítne cizí řetězec a databázi na cizí větvi neotevře', async () => {
+test('checkpoint: a new node rejects a foreign chain and does not open a database on a foreign branch', async () => {
   const honest = await newChain();
   await mineMany(honest, 3);
   const fake = await newChain();
@@ -197,8 +197,8 @@ test('kontrolní bod: nový uzel odmítne cizí řetězec a databázi na cizí v
 });
 
 /**
- * Těžba podle skutečných pravidel, ale bez hledání nonce: obtížnost a časy jdou přes pravý `nextDifficulty`.
- * Útočník má podíl `share` výkonu a do bloků píše čas, jaký mu vyhovuje, v mezích, které uzly přijmou.
+ * Mining by the real rules but without nonce search: difficulty and times go through the real `nextDifficulty`.
+ * The attacker has a `share` of the hashrate and writes whatever time suits it into blocks, within the bounds nodes accept.
  */
 function simulate({ blocks, share, stamp, seed = 1 }) {
   let x = seed;
@@ -231,23 +231,23 @@ function simulate({ blocks, share, stamp, seed = 1 }) {
   return { blockTime: (tail.at(-1).clock - tail[0].clock) / (tail.length - 1), low: Math.min(...tail.map((b) => b.difficulty)), high: Math.max(...tail.map((b) => b.difficulty)) };
 }
 
-test('obtížnost: bez útoku drží síť cílový čas bloku', () => {
+test('difficulty: without an attack the network keeps the target block time', () => {
   const r = simulate({ blocks: 8000, share: 0, stamp: ({ clock }) => BigInt(Math.floor(clock)) });
   assert.ok(Math.abs(r.blockTime - C.targetBlockTime) < 1.2, `čas bloku ${r.blockTime}`);
 });
 
-test('obtížnost: těžař s 30 % výkonu nestáhne obtížnost posouváním času do budoucna', () => {
+test('difficulty: a miner with 30 % of hashrate cannot pull difficulty down by shifting time into the future', () => {
   const r = simulate({ blocks: 8000, share: 0.3, stamp: ({ clock }) => BigInt(Math.floor(clock) + C.futureTimeLimit) });
   assert.ok(r.blockTime > 12 && r.blockTime < 18.5, `čas bloku ${r.blockTime}`);
   assert.ok(r.low > 2e11, `nejnižší obtížnost ${r.low}`);
 });
 
-test('obtížnost: těžař s 30 % výkonu ji nevyžene nahoru nejkratšími časy', () => {
+test('difficulty: a miner with 30 % of hashrate cannot drive it up with the shortest times', () => {
   const r = simulate({ blocks: 8000, share: 0.3, stamp: ({ earliest }) => earliest });
   assert.ok(r.blockTime > 12 && r.blockTime < 18.5, `čas bloku ${r.blockTime}`);
 });
 
-test('obtížnost: ani těžař se 49 % výkonu nezmění tempo bloků o víc než čtvrtinu', () => {
+test('difficulty: even a miner with 49 % of hashrate does not change the block pace by more than a quarter', () => {
   for (const seed of [1, 7, 42]) {
     const forward = simulate({ blocks: 8000, seed, share: 0.49, stamp: ({ clock }) => BigInt(Math.floor(clock) + C.futureTimeLimit) });
     const back = simulate({ blocks: 8000, seed, share: 0.49, stamp: ({ earliest }) => earliest });

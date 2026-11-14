@@ -1,4 +1,4 @@
-// Regrese kritických nálezů z auditu předchozí verze (K1 až K7).
+// Regression tests for critical findings from the audit of the previous version (K1 to K7).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createFeeMarket1559Tx } from '@ethereumjs/tx';
@@ -11,21 +11,21 @@ import { POW_DIR, mine, mineMany, newChain, tmpData, transfer, wallet } from './
 const balance = async (c, addr) => (await (await c.stateAt(c.head.stateRoot)).stateManager.getAccount(new Address(addr)))?.balance ?? 0n;
 const fund = (w) => ({ [bytesToHex(w.address)]: { balance: 100n * WEI } });
 
-test('K1: identifikátor transakce je hash obsahu, nejde si ho zvolit', async () => {
+test('K1: the transaction ID is the hash of the content and cannot be chosen', async () => {
   const a = wallet(); const b = wallet();
   const c = await newChain({ alloc: fund(a) });
   const t1 = transfer(c, a, new Address(b.address), 1n, 0n);
   const t2 = transfer(c, a, new Address(b.address), 2n, 0n);
   assert.notDeepEqual(t1.hash(), t2.hash());
   const raw = t1.serialize();
-  raw[raw.length - 40] ^= 1; // změna podepsaných dat změní hash i odesílatele
+  raw[raw.length - 40] ^= 1; // changing the signed data changes both the hash and the sender
   const { decodeTx } = await import('../src/core/types.js');
   let changed;
   try { changed = decodeTx(raw, c.common); } catch { changed = null; }
   if (changed) assert.notDeepEqual(changed.hash(), t1.hash());
 });
 
-test('K2: uzel nemění podepsaná data, transakce s libovolným poplatkem těžbu nezastaví', async () => {
+test('K2: the node does not change signed data; a transaction with any fee does not stop mining', async () => {
   const a = wallet(); const b = wallet();
   const c = await newChain({ alloc: fund(a) });
   const tx = createFeeMarket1559Tx({
@@ -38,7 +38,7 @@ test('K2: uzel nemění podepsaná data, transakce s libovolným poplatkem těž
   assert.equal((await mine(c, { txs: c.mempool.pending() })).res.status, 'added');
 });
 
-test('K4: obtížnost se po restartu nezmění, je odvozená z řetězce', async () => {
+test('K4: difficulty does not change after a restart; it is derived from the chain', async () => {
   const dir = tmpData();
   let clock = Number(NETWORKS.dev.genesisTimestamp);
   const open = async () => {
@@ -58,7 +58,7 @@ test('K4: obtížnost se po restartu nezmění, je odvozená z řetězce', async
   await c.close();
 });
 
-test('K5: reorganizace na kratší těžší větev přežije restart', async () => {
+test('K5: a reorganisation to a shorter heavier branch survives a restart', async () => {
   const dir = tmpData();
   let clock = Number(NETWORKS.dev.genesisTimestamp);
   const x = await Chain.open({ network: NETWORKS.dev, dataDir: dir, powDir: POW_DIR, now: () => clock });
@@ -86,24 +86,24 @@ test('K5: reorganizace na kratší těžší větev přežije restart', async ()
   await r.close();
 });
 
-test('K7: částky v konsensu jsou celá čísla, formát bloku nepřijme text', async () => {
+test('K7: amounts in consensus are integers; the block format does not accept text', async () => {
   const c = await newChain();
   const { Block } = await import('../src/core/types.js');
   const { RLP } = await import('@ethereumjs/rlp');
   const b = (await mine(c)).block;
   const fields = b.header.fields();
-  fields[6] = new Uint8Array([0, 1]); // nekanonické číslo s úvodní nulou
+  fields[6] = new Uint8Array([0, 1]); // non-canonical number with a leading zero
   assert.throws(() => Block.decode(RLP.encode([fields, []]), c.common), /nekanonické/);
   fields[6] = [new Uint8Array(1)];
   assert.throws(() => Block.decode(RLP.encode([fields, []]), c.common));
 });
 
-test('poplatky se nepálí: všechny mince zůstávají v oběhu a těžař dostane celý poplatek', async () => {
+test('fees are not burned: all coins stay in circulation and the miner gets the full fee', async () => {
   const a = wallet(); const b = wallet(); const m = wallet();
   const c = await newChain({ alloc: fund(a) });
   await mine(c, { miner: m.address, txs: [transfer(c, a, new Address(b.address), WEI, 0n)] });
   await mine(c, { miner: m.address, txs: [transfer(c, a, new Address(b.address), WEI, 1n)] });
-  // Základní poplatek 1 gwei a dýško 1 gwei, dvě transakce po 21 000 gasu.
+  // Base fee 1 gwei and tip 1 gwei, two transactions of 21,000 gas each.
   const fees = 2n * 21000n * (GWEI + GWEI);
   assert.equal(c.store.feesAt(c.head.number), fees);
   assert.equal(await balance(c, m.address), 2n * C.initialReward + fees, 'odměny a celý poplatek');
@@ -111,8 +111,8 @@ test('poplatky se nepálí: všechny mince zůstávají v oběhu a těžař dost
   assert.equal(total, 100n * WEI + 2n * C.initialReward, 'mince vznikají jen odměnou za blok');
 });
 
-test('PREVRANDAO vrací mixHash rodiče, ne nulu', async () => {
-  // Kód: vrátí DIFFICULTY/PREVRANDAO (0x44) z volání, uloží ho do slotu 0.
+test("PREVRANDAO returns the parent's mixHash, not zero", async () => {
+  // Code: returns DIFFICULTY/PREVRANDAO (0x44) from the call and stores it in slot 0.
   const contract = '0x00000000000000000000000000000000000c0de1';
   const a = wallet();
   const c = await newChain({ alloc: { ...fund(a), [contract]: { code: '0x4460005500' } } });
@@ -126,7 +126,7 @@ test('PREVRANDAO vrací mixHash rodiče, ne nulu', async () => {
   assert.equal(Buffer.from(value).toString('hex').replace(/^0+/, ''), Buffer.from(parent.mixHash).toString('hex').replace(/^0+/, ''));
 });
 
-test('K8: blok odmítnutý starou verzí programu nová verze po aktualizaci přijme', async () => {
+test('K8: a block rejected by an old program version is accepted by the new version after the update', async () => {
   const dir = tmpData();
   const forked = { ...NETWORKS.dev, forks: [{ ...NETWORKS.dev.forks[0], block: 2n }] };
   const source = await newChain({ network: forked });

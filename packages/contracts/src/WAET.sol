@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-/// @title Zabalený AET jako ERC-20, pro decentralizované burzy a kontrakty pracující s tokeny
+/// @title Wrapped QU as ERC-20, for decentralised exchanges and contracts working with tokens
 contract WAET {
     string public constant name = "Wrapped QU";
     string public constant symbol = "WQU";

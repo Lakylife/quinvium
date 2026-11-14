@@ -1,4 +1,4 @@
-// Hlavní proces aplikace Quinvium: spravuje uzel, miner a okno.
+// Main process of the Quinvium app: manages the node, the miner and the window.
 const { app, BrowserWindow, ipcMain, nativeTheme, powerSaveBlocker, shell } = require('electron');
 const { spawn, execFile } = require('node:child_process');
 const fs = require('node:fs');
@@ -12,22 +12,22 @@ const cliLauncher = require('./cli-launcher.cjs');
 
 const NETWORKS = { mainnet: 8545, testnet: 8546 };
 const P2P_PORTS = { mainnet: 30524, testnet: 30525 };
-// Jen testy: zkušební aplikace běží vedle skutečné, proto má uzel vlastní porty a skutečného uzlu se nedotkne.
+// Tests only: the test app runs next to the real one, so its node has its own ports and does not touch the real node.
 const TEST_RPC_PORT = Number(process.env.AETHER_RPC_PORT) || null;
 const TEST_STRATUM_PORT = Number(process.env.AETHER_STRATUM_PORT) || null;
-const CHAIN_FOLDERS = { testnet: 'testnet-5' };   // restart testnetu: nový genesis potřebuje prázdnou databázi, stará zůstává vedle
+const CHAIN_FOLDERS = { testnet: 'testnet-5' };   // testnet restart: a new genesis needs an empty database; the old one stays next to it
 const LOG_LINES = 200;
 const isWin = process.platform === 'win32';
 const packaged = app.isPackaged;
-// Aktualizovaná verze má vlastní složku, kterou předal spouštěč.
+// The updated version has its own folder, passed in by the launcher.
 const resources = packaged ? process.env.AETHER_RESOURCES ?? process.resourcesPath : path.join(__dirname, '..');
 const binDir = packaged ? path.join(resources, 'bin') : path.join(__dirname, '..', 'build');
 const explorerDir = packaged ? path.join(resources, 'explorer') : path.join(__dirname, '..', '..', 'explorer', 'public');
 const minerPath = path.join(binDir, isWin ? 'quintium-miner.exe' : 'quintium-miner');
 const nodeBundle = path.join(binDir, 'quintium-node.cjs');
 
-// Oddělená data pro automatické testy.
-// Název a ikona i při spuštění bez sestavení. Sestavená aplikace je má ze svého balíčku.
+// Separate data for automated tests.
+// Name and icon even when running without a build. The built app has them from its package.
 app.setName('Quinvium');
 if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(path.join(__dirname, '..', 'assets', 'icon.png'));
 if (process.env.AETHER_USER_DATA) app.setPath('userData', process.env.AETHER_USER_DATA);
@@ -68,37 +68,37 @@ const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
 const loadSettings = () => { try { return JSON.parse(fs.readFileSync(settingsFile(), 'utf8')); } catch { return {}; } };
 const saveSettings = (change) => fs.writeFileSync(settingsFile(), JSON.stringify({ ...loadSettings(), ...change }), { mode: 0o600 });
 
-/** Komu je uzel vidět: jen tomuto počítači, domácí síti, nebo i z internetu. Starší nastavení mělo jen zaškrtávátko. */
+/** Who can see the node: only this computer, the home network, or also the internet. Older settings had only a checkbox. */
 const ACCESS_MODES = ['off', 'lan', 'internet'];
 const accessMode = (s = loadSettings()) => (ACCESS_MODES.includes(s.access) ? s.access : s.share ? 'lan' : 'off');
 
-/** Uzly v místní síti se najdou samy, adresa je záloha pro sítě, kde všesměrové zprávy neprojdou. */
+/** Nodes on the local network find each other; the address is a fallback for networks where broadcasts do not pass. */
 function networkArgs(network) {
   const settings = loadSettings();
   const { seed, tag, runPool, publicHost } = settings;
   const access = accessMode(settings);
   const args = ['--lan'];
   if (process.env.AETHER_LAN_PORT) args.push('--lan-port', process.env.AETHER_LAN_PORT);
-  if (process.env.AETHER_P2P_PORT) args.push('--p2p-port', process.env.AETHER_P2P_PORT);   // jen testy, ať se k nim nepřipojí skutečné počítače
+  if (process.env.AETHER_P2P_PORT) args.push('--p2p-port', process.env.AETHER_P2P_PORT);   // tests only, so real computers do not connect to them
   if (TEST_RPC_PORT) args.push('--rpc-port', String(TEST_RPC_PORT));
   if (TEST_STRATUM_PORT) args.push('--stratum-port', String(TEST_STRATUM_PORT));
-  // Značka v bloku ukazuje, který počítač ho vytěžil, když je adresa výplaty společná.
+  // The tag in a block shows which computer mined it when the payout address is shared.
   if (tag) args.push('--extra', `aether/${tag}`);
   if (seed) {
     const address = seed.includes(':') ? seed : `${seed}:${P2P_PORTS[network]}`;
     args.push('--seeds', address);
     if (/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(address)) args.push('--allow-private');
   }
-  // Explorer a Stratum patří jen tomuto počítači, dokud je uživatel neotevře. Uzel nemá klíče ani správcovské metody.
+  // The Explorer and Stratum belong to this computer only until the user opens them. The node has no keys and no admin methods.
   if (access !== 'off') args.push('--rpc-host', '0.0.0.0', '--stratum-host', '0.0.0.0', '--rate-limit', '6000');
-  // Z internetu: router otevře porty sám (UPnP) a uzel zjistí veřejnou adresu, kterou pak ukáže peněženkám.
+  // From the internet: the router opens ports itself (UPnP) and the node finds out its public address, which it then shows to wallets.
   if (access === 'internet') args.push('--public', ...(publicHost ? ['--public-host', publicHost] : []));
-  // Server poolu: klíč jen platí gas za podíly, mince těžařů drží kontrakt.
+  // Pool server: the key only pays gas for shares; the contract holds the miners' coins.
   if (runPool?.network === network) args.push('--pool', runPool.address, '--pool-key-file', path.join(app.getPath('userData'), `pool-${network}.key`));
   return args;
 }
 
-/** Adresa tohoto počítače v místní síti, tu zadá ten druhý. */
+/** This computer's address on the local network, which the other side enters. */
 function lanAddress() {
   for (const list of Object.values(os.networkInterfaces())) {
     for (const a of list) if (a.family === 'IPv4' && !a.internal && !a.address.startsWith('169.254.')) return a.address;
@@ -135,7 +135,7 @@ const stop = (proc) => new Promise((resolve) => {
   proc.kill(isWin ? undefined : 'SIGINT');
 });
 
-/** Průběh přípravy z výpisu těžaře: otevření karty, výpočet DAG a jeho kontrola. */
+/** Preparation progress from the miner's output: opening the card, computing the DAG and checking it. */
 function readProgress(line) {
   if (miner.progress === null) return;
   const dag = /DAG (\d+) %/.exec(line);
@@ -146,13 +146,13 @@ function readProgress(line) {
   else if (/Výkon [1-9]/.test(line) || /Výkon 0\.[0-9]*[1-9]/.test(line)) { miner.progress = null; miner.stage = null; }
 }
 
-/** Pool patří jedné síti. Po přepnutí sítě se těží sólo, dokud si uživatel nevybere jiný. */
+/** A pool belongs to one network. After switching networks, mining is solo until the user picks another. */
 function activePool() {
   const { pool } = loadSettings();
   return pool?.network === node.network ? pool : null;
 }
 
-/** Spící počítač netěží. Blokuje se jen uspání systému, obrazovka se klidně vypne. */
+/** A sleeping computer does not mine. Only system sleep is blocked; the screen may turn off. */
 function keepAwake(on) {
   if (on && miner.awake === undefined) miner.awake = powerSaveBlocker.start('prevent-app-suspension');
   if (!on && miner.awake !== undefined) {
@@ -162,8 +162,8 @@ function keepAwake(on) {
 }
 
 /**
- * Výkon karty NVIDIA ve Windows. Ovladač ji jinak může nechat ve stavu P5 s pamětí na čtvrtině taktu.
- * Běží v samostatném procesu: když neveřejná funkce ovladače selže, těžby se to nedotkne.
+ * Performance of an NVIDIA card on Windows. Otherwise the driver may leave it in the P5 state with memory at a quarter of its clock.
+ * Runs in a separate process: if the non-public driver function fails, mining is not affected.
  */
 function setGpuState(state) {
   if (!isWin) return;
@@ -244,12 +244,12 @@ ipcMain.handle('node:stop', async () => { await stop(miner.proc); await stop(nod
 ipcMain.handle('node:network', async (_, options) => {
   const seed = String(options?.seed ?? '').trim();
   if (seed && !/^[A-Za-z0-9.-]+(:\d{1,5})?$/.test(seed)) throw new Error('Enter the computer address, for example 192.168.1.20');
-  // Starší volání posílá jen share, nové posílá režim přístupu.
+  // The older call sends only share, the new one sends the access mode.
   const access = ACCESS_MODES.includes(options?.access) ? options.access : options?.share ? 'lan' : 'off';
   const publicHost = String(options?.publicHost ?? '').trim();
   if (publicHost && !/^[A-Za-z0-9.-]{1,253}$/.test(publicHost)) throw new Error('Enter the public address, for example 203.0.113.7 or node.example.com');
   saveSettings({ seed, share: access !== 'off', access, publicHost });
-  // Nastavení se uzlu předává při spuštění. Těžba poběží dál a naváže, až se uzel vrátí.
+  // Settings are passed to the node at start. Mining keeps running and resumes when the node is back.
   if (node.proc) {
     const { network } = node;
     await stop(node.proc);
@@ -259,7 +259,7 @@ ipcMain.handle('node:network', async (_, options) => {
 });
 ipcMain.handle('node:pool', async (_, address) => {
   if (address && !/^0x[0-9a-fA-F]{40}$/.test(address)) throw new Error('Invalid pool address');
-  // Pool musí být dostupný z jiných počítačů, jinak by neměl kdo těžit.
+  // The pool must be reachable from other computers, otherwise nobody could mine.
   saveSettings(address ? { runPool: { network: node.network, address }, share: true, access: accessMode() === 'internet' ? 'internet' : 'lan' } : { runPool: null });
   if (node.proc) {
     const { network } = node;
@@ -269,10 +269,10 @@ ipcMain.handle('node:pool', async (_, address) => {
   return true;
 });
 ipcMain.handle('miner:list', listDevices);
-// Příkaz quinvium (a dřívější quintium): spouštěč ve stálé složce dat ukazuje na právě běžící verzi, i po aktualizaci přes internet.
+// The quinvium command (and the earlier quintium): the launcher in the permanent data folder points to the running version, even after an update over the internet.
 const cliDir = () => path.join(app.getPath('userData'), 'bin');
 function refreshCli() {
-  // Bez sestavení (vývoj a testy) slouží příkazová řádka z build/, pokud ji prepare.mjs vytvořil.
+  // Without a build (development and tests) the command line from build/ is used, if prepare.mjs created it.
   if (!packaged && !fs.existsSync(nodeBundle)) return null;
   try {
     const fallback = packaged ? path.join(process.resourcesPath, 'bin', 'quintium-node.cjs') : nodeBundle;
@@ -283,13 +283,13 @@ function refreshCli() {
   }
 }
 ipcMain.handle('cli:path', () => (refreshCli() ? { dir: cliDir(), line: cliLauncher.manualLine(cliDir(), process.platform) } : null));
-// Jen na kliknutí uživatele: přidá složku spouštěče do jeho cesty. Testy místo profilu dostanou vlastní soubor.
+// Only on the user's click: adds the launcher folder to their path. Tests get their own file instead of the profile.
 ipcMain.handle('cli:install', () => (refreshCli()
   ? cliLauncher.installPath({ dir: cliDir(), platform: process.platform, home: os.homedir(), shell: process.env.SHELL, profile: process.env.AETHER_SHELL_PROFILE })
   : { ok: false, error: 'not packaged' }));
 ipcMain.handle('wallet:activity', () => { send({ type: 'activity' }); });
 
-// MetaMask a další peněženky v prohlížeči: stránka na 127.0.0.1 předává žádosti o podpis, klíče zůstávají v peněžence.
+// MetaMask and other browser wallets: a page on 127.0.0.1 relays signature requests; keys stay in the wallet.
 const walletLink = new WalletLink({ open: (url) => shell.openExternal(url), onHello: (hello) => send({ type: 'wallet-link', ...hello }) });
 ipcMain.handle('wallet:link-open', (_, o) => walletLink.show(o));
 ipcMain.handle('wallet:link-request', (_, method, params, config) => walletLink.request(method, params, config));
@@ -305,7 +305,7 @@ ipcMain.handle('wallet:save', (_, data) => {
   return true;
 });
 
-// Peněženka běží v hlavním okně, okno Exploreru s ní mluví přes hlavní proces.
+// The wallet runs in the main window; the Explorer window talks to it through the main process.
 const walletCalls = new Map();
 let nextWalletCall = 1;
 let explorerOrigin = null;
@@ -352,7 +352,7 @@ ipcMain.handle('miner:pool', async (_, pool) => {
 ipcMain.handle('miner:power', async (_, value) => {
   const power = Math.min(100, Math.max(10, Math.round(Number(value) / 10) * 10)) || 100;
   saveSettings({ power });
-  // Nový výkon se projeví hned: těžař se znovu spustí se stejnou adresou a kartou.
+  // The new intensity applies immediately: the miner restarts with the same address and card.
   if (miner.proc) {
     const { address, device } = miner;
     await stop(miner.proc);
@@ -365,7 +365,7 @@ ipcMain.handle('update:check', async () => {
   return { ...update };
 });
 
-// Explorer je vložený přímo v aplikaci. Stránka smí jen na lokální uzel a dostane jediný most k peněžence.
+// The Explorer is embedded directly in the app. The page may talk only to the local node and gets a single bridge to the wallet.
 app.on('web-contents-created', (_, contents) => {
   contents.on('will-attach-webview', (event, prefs, params) => {
     prefs.preload = path.join(__dirname, 'explorer-preload.cjs');
@@ -395,7 +395,7 @@ function createWindow() {
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, webviewTag: true },
   });
-  // Aplikace je jen lokální: nikam nenaviguje a odkazy otevírá v prohlížeči.
+  // The app is local only: it navigates nowhere and opens links in the browser.
   win.webContents.on('will-navigate', (e) => e.preventDefault());
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//.test(url)) shell.openExternal(url);
@@ -409,38 +409,38 @@ setInterval(async () => {
   try {
     node.stats = await rpc('aether_stats');
     const endpoints = await rpc('aether_endpoints').catch(() => null);
-    // Adresy RPC a výsledek UPnP přicházejí až po startu uzlu, stránka Uzel se proto překreslí, jakmile se změní.
+    // RPC addresses and the UPnP result arrive only after the node starts, so the Node page is redrawn as soon as they change.
     const changed = JSON.stringify(endpoints) !== JSON.stringify(node.endpoints ?? null);
     node.endpoints = endpoints;
     send({ type: 'stats', stats: node.stats, gpu: miner.gpu ?? null });
     if (changed) send({ type: 'state' });
     resumeMining();
-  } catch { /* uzel ještě startuje */ }
+  } catch { /* the node is still starting */ }
 }, 3000);
 
-/** Těžba přerušená aktualizací pokračuje, jakmile je uzel připravený. */
+/** Mining interrupted by an update continues as soon as the node is ready. */
 function resumeMining() {
   const { resume } = loadSettings();
   if (!resume || miner.proc) return;
   saveSettings({ resume: null });
-  try { startMiner(resume); } catch { /* adresa už neplatí, uživatel spustí těžbu sám */ }
+  try { startMiner(resume); } catch { /* the address is no longer valid; the user starts mining themselves */ }
 }
 
-// ---- aktualizace na dálku a hlášení stavu, jen když je v nastavení adresa ---------------------------
+// ---- remote updates and status reports, only when an address is set in the settings ---------------------------
 const GPU_FULL_POWER = 0;
 const GPU_DRIVER_DEFAULT = 16;
 const HEALTHY_MS = 60_000;
-const UPDATE_CHECK_MS = Number(process.env.AETHER_UPDATE_MS) || 5 * 60_000;     // zkrácení je jen pro testy
+const UPDATE_CHECK_MS = Number(process.env.AETHER_UPDATE_MS) || 5 * 60_000;     // shortening is only for tests
 const REPORT_MS = Number(process.env.AETHER_REPORT_MS) || 60_000;
 let updating = false;
 
 const versionsDir = () => path.join(app.getPath('userData'), 'versions');
 
-/** Nová verze se rozbalí vedle běžící a aplikace se restartuje sama. Spouštěč vybere novou a při selhání se vrátí. */
+/** The new version is unpacked next to the running one and the app restarts itself. The launcher chooses the new one and rolls back on failure. */
 async function updateNow() {
   const { updateUrl } = loadSettings();
   if (!updateUrl || !app.isPackaged || updating) return;
-  // Mainnet bez aktualizací na dálku, dokud podpisový klíč leží na jednom počítači (docs/MAINNET-LAUNCH.md).
+  // Mainnet without remote updates while the signing key sits on one computer (docs/MAINNET-LAUNCH.md).
   if (node.network === 'mainnet') { update.error = 'Updates over the network are off on mainnet, install new versions manually.'; return; }
   update.error = null;
   const manifest = await updater.checkForUpdate(updateUrl, app.getVersion(), isWin ? 'manifest' : 'manifest-mac', isWin ? 'win32' : 'darwin');
@@ -464,7 +464,7 @@ async function updateNow() {
   }
 }
 
-// Teplotu a stav karty umí říct jen ovladač NVIDIA. Na jiných kartách údaj prostě není.
+// Only the NVIDIA driver can report the card's temperature and state. On other cards the value is simply absent.
 const GPU_READ_MS = 15_000;
 const GPU_REPORT_MS = 3_600_000;
 let gpuReported = 0;
@@ -481,7 +481,7 @@ function readGpu() {
 const HOME_CHECK_MS = 60_000;
 const ALIVE_MS = 3000;
 
-/** Adresa počítače s poolem nebo aktualizacemi se změnila: aplikace ho najde podle spojených uzlů a těží dál. */
+/** The address of the computer with the pool or updates changed: the app finds it through connected nodes and keeps mining. */
 async function followHome() {
   if (!node.proc) return;
   const peers = await rpc('aether_peers').catch(() => []);
@@ -525,8 +525,8 @@ async function reportState() {
 }
 
 /**
- * Úplný výpis ovladače NVIDIA, když karta počítá: stav výkonu, důvody omezení taktů, sběrnice a procesy.
- * Odesílá se jen na adresu z nastavení, bez sériového čísla a UUID karty.
+ * Full NVIDIA driver output while the card computes: performance state, clock throttle reasons, bus and processes.
+ * Sent only to the address from the settings, without the card's serial number or UUID.
  */
 function reportGpu(reportUrl, tag) {
   if (process.platform === 'darwin' || !miner.counters?.rate || Date.now() - gpuReported < GPU_REPORT_MS) return null;
@@ -547,7 +547,7 @@ setInterval(() => { reportState().catch(() => {}); }, REPORT_MS);
 setInterval(() => { followHome().catch(() => {}); }, HOME_CHECK_MS);
 setInterval(readGpu, GPU_READ_MS);
 
-// Aktualizace se potvrdí, až aplikace chvíli běží s uzlem. Do té doby se při neúspěchu vrací zpět.
+// An update is confirmed only after the app has run with the node for a while. Until then it rolls back on failure.
 const confirmHealthy = () => {
   if (node.proc && win && !win.isDestroyed()) versions.confirmVersion(versionsDir(), app.getVersion());
   else setTimeout(confirmHealthy, HEALTHY_MS);

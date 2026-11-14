@@ -1,4 +1,4 @@
-// Složí assets/icon.ico z PNG obrázků v zadané složce (16.png, 32.png…). Formát ICO s PNG uvnitř umí Windows od verze Vista.
+// Composes assets/icon.ico from PNG images in the given folder (16.png, 32.png…). Windows supports ICO with PNG inside since Vista.
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';

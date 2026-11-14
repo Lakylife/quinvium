@@ -7,7 +7,7 @@ import { cacheSize, datasetSize, seedHash, generateCache, hashimotoLight, quickR
 
 const hex = (b) => bytesToHex(b).slice(2);
 
-test('velikosti cache a DAG odpovídají tabulkám Ethash', () => {
+test('cache and DAG sizes match the Ethash tables', () => {
   assert.equal(cacheSize(0), 16776896);
   assert.equal(datasetSize(0), 1073739904);
   assert.equal(cacheSize(1), 16907456);
@@ -16,12 +16,12 @@ test('velikosti cache a DAG odpovídají tabulkám Ethash', () => {
   assert.equal(epochOf(30000), 1);
 });
 
-test('seed hash epochy 1 je keccak256 nulového seedu', () => {
+test('the seed hash of epoch 1 is keccak256 of the zero seed', () => {
   assert.equal(hex(seedHash(0)), '00'.repeat(32));
   assert.equal(hex(seedHash(1)), '290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563');
 });
 
-test('hashimoto: skutečný blok č. 1 z Etherea včetně hashe hlavičky', async () => {
+test('hashimoto: real Ethereum block no. 1 including the header hash', async () => {
   const f = (h) => hexToBytes('0x' + h);
   const fields = [
     f('d4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3'),
@@ -44,7 +44,7 @@ test('hashimoto: skutečný blok č. 1 z Etherea včetně hashe hlavičky', asyn
   assert.ok(bytesToBigInt(result) <= targetForDifficulty(0x3ff800000n));
 });
 
-test('hashimoto: skutečný blok č. 22 z Etherea (plná cache epochy 0)', async () => {
+test('hashimoto: real Ethereum block no. 22 (full epoch 0 cache)', async () => {
   const t0 = Date.now();
   const cache = await generateCache(cacheSize(0), seedHash(0));
   const t1 = Date.now();
@@ -58,15 +58,15 @@ test('hashimoto: skutečný blok č. 22 z Etherea (plná cache epochy 0)', async
   console.log(`cache epochy 0: ${t1 - t0} ms, ověření bloku: ${t2 - t1} ms`);
 });
 
-test('cíl obtížnosti', () => {
+test('difficulty target', () => {
   assert.equal(targetForDifficulty(1n), 2n ** 256n);
   assert.equal(targetForDifficulty(2n), 2n ** 255n);
   assert.equal(bytesToBigInt(new Uint8Array([1, 0])), 256n);
 });
 
-test('skutečné bloky Etherea napříč epochami: cache, DAG, výsledek i obtížnost', async () => {
+test('real Ethereum blocks across epochs: cache, DAG, result and difficulty', async () => {
   const { readFileSync } = await import('node:fs');
-  // Vysoké epochy trvají minuty, plná sada běží s AETHER_SLOW=1 a před každým vydáním.
+  // High epochs take minutes; the full set runs with AETHER_SLOW=1 and before every release.
   const vectors = JSON.parse(readFileSync(new URL('./fixtures/ethash-mainnet.json', import.meta.url)))
     .filter((v) => process.env.AETHER_SLOW || v.number <= 1000000);
   const caches = new Map();
@@ -83,7 +83,7 @@ test('skutečné bloky Etherea napříč epochami: cache, DAG, výsledek i obtí
   }
 });
 
-test('cache další epochy se počítá předem, ne až s jejím prvním blokem', async () => {
+test('the cache of the next epoch is computed in advance, not with its first block', async () => {
   const { Pow, PREPARE_AHEAD } = await import('../src/core/pow.js');
   const { POW_DIR } = await import('./helpers/chain.js');
   const early = new Pow(POW_DIR);

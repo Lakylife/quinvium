@@ -1,6 +1,6 @@
-//! Výkonový stav karty NVIDIA ve Windows. Ovladač může výpočet nechat v úsporném stavu P5 s pamětí na čtvrtině taktu,
-//! i když je karta plně vytížená, a Ethash je přímo úměrný taktu paměti. Funkce je v ovladači, ale není ve veřejném
-//! rozhraní, proto ji volá samostatný krátký proces. Když ji ovladač nezná nebo odmítne, těžba poběží dál jako dřív.
+//! Performance state of an NVIDIA card on Windows. The driver may keep compute in the power-saving P5 state with memory at a quarter of its clock,
+//! even when the card is fully loaded, and Ethash is directly proportional to the memory clock. The function exists in the driver but not in the public
+//! interface, so a separate short-lived process calls it. If the driver does not know it or refuses, mining continues as before.
 
 #[cfg(windows)]
 mod imp {

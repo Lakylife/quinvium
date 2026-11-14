@@ -3,14 +3,14 @@ pragma solidity ^0.8.28;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-/// @title Seznam ověřených tokenů
-/// @notice Peněženka a Explorer podle něj rozliší skutečný stablecoin od napodobeniny se stejným názvem.
-/// Název a zkratku tokenu si může zvolit kdokoli, adresa na tomto seznamu ne. Vlastníkem má být vícepodpisový kontrakt.
+/// @title List of verified tokens
+/// @notice The wallet and the Explorer use it to tell a real stablecoin from an imitation with the same name.
+/// Anyone can choose a token name and symbol; an address on this list, no. The owner should be a multisig contract.
 contract TokenRegistry is Ownable {
     enum Kind {
-        Issued,     // vydal ho přímo vydavatel na této síti
-        Bridged,    // krytý originálem uzamčeným v bráně
-        Community   // ověřený projekt bez krytí
+        Issued,     // issued directly by the issuer on this network
+        Bridged,    // backed by the original locked in the gateway
+        Community   // verified project without backing
     }
 
     struct Entry {

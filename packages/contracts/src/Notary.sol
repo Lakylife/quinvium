@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-/// @title Notář: důkaz existence dokumentu (právo, zdravotnictví, archivace, autorská práva)
-/// @notice Ukládá jen otisk dokumentu. Samotný dokument nikdy neopouští počítač uživatele.
-///         Záznam dokazuje, že dokument v daném čase existoval a kdo ho zapsal, ne kdo je jeho autorem.
-///         Každá adresa má vlastní záznam: kdo otisk opíše z čekajících transakcí, cizí zápis
-///         nezablokuje ani neodvolá.
+/// @title Notary: proof of existence of a document (law, healthcare, archiving, copyright)
+/// @notice Stores only the document fingerprint. The document itself never leaves the user's computer.
+///         A record proves that the document existed at the given time and who recorded it, not who its author is.
+///         Each address has its own record: whoever copies a fingerprint from pending transactions, a foreign entry
+///         cannot block or revoke it.
 contract Notary {
     struct Record {
         uint64 timestamp;

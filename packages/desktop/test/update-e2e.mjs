@@ -1,5 +1,5 @@
-// Skutečná aktualizace sestavené aplikace: stará verze si stáhne novou, sama se restartuje, a když je nová vadná, vrátí se.
-// Vyžaduje macOS a klíč ~/.aether/aktualizace-klic.pem, klíč zůstává v paměti testu. Uzel má vlastní porty, otevřená aplikace Quinvium nevadí.
+// A real update of the built app: the old version downloads the new one, restarts itself, and if the new one is faulty, rolls back.
+// Requires macOS and the publisher's update key; the key stays in the test's memory. The node has its own ports; an open Quinvium app does not matter.
 import { execFileSync, spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import assert from 'node:assert/strict';
@@ -86,15 +86,15 @@ try {
   publish(NEW, join(newApp, 'Contents', 'Resources'));
   await until('nová verze běží', () => lastVersion() === NEW);
   assert.equal(current().version, NEW);
-  // První hlášení nové verze může přijít dřív, než se její uzel rozběhne. Uzel musí naskočit do minuty.
+  // The first report of a new version may arrive before its node starts. The node must come up within a minute.
   await until('uzel běží v nové verzi', () => states.filter((s) => s.verze === NEW).at(-1)?.uzel === true, 60000);
   console.log(`[OK  ] aplikace se sama aktualizovala a restartovala na ${NEW}`);
 
-  // Aplikace potvrzuje zdravý běh 60 s po startu, a když okno nebo uzel ještě nejsou hotové, zkusí to znovu za dalších 60 s.
+  // The app confirms a healthy run 60 s after start, and if the window or node are not ready yet, it tries again 60 s later.
   await until('potvrzení zdravého běhu', () => current().tries === 0, 150000);
   console.log('[OK  ] nová verze potvrdila zdravý běh');
 
-  // Vadná verze: kód spadne hned při načtení.
+  // A faulty version: the code crashes right on load.
   const broken = join(work, 'vadna');
   mkdirSync(join(broken, 'src'), { recursive: true });
   writeFileSync(join(broken, 'package.json'), JSON.stringify({ name: 'aether-desktop', version: BROKEN, main: 'src/main.cjs' }));
@@ -121,7 +121,7 @@ try {
   code = 1;
   console.log(`[FAIL] ${e.message}`);
   console.log('Poslední stavy:', JSON.stringify(states.slice(-2)).slice(0, 500), JSON.stringify(current()));
-  // Průběh hlášení: kdy běžela která verze a od kdy s uzlem. Bez toho nejde poznat, proč potvrzení nepřišlo.
+  // Reporting progress: when which version ran and since when with the node. Without it one cannot tell why the confirmation did not arrive.
   const first = states[0]?.t ?? 0;
   console.log('Průběh:', states.map((x) => `${x.t - first}s ${x.verze}${x.uzel ? '+uzel' : ''}`).filter((v, i, all) => i === 0 || v.split(' ')[1] !== all[i - 1].split(' ')[1]).join(', '));
 } finally {

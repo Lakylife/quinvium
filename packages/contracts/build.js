@@ -1,4 +1,4 @@
-// Kompilace kontraktů a zápis genesis alokace. Adresy systémových kontraktů jsou pevné.
+// Compiling contracts and writing the genesis allocation. System contract addresses are fixed.
 import { createRequire } from 'node:module';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -23,7 +23,7 @@ export const PREDEPLOYS = {
   Multicall: '0xae0000000000000000000000000000000000000b',
 };
 
-// Kontrakty přidané forkem. Do genesis nepatří, běžící síť by změnila svůj první blok.
+// Contracts added by a fork. They do not belong in genesis; a running network would change its first block.
 export const UPGRADES = {
   PoolFactory: '0xae0000000000000000000000000000000000000c',
 };
@@ -35,7 +35,7 @@ function findImport(path) {
   for (const base of [join(here, 'node_modules'), join(root, 'node_modules')]) {
     try {
       return { contents: readFileSync(join(base, path), 'utf8') };
-    } catch { /* zkusíme další složku */ }
+    } catch { /* we try the next folder */ }
   }
   return { error: `nenalezeno ${path}` };
 }
@@ -89,7 +89,7 @@ mkdirSync(genesisDir, { recursive: true });
 writeFileSync(join(genesisDir, 'predeploys.json'), JSON.stringify(alloc));
 writeFileSync(join(genesisDir, 'upgrades.json'), JSON.stringify(upgrades));
 
-// Explorer a peněženky potřebují jen ABI a adresy.
+// The Explorer and wallets need only the ABI and addresses.
 const pub = {};
 for (const [name, c] of Object.entries(artifacts)) {
   if (c.address || ['SwapFactory', 'SwapPair', 'SwapRouter', 'AetherToken', 'AetherCollection', 'Multisig', 'AetherPool', 'StableToken', 'WrappedAsset', 'BridgeGateway', 'TokenRegistry'].includes(name)) pub[name] = { address: c.address, abi: c.abi };

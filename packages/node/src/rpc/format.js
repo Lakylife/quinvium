@@ -1,4 +1,4 @@
-// Převod bloků, transakcí a účtenek do formátu JSON-RPC, který znají Ethereum nástroje.
+// Conversion of blocks, transactions and receipts to the JSON-RPC format Ethereum tools know.
 import { RLP } from '@ethereumjs/rlp';
 import { Address, generateAddress } from '@ethereumjs/util';
 import { bytesToInt, quantity, toHex } from '../util/bytes.js';
@@ -35,7 +35,7 @@ export function decodeReceipt(encoded) {
   return { status: status.length ? 1 : 0, cumulative: bytesToInt(cumulative), bloom, logs };
 }
 
-/** Rozbalí účtenky bloku do seznamu s gasem a indexy logů. */
+/** Unpacks the block's receipts into a list with gas and log indexes. */
 export function blockReceipts(block, encoded) {
   let previous = 0n;
   let logIndex = 0;

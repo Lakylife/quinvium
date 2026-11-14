@@ -1,5 +1,5 @@
-// Vestavěné funkce sítě Quinvium. Ověření Proof of Work z kontraktu umožňuje pool, který nemusí věřit provozovateli:
-// práci těžařů počítá přímo řetězec, takže ji nikdo nemůže přikreslit ani ubrat. Výsledek musí být na všech uzlech stejný.
+// Built-in functions of the Quinvium network. Proof-of-work verification from a contract enables a pool that does not have to trust its operator:
+// the chain itself counts miners' work, so nobody can add to it or take from it. The result must be the same on all nodes.
 import { EVMError } from '@ethereumjs/evm';
 import { createAddressFromString } from '@ethereumjs/util';
 import { bytesToBigInt, epochOf } from '../crypto/ethash.js';
@@ -7,7 +7,7 @@ import { equal, intToBytes } from '../util/bytes.js';
 import { Header } from './types.js';
 
 export const POW_VERIFY_ADDRESS = '0x0000000000000000000000000000000000000100';
-export const POW_VERIFY_GAS = 100_000n;   // ověření trvá asi 6 ms, plný blok takových volání tak nezdrží ani starý procesor
+export const POW_VERIFY_GAS = 100_000n;   // verification takes about 6 ms, so a full block of such calls does not slow down even an old CPU
 const MAX_INPUT = 2048;
 const WORDS = 7;
 const TWO_256 = 1n << 256n;
@@ -22,12 +22,12 @@ const word = (value) => {
 const rejected = { executionGasUsed: POW_VERIFY_GAS, returnValue: new Uint8Array(0) };
 
 /**
- * Vstup je RLP celé hlavičky včetně mixHash a nonce. Výstup je sedm 32bajtových slov:
- * těžař, výška, rodič, obtížnost, odvedená práce, extraData zarovnané vlevo a hash hlavičky.
- * Neplatný vstup vrátí prázdno a stojí stejně, o všem ostatním rozhoduje kontrakt.
- * Chyba uzlu (třeba plný disk) se záměrně nezachytává: blok tím neplatný není.
+ * The input is the RLP of a whole header including mixHash and nonce. The output is seven 32-byte words:
+ * miner, height, parent, difficulty, work done, extraData left-aligned and the header hash.
+ * Invalid input returns empty and costs the same; the contract decides everything else.
+ * A node error (for example a full disk) is deliberately not caught: it does not make the block invalid.
  * @param {import('./pow.js').Pow} pow
- * @param {bigint} blockNumber výška prováděného bloku
+ * @param {bigint} blockNumber height of the block being executed
  */
 export function powVerifyPrecompile(pow, blockNumber) {
   const run = async ({ data, gasLimit }) => {
@@ -43,7 +43,7 @@ export function powVerifyPrecompile(pow, blockNumber) {
     }
     const { number, difficulty, extraData } = header;
     if (number < 1n || number > blockNumber || difficulty < 1n || difficulty >= TWO_256 || extraData.length > 32) return rejected;
-    // Cache jiné epochy by se počítala sekundy a platil by to každý uzel, proto jen aktuální a předchozí.
+    // The cache of another epoch would take seconds to compute and every node would pay for it, so only the current and previous ones.
     if (epochOf(number) + 1 < epochOf(blockNumber)) return rejected;
     const { mixDigest, result } = await pow.compute(header.sealHash(), header.nonce, number);
     if (!equal(mixDigest, header.mixHash)) return rejected;

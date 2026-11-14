@@ -1,5 +1,5 @@
-// Práce pro minery ve stylu getwork: uzel sám netěží, jen rozdává šablony a ověřuje výsledky.
-// Výplata jde na adresu, kterou miner uvede. Účet na uzlu není potřeba, těžit jde přes libovolný uzel.
+// getwork-style work for miners: the node does not mine itself, it only hands out templates and verifies results.
+// The payout goes to the address the miner specifies. No account on the node is needed; any node can be used for mining.
 import { EventEmitter } from 'node:events';
 import { Block, Header } from '../core/types.js';
 import { seedHash, epochOf, targetForDifficulty } from '../crypto/ethash.js';
@@ -8,10 +8,10 @@ import { equal, toHex } from '../util/bytes.js';
 import { L } from '../lang.js';
 
 const REBUILD_MS = 2000;
-const MAX_TEMPLATE_AGE_MS = 15_000;  // čas v bloku má odpovídat skutečnosti, LWMA z něj počítá obtížnost
+const MAX_TEMPLATE_AGE_MS = 15_000;  // the time in a block should match reality; LWMA computes difficulty from it
 const MAX_TEMPLATES = 512;
-const BUILD_RATE = [2, 32];          // sestavení s transakcemi za sekundu a povolený náraz, nad limit šablona bez transakcí
-const FREE_BUILDS_PER_HEAD = 4;      // nový blok útočník zadarmo nevyrobí, proto první sestavení po něm limit nezatěžují
+const BUILD_RATE = [2, 32];          // builds with transactions per second and the allowed burst; above the limit a template without transactions
+const FREE_BUILDS_PER_HEAD = 4;      // an attacker cannot produce a new block for free, so the first build after it does not count against the limit
 const MAX_HASHRATES = 4096;
 
 export class WorkError extends Error {}
@@ -50,8 +50,8 @@ export class WorkManager extends EventEmitter {
     const running = this.building.get(key);
     if (running) return running;
     const p = (async () => {
-      // Provedení transakcí stojí procesor a adresu výplaty si volí kdokoli. Bez limitu by stačilo
-      // posílat žádosti s náhodnými adresami a uzel by nic jiného nestíhal.
+      // Executing transactions costs CPU and anyone chooses the payout address. Without a limit it would be enough
+      // send requests with random addresses and the node would manage nothing else.
       const allowed = this.freeBuilds > 0 || this.buildBudget.take();
       this.freeBuilds -= 1;
       const block = await this.chain.buildTemplate({
@@ -72,7 +72,7 @@ export class WorkManager extends EventEmitter {
     }
   }
 
-  /** Vrátí práci pro danou adresu výplaty. Šablona se obnoví při novém bloku nebo změně fronty. */
+  /** Returns work for the given payout address. The template is refreshed on a new block or a queue change. */
   async getWork(miner) {
     if (this.network?.behind) throw new WorkError('uzel se synchronizuje');
     const c = this.current.get(toHex(miner));
@@ -88,7 +88,7 @@ export class WorkManager extends EventEmitter {
   }
 
   /**
-   * Přijme výsledek od minera.
+   * Accepts a result from the miner.
    * @returns {Promise<{accepted: boolean, reason?: string, hash?: Uint8Array, number?: bigint}>}
    */
   async submit(nonce, sealHash, mixDigest) {
@@ -103,7 +103,7 @@ export class WorkManager extends EventEmitter {
         this.log(`${L('Vytěžen blok', 'Mined block')} #${block.header.number} ${toHex(r.hash).slice(0, 18)}`);
         return { accepted: true, hash: r.hash, number: block.header.number };
       }
-      // Platný blok, který prohrál se souběžným blokem, odměnu nepřinese.
+      // A valid block that lost to a concurrent block brings no reward.
       return { accepted: r.status === 'side', stale: true, reason: r.status, hash: r.hash, number: block.header.number };
     } catch (e) {
       return { accepted: false, reason: e.message };
@@ -115,7 +115,7 @@ export class WorkManager extends EventEmitter {
     if (this.hashrates.size < MAX_HASHRATES || this.hashrates.has(id)) this.hashrates.set(id, { rate: BigInt(rate), at: Date.now() });
   }
 
-  /** Součet hashrate hlášený minery za poslední 2 minuty. */
+  /** Sum of hashrate reported by miners over the last 2 minutes. */
   hashrate() {
     let total = 0n;
     for (const [id, v] of this.hashrates) {

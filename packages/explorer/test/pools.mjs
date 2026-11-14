@@ -1,4 +1,4 @@
-// Stránky poolů ve skutečném Chromiu proti skutečnému uzlu. Peněženka podepisuje skutečné transakce klíčem z testu.
+// Pool pages in real Chromium against a real node. The wallet signs real transactions with a key from the test.
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
@@ -74,7 +74,7 @@ try {
   });
   let pool;
 
-  await step('prázdný seznam vybízí k založení', async () => {
+  await step('an empty list invites creating one', async () => {
     await page.goto(`${RPC}/#/pools`);
     await page.getByText('Zatím tu žádný pool není').waitFor();
     assert.ok(await page.locator('a[data-nav=\"pools\"].active').count());
@@ -83,14 +83,14 @@ try {
     await page.locator('#pool-form').waitFor();
   });
 
-  await step('příliš vysoký poplatek odmítne kontrakt a uživatel to pochopí', async () => {
+  await step('the contract rejects an excessive fee and the user understands why', async () => {
     await page.locator('input[name="name"]').fill('Vysoký poplatek');
     await page.locator('input[name="fee"]').fill('9');
     await page.locator('#pool-create').click();
     await page.getByText('Poplatek smí být nejvýše 5').waitFor({ timeout: 20000 });
   });
 
-  await step('založení poolu přejde na jeho stránku', async () => {
+  await step('creating a pool goes to its page', async () => {
     await page.locator('input[name="name"]').fill('Domácí pool');
     await page.locator('input[name="url"]').fill('http://192.168.1.50:8547');
     await page.locator('input[name="fee"]').fill('1,5');
@@ -98,7 +98,7 @@ try {
     await page.waitForURL(/\/pool\/0x[0-9a-fA-F]{40}\?created=1$/, { timeout: 30000 });
     pool = new URL(page.url()).pathname.split('/').pop();
     await page.getByRole('heading', { name: 'Domácí pool' }).waitFor();
-    // Tvůrce hned vidí, co dál: spustit server poolu, sdílet těžbu a zveřejnit adresu.
+    // The creator immediately sees what next: start the pool server, share mining and publish the address.
     await page.locator('.created-card', { hasText: 'Pool je založený. Co dál' }).waitFor();
     const text = await page.locator('#app').innerText();
     assert.match(text, /1,5 %/);
@@ -107,7 +107,7 @@ try {
     assert.match(text, /128 min/i, 'okno 16 kol po 32 blocích');
   });
 
-  await step('stav těžaře a provozovatele', async () => {
+  await step('miner and operator status', async () => {
     await page.locator('#miner-check').click();
     await page.getByText('K výběru: 0').waitFor();
     assert.ok(await page.locator('#op-form').count(), 'provozovatel vidí svou část');
@@ -118,7 +118,7 @@ try {
     assert.equal(await c.url(), 'http://192.168.1.51:8547');
   });
 
-  await step('připojení jako u velkých poolů: server, jméno, heslo a příkazy pro programy', async () => {
+  await step('connection like large pools: server, name, password and commands for programs', async () => {
     await page.goto(`${RPC}/#/pool/${pool}`);
     await page.locator('#connect .badge', { hasText: 'Server zveřejněný' }).waitFor();
     const card = await page.locator('#connect').innerText();
@@ -136,7 +136,7 @@ try {
     assert.match(await page.locator('[data-tool-body="cli"] pre').innerText(), new RegExp(`--pool ${pool} --node http://192\\.168\\.1\\.51:8547`, 'i'));
   });
 
-  await step('mezi tisíci těžaři jde najít vlastní adresu a seznam poolů má hledání', async () => {
+  await step("one's own address can be found among thousands of miners and the pool list has search", async () => {
     await page.goto(`${RPC}/#/pool/${pool}`);
     await page.fill('#miner-find input[name=miner]', wallet.address);
     await page.press('#miner-find input[name=miner]', 'Enter');
@@ -155,7 +155,7 @@ try {
     await page.locator('#all-pools tr[data-href]', { hasText: 'Domácí pool' }).waitFor();
   });
 
-  await step('hospodaření poolu, těžaři a pool na stránce provozovatele i kontraktu', async () => {
+  await step("pool accounts, miners and the pool on the operator's and the contract's page", async () => {
     await page.goto(`${RPC}/#/pool/${pool}`);
     await page.getByText('Hospodaření poolu').waitFor();
     const text = await page.locator('#app').innerText();
@@ -172,18 +172,18 @@ try {
     await page.getByRole('heading', { name: 'Domácí pool' }).waitFor();
   });
 
-  await step('pool je v seznamu a řádek vede na detail', async () => {
+  await step('the pool is in the list and the row leads to its details', async () => {
     await page.goto(`${RPC}/#/pools`);
     await page.locator('tr[data-href]', { hasText: 'Domácí pool' }).locator('td').nth(1).click();
     await page.getByRole('heading', { name: 'Domácí pool' }).waitFor();
   });
 
-  await step('cizí adresa se za pool nevydává', async () => {
+  await step('a foreign address does not pass for a pool', async () => {
     await page.goto(`${RPC}/#/pool/${wallet.address}`);
     await page.getByText('není pool z továrny').waitFor();
   });
 
-  await step('všechny jazyky fungují a výběr si stránka pamatuje', async () => {
+  await step('all languages work and the page remembers the choice', async () => {
     for (const [code, text] of [['de', 'Gebühr'], ['es', 'Comisión'], ['fr', 'Frais'], ['en', 'Fee']]) {
       await page.goto(`${RPC}/#/pools`);
       await page.click('#lang-btn');
@@ -201,7 +201,7 @@ try {
     await page.getByRole('heading', { name: 'Notar' }).waitFor();
   });
 
-  await step('úzká obrazovka: stránka poolu se nerozjede do šířky', async () => {
+  await step('narrow screen: the pool page does not overflow sideways', async () => {
     await page.setViewportSize({ width: 390, height: 800 });
     await page.goto(`${RPC}/#/pool/${pool}`);
     await page.locator('#miner-check').waitFor();
@@ -209,7 +209,7 @@ try {
     assert.ok(wide <= 0, `přesah ${wide} px`);
   });
 
-  await step('stránka nehlásí žádnou chybu', async () => assert.deepEqual(errors, []));
+  await step('the page reports no error', async () => assert.deepEqual(errors, []));
 } finally {
   await browser?.close();
   provider.destroy();

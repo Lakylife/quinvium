@@ -1,4 +1,4 @@
-// Skutečný prohlížeč Chromium se skutečným rozšířením proti skutečnému uzlu.
+// A real Chromium browser with the real extension against a real node.
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -25,7 +25,7 @@ const step = async (name, fn) => {
   } catch (e) {
     results.push([name, false]);
     console.log(`[FAIL] ${name}: ${e.message.split('\n')[0]}`);
-    // Co bylo v okně peněženky vidět, aby šlo selhání pochopit bez opakování.
+    // What was visible in the wallet window, so a failure can be understood without repeating it.
     const seen = await globalThis.failPage?.evaluate(() => document.body.innerText.replace(/\s+/g, ' ').slice(0, 400)).catch(() => null);
     if (seen) console.log(`       v okně: ${seen}`);
     throw e;
@@ -56,9 +56,9 @@ try {
   context = await chromium.launchPersistentContext(join(data, 'profile'), {
     channel: 'chromium', headless: true, args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
   });
-  // Na vytíženém počítači jde čekání prodloužit, například E2E_TIMEOUT=120000. Výchozích 30 s platí jinak.
+  // On a busy computer the wait can be extended, for example E2E_TIMEOUT=120000. Otherwise the default of 30 s applies.
   context.setDefaultTimeout(Number(process.env.E2E_TIMEOUT) || 30000);
-  // Čekání na vytěžení bloku: na vytíženém počítači aspoň tak dlouho jako ostatní kroky.
+  // Waiting for a block to be mined: on a busy computer at least as long as the other steps.
   var slow = (ms) => Math.max(ms, Number(process.env.E2E_TIMEOUT) || 0);
   const worker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');
   const id = worker.url().split('/')[2];
@@ -71,7 +71,7 @@ try {
   await popup.evaluate(() => localStorage.setItem('aether.lang', 'cs'));
   await open();
 
-  await step('obnova peněženky z fráze a nastavení hesla', async () => {
+  await step('restoring the wallet from the phrase and setting a password', async () => {
     await popup.click('#imp');
     await popup.fill('textarea[name=phrase]', PHRASE);
     await popup.click('button[type=submit]');
@@ -86,21 +86,21 @@ try {
     assert.equal((await popup.getAttribute('#addr', 'title')).trim(), ADDRESS);
   });
 
-  await step('fráze není v úložišti čitelně', async () => {
+  await step('the phrase is not readable in storage', async () => {
     const stored = await popup.evaluate(() => chrome.storage.local.get(null));
     assert.ok(stored.vault?.data, 'trezor existuje');
     assert.ok(!JSON.stringify(stored).includes('test test'), 'fráze není čitelně');
     assert.equal(stored.vault.iterations, 600000);
   });
 
-  await step('přepnutí na síť dev a zobrazení zůstatku', async () => {
+  await step('switching to the dev network and showing the balance', async () => {
     await popup.selectOption('#net', '52403');
     await popup.waitForFunction(() => /dQU/.test(document.querySelector('#balance')?.textContent ?? ''));
     assert.match(await popup.textContent('#balance'), /^[1-9]/);
   });
 
   const receiver = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8';
-  await step('platba z peněženky dorazí příjemci', async () => {
+  await step('a payment from the wallet reaches the recipient', async () => {
     await popup.click('#send');
     await popup.fill('input[name=to]', 'neplatna-adresa');
     await popup.fill('input[name=value]', '1');
@@ -117,7 +117,7 @@ try {
     await popup.click('#finish');
     await until(async () => BigInt(await rpc('eth_getBalance', [receiver, 'latest'])) === 1500000000000000000n);
   });
-  /** Otevře kontrolu platby s výběrem poplatku. */
+  /** Opens the payment review with fee selection. */
   const review = async (to, value) => {
     await popup.waitForSelector('#send');
     await popup.click('#send');
@@ -130,7 +130,7 @@ try {
   const tipOf = async (i = 0) => {
     const { activity } = await popup.evaluate(() => chrome.storage.local.get('activity'));
     const tx = await rpc('eth_getTransactionByHash', [activity[i].hash]);
-    // Uzel už může mít náhradu, zatímco peněženka si ji ještě nezapsala. To je krátký přechod, ne chyba.
+    // The node may already have the replacement while the wallet has not recorded it yet. That is a short transition, not an error.
     return tx ? { tip: BigInt(tx.maxPriorityFeePerGas), max: BigInt(tx.maxFeePerGas), hash: activity[i].hash } : { tip: 0n, max: 0n, hash: activity[i].hash };
   };
   const gwei = 1_000_000_000n;
@@ -145,7 +145,7 @@ try {
     await until(async () => BigInt(await rpc('eth_getBalance', [receiver, 'latest'])) > before);
   };
 
-  await step('výběr poplatku: rychle, pomalu i vlastní gwei se opravdu zapíše do transakce', async () => {
+  await step('fee choice: fast, slow and custom gwei are really written into the transaction', async () => {
     await review(receiver, '0,01');
     const text = await popup.textContent('.fee-options');
     assert.match(text, /Pomalu/); assert.match(text, /Běžně/); assert.match(text, /Rychle/); assert.match(text, /Vlastní/);
@@ -173,7 +173,7 @@ try {
     assert.equal(custom.max, 9n * gwei);
   });
 
-  await step('nesmyslný vlastní poplatek se neodešle', async () => {
+  await step('a nonsensical custom fee is not sent', async () => {
     await popup.waitForSelector('#send');
     const nonce = await rpc('eth_getTransactionCount', [ADDRESS, 'pending']);
     await review(receiver, '0,01');
@@ -205,20 +205,20 @@ try {
     return text;
   };
 
-  await step('stránka bez povolení nevidí účet', async () => {
+  await step('a page without permission does not see the account', async () => {
     assert.deepEqual(await explorer.evaluate(() => window.aether.request({ method: 'eth_accounts' })), []);
     await assert.rejects(explorer.evaluate(() => window.aether.request({ method: 'eth_sendTransaction', params: [{ to: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8', value: '0x1' }] })));
     await assert.rejects(explorer.evaluate(() => window.aether.request({ method: 'eth_sign', params: [] })));
     await assert.rejects(explorer.evaluate(() => window.aether.request({ method: 'personal_sign', params: ['0x1234', '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'] })));
   });
 
-  await step('odmítnuté připojení stránka nedostane', async () => {
+  await step('the page does not get a rejected connection', async () => {
     await approve(() => explorer.click('#login-btn'), '#no');
     await explorer.waitForSelector('#wallet-dialog[data-step="rejected"]');
     assert.deepEqual(await explorer.evaluate(() => window.aether.request({ method: 'eth_accounts' })), []);
   });
 
-  await step('připojení exploreru po schválení', async () => {
+  await step('Explorer connection after approval', async () => {
     const text = await approve(() => explorer.click('[data-wallet-retry]'), '#yes');
     assert.match(text, /127\.0\.0\.1:8547/, 'okno ukazuje původ stránky');
     await explorer.waitForFunction(() => document.querySelector('#login-btn').classList.contains('connected'));
@@ -227,9 +227,9 @@ try {
 
   const card = explorer.locator('.tool-card').first();
   await card.locator('summary').click();
-  // Notář: úkol Zapsat je první, Ověřit ukáže výsledek. Tlačítko spouští zvolený úkol.
+  // Notary: the Record task comes first, Verify shows the result. The button runs the chosen task.
   const write = async () => { await card.locator('[data-task=write]').click(); await card.locator('[data-run]').click(); };
-  await step('notářský zápis přes explorer s podpisem ve vlastním okně', async () => {
+  await step('a notary record through the Explorer with a signature in its own window', async () => {
     await card.locator('input[name=hash]').fill('moje-smlouva-e2e');
     await card.locator('input[name=note]').fill('Test');
     const text = await approve(write, '#yes');
@@ -240,13 +240,13 @@ try {
     await explorer.waitForFunction(() => /Platné/.test(document.querySelector('.tool-output')?.textContent ?? ''));
   });
 
-  await step('chyba kontraktu dorazí přes peněženku jako srozumitelná věta', async () => {
+  await step('a contract error arrives through the wallet as an understandable sentence', async () => {
     await card.locator('input[name=hash]').fill('moje-smlouva-e2e');
     await write();
     await explorer.waitForFunction(() => /už máte zapsaný/.test(document.querySelector('.tool-output')?.textContent ?? ''), null, { timeout: slow(20000) });
   });
 
-  await step('stránka nemůže zaplavit uživatele okny se žádostmi', async () => {
+  await step('a page cannot flood the user with request windows', async () => {
     const outcome = await explorer.evaluate(async () => {
       const ask = () => window.aether.request({ method: 'personal_sign', params: ['0x48656c6c6f', '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'] }).then(() => 'podepsáno', (e) => e.message);
       window.__asks = [ask(), ask(), ask()];
@@ -261,7 +261,7 @@ try {
     await explorer.evaluate(() => Promise.all(window.__asks));
   });
 
-  await step('ve schvalovacím okně jde změnit poplatek a transakce ho použije', async () => {
+  await step('the fee can be changed in the approval window and the transaction uses it', async () => {
     await card.locator('input[name=hash]').fill('smlouva-rychly-poplatek');
     const [win] = await Promise.all([context.waitForEvent('page', { predicate: (p) => p.url().includes('approval=') }), write()]);
     await win.waitForSelector('[data-tier=fast]');
@@ -273,7 +273,7 @@ try {
     assert.equal((await tipOf()).tip, 2n * gwei);
   });
 
-  await step('odmítnutá transakce se neodešle', async () => {
+  await step('a rejected transaction is not sent', async () => {
     const before = await rpc('eth_getTransactionCount', [ADDRESS, 'pending']);
     await card.locator('input[name=hash]').fill('jina-smlouva');
     await approve(write, '#no');
@@ -281,7 +281,7 @@ try {
     assert.equal(await rpc('eth_getTransactionCount', [ADDRESS, 'pending']), before);
   });
 
-  await step('podpis zprávy ověřitelný proti adrese', async () => {
+  await step('a message signature verifiable against the address', async () => {
     const sign = explorer.evaluate(() => window.aether.request({ method: 'personal_sign', params: ['0x48656c6c6f', '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'] }));
     const win = await context.waitForEvent('page', { predicate: (p) => p.url().includes('approval=') });
     await win.waitForSelector('#yes');
@@ -292,7 +292,7 @@ try {
     assert.equal(recovered, ADDRESS);
   });
 
-  await step('zamčení: účet zmizí, špatné heslo neprojde, správné ano', async () => {
+  await step('locking: the account disappears, a wrong password fails, the right one passes', async () => {
     await open();
     await popup.waitForSelector('#lock');
     await popup.click('#lock');
@@ -307,13 +307,13 @@ try {
     await popup.waitForSelector('#addr');
   });
 
-  await step('běžná stránka nemůže volat příkazy peněženky', async () => {
+  await step('an ordinary page cannot call wallet commands', async () => {
     const reply = await explorer.evaluate(() => (window.chrome?.runtime?.sendMessage ? 'dostupné' : 'nedostupné'));
     assert.equal(reply, 'nedostupné');
   });
 
-  await step('uvízlou platbu jde zrychlit i zrušit', async () => {
-    // Bez těžby transakce zůstane čekat, stejná data, stejný port.
+  await step('a stuck payment can be sped up or cancelled', async () => {
+    // Without mining the transaction stays pending, same data, same port.
     node.kill('SIGKILL');
     await until(async () => !(await rpc('eth_blockNumber').catch(() => null)));
     node = spawn(process.execPath, ['--no-warnings', nodeCli, '--network', 'dev', '--data-dir', join(data, 'node')], { stdio: 'ignore' });
@@ -341,7 +341,7 @@ try {
     assert.equal(pending[0].hash, faster.hash);
     assert.equal(BigInt(pending[0].value), 2n * 10n ** 18n, 'částka zůstala');
 
-    // Čeká se na řádek nové transakce: chvíli po zrychlení je v seznamu ještě ten starý.
+    // Waiting for the new transaction's row: shortly after a speed-up the old one is still in the list.
     await popup.waitForSelector(`[data-cancel="${faster.hash}"]`);
     await popup.click(`[data-cancel="${faster.hash}"]`);
     await until(async () => (await tipOf()).hash !== faster.hash);
@@ -356,7 +356,7 @@ try {
     assert.equal(BigInt(await rpc('eth_getBalance', [stuck, 'latest'])), 0n, 'příjemce nic nedostal');
   });
 
-  /** Tvrdý pád, nebo s graceful běžné vypnutí, při kterém si uzel frontu uloží. */
+  /** A hard crash, or with graceful a normal shutdown during which the node saves its queue. */
   const stopNode = async (graceful = false) => {
     node.kill(graceful ? 'SIGTERM' : 'SIGKILL');
     await until(async () => !(await rpc('eth_blockNumber').catch(() => null)));
@@ -366,7 +366,7 @@ try {
     await until(() => rpc('eth_blockNumber').catch(() => null));
   };
   const stored = async () => (await popup.evaluate(() => chrome.storage.local.get('activity'))).activity;
-  /** Otevření peněženky zkontroluje stav čekajících transakcí, jako když ji otevře člověk. */
+  /** Opening the wallet checks the state of pending transactions, as when a person opens it. */
   const refreshUntil = (fn, ms = 60000) => until(async () => {
     await open();
     await popup.waitForSelector('[data-view=activity]');
@@ -375,9 +375,9 @@ try {
     return false;
   }, ms);
 
-  await step('nahrazené transakce skončí jako neproběhlé a zrušená platba nikdy neprojde', async () => {
+  await step('replaced transactions end as not executed and a cancelled payment never goes through', async () => {
     const stuck = '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC';
-    // Po tvrdém pádu uzel zrušení z minulého kroku mít nemusí. Peněženka ho má podepsané a pošle ho znovu sama.
+    // After a hard crash the node may not have the cancellation from the previous step. The wallet has it signed and resends it itself.
     await refreshUntil(async () => (await stored()).filter((a) => a.dropped).length >= 2, 90000);
     const list = await stored();
     const cancel = list.find((a) => a.to?.toLowerCase() === ADDRESS.toLowerCase() && BigInt(a.value) === 0n);
@@ -391,7 +391,7 @@ try {
     assert.equal(await popup.locator('.tx.dropped [data-speed], .tx.dropped + .tx-pending [data-speed]').count(), 0, 'u neproběhlé se nic nenabízí');
   });
 
-  await step('transakci, kterou uzel zapomněl, peněženka pošle znovu a vytěží se', async () => {
+  await step('the wallet resends a transaction the node forgot and it gets mined', async () => {
     await stopNode();
     await startNode(false);
     const before = BigInt(await rpc('eth_getBalance', [receiver, 'latest']));
@@ -402,7 +402,7 @@ try {
     await popup.click('#finish');
     const { hash } = (await stored())[0];
     assert.ok(await rpc('eth_getTransactionByHash', [hash]), 'uzel transakci má');
-    // Pád uzlu i se smazanou frontou: uzel o transakci neví nic.
+    // A node crash with the queue deleted: the node knows nothing about the transaction.
     await stopNode();
     rmSync(join(data, 'node', 'mempool.bin'), { force: true });
     await startNode(true);
@@ -412,7 +412,7 @@ try {
     await refreshUntil(async () => (await stored())[0].done === true);
   });
 
-  await step('na nulovou adresu ani na adresu tokenu peněženka nic nepošle', async () => {
+  await step('the wallet sends nothing to the zero address or the token address', async () => {
     await open();
     await popup.waitForSelector('#send');
     await popup.click('#send');
@@ -420,7 +420,7 @@ try {
     await popup.fill('input[name=value]', '1');
     await popup.click('button[type=submit]');
     await popup.waitForFunction(() => /nulová adresa/.test(document.querySelector('.err')?.textContent ?? ''));
-    // Tokenu v testovací síti zůstatek nemáme, ochranu proto zkouší přímo příkaz peněženky.
+    // We have no balance of the token on the test network, so the protection is tested directly by the wallet command.
     const token = '0x901d0A87a7591c57ee1d94C7d057288B4E98e70C';
     const reply = await popup.evaluate((t) => new Promise((r) => chrome.runtime.sendMessage({ cmd: 'send', to: t, token: t, value: '1', decimals: 6 }, r)), token);
     assert.match(reply.error, /token contract itself/);
@@ -428,10 +428,10 @@ try {
     assert.match(zero.error, /zero address/);
   });
 
-  await step('s cizí peněženkou se zrychlení ani zrušení nenabízí, druhá platba tak nevznikne', async () => {
+  await step('with a foreign wallet neither speed-up nor cancel is offered, so no second payment is created', async () => {
     await stopNode();
     await startNode(false);
-    // Aplikace předává podpisy cizí peněžence. Tady ji zastoupí testovací klíč a pořadové číslo si volí sama, jako MetaMask.
+    // The app relays signatures to a foreign wallet. Here a test key stands in for it and chooses the nonce itself, like MetaMask.
     const sw = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');
     await sw.evaluate(({ key, url }) => {
       globalThis.externalRequest = async (ext, method, [p]) => {
@@ -460,7 +460,7 @@ try {
 
     await popup.evaluate(() => chrome.storage.local.remove('external'));
     await (context.serviceWorkers()[0] ?? sw).evaluate(() => { delete globalThis.externalRequest; }).catch(() => {});
-    // Běžné vypnutí: uzel frontu uloží a po startu ji načte, cizí platba se pak vytěží.
+    // Normal shutdown: the node saves the queue and loads it after start; the foreign payment is then mined.
     await stopNode(true);
     await startNode(true);
     await until(async () => (await rpc('eth_getTransactionReceipt', [item.hash])) !== null, 90000);
@@ -470,7 +470,7 @@ try {
     await open();
     await popup.waitForSelector('[data-view=activity]');
     await popup.click('[data-view=activity]');
-    // Aktivita je po dnech a ukazuje i to, co peněženka sama neposlala: tady odměny za vytěžené bloky.
+    // Activity is grouped by day and also shows what the wallet did not send itself: here rewards for mined blocks.
     await popup.locator('.tx-open', { hasText: 'Odměny za bloky' }).first().waitFor({ timeout: slow(30000) });
     assert.equal(await popup.locator('.act-day').first().textContent(), 'Dnes');
     const payment = popup.locator('.tx-open', { hasText: 'Platba' }).first();
@@ -480,7 +480,7 @@ try {
     await popup.waitForFunction(() => /Potvrzeno v bloku \d/.test(document.querySelector('#detail')?.textContent ?? ''));
     const detail = await popup.textContent('#detail');
     for (const text of ['Zaplacený poplatek', 'Pořadové číslo', 'Transakce', 'Komu']) assert.ok(detail.includes(text), `detail ukazuje ${text}`);
-    // Rozšíření otevře Explorer sítě v nové kartě, přímo na transakci.
+    // The extension opens the network's Explorer in a new tab, directly at the transaction.
     const [tab] = await Promise.all([context.waitForEvent('page'), popup.click('#d-explorer')]);
     assert.match(tab.url(), /\/tx\/0x[0-9a-f]{64}$/);
     await tab.close();
@@ -497,7 +497,7 @@ try {
     await popup.click('#back');
   });
 
-  await step('vklad ukáže QR kód s adresou a účty jdou přejmenovat i importovat', async () => {
+  await step('deposit shows a QR code with the address and accounts can be renamed and imported', async () => {
     await open();
     await popup.waitForSelector('#deposit');
     await popup.click('#deposit');
@@ -538,7 +538,7 @@ try {
     await popup.waitForFunction((a) => document.querySelector('#addr')?.title === a, ADDRESS);
   });
 
-  await step('fráze i soukromý klíč se ukážou jen po zadání hesla', async () => {
+  await step('the phrase and the private key are shown only after entering the password', async () => {
     await open();
     await popup.waitForSelector('#settings');
     await popup.click('#settings');
@@ -557,7 +557,7 @@ try {
     await popup.waitForSelector('#addr');
   });
 
-  await step('odhlášení vyžaduje potvrzení a dá se vrátit zpět', async () => {
+  await step('sign-out requires confirmation and can be undone', async () => {
     await open();
     await popup.waitForSelector('#settings');
     await popup.click('#settings');
@@ -573,7 +573,7 @@ try {
     await popup.waitForSelector('#addr');
   });
 
-  await step('odhlášení a import jiné peněženky', async () => {
+  await step('sign-out and import of another wallet', async () => {
     const before = await popup.evaluate(() => chrome.storage.local.get('chainId'));
     assert.deepEqual(await explorer.evaluate(() => window.aether.request({ method: 'eth_accounts' })), [ADDRESS]);
     await popup.click('#settings');
@@ -599,7 +599,7 @@ try {
     assert.deepEqual(await explorer.evaluate(() => window.aether.request({ method: 'eth_accounts' })), [], 'nová peněženka se stránce neukáže bez souhlasu');
   });
 
-  await step('zapomenuté heslo: z obrazovky odemknutí jde použít jiná peněženka', async () => {
+  await step('forgotten password: another wallet can be used from the unlock screen', async () => {
     await popup.click('#lock');
     await popup.waitForSelector('#other');
     await popup.click('#other');
@@ -613,7 +613,7 @@ try {
     assert.equal((await popup.evaluate(() => chrome.storage.local.get('vault'))).vault, undefined);
   });
 
-  await step('kontrolní slova jsou pokaždé jiná a fráze jde zkopírovat', async () => {
+  await step('the check words differ every time and the phrase can be copied', async () => {
     await popup.click('#new');
     await popup.waitForSelector('#copy-seed');
     assert.equal(await popup.$$eval('.seed span', (l) => l.length), 24);
@@ -630,7 +630,7 @@ try {
     assert.ok(seen.size > 1, 'pokaždé jiná místa ve frázi');
   });
 
-  await step('připojení bez peněženky nabídne její založení a dokončí se', async () => {
+  await step('connecting without a wallet offers to create one and completes', async () => {
     const fresh = await chromium.launchPersistentContext(join(data, 'profile-nova'), {
       channel: 'chromium', headless: true, args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
     });
@@ -651,7 +651,7 @@ try {
       await setup.click('button[type=submit]');
       await setup.waitForSelector('#yes');
       assert.match(await setup.textContent('body'), /Connect this site/);
-      // Nová peněženka začíná na mainnetu, průvodce ji hned po připojení přepne na síť stránky.
+      // A new wallet starts on mainnet; the guide switches it to the page's network right after connecting.
       const [change] = await Promise.all([approvalWindow(), setup.click('#yes')]);
       await change.waitForSelector('#yes');
       assert.match(await change.textContent('body'), /Switch network/);

@@ -1,4 +1,4 @@
-// Přístup z internetu: router otevře porty přes UPnP, uzel zná svou veřejnou adresu a ukáže ji peněženkám.
+// Access from the internet: the router opens ports through UPnP; the node knows its public address and shows it to wallets.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
@@ -12,7 +12,7 @@ const description = (control) => `<?xml version="1.0"?><root xmlns="urn:schemas-
   <service><serviceType>urn:schemas-upnp-org:service:Layer3Forwarding:1</serviceType><controlURL>/l3f</controlURL></service>
   <service><serviceType>${SERVICE}</serviceType><controlURL>${control}</controlURL></service></serviceList></device></root>`;
 
-/** Zkušební router: popis zařízení a řízení přesměrování, jak je posílají běžné domácí routery. */
+/** Test router: device description and port forwarding control, as sent by common home routers. */
 async function fakeRouter({ externalIp = '203.0.113.7', permanentOnly = false, control = '/ctl' } = {}) {
   const calls = [];
   const server = http.createServer((req, res) => {
@@ -38,19 +38,19 @@ async function fakeRouter({ externalIp = '203.0.113.7', permanentOnly = false, c
 
 const noLookup = (impl = globalThis.fetch) => (url, init) => (String(url) === IP_LOOKUP ? Promise.reject(new Error('bez internetu')) : impl(url, init));
 
-test('veřejná adresa: soukromé a sdílené adresy operátora mezi ně nepatří', () => {
+test('public address: private and shared operator addresses are not among them', () => {
   for (const ip of ['203.0.113.7', '8.8.8.8', '81.2.69.160']) assert.ok(isPublicIPv4(ip), ip);
   for (const ip of ['192.168.1.1', '10.0.0.2', '172.20.1.1', '100.64.3.4', '127.0.0.1', '169.254.1.1', 'nesmysl', '', null, '::1']) assert.ok(!isPublicIPv4(ip), String(ip));
 });
 
-test('popis routeru: vybere službu pro přesměrování a odmítne řízení na jiném počítači', () => {
+test('router description: picks the forwarding service and rejects control on another computer', () => {
   const g = parseDescription(description('/ctl'), 'http://192.168.1.1:5000/desc.xml');
   assert.deepEqual(g, { service: SERVICE, control: 'http://192.168.1.1:5000/ctl', host: '192.168.1.1' });
   assert.equal(parseDescription(description('http://10.9.9.9/ctl'), 'http://192.168.1.1:5000/desc.xml'), null);
   assert.equal(parseDescription('<root></root>', 'http://192.168.1.1/'), null);
 });
 
-test('router otevře porty, prozradí veřejnou adresu a po skončení porty zase zavře', async () => {
+test('the router opens ports, reveals the public address and closes the ports again at the end', async () => {
   const router = await fakeRouter();
   try {
     const access = new PublicAccess({ ports: [{ port: 8546, name: 'RPC' }, { port: 30525, name: 'P2P' }], discover: async () => router.location, localAddress: async () => '192.168.1.50', fetch: noLookup() });
@@ -69,7 +69,7 @@ test('router otevře porty, prozradí veřejnou adresu a po skončení porty zas
   }
 });
 
-test('router s trvalým přesměrováním a router za sdílenou adresou operátora', async () => {
+test('a router with permanent forwarding and a router behind a shared operator address', async () => {
   const permanent = await fakeRouter({ permanentOnly: true });
   const cgnat = await fakeRouter({ externalIp: '100.72.1.9' });
   try {
@@ -88,7 +88,7 @@ test('router s trvalým přesměrováním a router za sdílenou adresou operáto
   }
 });
 
-test('bez UPnP zjistí veřejnou adresu službou na internetu, ruční adresa má přednost', async () => {
+test('without UPnP it finds the public address through an internet service; a manual address takes precedence', async () => {
   const lookup = async (url) => { assert.equal(String(url), IP_LOOKUP); return new Response('198.51.100.20\n'); };
   const a = new PublicAccess({ ports: [{ port: 8546, name: 'RPC' }], discover: async () => null, fetch: lookup });
   const s = await a.refresh();
@@ -104,7 +104,7 @@ test('bez UPnP zjistí veřejnou adresu službou na internetu, ruční adresa m�
   assert.equal(m.method, 'manual');
 });
 
-test('aether_endpoints: uzel vypíše RPC pro tento počítač, místní síť a internet', async () => {
+test('aether_endpoints: the node lists RPC for this computer, the local network and the internet', async () => {
   const dataDir = tmpData();
   const base = { network: NETWORKS.dev, dataDir, powDir: POW_DIR, p2pPort: 0, rpcPort: 0, stratumPort: 0, p2pHost: '127.0.0.1', allowPrivate: true, log: () => {} };
   const local = await new AetherNode(base).start();
@@ -128,7 +128,7 @@ test('aether_endpoints: uzel vypíše RPC pro tento počítač, místní síť a
     assert.equal(r.result.access.method, 'manual');
     assert.equal(r.result.access.upnp, false);
     for (const url of r.result.lan) assert.match(url, new RegExp(`^http://(10|172|192|100)\\.[\\d.]+:${shared.rpc.port}$`));
-    // Volající z internetu (tady požadavek s hlavičkou proxy) nevidí místní adresy a nedostane práci pro těžbu.
+    // A caller from the internet (here a request with a proxy header) does not see local addresses and gets no mining work.
     const far = (method, params = []) => fetch(`http://127.0.0.1:${shared.rpc.port}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.9' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) }).then((x) => x.json());
     const f = await far('aether_endpoints');
     assert.equal(f.result.restricted, true);
@@ -147,7 +147,7 @@ test('aether_endpoints: uzel vypíše RPC pro tento počítač, místní síť a
   }
 });
 
-test('router za dalším routerem: veřejná adresa je známá, ale bez přesměrování na modemu nedostupná', async () => {
+test('a router behind another router: the public address is known but unreachable without forwarding on the modem', async () => {
   const inner = await fakeRouter({ externalIp: '192.168.0.10' });
   const cgnat = await fakeRouter({ externalIp: '100.72.1.9' });
   try {
@@ -168,12 +168,12 @@ test('router za dalším routerem: veřejná adresa je známá, ale bez přesmě
   }
 });
 
-test('isLocalCaller: místní je jen tento počítač a soukromá síť', () => {
+test('isLocalCaller: only this computer and the private network are local', () => {
   for (const ip of ['127.0.0.1', '::1', '::ffff:127.0.0.1', '192.168.1.235', '::ffff:10.0.0.5', '172.20.1.1', 'fe80::1', 'fd00::5']) assert.equal(isLocalCaller(ip), true, ip);
   for (const ip of ['203.0.113.7', '::ffff:8.8.8.8', '100.64.1.1', '2001:db8::1', '', undefined, 'nesmysl']) assert.equal(isLocalCaller(ip), false, String(ip));
 });
 
-test('odpověď routeru se čte s limitem', async () => {
+test("the router's response is read with a limit", async () => {
   const big = new Response(new ReadableStream({ pull(c) { c.enqueue(new Uint8Array(65536).fill(97)); } }));
   assert.equal((await readText(big, 1000)).length, 1000);
 });

@@ -1,4 +1,4 @@
-// Pomocné funkce testů: skutečná těžba s Ethash při obtížnosti 1 a řízené hodiny.
+// Test helpers: real Ethash mining at difficulty 1 and a controlled clock.
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { mkdtempSync } from 'node:fs';
@@ -28,7 +28,7 @@ export function wallet() {
   return { key, address: privateToAddress(key) };
 }
 
-/** Vyhledá platné nonce a vrátí hotový blok. */
+/** Searches for a valid nonce and returns the finished block. */
 export async function seal(chain, block) {
   const h = block.header;
   const target = targetForDifficulty(h.difficulty);
@@ -44,7 +44,7 @@ export async function seal(chain, block) {
 
 export async function mine(chain, { miner = new Uint8Array(20).fill(0xaa), txs = [], mutate, step = 15 } = {}) {
   chain.tick(step);
-  // Bez časového limitu: test na vytíženém počítači musí dát stejný blok jako na volném.
+  // No time limit: a test on a busy computer must produce the same block as on an idle one.
   let block = await chain.buildTemplate({ miner, txs, budgetMs: Infinity });
   if (mutate) block = (await mutate(block)) ?? block;
   const sealed = await seal(chain, block);

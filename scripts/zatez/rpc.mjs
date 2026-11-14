@@ -1,4 +1,4 @@
-// Zátěž čtení: kolik dotazů zvládne jeden uzel a jak roste zpoždění se souběžnými klienty.
+// Read load: how many queries one node handles and how latency grows with concurrent clients.
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { call, measure, root, row, startNode } from './spolecne.mjs';
