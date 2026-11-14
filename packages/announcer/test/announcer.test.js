@@ -43,6 +43,10 @@ test('halving: 30, 7 and 1 day notices, then the halving itself', () => {
   const s = initialState(at(400_000), T0);
   const d30 = detect(s, at(170_000), T0 + 60);              // ~29.5 days
   assert.deepEqual(d30.events.map((e) => e.key), ['halving:1:30d']);
+  const eta = d30.events[0].data.eta;   // now + blocks left × 15 s, so the date matches "in 30 days"
+  assert.equal(eta, T0 + 60 + 170_000 * 15);
+  assert.ok(Math.abs((eta - (T0 + 60)) / DAY - 29.5) < 0.1);
+  assert.match(xMessage(d30.events[0]).text, /expected around 14 Dec 2026/);
   assert.deepEqual(detect(s, at(40_000), T0 + 60).events.map((e) => e.key), ['halving:1:7d']);   // ~6.9 days
   assert.deepEqual(detect(s, at(5_000), T0 + 60).events.map((e) => e.key), ['halving:1:1d']);
   const done = detect(s, snap({ height: 8_000_001, reward: '2000000000000000000' }), T0 + 60);
