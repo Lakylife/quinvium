@@ -180,3 +180,16 @@ test('a digest merges small events into one Telegram message', () => {
   assert.match(m.text, /New miners: 2/);
   assert.match(m.text, /New nodes: 1/);
 });
+
+test('a majority miner is reported once on Telegram, and again when it is over', () => {
+  const s = initialState(snap(), T0);
+  const big = { address: '0x' + '2e'.repeat(20), share: 0.62, blocks: 160, of: 259 };
+  const a = detect(s, snap({ headTime: T0 + 50, majority: big }), T0 + 60);
+  assert.deepEqual(kinds(a), ['majority']);
+  assert.deepEqual(a.events[0].channels, ['telegram']);
+  assert.match(telegramMessage(a.events[0]).text, /62% of the work/);
+  assert.deepEqual(detect(a.state, snap({ headTime: T0 + 110, majority: big }), T0 + 120).events, [], 'not repeated');
+  const b = detect(a.state, snap({ headTime: T0 + 3590, majority: { ...big, share: 0.4 } }), T0 + 3600);
+  assert.deepEqual(kinds(b), ['majority-end']);
+  assert.ok(xMessage(a.events[0]).text.replace(/https:\/\/\S+/g, 'x'.repeat(23)).length <= 280);
+});
