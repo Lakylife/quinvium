@@ -1,65 +1,65 @@
 {
- "version": "2.14.2",
+ "version": "2.15.0",
  "items": [
   {
-   "file": "Quinvium-2.14.2-macOS-x64.zip",
+   "file": "Quinvium-2.15.0-macOS-x64.zip",
    "title": "Quinvium app",
    "platform": "macOS 13+, Intel (Apple Silicon via Rosetta)",
    "icon": "cube",
    "desc": "Wallet, full node, GPU mining, Explorer and Swap in one app.",
    "note": null,
    "size": "130.3 MB",
-   "sha256": "873a180906a833638a3a70a3edfa9d933b2c3a576b353354cecb136be08b9e2d"
+   "sha256": "23109e48e2f75e0c4798110f9954793687b8320f9d8f6d4676f799121cd6f4c3"
   },
   {
-   "file": "Quinvium-2.14.2-Windows-x64.exe",
+   "file": "Quinvium-2.15.0-Windows-x64.exe",
    "title": "Quinvium app",
    "platform": "Windows 10/11, 64-bit, installer",
    "icon": "cube",
    "desc": "Wallet, full node, GPU mining, Explorer and Swap in one app.",
    "note": null,
    "size": "127.0 MB",
-   "sha256": "e01f9797741665e6282b86b619a5cf2d2d11640fdfbba4c70ad25909636f9210"
+   "sha256": "90366fc37831e555257ea54e4002b66dfbbd50590c731019b490d0755b9d0b00"
   },
   {
-   "file": "Quinvium-2.14.2-Windows-x64.zip",
+   "file": "Quinvium-2.15.0-Windows-x64.zip",
    "title": "Quinvium app, portable",
    "platform": "Windows 10/11, 64-bit, no install",
    "icon": "cube",
    "desc": "The same app as a zip, runs without installing.",
    "note": null,
    "size": "159.7 MB",
-   "sha256": "d398f302e4b980f8000dd1c3a5e9925d2bc58173a83e9354f0bcb8410d432fe2"
+   "sha256": "6a7ccb3a54b5a91c35cbcef6c6b55d805377c306b0b08ddc3ddc1984590d52e4"
   },
   {
-   "file": "Quinvium-Node-Miner-2.14.2-Windows-x64.zip",
+   "file": "Quinvium-Node-Miner-2.15.0-Windows-x64.zip",
    "title": "Node and miner",
    "platform": "Windows 10/11, 64-bit, command line",
    "icon": "chip",
    "desc": "The node as a single program and quintium-miner for the GPU, without the app.",
    "note": null,
    "size": "41.5 MB",
-   "sha256": "70d31c849e83e26bb60d061e42376ea6bfe8879a3003627387e97da96a5258ae"
+   "sha256": "252c97bf5f0e0d9a1d2f2c87bc2600880d9ea1027e8b1aedee1e1071897374fe"
   },
   {
-   "file": "Quinvium-Node-2.14.2.tar.gz",
+   "file": "Quinvium-Node-2.15.0.tar.gz",
    "title": "Node",
    "platform": "Linux, macOS, any system with Node.js 24",
    "icon": "code",
    "desc": "The full node from source with the Explorer. See README.txt inside.",
    "note": null,
    "size": "658 kB",
-   "sha256": "40abe6cf9eef2dc14f375a6a46071c94d9b3bcc0bb59484ff642c74bb1184bc7"
+   "sha256": "d268839a031a4916507c51baa67768b41b6a33497cbddd023873c068a6fd0764"
   },
   {
-   "file": "Quinvium-Wallet-Chrome-2.14.2.zip",
+   "file": "Quinvium-Wallet-Chrome-2.15.0.zip",
    "title": "Wallet for Chrome",
    "platform": "Chrome, Edge, Brave",
    "icon": "globe",
    "desc": "A browser wallet for Quinvium apps. Install with Load unpacked, steps below.",
    "note": null,
    "size": "247 kB",
-   "sha256": "49334520810c07bdf5becd5393384a7332e4cd38b3746d3c9ed3b2710a4ae1db"
+   "sha256": "e90b7fe2f63af0ff228b8e7109037ddde9d549871b090a4f24d18ba7514098b8"
   }
  ]
 }

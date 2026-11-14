@@ -455,6 +455,20 @@
     el('n-public-note').hidden = el('n-access').value !== 'internet';
   }
 
+  /** The Explorer and the wallet follow the node that runs now: after switching networks the node has another port. */
+  let networkShown = false;
+  async function followNode(s) {
+    if (!s.node.running) return;
+    const chainId = s.node.network === 'mainnet' ? 52401 : 52402;
+    const { chainId: walletChain } = await chrome.storage.local.get('chainId');
+    if (walletChain !== chainId) await chrome.storage.local.set({ chainId });
+    if (explorer && explorer.origin !== `http://127.0.0.1:${s.node.rpc}`) {
+      explorer = await d.explorerInfo();
+      await trustExplorer();
+      reloadExplorer();
+    }
+  }
+
   async function refresh() {
     const s = await d.state();
     last = s;
@@ -469,6 +483,9 @@
     el('n-stop').disabled = !s.node.running;
     el('n-network').disabled = s.node.running;
     if (s.node.network) { el('n-network').value = s.node.network; el('net-name').textContent = s.node.network; }
+    else if (s.node.preferred && !networkShown) el('n-network').value = s.node.preferred;
+    networkShown = true;
+    followNode(s);
     el('m-start').hidden = s.miner.running;
     el('m-stop').hidden = !s.miner.running;
     setState('m-state', s.miner.running, tr(s.miner.running ? 'Mining is running' : 'Mining is off'));
@@ -746,6 +763,8 @@
     el('m-card').textContent = devices.length === 1 ? devices[0].name : devices.length ? tr('{n} graphics cards', { n: devices.length }) : tr('No graphics card found');
     fillAddress();
     const s = await d.state();
+    // The remembered network (mainnet by default) before the node starts, not the first option of the list.
+    if (!s.node.running && s.node.preferred) el('n-network').value = s.node.preferred;
     if (!s.node.running) el('n-start').click();
     refresh();
   })();

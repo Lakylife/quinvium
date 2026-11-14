@@ -100,6 +100,10 @@ mkdirSync(win);
 for (const s of [16, 24, 32, 48, 64, 128, 256]) await png(tile(s, { radius: 0.2, share: s <= 32 ? 0.8 : 0.66 }), s, join(win, `${s}.png`));
 execFileSync(process.execPath, [join(root, 'packages', 'desktop', 'scripts', 'make-ico.mjs'), win], { stdio: 'inherit' });
 
+// Tray: macOS draws a template image (black with transparency) in the menu bar colour; Windows shows the coloured tile next to the clock.
+for (const [s, file] of [[16, 'trayTemplate.png'], [32, 'trayTemplate@2x.png']]) await png(svg(s, placed(f(s * 0.03), f(s * 0.03), f(s * 0.94 / 64 * 64 / 60), MARK, '#000000')), s, join(desktop, file));
+for (const [s, file] of [[16, 'tray.png'], [32, 'tray@2x.png']]) await png(tile(s, { radius: 0.2, share: 0.8 }), s, join(desktop, file));
+
 // Browser extension.
 for (const s of [16, 48, 128, 256]) await png(tile(s, { radius: 0.2, share: s === 16 ? 0.8 : 0.66 }), s, join(root, 'packages', 'extension', 'icons', `${s}.png`));
 copyFileSync(join(desktop, 'icon.png'), join(brand, 'quintium-ikona-aplikace.png'));
