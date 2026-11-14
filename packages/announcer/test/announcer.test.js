@@ -192,6 +192,8 @@ test('a majority miner is reported once on Telegram, and again when it is over',
   const b = detect(a.state, snap({ headTime: T0 + 3590, majority: { ...big, share: 0.4 } }), T0 + 3600);
   assert.deepEqual(kinds(b), ['majority-end']);
   assert.ok(xMessage(a.events[0]).text.replace(/https:\/\/\S+/g, 'x'.repeat(23)).length <= 280);
+});
+
 test('a state from the previous version announces no existing node and no old miner', () => {
   const old = initialState(snap(), T0);
   delete old.nodes; delete old.minerHeight; delete old.weekMiners; delete old.lastWeek; delete old.hashrateBase;
