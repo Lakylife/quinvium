@@ -244,7 +244,7 @@ All software is written for the project:
 - **Miner** (Rust): `quintium-miner` for graphics cards.
 - **Desktop app** (macOS, Windows): wallet, full node, mining, Explorer and swap in one application.
 - **Wallets:** the Quinvium wallet for Chrome and Wpayin for iOS and Android; any EVM wallet such as MetaMask also works.
-- **Explorer:** blocks, transactions, addresses, tokens, network apps and documentation in five languages.
+- **Explorer:** blocks, transactions, addresses, tokens, network apps and documentation in eight languages, including right-to-left Arabic.
 - **Command line:** the `quinvium` command for wallets, transfers and every network app.
 
 ## 12. Security

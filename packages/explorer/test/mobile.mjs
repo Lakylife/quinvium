@@ -32,6 +32,8 @@ const call = (method, params = []) => fetch(base, { method: 'POST', headers: { '
 const head = await call('eth_getBlockByNumber', ['latest', false]);
 const miner = head?.miner ?? '0x0000000000000000000000000000000000000000';
 const pages = ['/', '/blocks', `/block/${Number(head?.number ?? 1)}`, '/txs', `/address/${miner}`, '/mempool', '/richlist', '/network', '/charts', '/miners', '/pools', '/mining', '/tokens', '/swap', '/bridge', '/apps', '/api'];
+// Right-to-left Arabic and the CJK languages on the busiest pages (the page takes the language from ?lang=).
+for (const l of ['ar', 'ja', 'zh']) for (const p of ['/', '/blocks', '/pools', '/network', '/apps']) pages.push(`${p}?lang=${l}`);
 const problems = await checkPages(base, pages, { settle: 1500, label: 'explorer' });
 server.close();
 for (const p of problems) console.log(`[FAIL] ${p}`);

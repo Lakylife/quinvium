@@ -54,7 +54,8 @@ try {
   await page.waitForFunction(() => /^\/block\/\d+$/.test(location.pathname), null, { timeout: 15000 });
   await page.goBack();
   await page.waitForFunction(() => location.pathname === '/blocks', null, { timeout: 15000 });
-  for (const lang of ['en', 'cs', 'de', 'es', 'fr']) {
+  const LANGS = ['en', 'cs', 'de', 'es', 'fr', 'ja', 'zh', 'ar'];
+  for (const lang of LANGS) {
     await page.evaluate((l) => localStorage.setItem('aether.lang', l), lang);
     await page.reload();
     await page.waitForSelector('#app *');
@@ -83,7 +84,7 @@ try {
     }
   }
   if (errors.length) { failed += 1; console.log(`[FAIL] chyby JavaScriptu: ${[...new Set(errors)].join(' | ')}`); }
-  console.log(failed ? `Selhalo: ${failed}` : `Vše prošlo: ${routes.length} stránek v 5 jazycích`);
+  console.log(failed ? `Selhalo: ${failed}` : `Vše prošlo: ${routes.length} stránek v ${LANGS.length} jazycích`);
 } finally {
   await browser?.close().catch(() => {});
   node.kill('SIGTERM');
