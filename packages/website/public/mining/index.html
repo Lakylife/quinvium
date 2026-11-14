@@ -76,7 +76,7 @@ quintium-miner --address VAŠE_ADRESA --node http://127.0.0.1:8545</code></pre>
     <li><span class="n">1</span><h3>Create the contract</h3><p>In the Explorer, Pools → Create a pool, or:</p><pre><code>quinvium pool create --name "My Pool" \
   --url https://pool.example.org --fee-percent 1</code></pre></li>
     <li><span class="n">2</span><h3>Run the pool server</h3><p>A node with --pool. The node's own account pays gas for shares; send it a little QU.</p><pre><code>node packages/node/src/cli.js --network mainnet \
-  --pool 0xPOOL --stratum-port 3333</code></pre></li>
+  --pool 0xPOOL --stratum-port 4444</code></pre></li>
     <li><span class="n">3</span><h3>Bring miners</h3><p>Miners connect with the miner or over Stratum and withdraw earnings in the app or the Explorer.</p><pre><code>quintium-miner --address YOUR_ADDRESS \
   --node https://pool.example.org --pool 0xPOOL</code></pre></li>
   </ol>

@@ -133,6 +133,19 @@ export function detect(state, snap, now, { stallAfter = 600, summaryHour = 12 } 
   }
   s.hashrateBase = base + (snap.hashrate - base) * 0.0005;   // one sample a minute
 
+  // One address with more than half of the work in the last hour (Telegram only, at most every 6 hours, and once when it is over).
+  if (snap.majority) {
+    const m = snap.majority;
+    if (m.share > 0.5 && !s.majorityActive && now - (s.majorityAnnounced ?? 0) >= 6 * 3600) {
+      add(`majority:${Math.floor(now / 3600)}`, 'majority', m, ['telegram']);
+      s.majorityActive = true;
+      s.majorityAnnounced = now;
+    } else if (m.share < 0.45 && s.majorityActive) {
+      add(`majority-end:${Math.floor(now / 3600)}`, 'majority-end', m, ['telegram']);
+      s.majorityActive = false;
+    }
+  }
+
   // Weekly summary of new miners, Monday after the summary hour: Telegram and X.
   const week = weekOf(now);
   s.lastWeek ??= week;
@@ -167,7 +180,7 @@ export function count(state, channel, now) {
 }
 
 /** The more important event wins when the X budget is tight. */
-export const PRIORITY = { halving: 0, 'halving-soon': 1, release: 2, milestone: 3, hashrate: 4, pool: 4, week: 5, summary: 5, stall: 6, resume: 6, 'hashrate-jump': 7, miner: 8, node: 8, digest: 8 };
+export const PRIORITY = { majority: 0, 'majority-end': 1, halving: 0, 'halving-soon': 1, release: 2, milestone: 3, hashrate: 4, pool: 4, week: 5, summary: 5, stall: 6, resume: 6, 'hashrate-jump': 7, miner: 8, node: 8, digest: 8 };
 
 /** Telegram at most this many messages an hour; small events above it are merged into one digest. */
 export const TELEGRAM_PER_HOUR = 5;

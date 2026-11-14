@@ -12,6 +12,9 @@ tiny-keccak = { version = "2", features = ["keccak"] }
 serde_json = "1"
 bytemuck = "1"
 libloading = "0.8"
+# TLS for pool servers and public nodes behind https://. ring backend, no system OpenSSL; Mozilla root certificates built in.
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+webpki-roots = "0.26"
 
 [profile.release]
 opt-level = 3

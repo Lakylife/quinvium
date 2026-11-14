@@ -93,6 +93,15 @@ export function compose(e) {
       return { emoji: '👷', title: `${n(d.miners)} new miner${d.miners === 1 ? '' : 's'} this week`, link: `${EXPLORER}/miners`, lines: [
         `${n(d.miners)} address${d.miners === 1 ? '' : 'es'} mined ${d.miners === 1 ? 'its' : 'their'} first Quinvium block in the last 7 days.`,
       ] };
+    case 'majority':
+      return { emoji: '⚠️', title: 'One miner has over half of the hashrate', link: `${EXPLORER}/pools`, lines: [
+        `${short(d.address)} did ${Math.round(d.share * 100)}% of the work in the last hour (${n(d.blocks)} of ${n(d.of)} blocks).`,
+        'A majority miner can rewrite recent blocks. Wait for more confirmations on large payments; more independent miners and pools make the network safer.',
+      ] };
+    case 'majority-end':
+      return { emoji: '✅', title: 'No single miner has a majority now', link: `${EXPLORER}/pools`, lines: [
+        `The largest miner did ${Math.round(d.share * 100)}% of the work in the last hour.`,
+      ] };
     case 'digest': {
       const count = (k) => d.items.filter((i) => i.kind === k).length;
       const parts = [count('miner') && `⛏ New miners: ${n(count('miner'))}`, count('node') && `🛰 New nodes: ${n(count('node'))}`, count('hashrate-jump') && '📈 Hashrate rising fast'].filter(Boolean);
