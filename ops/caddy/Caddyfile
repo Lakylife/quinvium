@@ -35,13 +35,39 @@ www.quinvium.com {
 }
 
 # Mainnet: Explorer and JSON-RPC (service quinvium-mainnet)
-explorer.quinvium.com, rpc.quinvium.com {
+explorer.quinvium.com {
 	encode zstd gzip
-	reverse_proxy 127.0.0.1:8545
+	# robots.txt and sitemap.xml for search engines come straight from the Explorer files
+	@seo path /robots.txt /sitemap.xml
+	handle @seo {
+		root * /opt/quinvium/packages/explorer/public
+		file_server
+	}
+	handle {
+		reverse_proxy 127.0.0.1:8545
+	}
+}
+
+# JSON-RPC only: nothing to index
+rpc.quinvium.com {
+	encode zstd gzip
+	handle /robots.txt {
+		respond "User-agent: *\nDisallow: /\n" 200
+	}
+	handle {
+		reverse_proxy 127.0.0.1:8545
+	}
 }
 
 # Testnet: Explorer and JSON-RPC (service quinvium-testnet)
 testnet.quinvium.com, rpc1.quinvium.com {
 	encode zstd gzip
-	reverse_proxy 127.0.0.1:8546
+	# the testnet would only duplicate the mainnet Explorer in search results
+	header X-Robots-Tag "noindex"
+	handle /robots.txt {
+		respond "User-agent: *\nDisallow: /\n" 200
+	}
+	handle {
+		reverse_proxy 127.0.0.1:8546
+	}
 }

@@ -30,6 +30,25 @@ const ARROW = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M
 const CHEV = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 const EXT = '<svg class="ic ext" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>';
 
+/**
+ * Structured data for search engines. Quinvium is a network, not a company: a WebSite on every page,
+ * the download page also describes the app as SoftwareApplication. "<" is escaped so no text can close the script tag.
+ */
+function ldJson(p, path, dl) {
+  const site = { '@type': 'WebSite', '@id': `${SITE}/#website`, name: 'Quinvium', url: `${SITE}/`, description: 'A programmable proof-of-work blockchain mined on graphics cards.', inLanguage: 'en', sameAs: ['https://github.com/Lakylife/quinvium', 'https://x.com/Quinvium', 'https://t.me/Quinvium'] };
+  const page = { '@type': 'WebPage', '@id': `${SITE}${path}#page`, url: `${SITE}${path}`, name: p.title, description: p.desc, isPartOf: { '@id': `${SITE}/#website` }, inLanguage: 'en' };
+  const graph = [site, page];
+  if (p.slug === 'download' && dl) {
+    graph.push({
+      '@type': 'SoftwareApplication', name: 'Quinvium', applicationCategory: 'FinanceApplication', operatingSystem: 'macOS 13+, Windows 10, Windows 11',
+      softwareVersion: dl.version, downloadUrl: `${SITE}${path}`, license: 'https://opensource.org/licenses/MIT', isAccessibleForFree: true,
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      description: 'Wallet, full node, GPU mining, Explorer and Swap for the Quinvium network.',
+    });
+  }
+  return JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replace(/</g, '\\u003c');
+}
+
 for (const [lang, prefix] of Object.entries(LANGS)) {
   const L = (cs, en) => (lang === 'cs' ? cs : en);
   const u = (slug) => `${prefix}/${slug ? `${slug}/` : ''}`;
@@ -78,7 +97,16 @@ for (const [lang, prefix] of Object.entries(LANGS)) {
 <meta property="og:description" content="${esc(p.desc)}">
 <meta property="og:url" content="${SITE}${path}">
 <meta property="og:image" content="${SITE}/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Quinvium: the blockchain mined on graphics cards">
+<meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@Quinvium">
+<meta name="twitter:title" content="${esc(p.title)}">
+<meta name="twitter:description" content="${esc(p.desc)}">
+<meta name="twitter:image" content="${SITE}/og.png">
+<script type="application/ld+json">${ldJson(p, path, dl)}</script>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="/site.css">
@@ -148,7 +176,8 @@ ${p.body}
 }
 
 writeFileSync(join(out, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${SITE}/sitemap.xml\n`);
-writeFileSync(join(out, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((p) => `  <url><loc>${SITE}${p}</loc></url>`).join('\n')}\n</urlset>\n`);
+const lastmod = new Date().toISOString().slice(0, 10);
+writeFileSync(join(out, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((p) => `  <url><loc>${SITE}${p}</loc><lastmod>${lastmod}</lastmod><priority>${p === '/' ? '1.0' : '0.8'}</priority></url>`).join('\n')}\n</urlset>\n`);
 for (const f of ['site.css', 'site.js', 'logo.svg', 'Quinvium-Symbol.ttf']) copyFileSync(join(here, f), join(out, f));
 copyFileSync(join(here, 'logo.svg'), join(out, 'favicon.svg'));
 for (const f of ['og.png', 'apple-touch-icon.png', 'quinvium-whitepaper.pdf']) { try { copyFileSync(join(here, f), join(out, f)); } catch { console.warn(`chybí ${f}, spusťte node src/og.mjs`); } }

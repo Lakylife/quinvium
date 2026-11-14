@@ -3,7 +3,7 @@
 // Usage: node packages/announcer/src/main.js [--once] [--dry-run]
 // Keys come only from environment variables (see packages/announcer/README.md); without them the channel only prints.
 import { readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { PRIORITY, allowed, count, detect, initialState } from './events.js';
+import { MERGEABLE, PRIORITY, TELEGRAM_PER_HOUR, allowed, count, detect, initialState } from './events.js';
 import { telegramMessage, xMessage } from './format.js';
 import { telegram, x } from './channels.js';
 
@@ -38,9 +38,10 @@ async function latestRelease() {
 }
 
 export async function snapshot() {
-  const [stats, activity, miners, head, pools, release] = await Promise.all([
+  const [stats, activity, miners, head, pools, release, recent, peers] = await Promise.all([
     rpc('aether_stats'), rpc('aether_activity'), rpc('aether_minerList', [{ limit: 1 }]),
     rpc('eth_getBlockByNumber', ['latest', false]), rpc('aether_pools', [{ limit: 200, seconds: 0 }]).catch(() => null), latestRelease(),
+    rpc('aether_minerList', [{ limit: 50, order: 'last' }]).catch(() => null), rpc('aether_peers').catch(() => null),
   ]);
   if (stats.network !== 'mainnet' && !env.ANNOUNCER_ANY_NETWORK) throw new Error(`RPC is on ${stats.network}, not mainnet`);
   return {
@@ -48,6 +49,9 @@ export async function snapshot() {
     halvingInterval: stats.halvingInterval, blockTime: stats.blockTimeTarget, supply: stats.supply,
     day: { blocks: activity.blocks, txs: activity.txs, miners: miners.active, avgBlockTime: activity.avgBlockTime },
     release, pools: pools ? pools.items.map((p) => ({ address: p.address, name: p.name, feeBps: p.feeBps })) : null,
+    recentMiners: recent ? recent.items.map((m) => ({ address: m.address, first: m.first })) : null,
+    // Only the node ID and version; the IP address never leaves this function.
+    nodes: peers ? peers.filter((p) => p.id && p.verified).map((p) => ({ id: p.id, agent: p.agent })) : null,
   };
 }
 
@@ -74,15 +78,29 @@ export async function tick() {
   state = found.state;
   state.queue ??= [];
   for (const e of found.events) if (!state.queue.some((q) => q.key === e.key)) state.queue.push({ ...e, at: now, done: [] });
+  // Telegram at most TELEGRAM_PER_HOUR messages an hour. When small events (new miners, nodes, hashrate jumps)
+  // would not fit, they become one digest message instead of a burst.
+  const hour = Math.floor(now / 3600);
+  if (state.tgHour?.hour !== hour) state.tgHour = { hour, n: 0 };
+  const left = () => TELEGRAM_PER_HOUR - state.tgHour.n;
+  const small = state.queue.filter((q) => MERGEABLE.has(q.kind) && !q.done.includes('telegram'));
+  const important = state.queue.filter((q) => !MERGEABLE.has(q.kind) && q.channels.includes('telegram') && !q.done.includes('telegram')).length;
+  if (small.length > 1 && small.length > left() - important) {
+    for (const q of small) state.sent[q.key] = now;
+    state.queue = state.queue.filter((q) => !small.includes(q));
+    state.queue.push({ key: `digest:${hour}:${small.length}`, kind: 'digest', data: { items: small.map((q) => ({ kind: q.kind, data: q.data })) }, channels: ['telegram'], at: now, done: [] });
+  }
   state.queue.sort((a, b) => (PRIORITY[a.kind] ?? 9) - (PRIORITY[b.kind] ?? 9));
 
   for (const q of state.queue) {
     for (const ch of channels) {
       if (!q.channels.includes(ch.name) || q.done.includes(ch.name)) continue;
+      if (ch.name === 'telegram' && left() <= 0) continue;   // waits for the next hour
       if (!allowed(state, ch.name, now)) { log(`${ch.name}: limit reached, ${q.key} skipped`); q.done.push(ch.name); continue; }
       try {
         await ch.send(ch.name === 'telegram' ? telegramMessage(q) : xMessage(q));
         if (!ch.dry) count(state, ch.name, now);
+        if (ch.name === 'telegram') state.tgHour.n += 1;
         q.done.push(ch.name);
         log(`${ch.name}${ch.dry ? ' (dry run)' : ''}: ${q.key}`);
       } catch (err) {
