@@ -12,7 +12,7 @@
     "node": ">=24"
   },
   "devDependencies": {
-    "@walletconnect/ethereum-provider": "2.21.8",
+    "@walletconnect/ethereum-provider": "2.26.0",
     "bitcoinjs-lib": "6.1.7",
     "playwright": "1.64.1"
   }
