@@ -123,7 +123,7 @@ Windows packages: `bash scripts/release.sh`. macOS build and install: `bash scri
 
 ## Contributing and security
 
-Contributions are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). Please report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+Contributions are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). Changes to the consensus rules follow the public QIP process in [docs/GOVERNANCE.md](docs/GOVERNANCE.md): at least 30 days of review, 60 days on testnet and 90 days of notice before a mainnet fork. Please report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
 ## License
 

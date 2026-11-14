@@ -1,0 +1,13 @@
+# Consensus code and the rules for changing it need a review by a code owner (docs/GOVERNANCE.md).
+/packages/node/src/params.js       @Lakylife
+/packages/node/src/core/           @Lakylife
+/packages/node/src/crypto/         @Lakylife
+/packages/node/src/genesis/        @Lakylife
+/packages/node/package.json        @Lakylife
+/packages/node/test/golden.test.js @Lakylife
+/packages/contracts/src/           @Lakylife
+/scripts/consensus-paths.json      @Lakylife
+/scripts/consensus-guard.mjs       @Lakylife
+/docs/GOVERNANCE.md                @Lakylife
+/docs/qips/                        @Lakylife
+/.github/                          @Lakylife

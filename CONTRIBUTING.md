@@ -5,6 +5,7 @@ Quinvium is a decentralised network and open-source software. Contributions are 
 ## Before you start
 
 - For larger changes, open an issue first to discuss the idea.
+- **Consensus changes need an accepted QIP** ([docs/GOVERNANCE.md](docs/GOVERNANCE.md), [docs/qips](docs/qips/)): 30 days of review, 14 days of last call, 60 days on testnet, 90 days of notice before the mainnet fork. A pull request that touches consensus code must say `Implements QIP-<n>` or `No consensus change`; CI checks it.
 - **Consensus changes are hard forks.** Anything that changes block validity, rewards, the EVM rules or genesis needs a fork with an activation height (see [docs/SPECIFICATION.md](docs/SPECIFICATION.md#10-network-upgrades)), must be tested on testnet first and requires updating the fingerprints in `packages/node/test/golden.test.js`.
 - Dependencies that affect consensus have exact versions in `packages/node/package.json`. Updating them is treated as a potential hard fork.
 
@@ -33,3 +34,7 @@ Do not open public issues for vulnerabilities. See [SECURITY.md](SECURITY.md).
 ## Licence
 
 By contributing you agree that your contributions are licensed under the [MIT licence](LICENSE).
+
+## Branch protection
+
+`main` accepts changes only through pull requests with passing CI, also from maintainers. Force pushes and deleting the branch are not allowed.

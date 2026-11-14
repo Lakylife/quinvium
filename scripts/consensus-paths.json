@@ -1,0 +1,20 @@
+{
+  "comment": "Files whose change can alter which blocks are valid. See docs/GOVERNANCE.md.",
+  "paths": [
+    "packages/node/src/params.js",
+    "packages/node/src/core/chain.js",
+    "packages/node/src/core/difficulty.js",
+    "packages/node/src/core/economics.js",
+    "packages/node/src/core/executor.js",
+    "packages/node/src/core/fees.js",
+    "packages/node/src/core/forks.js",
+    "packages/node/src/core/genesis.js",
+    "packages/node/src/core/pow.js",
+    "packages/node/src/core/precompiles.js",
+    "packages/node/src/core/types.js",
+    "packages/node/src/crypto/",
+    "packages/node/src/genesis/",
+    "packages/node/package.json",
+    "packages/node/test/golden.test.js"
+  ]
+}

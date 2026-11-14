@@ -1,0 +1,22 @@
+# Consensus guard (docs/GOVERNANCE.md): a pull request that changes consensus code must name an accepted QIP
+# or state "No consensus change". The description is passed through an environment variable, never into the script text.
+name: consensus
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  guard:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: node scripts/consensus-guard.mjs "origin/${BASE_REF}"
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          PR_BODY: ${{ github.event.pull_request.body }}

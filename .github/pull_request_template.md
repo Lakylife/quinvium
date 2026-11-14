@@ -6,4 +6,10 @@
 
 - [ ] Relevant test suites pass
 - [ ] New behaviour or fixed bugs have tests
-- [ ] No consensus change, or the change is a fork with an activation height and updated `golden.test.js`
+
+## Consensus
+
+Write one of these lines (checked by the consensus guard, see docs/GOVERNANCE.md):
+
+- `No consensus change`
+- `Implements QIP-<n>` (the QIP must already be Accepted on `main`; the fork has a fixed activation height and `golden.test.js` is updated)
