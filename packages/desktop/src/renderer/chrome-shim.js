@@ -17,6 +17,8 @@
   const SENDER = { id: 'aether-desktop', url: 'chrome-extension://aether-desktop/desktop.html' };
   // Tests only: the test app has its node on its own port and the wallet must ask it, not the real node.
   if (window.desktop.testRpcPort) self.AETHER_TEST_RPC = `http://127.0.0.1:${window.desktop.testRpcPort}`;
+  // The wallet uses the app's own node (mainnet 8545, testnet 8546, see main.cjs), never a public one: the app's CSP allows only 127.0.0.1.
+  self.AETHER_LOCAL_RPC = { 52401: 'http://127.0.0.1:8545', 52402: 'http://127.0.0.1:8546' };
 
   // The Explorer window talks to the wallet just as a page talks to the extension; instead of a browser port it goes through the main process.
   const ports = new Map();

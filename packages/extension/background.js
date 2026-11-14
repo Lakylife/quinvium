@@ -12,6 +12,8 @@ const DEFAULT_NETWORKS = {
 };
 // The test app next to the real one has its testnet node on its own port. The extension never gets this variable.
 if (self.AETHER_TEST_RPC) Object.assign(DEFAULT_NETWORKS[52402], { rpc: self.AETHER_TEST_RPC, explorer: self.AETHER_TEST_RPC });
+// Inside the desktop app the wallet talks to the app's own node; the app does not allow connections to other hosts.
+if (self.AETHER_LOCAL_RPC) for (const [id, url] of Object.entries(self.AETHER_LOCAL_RPC)) if (DEFAULT_NETWORKS[id] && !(self.AETHER_TEST_RPC && id === '52402')) DEFAULT_NETWORKS[id].rpc = url;
 const RPC_PASSTHROUGH = /^(eth_(blockNumber|call|estimateGas|feeHistory|gasPrice|getBalance|getBlockBy|getBlockTransactionCountBy|getCode|getFilter|getLogs|getProof|getStorageAt|getTransactionBy|getTransactionCount|getTransactionReceipt|maxPriorityFeePerGas|newBlockFilter|newFilter|newPendingTransactionFilter|protocolVersion|syncing|uninstallFilter)|net_|web3_clientVersion|aether_)/;
 
 const local = {
@@ -130,7 +132,11 @@ const rpcError = (code, message) => Object.assign(new Error(message), { code });
 async function networks() {
   const all = { ...DEFAULT_NETWORKS, ...(await local.get('networks', {})) };
   // The coin's ticker is determined by the network. A stored copy from an earlier app version must not show an old one.
-  for (const id of Object.keys(DEFAULT_NETWORKS)) all[id] = { ...all[id], symbol: DEFAULT_NETWORKS[id].symbol, registry: DEFAULT_NETWORKS[id].registry };
+  for (const id of Object.keys(DEFAULT_NETWORKS)) {
+    all[id] = { ...all[id], symbol: DEFAULT_NETWORKS[id].symbol, registry: DEFAULT_NETWORKS[id].registry };
+    // A stored copy from an older version must not point the app's wallet at a node the app cannot reach.
+    if (self.AETHER_LOCAL_RPC?.[id]) all[id].rpc = DEFAULT_NETWORKS[id].rpc;
+  }
   return all;
 }
 async function currentNetwork() {
