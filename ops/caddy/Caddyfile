@@ -52,7 +52,9 @@ explorer.quinvium.com {
 rpc.quinvium.com {
 	encode zstd gzip
 	handle /robots.txt {
-		respond "User-agent: *\nDisallow: /\n" 200
+		respond `User-agent: *
+Disallow: /
+` 200
 	}
 	handle {
 		reverse_proxy 127.0.0.1:8545
@@ -65,7 +67,9 @@ testnet.quinvium.com, rpc1.quinvium.com {
 	# the testnet would only duplicate the mainnet Explorer in search results
 	header X-Robots-Tag "noindex"
 	handle /robots.txt {
-		respond "User-agent: *\nDisallow: /\n" 200
+		respond `User-agent: *
+Disallow: /
+` 200
 	}
 	handle {
 		reverse_proxy 127.0.0.1:8546
