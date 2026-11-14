@@ -21,7 +21,7 @@ Pools are created through the network's **PoolFactory** at `0xae00…000c` (part
    quintium-miner --address YOUR_ADDRESS --node https://pool.example.org --pool 0xPOOL --worker rig1
    ```
 
-   In the Quinvium app choose the pool under Mining. Other Ethash miners (including ASICs) connect to the pool server over Stratum (port 3333 on mainnet).
+   In the Quinvium app choose the pool under Mining. Other Ethash miners (including ASICs) connect to the pool server over Stratum; the official pool uses `stratum+tcp://pool.quinvium.com:4444`.
 3. Earnings accumulate in the contract. Withdraw them in the app, on the pool page in the Explorer, or with `quinvium pool claim 0xPOOL`. Payouts the operator triggers go straight to your address.
 
 ## For operators
@@ -49,11 +49,12 @@ The transaction is sent from your wallet; that address becomes the operator and 
 The pool server is an ordinary Quinvium node with `--pool`:
 
 ```bash
-node packages/node/src/cli.js --network mainnet --pool 0xPOOL --rpc-host 127.0.0.1 --rpc-port 8545 --stratum-port 3333
+node packages/node/src/cli.js --network mainnet --pool 0xPOOL --data-dir /var/lib/quinvium/pool --rpc-host 127.0.0.1 --rpc-port 8555 --p2p-port 30534 --stratum-host 0.0.0.0 --stratum-port 4444
 ```
 
 - On first start the node creates its own account key `pool.key` in the data folder (or `--pool-key-file`). This account pays the gas for writing shares to the chain. Send it a small amount of QU and keep it topped up; the Explorer shows its balance on the pool page.
-- Put an HTTPS reverse proxy in front of the RPC port and publish that address as the pool `url` (see [RUNNING-A-PUBLIC-NODE.md](RUNNING-A-PUBLIC-NODE.md) and `ops/caddy/Caddyfile`). Open the Stratum port for miners that use Stratum.
+- If the same server also runs a public node, give the pool node its own data folder and ports (as above). A ready systemd unit is `ops/systemd/quinvium-pool.service`.
+- Put an HTTPS reverse proxy in front of the RPC port and publish that address as the pool `url`; the miner speaks both `http://` and `https://` (see [RUNNING-A-PUBLIC-NODE.md](RUNNING-A-PUBLIC-NODE.md) and `ops/caddy/Caddyfile`). Open the Stratum port for miners that use Stratum.
 - The key never leaves the server and is never printed. It can only pay gas for shares; it cannot move pooled rewards.
 
 ### 3. Operate
@@ -65,3 +66,13 @@ node packages/node/src/cli.js --network mainnet --pool 0xPOOL --rpc-host 127.0.0
 ## Solo mining
 
 Without a pool, a miner mines for its own address and receives the whole block reward and all fees whenever it finds a block. The Explorer lists solo miners on [Miners](https://explorer.quinvium.com/miners); on the Pools page the largest solo miners are shown one by one and the rest are summed up in one row.
+
+## The official pool
+
+| | |
+| --- | --- |
+| Contract | `0x7ec85f6dfd7baa9f4d0ff93713a7297150a23e5a` |
+| Server | `https://pool.quinvium.com` |
+| Stratum | `stratum+tcp://pool.quinvium.com:4444` |
+| Fee | 1 % |
+| Round / window | 32 blocks / 16 rounds |
