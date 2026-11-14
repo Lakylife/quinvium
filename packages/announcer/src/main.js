@@ -38,10 +38,11 @@ async function latestRelease() {
 }
 
 export async function snapshot() {
-  const [stats, activity, miners, head, pools, release, recent, peers] = await Promise.all([
+  const [stats, activity, miners, head, pools, release, recent, peers, hour] = await Promise.all([
     rpc('aether_stats'), rpc('aether_activity'), rpc('aether_minerList', [{ limit: 1 }]),
     rpc('eth_getBlockByNumber', ['latest', false]), rpc('aether_pools', [{ limit: 200, seconds: 0 }]).catch(() => null), latestRelease(),
     rpc('aether_minerList', [{ limit: 50, order: 'last' }]).catch(() => null), rpc('aether_peers').catch(() => null),
+    rpc('aether_minerShares', [{ from: Math.floor(Date.now() / 1000) - 3600, to: Math.floor(Date.now() / 1000) }]).catch(() => null),
   ]);
   if (stats.network !== 'mainnet' && !env.ANNOUNCER_ANY_NETWORK) throw new Error(`RPC is on ${stats.network}, not mainnet`);
   return {
@@ -52,6 +53,8 @@ export async function snapshot() {
     recentMiners: recent ? recent.items.map((m) => ({ address: m.address, first: m.first })) : null,
     // Only the node ID and version; the IP address never leaves this function.
     nodes: peers ? peers.filter((p) => p.id && p.verified).map((p) => ({ id: p.id, agent: p.agent })) : null,
+    // The largest share of work in the last hour: over half means that one miner could rewrite recent blocks.
+    majority: hour?.work && hour.blocks >= 20 ? (() => { const top = [...hour.items].sort((a, b) => b.work - a.work)[0]; return top ? { address: top.address, share: top.work / hour.work, blocks: top.blocks, of: hour.blocks } : null; })() : null,
   };
 }
 
