@@ -76,7 +76,7 @@ Disallow: /
 	}
 }
 
-# Mining pool server (service quinvium-pool, docs/POOLS.md): JSON-RPC for miners. Stratum listens on port 3333 directly.
+# Mining pool server (service quinvium-pool, docs/POOLS.md): JSON-RPC for miners. Stratum listens on port 4444 directly.
 pool.quinvium.com {
 	encode zstd gzip
 	handle /robots.txt {
