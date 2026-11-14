@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Quinvium Wallet",
-  "version": "2.15.0",
+  "version": "2.15.1",
   "description": "Peněženka sítě Quinvium: klíče zůstávají jen u vás, každý podpis schvalujete vy.",
   "icons": { "16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png" },
   "action": { "default_popup": "popup.html", "default_title": "Quinvium Wallet" },

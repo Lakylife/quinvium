@@ -1,7 +1,7 @@
 {
   "name": "aether-desktop",
   "productName": "Quinvium",
-  "version": "2.15.0",
+  "version": "2.15.1",
   "description": "Quinvium: peněženka, plný uzel a GPU těžba",
   "author": "Quinvium",
   "main": "src/bootstrap.cjs",
