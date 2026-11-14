@@ -76,6 +76,8 @@ window.AetherExplorerText = {
     'swap.removeShort': ['Abheben', 'Retirar', 'Retirer'],
     'pools.split': ['Verteilung der Netzwerkleistung', 'Distribución del hashrate de la red', 'Répartition du hashrate du réseau'],
     'pools.solo': ['Solo-Miner', 'Mineros en solitario', 'Mineurs solo'],
+    'pools.soloMore': ['{n} weitere Solo-Miner', '{n} mineros en solitario más', '{n} autres mineurs solo'],
+    'pools.soloHint': ['minen allein ohne Pool; alle stehen unter Miner', 'minan por su cuenta sin pool; todos están en Mineros', 'minent seuls sans pool ; tous sont listés dans Mineurs'],
     'pools.soloCount': ['Solo-Adressen: {n}', 'direcciones en solitario: {n}', 'adresses solo : {n}'],
     'pools.soloOne': ['Solo-Miner', 'minero en solitario', 'mineur solo'],
     'pools.topNow': ['Größter Anteil, letzte Stunde', 'Mayor cuota, última hora', 'Plus grande part, dernière heure'],

@@ -70,6 +70,18 @@ quintium-miner --address VAŠE_ADRESA --node http://127.0.0.1:8545</code></pre>
     <article class="card"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M17 4a4 4 0 0 1 0 8M22 21c0-3-2-5-4-6"/></svg><h3>Contract pool</h3><p>The pool factory is built into the network. A pool counts miner shares and the contract pays rewards by them. Nobody runs a public mainnet pool yet.</p></article>
   </div>
 
+  <h2 id="run-a-pool">Run a pool</h2>
+  <p>A pool on Quinvium is a smart contract from the network factory. Rewards go straight into the contract, which splits them by proven work (PPLNS); the operator can take only its fixed fee, at most 5 %.</p>
+  <ol class="steps3">
+    <li><span class="n">1</span><h3>Create the contract</h3><p>In the Explorer, Pools → Create a pool, or:</p><pre><code>quinvium pool create --name "My Pool" \
+  --url https://pool.example.org --fee-percent 1</code></pre></li>
+    <li><span class="n">2</span><h3>Run the pool server</h3><p>A node with --pool. The node's own account pays gas for shares; send it a little QU.</p><pre><code>node packages/node/src/cli.js --network mainnet \
+  --pool 0xPOOL --stratum-port 3333</code></pre></li>
+    <li><span class="n">3</span><h3>Bring miners</h3><p>Miners connect with the miner or over Stratum and withdraw earnings in the app or the Explorer.</p><pre><code>quintium-miner --address YOUR_ADDRESS \
+  --node https://pool.example.org --pool 0xPOOL</code></pre></li>
+  </ol>
+  <p class="row-btns"><a class="btn link" href="https://github.com/Lakylife/quinvium/blob/main/docs/POOLS.md">Full pool guide<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="btn link" href="https://explorer.quinvium.com/pools">Pools in the Explorer<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a></p>
+
   <h2>Difficulty</h2>
   <p>Difficulty adjusts after every block based on the last 60 blocks (LWMA). When hashrate joins, blocks speed up for a while and difficulty catches up within minutes. When hashrate leaves, it settles the same way. The minimum difficulty is 2<sup>24</sup>.</p>
 
