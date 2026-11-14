@@ -53,7 +53,9 @@ test('all kinds of recipient addresses give the same script as bitcoinjs-lib', (
 
 test('neither an invalid address nor an address from another network passes', () => {
   const good = bitcoinjs.address.toBech32(crypto.randomBytes(20), 0, 'bc');
-  const mixed = good.slice(0, 8) + good.slice(8, 12).toUpperCase() + good.slice(12);
+  // upper-case one letter of the data part (digits have no case, so a fixed slice could stay unchanged)
+  const at = [...good].findIndex((ch, i) => i > 3 && /[a-z]/.test(ch));
+  const mixed = good.slice(0, at) + good[at].toUpperCase() + good.slice(at + 1);
   const flipped = good.slice(0, -1) + (good.endsWith('q') ? 'p' : 'q');
   for (const bad of [flipped, mixed, 'bc1', '', '1BoatSLRHtKNngkdXEeobR76b53LETtpyX', 'tb1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq', '0x2546BcD3c84621e976D8185a91A922aE77ECEc30']) {
     assert.throws(() => addressScript(bad, 'mainnet'), undefined, bad);
