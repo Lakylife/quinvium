@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Miner Quinvium · Quinvium</title>
+<meta name="description" content="Comment miner des QU sur une carte graphique : l’app Quinvium, votre propre nœud et mineur, des pools qui paient via un contrat.">
+<meta name="theme-color" content="#0b1622">
+<link rel="canonical" href="https://quinvium.com/fr/mining/">
+<link rel="alternate" hreflang="en" href="https://quinvium.com/mining/">
+<link rel="alternate" hreflang="cs" href="https://quinvium.com/cs/mining/">
+<link rel="alternate" hreflang="de" href="https://quinvium.com/de/mining/">
+<link rel="alternate" hreflang="es" href="https://quinvium.com/es/mining/">
+<link rel="alternate" hreflang="fr" href="https://quinvium.com/fr/mining/">
+<link rel="alternate" hreflang="ja" href="https://quinvium.com/ja/mining/">
+<link rel="alternate" hreflang="zh" href="https://quinvium.com/zh/mining/">
+<link rel="alternate" hreflang="ar" href="https://quinvium.com/ar/mining/">
+<link rel="alternate" hreflang="x-default" href="https://quinvium.com/mining/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Quinvium">
+<meta property="og:title" content="Miner Quinvium">
+<meta property="og:description" content="Comment miner des QU sur une carte graphique : l’app Quinvium, votre propre nœud et mineur, des pools qui paient via un contrat.">
+<meta property="og:url" content="https://quinvium.com/fr/mining/">
+<meta property="og:image" content="https://quinvium.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Quinvium : la blockchain minée sur cartes graphiques">
+<meta property="og:locale" content="fr_FR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@Quinvium">
+<meta name="twitter:title" content="Miner Quinvium">
+<meta name="twitter:description" content="Comment miner des QU sur une carte graphique : l’app Quinvium, votre propre nœud et mineur, des pools qui paient via un contrat.">
+<meta name="twitter:image" content="https://quinvium.com/og.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://quinvium.com/#website","name":"Quinvium","url":"https://quinvium.com/","description":"A programmable proof-of-work blockchain mined on graphics cards.","inLanguage":"fr","sameAs":["https://github.com/Lakylife/quinvium","https://x.com/Quinvium","https://t.me/Quinvium"]},{"@type":"WebPage","@id":"https://quinvium.com/mining/#page","url":"https://quinvium.com/mining/","name":"Mining Quinvium","description":"How to mine QU on a graphics card: the Quinvium app, your own node and miner, pools that pay out through a contract.","isPartOf":{"@id":"https://quinvium.com/#website"},"inLanguage":"fr"}]}</script>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/site.css">
+<script src="/theme.js"></script>
+<script src="/site.js" defer></script>
+</head>
+<body data-lang="fr">
+<a class="skip" href="#main">Aller au contenu</a>
+<header class="top">
+  <div class="wrap top-in">
+    <a class="brand" href="/fr/"><img src="/logo.svg" alt="" width="30" height="30"><span>Quinvium</span></a>
+    <nav class="nav" id="nav" aria-label="Menu principal"><div class="nav-in"><div class="ng"><button type="button" class="ng-btn" aria-expanded="false" aria-controls="ng0">Découvrir<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="ng-panel" id="ng0"><a class="ni" href="/fr/about/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg><span><strong>À propos</strong><small>Ce qu’est Quinvium et comment il a été lancé</small></span></a><a class="ni" href="/fr/whitepaper/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6zM14 3v6h6M9 15l2 2 4-4"/></svg><span><strong>Livre blanc</strong><small>Conception, consensus et politique monétaire</small></span></a><a class="ni" href="/fr/tokenomics/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M15.5 9.5a6 6 0 1 1-6 6"/></svg><span><strong>Tokenomics</strong><small>Offre, récompenses et frais</small></span></a><a class="ni" href="/fr/security/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/></svg><span><strong>Sécurité</strong><small>État, revues et risques</small></span></a><a class="ni" href="/fr/roadmap/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l10 5-10 5L2 7l10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg><span><strong>Feuille de route</strong><small>Ce qui est fait et ce qui vient</small></span></a><a class="ni" href="/fr/faq/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span><strong>FAQ</strong><small>Réponses courtes aux questions fréquentes</small></span></a></div></div><div class="ng"><button type="button" class="ng-btn" aria-expanded="false" aria-controls="ng1">Utiliser<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="ng-panel" id="ng1"><a class="ni" href="/fr/wallets/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zM3 7l12-4v4M16 13h2"/></svg><span><strong>Portefeuilles</strong><small>Portefeuilles et ajout du réseau</small></span></a><a class="ni" href="/fr/ecosystem/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5zM3 7l9 5 9-5M12 12v10"/></svg><span><strong>Écosystème</strong><small>Apps intégrées, Swap et outils</small></span></a><a class="ni" href="/fr/download/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12M6 11l6 6 6-6M5 21h14"/></svg><span><strong>Télécharger</strong><small>Apps pour macOS, Windows et Chrome</small></span></a></div></div><div class="ng"><a class="ng-btn here" href="/fr/mining/" aria-current="page">Miner</a></div><div class="ng"><button type="button" class="ng-btn" aria-expanded="false" aria-controls="ng3">Développer<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="ng-panel" id="ng3"><a class="ni" href="/fr/developers/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6l-6 6 6 6M16 6l6 6-6 6"/></svg><span><strong>Développeurs</strong><small>Guide, RPC et adresses des contrats</small></span></a><a class="ni" href="/fr/developers/#parameters"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg><span><strong>Paramètres du réseau</strong><small>Chain ID, RPC et seeds</small></span></a><a class="ni" href="https://testnet.quinvium.com"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg><span><strong>Testnet</strong><small>Réseau de test avec tQU</small></span></a></div></div><div class="ng"><a class="ng-btn" href="https://explorer.quinvium.com">Explorer<svg class="ic ext" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a></div></div><a class="btn primary lg nav-dl" href="/fr/download/">Télécharger<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></nav>
+    <div class="tools">
+      <div class="lang-menu" data-lang-menu><button type="button" class="tool-btn" aria-expanded="false" aria-controls="langs" aria-label="Langue"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg><span class="lang-code" translate="no">FR</span></button><div class="lang-panel" id="langs" role="menu" translate="no"><a role="menuitem" href="/mining/" hreflang="en" lang="en" data-l>English<small>en</small></a><a role="menuitem" href="/cs/mining/" hreflang="cs" lang="cs" data-l>Čeština<small>cs</small></a><a role="menuitem" href="/de/mining/" hreflang="de" lang="de" data-l>Deutsch<small>de</small></a><a role="menuitem" href="/es/mining/" hreflang="es" lang="es" data-l>Español<small>es</small></a><a role="menuitem" href="/fr/mining/" hreflang="fr" lang="fr" data-l aria-current="true">Français<small>fr</small></a><a role="menuitem" href="/ja/mining/" hreflang="ja" lang="ja" data-l>日本語<small>ja</small></a><a role="menuitem" href="/zh/mining/" hreflang="zh" lang="zh" data-l>中文<small>zh</small></a><a role="menuitem" href="/ar/mining/" hreflang="ar" lang="ar" data-l>العربية<small>ar</small></a></div></div>
+      <button type="button" class="tool-btn theme-btn" data-theme-toggle aria-label="Basculer entre mode clair et sombre" title="Basculer entre mode clair et sombre"><span class="sun"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span><span class="moon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.3A8.5 8.5 0 0 1 9.7 3.5a8.5 8.5 0 1 0 10.8 10.8z"/></svg></span></button>
+      <a class="btn primary md head-dl" href="/fr/download/">Télécharger<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <button class="menu" id="menu" aria-label="Menu" aria-expanded="false" aria-controls="nav"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+<main id="main">
+<section class="page-head"><div class="wrap"><h1>Miner Quinvium</h1><p class="lead">Une carte graphique, l’app et une adresse de paiement. C’est tout.</p></div></section>
+
+<section class="sec reveal"><div class="wrap">
+  <h2>Ce qu’il vous faut</h2>
+  <div class="cards c3">
+    <article class="card"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg><h3>Une carte graphique</h3><p>AMD ou NVIDIA avec au moins 2 Go de mémoire. Les données de l’algorithme (DAG) grandissent avec le temps, donc plus de mémoire tient plus longtemps. Les ASIC Ethash sont aussi autorisés.</p></article>
+    <article class="card"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zM3 7l12-4v4M16 13h2"/></svg><h3>Une adresse de paiement</h3><p>N’importe quelle adresse 0x… de votre portefeuille. Les récompenses y sont versées directement.</p></article>
+    <article class="card"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg><h3>Une connexion</h3><p>Le nœud rejoint le réseau tout seul via seed.quinvium.com.</p></article>
+  </div>
+
+  <h2>Miner dans l’app Quinvium</h2>
+  <ol class="numbered">
+    <li>Installez l’app pour macOS ou Windows. <a href="/fr/download/">Télécharger</a></li>
+    <li>Choisissez le réseau Mainnet. L’app démarre son propre nœud et télécharge la chaîne.</li>
+    <li>Dans Minage, saisissez votre adresse de paiement et activez le minage.</li>
+  </ol>
+
+  <h2>Votre propre nœud et mineur</h2>
+  <p>Le nœud en ligne de commande et le mineur GPU <code>quintium-miner</code> :</p>
+  <pre><code>quintium-node --network mainnet --miner-address VAŠE_ADRESA
+quintium-miner --address VAŠE_ADRESA --node http://127.0.0.1:8545</code></pre>
+  <p>Le nœud propose aussi Stratum (port 3333), donc d’autres mineurs Ethash fonctionnent aussi. Pour les mineurs de votre réseau local, lancez le nœud avec <code>--stratum-host 0.0.0.0</code>.</p>
+
+  <h2>Solo ou pool</h2>
+  <div class="cards c2">
+    <article class="card"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5zM3 7l9 5 9-5M12 12v10"/></svg><h3>Solo</h3><p>Vous recevez le bloc entier et ses frais, mais avec une seule carte l’attente entre deux blocs peut être longue.</p></article>
+    <article class="card"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M17 4a4 4 0 0 1 0 8M22 21c0-3-2-5-4-6"/></svg><h3>Pool par contrat</h3><p>La fabrique de pools est intégrée au réseau. Un pool compte les parts des mineurs et le contrat verse les récompenses en conséquence. Le Quinvium Pool officiel tourne sur pool.quinvium.com avec des frais de 1 %.</p></article>
+  </div>
+
+  <h2 id="run-a-pool">Gérer un pool</h2>
+  <p>Un pool sur Quinvium est un contrat intelligent issu de la fabrique du réseau. Les récompenses vont directement dans le contrat, qui les répartit selon le travail prouvé (PPLNS) ; l’opérateur ne peut prendre que ses frais fixes, 5 % au plus.</p>
+  <ol class="steps3">
+    <li><span class="n">1</span><h3>Créez le contrat</h3><p>Dans l’Explorer, Pools → Créer un pool, ou :</p><pre><code>quinvium pool create --name "My Pool" \
+  --url https://pool.example.org --fee-percent 1</code></pre></li>
+    <li><span class="n">2</span><h3>Lancez le serveur du pool</h3><p>Un nœud avec --pool. Le compte du nœud paie le gas des parts ; envoyez-lui un peu de QU.</p><pre><code>node packages/node/src/cli.js --network mainnet \
+  --pool 0xPOOL --stratum-port 4444</code></pre></li>
+    <li><span class="n">3</span><h3>Attirez des mineurs</h3><p>Les mineurs se connectent avec le mineur ou via Stratum et retirent leurs gains dans l’app ou l’Explorer.</p><pre><code>quintium-miner --address YOUR_ADDRESS \
+  --node https://pool.example.org --pool 0xPOOL</code></pre></li>
+  </ol>
+  <p class="row-btns"><a class="btn link" href="https://github.com/Lakylife/quinvium/blob/main/docs/POOLS.md">Guide complet des pools<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="btn link" href="https://explorer.quinvium.com/pools">Pools dans l’Explorer<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a></p>
+
+  <h2>Difficulté</h2>
+  <p>La difficulté s’ajuste après chaque bloc selon les 60 derniers blocs (LWMA). Quand de la puissance arrive, les blocs accélèrent un moment et la difficulté rattrape en quelques minutes. Quand elle part, elle se stabilise de la même façon. La difficulté minimale est 2<sup>24</sup>.</p>
+
+  <h2>Questions sur le minage</h2>
+  <details class="qa"><summary>Combien vais-je miner ?</summary><div>Votre part du hashrate du réseau multipliée par 4 QU par bloc. Environ 5 760 blocs sont produits par jour, soit à peu près 23 040 QU pour tout le réseau. Le hashrate actuel figure sur la page d’accueil et dans l’Explorer.</div></details>
+  <details class="qa"><summary>Quand la récompense arrive-t-elle ?</summary><div>Immédiatement avec le bloc. La récompense fait partie du bloc que vous minez.</div></details>
+  <details class="qa"><summary>Puis-je miner sur un serveur cloud ?</summary><div>Cela dépend des conditions du fournisseur. Beaucoup interdisent le minage.</div></details>
+</div></section>
+</main>
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-top">
+      <div class="foot-brand">
+        <a class="brand" href="/fr/"><img src="/logo.svg" alt="" width="36" height="36"><span>Quinvium</span></a>
+        <p>Une blockchain programmable à preuve de travail. Minée sur cartes graphiques, ouverte à tous, n’appartenant à personne.</p>
+        <div class="foot-chips"><span>Chain ID 52401</span><span>QU</span><span>Preuve de travail + EVM</span></div>
+        <div class="foot-actions">
+          <button type="button" class="btn secondary md" data-add="main">Ajouter à MetaMask</button>
+          <a class="btn secondary md" href="https://github.com/Lakylife/quinvium"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg>Code source</a>
+        </div>
+        <p class="msg" data-add-msg></p>
+      </div>
+      <nav class="foot-cols" aria-label="Pied de page">
+        <div><h4>Découvrir</h4><a href="/fr/about/">À propos</a><a href="/fr/whitepaper/">Livre blanc</a><a href="/fr/tokenomics/">Tokenomics</a><a href="/fr/roadmap/">Feuille de route</a><a href="/fr/faq/">FAQ</a></div>
+        <div><h4>Utiliser</h4><a href="/fr/wallets/">Portefeuilles</a><a href="/fr/download/">Télécharger</a><a href="/fr/ecosystem/">Écosystème</a><a href="https://explorer.quinvium.com">Explorer</a></div>
+        <div><h4>Miner et développer</h4><a href="/fr/mining/">Minage</a><a href="/fr/developers/">Développeurs</a><a href="https://explorer.quinvium.com/api">Documentation et API</a><a href="https://testnet.quinvium.com">Testnet</a></div>
+        <div><h4>Communauté</h4><a href="https://x.com/Quinvium" rel="me">X (Twitter)</a><a href="https://t.me/Quinvium" rel="me">Telegram</a><a href="https://github.com/Lakylife/quinvium">GitHub</a><a href="https://github.com/Lakylife/quinvium/releases">Versions</a><a href="https://github.com/Lakylife/quinvium/issues">Signaler un problème</a><a href="/fr/security/">Sécurité</a><a href="/fr/contact/">Contact</a></div>
+      </nav>
+    </div>
+    <div class="foot-status" data-foot-status><span class="dot" data-foot-dot></span><span data-foot-text>Mainnet</span><span class="sep">·</span><a href="https://rpc.quinvium.com/health">rpc.quinvium.com</a></div>
+    <div class="foot-base">
+      <span>Logiciel ouvert et décentralisé. Pas d’entreprise, pas de propriétaire. <a href="https://github.com/Lakylife/quinvium/blob/main/LICENSE">Licence MIT</a>.</span> <span><a href="/fr/legal/">Avertissement</a> · Pas de cookies, pas de pistage.</span>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

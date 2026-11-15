@@ -3,10 +3,6 @@
 # Website (packages/website/public, built by packages/website/src/build.mjs)
 quinvium.com {
 	encode zstd gzip
-	# the site is English only; old Czech paths redirect to the English pages
-	redir /cs /  permanent
-	@cs path_regexp cs ^/cs/(.*)$
-	redir @cs /{re.cs.1} permanent
 	# release downloads (ops/deploy-downloads.sh)
 	handle_path /downloads/* {
 		root * /var/www/quinvium-downloads

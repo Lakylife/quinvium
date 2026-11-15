@@ -24,7 +24,7 @@
       'home.sub': 'Stav sítě Quinvium v reálném čase.', 'home.tip': 'Poslední blok', 'home.health': 'Stav sítě', 'home.ok': 'V pořádku', 'home.sync': 'Synchronizace',
       'm.height': 'Výška', 'm.supply': 'V oběhu', 'm.fees': 'Poplatky těžařům', 'm.reward': 'Odměna za blok', 'm.hashrate': 'Výkon sítě', 'm.difficulty': 'Obtížnost',
       'm.ofMax': 'z 64 mil.', 'm.feesSub': 'odměna navíc k emisi', 'f.age': 'Stáří', 'f.tx': 'Transakce', 'f.gas': 'Gas', 'f.size': 'Velikost',
-      'watch.title': "Hlídání sítě", 'watch.sub': "Tento uzel se ptá ostatních uzlů na jejich blok a porovnává web a Explorer s GitHubem.", 'watch.peers': "Uzly se stejným blokem", 'watch.differ': "Uzly na jiné větvi", 'watch.incidents': "Hluboké přepisy za 24 h", 'watch.sites': "Web a Explorer", 'watch.siteOk': "Shoda s GitHubem", 'watch.siteChanged': "Změněno: {n}", 'watch.siteWait': "Zatím nezkontrolováno", 'watch.siteOff': "Kontrola vypnutá", 'watch.minority': "Většina uzlů má jiný blok než tento uzel. Tento uzel může být odříznutý od sítě.", 'watch.explorerNodes': "Uzly Exploreru se neshodují: {list} ukazuje jinou větev, Explorer ho nepoužívá.", 'sig.title': 'Signalizace forků', 'sig.sub': 'Těžaři mohou do bloku napsat QIP-n a vyjádřit tak podporu návrhu. Je to jen informace, nic se tím nezapíná. Posledních {n} bloků.', 'sig.none': 'Žádný blok v tomto období nesignalizuje žádný návrh.', 'sig.proposal': 'Návrh', 'sig.miners': 'Těžaři', 'sig.how': 'Jak signalizovat a jak se síť mění', 'nh.peers': 'Připojené uzly', 'nh.time': 'Průměrný čas bloku', 'nh.accounts': 'Účty', 'nh.mempool': 'Čekající transakce', 'nh.basefee': 'Základní poplatek', 'nh.tips': 'Dýško pomalu · běžně · rychle', 'nh.halving': 'Další půlení',
+      'watch.title': "Hlídání sítě", 'watch.sub': "Tento uzel se ptá ostatních uzlů na jejich blok a porovnává web a Explorer s GitHubem.", 'watch.peers': "Uzly se stejným blokem", 'watch.differ': "Uzly na jiné větvi", 'watch.incidents': "Hluboké přepisy za 24 h", 'watch.sites': "Web a Explorer", 'watch.siteOk': "Shoda s GitHubem", 'watch.siteChanged': "Změněno: {n}", 'watch.siteWait': "Zatím nezkontrolováno", 'watch.siteOff': "Kontrola vypnutá", 'watch.minority': "Většina uzlů má jiný blok než tento uzel. Tento uzel může být odříznutý od sítě.", 'watch.explorerNodes': "Uzly Exploreru se neshodují: {list} ukazuje jinou větev, Explorer ho nepoužívá.", 'nav.apiTop': "API", 'pools.noFee': "bez poplatku", 'pools.noFeeHint': "Sólo těžař si nechává celý blok a žádný poplatek neplatí.", 'sg.block': "Blok", 'sg.tx': "Transakce", 'sg.address': "Adresa", 'sg.token': "Token", 'sg.pool': "Pool", 'sg.name': "Jméno .qu", 'sg.contract': "kontrakt", 'sg.pending': "čeká na blok", 'sg.none': "Nic nenalezeno. Enter zkusí přesnou shodu.", 'sg.filter': "Filtr hledání", 'sg.f.all': "Vše", 'sg.f.addresses': "Adresy", 'sg.f.tokens': "Tokeny", 'sg.f.blocks': "Bloky", 'sg.f.txs': "Transakce", 'sg.f.pools': "Pooly", 'sg.f.names': "Jména .qu", 'sig.title': 'Signalizace forků', 'sig.sub': 'Těžaři mohou do bloku napsat QIP-n a vyjádřit tak podporu návrhu. Je to jen informace, nic se tím nezapíná. Posledních {n} bloků.', 'sig.none': 'Žádný blok v tomto období nesignalizuje žádný návrh.', 'sig.proposal': 'Návrh', 'sig.miners': 'Těžaři', 'sig.how': 'Jak signalizovat a jak se síť mění', 'nh.peers': 'Připojené uzly', 'nh.time': 'Průměrný čas bloku', 'nh.accounts': 'Účty', 'nh.mempool': 'Čekající transakce', 'nh.basefee': 'Základní poplatek', 'nh.tips': 'Dýško pomalu · běžně · rychle', 'nh.halving': 'Další půlení',
       'sec.viewAll': 'Zobrazit vše →', 't.block': 'Blok', 't.hash': 'Hash', 't.miner': 'Těžař', 't.tx': 'Tx', 't.age': 'Stáří', 't.gas': 'Gas', 't.from': 'Od', 't.to': 'Komu', 't.value': 'Částka',
       't.status': 'Stav', 't.balance': 'Zůstatek', 't.share': 'Podíl', 't.address': 'Adresa', 't.blocks': 'Bloky', 't.last': 'Poslední blok', 't.fee': 'Poplatek', 't.type': 'Typ',
       'x.noBlocks': 'Žádné bloky', 'x.noTxs': 'Zatím žádné transakce', 'x.empty': 'Žádné čekající transakce', 'x.newer': '← Novější', 'x.older': 'Starší →',
@@ -68,7 +68,7 @@
       'home.sub': 'Real-time state of the Quinvium network.', 'home.tip': 'Latest block', 'home.health': 'Network status', 'home.ok': 'Healthy', 'home.sync': 'Syncing',
       'm.height': 'Height', 'm.supply': 'Supply', 'm.fees': 'Fees to miners', 'm.reward': 'Block reward', 'm.hashrate': 'Hashrate', 'm.difficulty': 'Difficulty',
       'm.ofMax': 'of 64M', 'm.feesSub': 'on top of block rewards', 'f.age': 'Age', 'f.tx': 'Transactions', 'f.gas': 'Gas', 'f.size': 'Size',
-      'watch.title': "Network watch", 'watch.sub': "This node asks its peers for their block and compares the website and the Explorer with GitHub.", 'watch.peers': "Peers with the same block", 'watch.differ': "Peers on another branch", 'watch.incidents': "Deep reorganisations in 24 h", 'watch.sites': "Website and Explorer", 'watch.siteOk': "Match GitHub", 'watch.siteChanged': "Changed: {n}", 'watch.siteWait': "Not checked yet", 'watch.siteOff': "Check off", 'watch.minority': "Most peers have a different block than this node. This node may be cut off from the network.", 'watch.explorerNodes': "The Explorer’s nodes disagree: {list} shows another branch; the Explorer does not use it.", 'sig.title': 'Fork signalling', 'sig.sub': 'Miners can write QIP-n into a block to show support for a proposal. It is informative only and activates nothing. Last {n} blocks.', 'sig.none': 'No block in this period signals a proposal.', 'sig.proposal': 'Proposal', 'sig.miners': 'Miners', 'sig.how': 'How to signal and how the network changes', 'nh.peers': 'Connected peers', 'nh.time': 'Average block time', 'nh.accounts': 'Accounts', 'nh.mempool': 'Pending', 'nh.basefee': 'Base fee', 'nh.tips': 'Tip slow · normal · fast', 'nh.halving': 'Next halving',
+      'watch.title': "Network watch", 'watch.sub': "This node asks its peers for their block and compares the website and the Explorer with GitHub.", 'watch.peers': "Peers with the same block", 'watch.differ': "Peers on another branch", 'watch.incidents': "Deep reorganisations in 24 h", 'watch.sites': "Website and Explorer", 'watch.siteOk': "Match GitHub", 'watch.siteChanged': "Changed: {n}", 'watch.siteWait': "Not checked yet", 'watch.siteOff': "Check off", 'watch.minority': "Most peers have a different block than this node. This node may be cut off from the network.", 'watch.explorerNodes': "The Explorer’s nodes disagree: {list} shows another branch; the Explorer does not use it.", 'nav.apiTop': "API", 'pools.noFee': "no fee", 'pools.noFeeHint': "A solo miner keeps the whole block and pays no fee.", 'sg.block': "Block", 'sg.tx': "Transaction", 'sg.address': "Address", 'sg.token': "Token", 'sg.pool': "Pool", 'sg.name': ".qu name", 'sg.contract': "contract", 'sg.pending': "pending", 'sg.none': "No matches. Press Enter for an exact search.", 'sg.filter': "Search filter", 'sg.f.all': "All filters", 'sg.f.addresses': "Addresses", 'sg.f.tokens': "Tokens", 'sg.f.blocks': "Blocks", 'sg.f.txs': "Txns", 'sg.f.pools': "Pools", 'sg.f.names': ".qu names", 'sig.title': 'Fork signalling', 'sig.sub': 'Miners can write QIP-n into a block to show support for a proposal. It is informative only and activates nothing. Last {n} blocks.', 'sig.none': 'No block in this period signals a proposal.', 'sig.proposal': 'Proposal', 'sig.miners': 'Miners', 'sig.how': 'How to signal and how the network changes', 'nh.peers': 'Connected peers', 'nh.time': 'Average block time', 'nh.accounts': 'Accounts', 'nh.mempool': 'Pending', 'nh.basefee': 'Base fee', 'nh.tips': 'Tip slow · normal · fast', 'nh.halving': 'Next halving',
       'sec.viewAll': 'View all →', 't.block': 'Block', 't.hash': 'Hash', 't.miner': 'Miner', 't.tx': 'Tx', 't.age': 'Age', 't.gas': 'Gas', 't.from': 'From', 't.to': 'To', 't.value': 'Value',
       't.status': 'Status', 't.balance': 'Balance', 't.share': 'Share', 't.address': 'Address', 't.blocks': 'Blocks', 't.last': 'Last block', 't.fee': 'Fee', 't.type': 'Type',
       'x.noBlocks': 'No blocks', 'x.noTxs': 'No transactions yet', 'x.empty': 'No pending transactions', 'x.newer': '← Newer', 'x.older': 'Older →',
@@ -311,9 +311,9 @@
       $('footer-ver').textContent = fill('foot.node', { v: String(stats.version ?? '').split('/').pop() });
       $('node-dot').style.background = '';
       pageMeta();
-      $('net-label').textContent = stats.network === 'mainnet' ? 'Mainnet' : stats.network === 'testnet' ? 'Testnet' : stats.network;
-      $('net-dot').classList.toggle('testnet', stats.network !== 'mainnet');
-      document.querySelectorAll('#net-pop button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.net === stats.network)));
+      for (const id of ['net-label', 'hnet-label']) $(id).textContent = stats.network === 'mainnet' ? 'Mainnet' : stats.network === 'testnet' ? 'Testnet' : stats.network;
+      for (const id of ['net-dot', 'hnet-dot']) $(id).classList.toggle('testnet', stats.network !== 'mainnet');
+      document.querySelectorAll('.net-pop [data-net]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.net === stats.network)));
       renderWallet();
       if (pageFailed) { pageFailed = false; render(); }
     } catch (e) {
@@ -880,7 +880,7 @@
       if (route().name !== 'home') return;
       if (!$('home-live')) {
         app.innerHTML = `<section class="hero"><div class="hero-inner"><h1>${t('home.title')}</h1>
-          <form class="hero-search js-search" role="search"><input type="text" autocomplete="off" spellcheck="false" placeholder="${t('search.ph')}" aria-label="${t('search.ph')}"><button type="submit" title="${t('search.go')}" aria-label="${t('search.go')}">${SEARCH_ICON}</button></form>
+          <form class="hero-search js-search has-filter" role="search">${filterSelect()}<input type="text" autocomplete="off" spellcheck="false" placeholder="${t('search.ph')}" aria-label="${t('search.ph')}"><button type="submit" title="${t('search.go')}" aria-label="${t('search.go')}">${SEARCH_ICON}</button></form>
           <div id="home-ribbon"></div></div></section><div id="home-live"></div>`;
       }
       $('home-ribbon').innerHTML = homeRibbon(blocks.slice(0, RIBBON_BLOCKS));
@@ -2348,7 +2348,7 @@
       <td><div class="share-name"><i class="series-dot series-${r.slot}${activeNow(r) ? ' live' : ''}" title="${activeNow(r) ? esc(t('pools.activeNow')) : esc(t('pools.idleNow'))}"></i><div>${nameCell(r)}</div></div></td>
       <td class="share-cell"><div class="share-track"><i style="width:${(r.share * 100).toFixed(2)}%"></i></div><b>${pct(r.share)} %</b></td>
       <td class="num">${num(r.blocks)}</td><td class="num">${rate(BigInt(Math.round(r.hashrate)))}</td>
-      <td class="num">${r.address ? percent(r.feeBps) : '—'}</td></tr>`).join('');
+      <td class="num">${r.address ? percent(r.feeBps) : r.otherPools ? '—' : `<span class="muted" title="${esc(t('pools.noFeeHint'))}">${t('pools.noFee')}</span>`}</td></tr>`).join('');
     const listRows = listing.items.map((p, i) => `<tr class="rowlink" data-href="/pool/${esc(p.address)}">
       <td class="num muted">${num((page - 1) * POOL_PAGE + i + 1)}</td>
       <td><div class="share-name"><i class="series-dot series-${slotOf(p.order)}${recentSet.has(p.address.toLowerCase()) ? ' live' : ''}" title="${recentSet.has(p.address.toLowerCase()) ? esc(t('pools.activeNow')) : esc(t('pools.idleNow'))}"></i><div><a href="/pool/${esc(p.address)}">${esc(p.name)}</a><small class="hash">${esc(short(p.address, 8))}</small></div></div></td>
@@ -3789,6 +3789,7 @@
     try {
       const out = await renderPage();
       if (seq === renderSeq) pageMeta();
+      document.querySelectorAll('.js-search').forEach(attachSuggest);
       return out;
     } catch (e) {
       if (seq === renderSeq) app.innerHTML = errorBox(e.message);
@@ -3843,7 +3844,7 @@
 
   /** Header menus: only one is open at a time; a click outside or Escape closes it. */
   function menus() {
-    const pairs = [['net-btn', 'net-pop'], ['lang-btn', 'lang-pop']];
+    const pairs = [['net-btn', 'net-pop'], ['hnet-btn', 'hnet-pop'], ['lang-btn', 'lang-pop']];
     const closeAll = () => {
       for (const [b, p] of pairs) { $(p).classList.remove('open'); $(b).setAttribute('aria-expanded', 'false'); }
       $('account-pop').classList.remove('open');
@@ -3868,7 +3869,121 @@
       render();
     });
     $('net-pop').addEventListener('click', () => closeAll());
+    $('hnet-pop').addEventListener('click', () => closeAll());
   }
+
+  // ------------------------------------------------------------- search suggestions
+  // While typing, the search offers matches like Etherscan: blocks, transactions and known addresses from the node,
+  // tokens from the Swap factory, pools from the pool factory and .qu names from their contract. The filter narrows the kinds.
+  const SUGGEST_FILTERS = ['all', 'addresses', 'tokens', 'blocks', 'txs', 'pools', 'names'];
+  let suggestTokens = null;
+  async function tokenSuggestions(q) {
+    suggestTokens ??= (async () => {
+      const d = await deployment().catch(() => null);
+      return d?.swap?.factory ? swapTokens(d).catch(() => []) : [];
+    })();
+    const list = await suggestTokens;
+    return list.filter((x) => !x.native && (String(x.symbol).toLowerCase().startsWith(q) || String(x.name).toLowerCase().includes(q) || x.address.toLowerCase().startsWith(q)))
+      .slice(0, 4).map((x) => ({ type: 'token', id: x.address, symbol: x.symbol, name: x.name }));
+  }
+  async function nameSuggestion(q) {
+    const name = q.replace(/\.qu$/, '');
+    if (!contracts.AetherNames || !/^[a-z0-9-]{1,63}$/.test(name)) return [];
+    const target = await new ethers.Contract(contracts.AetherNames.address, contracts.AetherNames.abi, provider()).resolve(name).catch(() => ethers.ZeroAddress);
+    return target && target !== ethers.ZeroAddress ? [{ type: 'name', id: target, name: `${name}.qu` }] : [];
+  }
+  async function suggestions(q, filter) {
+    const s = q.trim();
+    const lower = s.toLowerCase();
+    if (!s) return [];
+    const want = (k) => filter === 'all' || filter === k;
+    const jobs = [];
+    if (want('blocks') || want('txs') || want('addresses')) {
+      jobs.push(rpc('aether_suggest', [s, { type: ['blocks', 'txs', 'addresses'].includes(filter) ? filter : 'all', limit: 6 }])
+        .catch(async () => { const hit = await rpc('aether_search', [s]).catch(() => null); return hit ? [{ type: hit.type, id: hit.id }] : []; }));
+    }
+    if (want('pools') && s.length >= 2) jobs.push(rpc('aether_pools', [{ query: lower, limit: 4 }]).then((r) => r.items.map((p) => ({ type: 'pool', id: p.address, name: p.name, fee: p.feeBps }))).catch(() => []));
+    if (want('tokens') && s.length >= 2) jobs.push(tokenSuggestions(lower).catch(() => []));
+    if (want('names') && !lower.startsWith('0x')) jobs.push(nameSuggestion(lower).catch(() => []));
+    const seen = new Set();
+    const out = [];
+    for (const x of (await Promise.all(jobs)).flat()) {
+      const key = `${x.type}:${String(x.id).toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(x);
+    }
+    return out.slice(0, 10);
+  }
+  const suggestHref = (x) => ({ block: `/block/${x.id}`, tx: `/tx/${x.id}`, address: `/address/${x.id}`, name: `/address/${x.id}`, token: `/token/${x.id}`, pool: `/pool/${x.id}` }[x.type]);
+  function suggestRow(x) {
+    const main = {
+      block: () => `#${num(x.id)}`, tx: () => `<span class="hash">${esc(short(x.id, 12))}</span>`,
+      address: () => `<span class="hash">${esc(short(x.id, 12))}</span>${labelOf(x.id) ? ` <b>${esc(labelOf(x.id))}</b>` : ''}`,
+      token: () => `<b>${esc(x.symbol)}</b> ${esc(x.name)}`, pool: () => `<b>${esc(x.name)}</b>`, name: () => `<b>${esc(x.name)}</b>`,
+    }[x.type]();
+    const sub = {
+      block: () => (x.hash ? short(x.hash, 10) : ''), tx: () => (x.pending ? t('sg.pending') : ''),
+      address: () => (x.contract ? t('sg.contract') : x.balance !== undefined ? `${aet(BigInt(x.balance), 4)} ${coin()}` : ''),
+      token: () => short(x.id, 8), pool: () => `${short(x.id, 8)} · ${percent(x.fee)}`, name: () => short(x.id, 8),
+    }[x.type]();
+    return `<span class="sg-type">${t(`sg.${x.type}`)}</span><span class="sg-main">${main}</span><span class="sg-sub">${esc(sub)}</span>`;
+  }
+  /** Attaches the suggestion list to a search form. Arrows move, Enter opens, Escape closes. */
+  function attachSuggest(form) {
+    if (form.suggest) return;
+    const input = form.querySelector('input');
+    const box = document.createElement('div');
+    box.className = 'suggest';
+    box.setAttribute('role', 'listbox');
+    box.hidden = true;
+    form.append(box);
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-expanded', 'false');
+    let items = [];
+    let active = -1;
+    let ticket = 0;
+    let timer = 0;
+    const filter = () => form.querySelector('.search-filter')?.value ?? 'all';
+    const close = () => { box.hidden = true; active = -1; input.setAttribute('aria-expanded', 'false'); };
+    const paint = () => {
+      box.innerHTML = items.length
+        ? items.map((x, i) => `<a class="sg-item${i === active ? ' active' : ''}" role="option" aria-selected="${i === active}" href="${suggestHref(x)}">${suggestRow(x)}</a>`).join('')
+        : `<p class="sg-empty">${t('sg.none')}</p>`;
+      box.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+    };
+    const run = async () => {
+      const q = input.value.trim();
+      const mine = ++ticket;
+      if (q.length < 1) { close(); return; }
+      const found = await suggestions(q, filter());
+      if (mine !== ticket || input.value.trim() !== q) return;
+      items = found;
+      active = items.length && filter() !== 'all' ? 0 : -1;
+      paint();
+    };
+    input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(run, 180); });
+    input.addEventListener('focus', () => { if (input.value.trim()) run(); });
+    input.addEventListener('keydown', (e) => {
+      if (box.hidden || !items.length) return;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        active = (active + (e.key === 'ArrowDown' ? 1 : items.length - 1) + (active < 0 && e.key === 'ArrowUp' ? 1 : 0)) % items.length;
+        paint();
+      } else if (e.key === 'Escape') close();
+    });
+    form.querySelector('.search-filter')?.addEventListener('change', () => { if (input.value.trim()) run(); input.focus(); });
+    box.addEventListener('mousedown', (e) => e.preventDefault());   // a click keeps the focus, the link opens normally
+    box.addEventListener('click', (e) => { if (e.target.closest('.sg-item')) { close(); input.value = ''; } });
+    input.addEventListener('blur', () => setTimeout(close, 120));
+    form.suggest = { close, chosen: () => (!box.hidden && active >= 0 && items[active] ? suggestHref(items[active]) : null) };
+  }
+  const filterSelect = () => `<select class="search-filter" aria-label="${esc(t('sg.filter'))}">${SUGGEST_FILTERS.map((f) => `<option value="${f}">${esc(t(`sg.f.${f}`))}</option>`).join('')}</select>`;
+
+  /** The Quinvium domains: the network switch moves between explorer. and testnet. instead of local ports. */
+  const NET_DOMAINS = { mainnet: 'explorer.quinvium.com', testnet: 'testnet.quinvium.com' };
 
   async function init() {
     // The Quinvium app switches Explorer pages directly through this path, without the old # address. Applies right from load.
@@ -3922,8 +4037,17 @@
     });
     document.addEventListener('click', (e) => { if (!e.target.closest('.nav-group') && !e.target.closest('#menu-btn')) closeNav(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeNav(); });
-    document.querySelectorAll('#net-pop button').forEach((b) => {
+    document.querySelectorAll('.net-pop [data-net]').forEach((b) => {
       b.onclick = async () => {
+        const domain = NET_DOMAINS[b.dataset.net];
+        if (Object.values(NET_DOMAINS).includes(location.hostname)) {
+          if (domain === location.hostname) return;
+          // Blocks, transactions and addresses differ between networks; other pages exist on both.
+          const { name } = route();
+          const same = !['block', 'tx', 'address', 'token', 'pool'].includes(name);
+          location.href = `https://${domain}${same ? location.pathname : '/'}`;
+          return;
+        }
         const port = PORTS[b.dataset.net];
         const target = location.port === String(port) ? location.origin : `${location.protocol}//${location.hostname}:${port}`;
         // A network without a running node would show only an error; we stay on the one that works.
@@ -3944,6 +4068,8 @@
       const input = form.querySelector('input');
       const q = input.value.trim();
       if (!q) return;
+      const picked = form.suggest?.chosen();
+      if (picked) { form.suggest.close(); input.value = ''; navigate(picked); return; }
       const hit = await rpc('aether_search', [q]).catch(() => null);
       if (!hit) { toast(`${t('search.none')} ${esc(q)}`); return; }
       input.value = '';

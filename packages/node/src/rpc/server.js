@@ -7,6 +7,7 @@ import { toHex } from '../util/bytes.js';
 import { blockReceipts, logToRpc } from './format.js';
 import { MINING_METHODS, RpcError, createMethods } from './methods.js';
 import { isLocalCaller } from '../p2p/upnp.js';
+import { COST, etherscan } from './etherscan.js';
 
 const MAX_BODY = 5 * 1024 * 1024;
 const MAX_BATCH = 100;
@@ -144,6 +145,7 @@ export class RpcServer {
       // Anyone sends the path, even an ordinary link on someone else's page. An error in it must not crash the node.
       try {
         if (req.url.split('?')[0] === '/health') { this._health(req, res); return; }
+        if (req.url.split('?')[0] === '/api' && /[?&]module=/.test(req.url)) { this._etherscan(req, res); return; }
         this._static(req, res);
       } catch {
         if (!res.headersSent) res.writeHead(400);
@@ -152,6 +154,30 @@ export class RpcServer {
       return;
     }
     res.writeHead(405); res.end();
+  }
+
+  /**
+   * Etherscan-style REST (rpc/etherscan.js). It goes through the same methods, rate limit and caller rules as JSON-RPC.
+   * Without `module` the path /api stays the Explorer's developer page.
+   */
+  _etherscan(req, res) {
+    const caller = this._caller(req);
+    const q = new URL(req.url, 'http://x').searchParams;
+    const reply = (status, body) => {
+      const text = JSON.stringify(body);
+      res.writeHead(status, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(text), 'Cache-Control': 'no-store' });
+      res.end(text);
+    };
+    if (!this._allow(caller, COST[q.get('action')] ?? 1)) { reply(429, { status: '0', message: 'NOTOK', result: 'Max rate limit reached' }); return; }
+    const call = async (method, params = []) => {
+      const r = await this.call({ jsonrpc: '2.0', id: 1, method, params }, caller);
+      if (r.error) throw new Error(r.error.message);
+      return r.result;
+    };
+    etherscan(q, call).then((body) => reply(200, body), (e) => {
+      this.log(`API: ${e.stack ?? e.message}`);
+      reply(200, { status: '0', message: 'NOTOK', result: 'Error! Internal error' });
+    });
   }
 
   /**

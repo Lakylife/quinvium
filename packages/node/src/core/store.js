@@ -125,6 +125,7 @@ export class Store {
       logDelAbove: p('DELETE FROM logs WHERE number>?'),
       accountPut: p('INSERT OR REPLACE INTO accounts VALUES(?,?,?,?)'),
       richList: p('SELECT addr,balance_hex,is_contract FROM accounts ORDER BY balance_sort DESC LIMIT ?'),
+      accountsRange: p('SELECT addr,balance_hex,is_contract FROM accounts WHERE addr >= ? AND addr <= ? ORDER BY addr LIMIT ?'),
       feesPut: p('INSERT OR REPLACE INTO miner_fees VALUES(?,?)'),
       feesGet: p('SELECT total FROM miner_fees WHERE number=?'),
       feesDelAbove: p('DELETE FROM miner_fees WHERE number>?'),
@@ -242,6 +243,14 @@ export class Store {
   }
 
   richList(limit) { return this.q.richList.all(limit).map((r) => ({ addr: u8(r.addr), balance: BigInt('0x' + r.balance_hex), isContract: !!r.is_contract })); }
+  /** Known accounts whose address starts with the given hex digits (search suggestions). The primary key makes it a range read. */
+  accountsByPrefix(hex, limit) {
+    const h = String(hex).toLowerCase().replace(/^0x/, '');
+    if (!/^[0-9a-f]{1,40}$/.test(h)) return [];
+    const low = Buffer.from(h.padEnd(40, '0'), 'hex');
+    const high = Buffer.from(h.padEnd(40, 'f'), 'hex');
+    return this.q.accountsRange.all(low, high, limit).map((r) => ({ addr: u8(r.addr), balance: BigInt('0x' + r.balance_hex), isContract: !!r.is_contract }));
+  }
   accountCount() { return this.q.counterGet.get('accounts')?.v ?? 0; }
   holderCount() { return this.q.counterGet.get('holders')?.v ?? 0; }
   accountPut(addr, balance, isContract) {

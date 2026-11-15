@@ -19,6 +19,8 @@ const server = createServer((req, res) => {
 });
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const pages = ['/', ...readdirSync(pub).filter((d) => existsSync(join(pub, d, 'index.html'))).map((d) => `/${d}/`), '/missing-page'];
+// Translated pages: longer German words, CJK and right-to-left Arabic on the pages with the widest content.
+for (const l of ['de', 'ja', 'ar', 'fr']) for (const p of ['download', 'developers', 'tokenomics']) pages.push(`/${l}/${p}/`);
 const problems = await checkPages(`http://127.0.0.1:${server.address().port}`, pages, { settle: 300, label: 'web' });
 server.close();
 for (const p of problems) console.log(`[FAIL] ${p}`);

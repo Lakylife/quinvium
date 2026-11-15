@@ -39,5 +39,5 @@ jobs:
       - run: node --test packages/announcer/test/announcer.test.js scripts/consensus-guard.test.mjs
       # Mobile layout: every website and Explorer page at phone, tablet and landscape sizes (no sideways scrolling, 16 px fields).
       - run: npx playwright install --with-deps chromium
-      - run: node packages/website/src/build.mjs && node packages/website/test/mobile.mjs
+      - run: node packages/website/src/build.mjs && node --test packages/website/test/i18n.test.mjs && node packages/website/test/mobile.mjs
       - run: node packages/explorer/test/mobile.mjs

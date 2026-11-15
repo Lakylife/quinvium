@@ -3,6 +3,35 @@
   const RPC = 'https://rpc.quinvium.com';
   const GENESIS = 1794610800; // 14 Nov 2026 00:00 CET
   const lang = document.body.dataset.lang || 'en';
+  // Texts the script writes itself, in every language of the site.
+  const TEXT = {
+    en: { none: 'No browser wallet found. Install MetaMask or use the Quinvium app.', ok: 'Network added.', no: 'The request was rejected in the wallet.', block: 'Mainnet · block #{n}', down: 'Mainnet · status unavailable', ago: '{t} ago' },
+    cs: { none: 'Peněženka v prohlížeči nenalezena. Nainstalujte MetaMask nebo použijte aplikaci Quinvium.', ok: 'Síť je přidaná.', no: 'Požadavek byl v peněžence odmítnut.', block: 'Mainnet · blok #{n}', down: 'Mainnet · stav nedostupný', ago: 'před {t}' },
+    de: { none: 'Keine Browser-Wallet gefunden. Installieren Sie MetaMask oder nutzen Sie die Quinvium-App.', ok: 'Netzwerk hinzugefügt.', no: 'Die Anfrage wurde in der Wallet abgelehnt.', block: 'Mainnet · Block #{n}', down: 'Mainnet · Status nicht verfügbar', ago: 'vor {t}' },
+    es: { none: 'No se encontró una cartera en el navegador. Instale MetaMask o use la app Quinvium.', ok: 'Red añadida.', no: 'La solicitud fue rechazada en la cartera.', block: 'Mainnet · bloque #{n}', down: 'Mainnet · estado no disponible', ago: 'hace {t}' },
+    fr: { none: 'Aucun portefeuille de navigateur trouvé. Installez MetaMask ou utilisez l’app Quinvium.', ok: 'Réseau ajouté.', no: 'La demande a été refusée dans le portefeuille.', block: 'Mainnet · bloc #{n}', down: 'Mainnet · état indisponible', ago: 'il y a {t}' },
+    ja: { none: 'ブラウザーのウォレットが見つかりません。MetaMask をインストールするか、Quinvium アプリを使ってください。', ok: 'ネットワークを追加しました。', no: 'ウォレットでリクエストが拒否されました。', block: 'メインネット · ブロック #{n}', down: 'メインネット · 状態を取得できません', ago: '{t}前' },
+    zh: { none: '未找到浏览器钱包。请安装 MetaMask 或使用 Quinvium 应用。', ok: '网络已添加。', no: '请求在钱包中被拒绝。', block: '主网 · 区块 #{n}', down: '主网 · 状态不可用', ago: '{t}前' },
+    ar: { none: 'لم يُعثر على محفظة في المتصفح. ثبّت MetaMask أو استخدم تطبيق Quinvium.', ok: 'أُضيفت الشبكة.', no: 'رُفض الطلب في المحفظة.', block: 'الشبكة الرئيسية · الكتلة #{n}', down: 'الشبكة الرئيسية · الحالة غير متاحة', ago: 'منذ {t}' },
+  };
+  const LOCALES = { en: 'en-US', cs: 'cs-CZ', de: 'de-DE', es: 'es-ES', fr: 'fr-FR', ja: 'ja-JP', zh: 'zh-CN', ar: 'ar-u-nu-latn' };
+  const say = (k, n) => (TEXT[lang] ?? TEXT.en)[k].replace('{n}', n ?? '').replace('{t}', n ?? '');
+
+  // Light and dark: the choice is remembered; without it the system decides (theme.js)
+  document.querySelectorAll('[data-theme-toggle]').forEach((b) => b.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem('theme', next); } catch { /* private window */ }
+  }));
+  // Language menu
+  const langMenu = document.querySelector('[data-lang-menu]');
+  if (langMenu) {
+    const btn = langMenu.querySelector('button');
+    const set = (open) => { langMenu.classList.toggle('open', open); btn.setAttribute('aria-expanded', String(open)); };
+    btn.addEventListener('click', (e) => { e.stopPropagation(); set(!langMenu.classList.contains('open')); });
+    document.addEventListener('click', (e) => { if (!e.target.closest('[data-lang-menu]')) set(false); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && langMenu.classList.contains('open')) { set(false); btn.focus(); } });
+  }
 
   // Menu groups: a click opens the panel; a second click, Escape or a click outside closes it
   const groups = [...document.querySelectorAll('.ng-btn[aria-controls]')];
@@ -71,10 +100,7 @@
     main: { chainId: '0xccb1', chainName: 'Quinvium', rpcUrls: ['https://rpc.quinvium.com'], nativeCurrency: { name: 'Quinvium', symbol: 'QU', decimals: 18 }, blockExplorerUrls: ['https://explorer.quinvium.com'] },
     test: { chainId: '0xccb2', chainName: 'Quinvium Testnet', rpcUrls: ['https://rpc1.quinvium.com'], nativeCurrency: { name: 'Quinvium Testnet', symbol: 'tQU', decimals: 18 }, blockExplorerUrls: ['https://testnet.quinvium.com'] },
   };
-  const T = {
-    cs: { none: 'Peněženka v prohlížeči nenalezena. Nainstalujte MetaMask nebo použijte aplikaci Quinvium.', ok: 'Síť je přidaná.', no: 'Požadavek byl v peněžence odmítnut.' },
-    en: { none: 'No browser wallet found. Install MetaMask or use the Quinvium app.', ok: 'Network added.', no: 'The request was rejected in the wallet.' },
-  }[lang];
+  const T = TEXT[lang] ?? TEXT.en;
   document.querySelectorAll('[data-add]').forEach((btn) => btn.addEventListener('click', async () => {
     const msg = btn.closest('section, footer')?.querySelector('[data-add-msg]');
     const say = (t) => { if (msg) msg.textContent = t; };
@@ -88,8 +114,8 @@
   const ftext = document.querySelector('[data-foot-text]');
   if (fdot && ftext) {
     fetch(RPC, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }), signal: AbortSignal.timeout(8000) })
-      .then((r) => r.json()).then((d) => { const h = Number(BigInt(d.result)); ftext.textContent = `Mainnet · block #${h.toLocaleString('en-US')}`; fdot.className = 'dot on'; })
-      .catch(() => { ftext.textContent = 'Mainnet · status unavailable'; fdot.className = 'dot off'; });
+      .then((r) => r.json()).then((d) => { const h = Number(BigInt(d.result)); ftext.textContent = say('block', h.toLocaleString(LOCALES[lang] ?? 'en-US')); fdot.className = 'dot on'; })
+      .catch(() => { ftext.textContent = say('down'); fdot.className = 'dot off'; });
   }
 
   // Live mainnet status
@@ -98,7 +124,7 @@
   const note = document.querySelector('[data-live-note]');
   const dot = document.querySelector('[data-live-dot]');
   const blocks = document.querySelector('[data-blocks]');
-  const loc = lang === 'cs' ? 'cs-CZ' : 'en-US';
+  const loc = LOCALES[lang] ?? 'en-US';
   const fmt = (n, d = 0) => n.toLocaleString(loc, { maximumFractionDigits: d, minimumFractionDigits: d });
   const unit = (v, units) => { let i = 0; while (v >= 1000 && i < units.length - 1) { v /= 1000; i += 1; } return `${fmt(v, v < 10 ? 2 : 1)} ${units[i]}`; };
   const set = (k, v) => { const el = live.querySelector(`[data-m="${k}"]`); if (el) el.textContent = v; };
@@ -130,6 +156,26 @@
       dot.className = `dot ${before ? '' : 'on'}`;
       const pill = document.querySelector('[data-hero-status]');
       if (pill) pill.textContent = before ? pill.dataset.before : pill.dataset.on;
+      const heroHeight = document.querySelector('[data-hero-height]');
+      if (heroHeight) heroHeight.textContent = `#${fmt(h)}`;
+      const row = document.querySelector('[data-chain-row]');
+      if (row && h > 0) {
+        // The four newest blocks under the mark; a new block slides in from the start of the row.
+        const known = new Set([...row.children].map((a) => a.dataset.n));
+        const list = await Promise.all(Array.from({ length: Math.min(4, h) }, (_, i) => (i === 0 ? head : block(h - i))));
+        const now = Date.now() / 1000;
+        row.replaceChildren(...list.map((b) => {
+          const n = String(Number(BigInt(b.number)));
+          const a = document.createElement('a');
+          a.href = `${row.parentElement.dataset.explorer}/block/${n}`;
+          a.dataset.n = n;
+          if (known.size && !known.has(n)) a.className = 'new';
+          const t = document.createElement('b'); t.textContent = `#${fmt(Number(n))}`;
+          const s = document.createElement('small'); s.textContent = say('ago', ago(now - Number(BigInt(b.timestamp))));
+          a.append(t, s);
+          return a;
+        }));
+      }
       if (h > 0 && blocks) {
         const list = await Promise.all(Array.from({ length: Math.min(6, h) }, (_, i) => (i === 0 ? head : block(h - i))));
         const now = Date.now() / 1000;
@@ -144,7 +190,7 @@
           const t = document.createElement('b'); t.textContent = `#${fmt(n)}`;
           const age = ago(now - Number(BigInt(b.timestamp)));
           const s = document.createElement('span');
-          s.textContent = `${b.transactions.length} ${blocks.dataset.txs} · ${lang === 'cs' ? `${blocks.dataset.ago} ${age}` : `${age} ${blocks.dataset.ago}`} · ${blocks.dataset.miner} ${b.miner.slice(0, 6)}…${b.miner.slice(-4)}`;
+          s.textContent = `${b.transactions.length} ${blocks.dataset.txs} · ${say('ago', age)} · ${blocks.dataset.miner} ${b.miner.slice(0, 6)}…${b.miner.slice(-4)}`;
           a.append(c, t, s);
           blocks.append(a);
         }

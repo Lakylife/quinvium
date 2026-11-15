@@ -20,6 +20,16 @@ console.log('klíč', wallet.privateKey);` },
     stats: { lang: 'bash', run: true, code: (n) => `curl -s -X POST ${n.rpc} -H 'Content-Type: application/json' \\
   -d '{"jsonrpc":"2.0","id":1,"method":"quinvium_stats","params":[]}'` },
 
+    restBalance: { lang: 'bash', run: true, code: (n) => `curl -s "${n.rpc}/api?module=account&action=balance&address=0xVASE_ADRESA&tag=latest"` },
+
+    restTxlist: { lang: 'bash', run: true, code: (n) => `curl -s "${n.rpc}/api?module=account&action=txlist&address=0xVASE_ADRESA&page=1&offset=10&sort=desc"` },
+
+    restJs: { lang: 'js', run: true, code: (n) => `const api = '${n.rpc}/api';
+
+const query = new URLSearchParams({ module: 'account', action: 'txlist', address: '0xVASE_ADRESA', page: '1', offset: '25', sort: 'desc' });
+const { status, message, result } = await (await fetch(\`\${api}?\${query}\`)).json();
+console.log(status, message, Array.isArray(result) ? result.length : result);` },
+
     addNetwork: { lang: 'js', code: (n) => `await window.ethereum.request({
   method: 'wallet_addEthereumChain',
   params: [{
@@ -290,6 +300,7 @@ console.log('blok', receipt.blockNumber, 'poplatek', ethers.formatEther(receipt.
       ['quinvium_watch', '[]', L('Hlídání: mají uzly na usazené výšce stejný blok, hluboké přepisy, shoduje se web a Explorer s GitHubem. Uzly jsou jen podle klíče, bez IP adres', 'Watch: do peers have the same block at a settled height, deep reorganisations, do the website and Explorer match GitHub. Peers by key only, no IP addresses')],
       ['quinvium_nodeInfo', '[]', L('Identita uzlu: veřejný klíč a záznam seedu `klíč@HOST:port`', 'Node identity: public key and seed entry `key@HOST:port`')],
       ['quinvium_endpoints', '[]', L('Adresy RPC uzlu pro tento počítač, místní síť a internet. Volající z internetu vidí jen veřejnou adresu', 'The node’s RPC addresses for this computer, the local network and the internet. Callers from the internet see only the public address')],
+      ['quinvium_suggest', '[query, {type, limit}]', L('Návrhy při psaní do hledání: blok podle čísla, blok nebo transakce podle hashe a známé adresy podle začátku. `type` je `blocks`, `txs` nebo `addresses`', 'Suggestions while typing a search: a block by number, a block or transaction by hash and known addresses by their first digits. `type` is `blocks`, `txs` or `addresses`')],
       ['quinvium_search', '[query]', L('Hledání bloku, transakce nebo adresy', 'Searches blocks, transactions and addresses')],
     ] },
     { title: L('Ostatní', 'Other'), rows: [
@@ -367,6 +378,32 @@ console.log('blok', receipt.blockNumber, 'poplatek', ethers.formatEther(receipt.
       { code: 'startDev' },
       { h: L('3. První dotaz', '3. First request') },
       { code: 'blockNumber' },
+    ] },
+
+    { id: 'rest', title: L('REST API (jako Etherscan)', 'REST API (Etherscan-compatible)'), blocks: [
+      { p: L('Kompletní data z řetězce přes jednoduché adresy GET: zůstatky, transakce, převody tokenů, vytěžené bloky, odměny, logy a poplatky. Formát odpovědí je stejný jako u Etherscanu, takže peněženky, daňové nástroje a skripty pro Etherscan stačí přepnout na adresu níže. API je jen pro čtení, zdarma a bez klíče.', 'Complete on-chain data through plain GET URLs: balances, transactions, token transfers, mined blocks, rewards, logs and fees. Answers use the same format as Etherscan, so wallets, tax tools and scripts written for Etherscan only need the address below. The API is read-only, free and needs no key.') },
+      { p: L('Adresa: `/api?module=…&action=…` na uzlu nebo Exploreru, třeba `https://explorer.quinvium.com/api`. Odpověď je `{"status":"1","message":"OK","result":…}`, chyba má `status` `0`. Stránka má nejvýše 100 řádků (`offset`), další se čtou přes `page`. Platí limit počtu požadavků jako u JSON-RPC, seznamy počítají za pět.', 'Endpoint: `/api?module=…&action=…` on a node or the Explorer, for example `https://explorer.quinvium.com/api`. An answer is `{"status":"1","message":"OK","result":…}`; an error has `status` `0`. A page holds up to 100 rows (`offset`); read more with `page`. The same rate limit as JSON-RPC applies; lists count as five requests.') },
+      { code: 'restBalance' },
+      { code: 'restTxlist' },
+      { code: 'restJs' },
+      { h: L('Moduly a akce', 'Modules and actions') },
+      { table: { head: [L('Modul', 'Module'), L('Akce', 'Action'), L('Parametry', 'Parameters'), L('Vrací', 'Returns')], rows: [
+        ['`account`', '`balance`', '`address`, `tag`', L('Zůstatek ve wei', 'Balance in wei')],
+        ['`account`', '`balancemulti`', L('`address` až 20 oddělených čárkou', '`address` up to 20, comma separated'), L('Zůstatky adres', 'Balances')],
+        ['`account`', '`txlist`', '`address`, `startblock`, `endblock`, `page`, `offset`, `sort`', L('Transakce adresy', 'Transactions of an address')],
+        ['`account`', '`tokentx`', '`address` nebo/or `contractaddress`, `page`, `offset`, `sort`', L('Převody tokenů s názvem, symbolem a desetinnými místy', 'Token transfers with name, symbol and decimals')],
+        ['`account`', '`tokenbalance`', '`contractaddress`, `address`, `tag`', L('Zůstatek tokenu', 'Token balance')],
+        ['`account`', '`getminedblocks`', '`address`, `page`, `offset`', L('Bloky vytěžené adresou a odměna za každý', 'Blocks mined by the address and the reward for each')],
+        ['`transaction`', '`getstatus`, `gettxreceiptstatus`', '`txhash`', L('Stav a důvod selhání', 'Status and revert reason')],
+        ['`block`', '`getblockreward`', '`blockno`', L('Těžař a celá odměna včetně poplatků', 'Miner and the full reward including fees')],
+        ['`block`', '`getblocknobytime`', '`timestamp`, `closest` (`before` / `after`)', L('Číslo bloku k času', 'Block number at a time')],
+        ['`block`', '`getblockcountdown`', '`blockno`', L('Kolik bloků a sekund zbývá', 'Blocks and seconds remaining')],
+        ['`logs`', '`getLogs`', '`fromBlock`, `toBlock`, `address`, `topic0`…`topic3`, `page`, `offset`', L('Události kontraktů', 'Contract events')],
+        ['`stats`', '`ethsupply`, `coinsupply`, `nodecount`', '—', L('Vytěžené mince a počet uzlů', 'Coins mined and node count')],
+        ['`gastracker`', '`gasoracle`', '—', L('Poplatky pomalu, běžně, rychle v gwei', 'Slow, normal and fast fees in gwei')],
+        ['`proxy`', '`eth_blockNumber`, `eth_getBlockByNumber`, `eth_getTransactionByHash`, `eth_getTransactionReceipt`, `eth_call`, `eth_getCode`, `eth_getStorageAt`, `eth_getTransactionCount`, `eth_gasPrice`, `eth_estimateGas`', L('Parametry jako u Etherscanu (`tag`, `txhash`, `to`, `data` …)', 'Parameters as on Etherscan (`tag`, `txhash`, `to`, `data` …)'), L('Odpověď JSON-RPC', 'A JSON-RPC answer')],
+      ] } },
+      { note: L('Rozdíly: API nepřijímá transakce (`eth_sendRawTransaction` patří do JSON-RPC), nemá ceny ani ověřené zdrojové kódy kontraktů a interní transakce. Všechno ostatní z řetězce dává JSON-RPC níže.', 'Differences: the API does not accept transactions (`eth_sendRawTransaction` belongs to JSON-RPC), and has no prices, verified contract sources or internal transactions. Everything else on the chain is in the JSON-RPC below.') },
     ] },
 
     { id: 'network', title: L('Síť', 'Network'), blocks: [
