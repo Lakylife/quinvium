@@ -7,7 +7,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..', '..');
 const walletDir = join(here, '..', 'src', 'renderer', 'wallet');
 mkdirSync(walletDir, { recursive: true });
-for (const f of ['background.js', 'popup.js', 'popup.css', 'i18n.js', 'qrcode.js', 'jsqr.js', 'qr-tools.js', 'ethers.umd.min.js']) copyFileSync(join(root, 'extension', f), join(walletDir, f));
+for (const f of ['background.js', 'popup.js', 'popup.css', 'i18n.js', 'qrcode.js', 'jsqr.js', 'qr-tools.js', 'quinvium-symbol.ttf', 'ethers.umd.min.js']) copyFileSync(join(root, 'extension', f), join(walletDir, f));
 for (const f of ['config.js', 'walletconnect.js']) copyFileSync(join(root, 'explorer', 'public', f), join(walletDir, f));
 await import('./bundle-node.mjs');
 const build = join(here, '..', 'build');

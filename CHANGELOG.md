@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Explorer: .qu name registration can be finished later, step 2 is its own click, the first name becomes primary; primary names in lists, on the address page and in the wallet menu.
+- Explorer and wallet: the currency can be shown as QU or as the Quinvium symbol (Settings in the wallet, footer in the Explorer).
+
 ## 2.15.2 (15 November 2026)
 
 - App and Chrome wallet in eight languages: English, Czech, German, Spanish, French, Japanese, Chinese and Arabic (right to left).
