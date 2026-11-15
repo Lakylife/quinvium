@@ -1,5 +1,5 @@
 // Prepares files for the build: the node in one file, the miner and the shared wallet code.
-import { copyFileSync, mkdirSync, rmSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -22,6 +22,10 @@ rmSync(bin, { recursive: true, force: true });     // files from older builds mu
 mkdirSync(bin, { recursive: true });
 copyFileSync(miner, join(bin, target === 'win' ? 'quintium-miner.exe' : 'quintium-miner'));
 for (const f of ['quintium-node.cjs', 'vm-worker.cjs']) copyFileSync(join(build, f), join(bin, f));
+// Hashes of the website and Explorer this release carries: the node compares the public sites with them (watch/site.js).
+const { siteManifest } = await import('../../../scripts/site-manifest.mjs');
+const { version } = JSON.parse(readFileSync(join(here, '..', 'package.json'), 'utf8'));
+writeFileSync(join(bin, 'site-manifest.json'), `${JSON.stringify(siteManifest(version), null, 1)}\n`);
 // Command line: runs on the Node built into the app; the user does not need to install anything.
 // quinvium is the new command name; quintium stays. Both run the same thing.
 for (const name of target === 'win' ? ['quintium.cmd', 'quinvium.cmd'] : ['quintium', 'quinvium']) copyFileSync(join(here, 'bin', target === 'win' ? 'quintium.cmd' : 'quintium'), join(bin, name));

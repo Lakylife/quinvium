@@ -102,6 +102,22 @@ export function compose(e) {
       return { emoji: '✅', title: 'No single miner has a majority now', link: `${EXPLORER}/pools`, lines: [
         `The largest miner did ${Math.round(d.share * 100)}% of the work in the last hour.`,
       ] };
+    case 'watch-site':
+      return { emoji: '🚨', title: 'Website or Explorer differs from the release', link: 'https://github.com/Lakylife/quinvium', lines: [
+        `Nodes found ${n(d.urls.length)} file${d.urls.length === 1 ? '' : 's'} that match${d.urls.length === 1 ? 'es' : ''} neither GitHub nor the release: ${d.urls.slice(0, 3).join(', ')}${d.urls.length > 3 ? ' …' : ''}.`,
+        'Do not enter keys or seed phrases on the site until this is resolved. The chain itself is not affected.',
+      ] };
+    case 'watch-site-ok':
+      return { emoji: '✅', title: 'Website and Explorer match GitHub again', link: EXPLORER, lines: ['Every checked file matches the protected main branch.'] };
+    case 'watch-chain':
+      return { emoji: '⚠️', title: d.minority ? 'Most peers see a different chain than the public node' : 'A node follows another branch', link: `${EXPLORER}/network`, lines: [
+        `${n(d.differ)} of ${n(d.checked)} checked peers have a different block at a settled height.`,
+        d.minority ? 'The public node may be cut off. Wait for more confirmations before relying on new payments.' : 'Every node still verifies every block itself; this is a warning, not a change of the chain.',
+      ] };
+    case 'watch-reorg':
+      return { emoji: '⚠️', title: 'Deep chain reorganisation', link: `${EXPLORER}/network`, lines: [
+        `The public node saw: ${d.kinds.join(', ')}. Wait for more confirmations on large payments.`,
+      ] };
     case 'digest': {
       const count = (k) => d.items.filter((i) => i.kind === k).length;
       const parts = [count('miner') && `⛏ New miners: ${n(count('miner'))}`, count('node') && `🛰 New nodes: ${n(count('node'))}`, count('hashrate-jump') && '📈 Hashrate rising fast'].filter(Boolean);

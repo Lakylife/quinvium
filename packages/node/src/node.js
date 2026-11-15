@@ -1,7 +1,7 @@
 // Full node: ties together the chain, the transaction queue, the network, RPC and work for miners.
 import { EventEmitter } from 'node:events';
 import { homedir, networkInterfaces } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { NETWORKS } from './params.js';
 import { Chain } from './core/chain.js';
 import { Mempool } from './core/mempool.js';
@@ -17,6 +17,10 @@ import { estimateGas, ethCall } from './rpc/call.js';
 import { fromHex, toHex } from './util/bytes.js';
 import predeploys from './genesis/predeploys.json' with { type: 'json' };
 import { L } from './lang.js';
+import { ChainWatch } from './watch/peers.js';
+import { SITES, SiteWatch, hashFolder } from './watch/site.js';
+import { readFileSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 export const VERSION = 'quintium-node/2.15.1';
 const POOL_RETRY_MS = 60_000;
@@ -26,6 +30,26 @@ const REBROADCAST_MS = 60_000;   // own pending transactions to peers again
 /** The system contracts in genesis are the same on all networks. */
 const DEEP_REORG = 6;     // ordinary branches have one or two blocks
 export const loadAlloc = () => predeploys;
+
+/**
+ * Hashes of the website and Explorer files this release carries: the Explorer the node serves itself, and
+ * site-manifest.json written by the release script (scripts/site-manifest.mjs) for the website.
+ */
+export function releaseHashes(staticDir) {
+  const out = hashFolder(staticDir, 'packages/explorer/public');
+  // Next to the one-file node in the app (build/<platform>), or in the node package when run from source.
+  const dirs = [];
+  if (typeof __dirname === 'string') dirs.push(__dirname);
+  try { dirs.push(join(dirname(fileURLToPath(import.meta.url)), '..')); } catch { /* bundled: no import.meta */ }
+  const manifest = dirs.map((d) => join(d, 'site-manifest.json')).find((f) => existsSync(f));
+  if (manifest) {
+    try {
+      const files = JSON.parse(readFileSync(manifest, 'utf8')).files ?? {};
+      for (const [path, hash] of Object.entries(files)) if (typeof hash === 'string' && /^[0-9a-f]{40}$/.test(hash)) out[path] ??= hash;
+    } catch { /* a damaged manifest only means fewer accepted hashes */ }
+  }
+  return out;
+}
 
 export class AetherNode extends EventEmitter {
   constructor(opts) {
@@ -75,6 +99,16 @@ export class AetherNode extends EventEmitter {
       this.log(L(`VAROVÁNÍ: uzel ${peer.address} používá jiná pravidla sítě. Pokud se to opakuje, zkontrolujte aktualizaci programu.`, `WARNING: node ${peer.address} uses different network rules. If this repeats, check for a program update.`));
     });
     await this.network.start();
+    // Nodes watch each other's blocks, and the public website and Explorer against GitHub and this release.
+    this.chainWatch = new ChainWatch({ chain: this.chain, network: this.network, log: this.log });
+    this.chainWatch.on('disagree', (d) => this.emit('watch', { kind: 'disagree', ...d }));
+    this.chainWatch.on('incident', (d) => this.emit('watch', d));
+    const sites = o.siteCheck === false || process.env.AETHER_NO_SITE_CHECK === '1' ? null : (o.sites ?? SITES[network.name] ?? null);
+    if (sites) {
+      this.siteWatch = new SiteWatch({ sites, release: releaseHashes(o.staticDir), log: this.log, ...o.siteWatchOptions });
+      this.siteWatch.on('changed', (c) => this.emit('watch', { kind: 'site-changed', ...c }));
+      this.siteWatch.start(o.siteWatchStart);
+    }
     await this.rpc.start();
     await this.stratum.start();
     if (o.pool) await this._configuredPool();
@@ -164,6 +198,8 @@ export class AetherNode extends EventEmitter {
   async stop() {
     clearTimeout(this.poolRetry);
     await this.publicAccess?.stop();
+    this.siteWatch?.stop();
+    this.chainWatch?.stop();
     this.timers?.forEach(clearInterval);
     this.pool?.stop();
     await this.stratum?.stop();

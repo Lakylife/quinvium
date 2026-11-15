@@ -8,7 +8,7 @@ import { SecureChannel, MSG } from '../src/p2p/wire.js';
 import { Peer } from '../src/p2p/peer.js';
 import { CONSENSUS as C, WEI } from '../src/params.js';
 import { equal as equalHash } from '../src/util/bytes.js';
-import { newChain, wallet, mine, mineMany, transfer, seal } from './helpers/chain.js';
+import { newChain, wallet, mine, mineMany, transfer, seal, tmpData } from './helpers/chain.js';
 import { Block, Header } from '../src/core/types.js';
 
 const until = async (cond, ms = 15000) => {
@@ -214,3 +214,17 @@ test('a seed given by name: the node knows all its addresses and connects', asyn
 });
 
 function once(socket) { return new Promise((r) => socket.once('connect', r)); }
+
+test('addresses learned from peer exchange survive a restart of the node', async () => {
+  const dataDir = tmpData();
+  const chain = await newChain({ dataDir });
+  const n = new Network({ chain, mempool: chain.mempool, port: 0, host: '127.0.0.1', allowPrivate: false });
+  const fake = { ready: true };
+  n._onPeers(fake, ['8.8.4.4:30524', '1.1.1.1:30524', '10.0.0.5:30524'].map((a) => new TextEncoder().encode(a)));
+  chain.close();
+  const again = await newChain({ dataDir });
+  const known = [...again.store.peersNew(100), ...again.store.peersTried(100)];
+  assert.ok(known.includes('8.8.4.4:30524') && known.includes('1.1.1.1:30524'), `known: ${known.join(' ')}`);
+  assert.ok(!known.includes('10.0.0.5:30524'), 'a private address from a stranger is not kept');
+  again.close();
+});

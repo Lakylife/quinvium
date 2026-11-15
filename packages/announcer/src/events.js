@@ -148,6 +148,25 @@ export function detect(state, snap, now, { stallAfter = 600, summaryHour = 12 } 
     }
   }
 
+  // The node's watch (Telegram only): a peer on another branch, a deep reorganisation, or a website or Explorer file
+  // that differs from GitHub. Each problem once while it lasts, and once when everything matches again.
+  if (snap.watch) {
+    const w = snap.watch;
+    const chainKey = w.differ > 0 ? `${w.differ}/${w.checked}/${w.minority}` : null;
+    if (chainKey && !s.watchChain) {
+      add(`watch-chain:${now}`, 'watch-chain', { differ: w.differ, checked: w.checked, minority: w.minority }, ['telegram']);
+    }
+    s.watchChain = chainKey;
+    const seen = new Set(s.watchIncidents ?? []);
+    const fresh = w.incidents.filter((i) => !seen.has(i));
+    if (fresh.length && s.watchIncidents) add(`watch-reorg:${fresh[0]}`, 'watch-reorg', { kinds: [...new Set(fresh.map((i) => i.split(':')[0]))] }, ['telegram']);
+    s.watchIncidents = w.incidents.slice(-64);
+    const sites = [...w.sites].sort().join(' ');
+    if (sites && sites !== s.watchSites) add(`watch-site:${now}`, 'watch-site', { urls: w.sites }, ['telegram']);
+    if (!sites && s.watchSites) add(`watch-site-ok:${now}`, 'watch-site-ok', {}, ['telegram']);
+    s.watchSites = sites || null;
+  }
+
   // Weekly summary of new miners, Monday after the summary hour: Telegram and X.
   const week = weekOf(now);
   s.lastWeek ??= week;
@@ -182,7 +201,7 @@ export function count(state, channel, now) {
 }
 
 /** The more important event wins when the X budget is tight. */
-export const PRIORITY = { majority: 0, 'majority-end': 1, halving: 0, 'halving-soon': 1, release: 2, milestone: 3, hashrate: 4, pool: 4, week: 5, summary: 5, stall: 6, resume: 6, 'hashrate-jump': 7, miner: 8, node: 8, digest: 8 };
+export const PRIORITY = { 'watch-site': 0, 'watch-chain': 0, 'watch-reorg': 0, 'watch-site-ok': 1, majority: 0, 'majority-end': 1, halving: 0, 'halving-soon': 1, release: 2, milestone: 3, hashrate: 4, pool: 4, week: 5, summary: 5, stall: 6, resume: 6, 'hashrate-jump': 7, miner: 8, node: 8, digest: 8 };
 
 /** Telegram at most this many messages an hour; small events above it are merged into one digest. */
 export const TELEGRAM_PER_HOUR = 5;

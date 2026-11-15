@@ -28,3 +28,4 @@ docs/snimky/
 docs/cs/
 packages/announcer/announcer.env
 announcer-state.json
+packages/node/site-manifest.json
