@@ -33,7 +33,7 @@
       'mine.sub': 'Těžař dostane odměnu 4 QU za blok a všechny poplatky z transakcí v bloku.', 'b.reward': 'Odměna za blok', 'b.baseFees': 'Základní poplatky', 'b.tips': 'Dýška', 'b.total': 'Těžař celkem', 'mine.own': 'Vlastní Quinvium Miner (Windows, macOS, Linux)',
       'mine.other': 'Běžné Windows minery přes Stratum', 'mine.note': 'Těžit lze na libovolný uzel. Účet ani registrace nejsou potřeba, stačí adresa peněženky.',
       'mine.yourAddr': 'VAŠE_ADRESA', 'apps.sub': 'Hotové kontrakty sítě Quinvium pro různé obory. Čtení je zdarma, zápis podepisuje vaše peněženka.',
-      'tool.read': 'Ověřit', 'tool.write': 'Zapsat do řetězce', 'tool.file': 'Nebo vyberte soubor (zůstává ve vašem počítači)', 'tool.sent': 'Transakce odeslána', 'tool.done': 'Potvrzeno v bloku', 'tool.missing': 'Vyplňte pole', 'tool.failed': 'Transakce v bloku selhala', 'tool.nameStep1': 'Krok 1 ze 2: podepište závazek', 'tool.nameStep2': 'Čekám na ochrannou lhůtu, zbývá', 'tool.nameStep3': 'Krok 2 ze 2: podepište registraci', 'net.title': 'Síť a uzly', 'net.rpcLan': 'RPC v domácí síti', 'net.rpcPublic': 'RPC z internetu', 'net.rpcPublicFwd': 'RPC z internetu (po přesměrování)', 'net.rpcOnlyHere': 'Uzel přijímá jen tento počítač. Sdílení se zapíná v aplikaci Quinvium v části Uzel, Spojit s jiným počítačem.', 'net.rpcHint': 'Do peněženky v telefonu zadejte RPC z domácí sítě, nebo z internetu, když je telefon na mobilních datech.', 'charts.time': 'Čas bloku (s)', 'charts.diff': 'Obtížnost', 'charts.rate': 'Odhad výkonu (H/s)',
+      'tool.read': 'Ověřit', 'tool.write': 'Zapsat do řetězce', 'tool.file': 'Nebo vyberte soubor (zůstává ve vašem počítači)', 'tool.sent': 'Transakce odeslána', 'tool.done': 'Potvrzeno v bloku', 'tool.missing': 'Vyplňte pole', 'tool.failed': 'Transakce v bloku selhala', 'tool.nameStep1': 'Krok 1 ze 2: podepište závazek', 'tool.nameStep2': 'Čekám na ochrannou lhůtu, zbývá', 'tool.nameStep3': 'Krok 2 ze 2: podepište registraci', 'tool.namePrimary': 'Poslední krok: podepište, aby se jméno ukazovalo místo vaší adresy', 'tool.nameResume': 'Pokračuji v rozdělané registraci, závazek už je v řetězci.', 'tool.namePending': 'Registrace jména {name} není dokončená: krok 1 je v řetězci, krok 2 chybí. Klikněte na Registrovat a podepište ho (závazek platí 24 hodin od odeslání).', 'tool.nameFinished': 'Jméno se teď ukazuje místo vaší adresy.', 'addr.names': 'Jména .qu', 'addr.namesHint': 'Jméno zatím není hlavní, proto se místo adresy neukazuje.', 'addr.setPrimary': 'Nastavit jako hlavní jméno', 'net.title': 'Síť a uzly', 'net.rpcLan': 'RPC v domácí síti', 'net.rpcPublic': 'RPC z internetu', 'net.rpcPublicFwd': 'RPC z internetu (po přesměrování)', 'net.rpcOnlyHere': 'Uzel přijímá jen tento počítač. Sdílení se zapíná v aplikaci Quinvium v části Uzel, Spojit s jiným počítačem.', 'net.rpcHint': 'Do peněženky v telefonu zadejte RPC z domácí sítě, nebo z internetu, když je telefon na mobilních datech.', 'charts.time': 'Čas bloku (s)', 'charts.diff': 'Obtížnost', 'charts.rate': 'Odhad výkonu (H/s)',
       'rich.sub': 'Adresy podle zůstatku', 'mem.sub': 'Transakce čekající na vytěžení', 'miners.sub': 'Podle posledních 1000 bloků', 'search.none': 'Nic nenalezeno pro',
       'swap.allTrades': 'Všechny směny →', 'swap.mine': 'Moje likvidita', 'swap.searchPair': 'Hledat dvojici', 'swap.linked': 'Částky jsou svázané kurzem poolu', 'swap.linkedRate': 'Svázáno kurzem poolu: 1 {a} = {rate} {b}', 'swap.newPoolRate': 'Nový pool: poměr částek určí počáteční kurz', 'swap.addMore': 'Přidat', 'swap.withdrawPart': 'Vybrat část', 'swap.youGet': 'Dostanete zpět asi {a} a {b}.', 'swap.everything': 'vše', 'swap.pickPart': 'Vyberte, kolik chcete vybrat.', 'swap.showMore': 'Zobrazit dalších {n} (celkem {total})', 'swap.noMatch': 'Hledání neodpovídá žádná dvojice.', 'bridge.step1': 'Uzamčení', 'bridge.step2': 'Potvrzení', 'bridge.step3': 'Připsání', 'bridge.how2n': 'Nezávislí validátoři počkají, až je převod v řetězci dost hluboko, a podepíšou ho. Potřeba je {threshold} z {count} podpisů.',
       'pools.online': 'Server zveřejněný', 'pools.noServerShort': 'Bez serveru', 'pool.asic': 'ASIC a jiné', 'pool.viaApp': 'V aplikaci Quinvium otevřete Těžba → Kam těžíte, najděte tento pool v seznamu a vyberte ho. Těžba pak poběží na vaši peněženku.', 'pool.asicUrl': 'Adresa poolu', 'pool.asicWorker': 'Pracovník (worker)', 'pool.password': 'Heslo', 'pool.loginNote': 'adresa peněženky pro výplaty, za tečkou název zařízení', 'pool.passwordNote': 'libovolné, pool ho nepoužívá', 'pool.algo': 'Algoritmus', 'pool.algoNote': 'standardní Ethash přes EthereumStratum/1.0.0 i ETHPROXY', 'pool.payout': 'Výplaty', 'pool.payoutNote': 'automaticky z kontraktu, PPLNS za posledních {n} min, poplatek provozovatele {fee}', 'pool.software': 'Program', 'pool.connectNote': 'Těžit jde přes server, který provozovatel zveřejnil. Odměny drží kontrakt: provozovatel si vezme jen poplatek a výplatu může každý těžař vybrat i sám tlačítkem Vybrat.', 'pool.share24': 'Podíl na blocích za 24 h', 'pool.blocks24': '{n} bloků za 24 h', 'pool.findMiner': 'Najít těžaře podle adresy', 'pool.minersTotal': 'celkem {n} těžařů', 'pool.minerNotFound': 'Tato adresa v okně poolu neposlala žádný podíl.', 'pool.allMiners': '← Všichni těžaři', 'pool.createdTitle': 'Pool je založený. Co dál:', 'pools.otherPools': 'Ostatní pooly', 'pools.otherCount': 'dalších poolů: {n}', 'pools.all': 'Všechny pooly ({n})', 'pools.find': 'Hledat pool podle jména nebo adresy', 'pools.minersCol': 'Těžaři', 'pools.createdCol': 'Založen', 'pools.noMatch': 'Hledání „{q}“ neodpovídá žádný pool.',
@@ -77,7 +77,7 @@
       'mine.sub': 'The miner gets a 4 QU block reward plus all transaction fees in the block.', 'b.reward': 'Block reward', 'b.baseFees': 'Base fees', 'b.tips': 'Tips', 'b.total': 'Miner total', 'mine.own': 'Quinvium Miner (Windows, macOS, Linux)',
       'mine.other': 'Common Windows miners via Stratum', 'mine.note': 'Mine on any node. No account needed, just your wallet address.',
       'mine.yourAddr': 'YOUR_ADDRESS', 'apps.sub': 'Ready-made Quinvium contracts for many industries. Reading is free, writing is signed by your wallet.',
-      'tool.read': 'Verify', 'tool.write': 'Write to chain', 'tool.file': 'Or choose a file (stays on your computer)', 'tool.sent': 'Transaction sent', 'tool.done': 'Confirmed in block', 'tool.missing': 'Fill in', 'tool.failed': 'The transaction failed in the block', 'tool.nameStep1': 'Step 1 of 2: sign the commitment', 'tool.nameStep2': 'Waiting for the protection period, left', 'tool.nameStep3': 'Step 2 of 2: sign the registration', 'net.title': 'Network', 'net.rpcLan': 'RPC on the home network', 'net.rpcPublic': 'RPC from the internet', 'net.rpcPublicFwd': 'RPC from the internet (after forwarding)', 'net.rpcOnlyHere': 'The node accepts only this computer. Turn on sharing in the Quinvium app under Node, Connect to another computer.', 'net.rpcHint': 'In a phone wallet, enter the home network RPC, or the internet RPC when the phone is on mobile data.', 'charts.time': 'Block time (s)', 'charts.diff': 'Difficulty', 'charts.rate': 'Estimated hashrate (H/s)',
+      'tool.read': 'Verify', 'tool.write': 'Write to chain', 'tool.file': 'Or choose a file (stays on your computer)', 'tool.sent': 'Transaction sent', 'tool.done': 'Confirmed in block', 'tool.missing': 'Fill in', 'tool.failed': 'The transaction failed in the block', 'tool.nameStep1': 'Step 1 of 2: sign the commitment', 'tool.nameStep2': 'Waiting for the protection period, left', 'tool.nameStep3': 'Step 2 of 2: sign the registration', 'tool.namePrimary': 'Last step: sign so the name is shown instead of your address', 'tool.nameResume': 'Continuing an unfinished registration; the commitment is already on chain.', 'tool.namePending': 'The registration of {name} is not finished: step 1 is on chain, step 2 is missing. Click Register and sign it (the commitment is valid for 24 hours after it was sent).', 'tool.nameFinished': 'The name is now shown instead of your address.', 'addr.names': '.qu names', 'addr.namesHint': 'The name is not primary yet, so it is not shown instead of the address.', 'addr.setPrimary': 'Set as primary name', 'net.title': 'Network', 'net.rpcLan': 'RPC on the home network', 'net.rpcPublic': 'RPC from the internet', 'net.rpcPublicFwd': 'RPC from the internet (after forwarding)', 'net.rpcOnlyHere': 'The node accepts only this computer. Turn on sharing in the Quinvium app under Node, Connect to another computer.', 'net.rpcHint': 'In a phone wallet, enter the home network RPC, or the internet RPC when the phone is on mobile data.', 'charts.time': 'Block time (s)', 'charts.diff': 'Difficulty', 'charts.rate': 'Estimated hashrate (H/s)',
       'rich.sub': 'Addresses by balance', 'mem.sub': 'Transactions waiting to be mined', 'miners.sub': 'From the last 1000 blocks', 'search.none': 'Nothing found for',
       'swap.allTrades': 'All swaps →', 'swap.mine': 'My liquidity', 'swap.searchPair': 'Search pair', 'swap.linked': 'The amounts are linked by the pool rate', 'swap.linkedRate': 'Linked by the pool rate: 1 {a} = {rate} {b}', 'swap.newPoolRate': 'New pool: the ratio of the amounts sets the starting rate', 'swap.addMore': 'Add more', 'swap.withdrawPart': 'Withdraw', 'swap.youGet': 'You get back about {a} and {b}.', 'swap.everything': 'all', 'swap.pickPart': 'Choose how much to withdraw.', 'swap.showMore': 'Show {n} more ({total} in total)', 'swap.noMatch': 'No pair matches the search.', 'bridge.step1': 'Lock', 'bridge.step2': 'Confirm', 'bridge.step3': 'Receive', 'bridge.how2n': 'Independent validators wait until the transfer is deep enough in the chain and sign it. {threshold} of {count} signatures are needed.',
       'pools.online': 'Server published', 'pools.noServerShort': 'No server', 'pool.asic': 'ASIC and others', 'pool.viaApp': 'In the Quinvium app open Mining → Where you mine, find this pool in the list and choose it. Mining then runs for your wallet.', 'pool.asicUrl': 'Pool URL', 'pool.asicWorker': 'Worker', 'pool.password': 'Password', 'pool.loginNote': 'your payout wallet address, then a dot and a device name', 'pool.passwordNote': 'anything, the pool ignores it', 'pool.algo': 'Algorithm', 'pool.algoNote': 'standard Ethash over EthereumStratum/1.0.0 or ETHPROXY', 'pool.payout': 'Payouts', 'pool.payoutNote': 'automatic from the contract, PPLNS over the last {n} min, operator fee {fee}', 'pool.software': 'Software', 'pool.connectNote': 'Mining goes through the server the operator published. The contract holds the rewards: the operator only takes the fee, and every miner can also withdraw on their own with the Withdraw button.', 'pool.share24': 'Block share in 24 h', 'pool.blocks24': '{n} blocks in 24 h', 'pool.findMiner': 'Find a miner by address', 'pool.minersTotal': '{n} miners in total', 'pool.minerNotFound': 'This address sent no share in the pool window.', 'pool.allMiners': '← All miners', 'pool.createdTitle': 'Your pool is created. What next:', 'pools.otherPools': 'Other pools', 'pools.otherCount': '{n} more pools', 'pools.all': 'All pools ({n})', 'pools.find': 'Search pools by name or address', 'pools.minersCol': 'Miners', 'pools.createdCol': 'Created', 'pools.noMatch': 'No pool matches “{q}”.',
@@ -94,6 +94,7 @@
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch { /* private window */ } },
+    del(k) { try { localStorage.removeItem(k); } catch { /* private window */ } },
   };
   // German, Spanish and French are in i18n.js, Japanese, Chinese and Arabic in i18n-more.js. The Quinvium app also sets the language code.
   const LANGUAGES = { en: 'English', cs: 'Čeština', de: 'Deutsch', es: 'Español', fr: 'Français', ja: '日本語', zh: '中文', ar: 'العربية' };
@@ -342,7 +343,7 @@
       await refreshStats();
       if (route().name === 'home') pageHome(true);
       // The refresh belongs to a page that may already be gone. Its error has nothing to show.
-      try { await pageTick?.(); } catch { /* the page has left in the meantime */ }
+      try { await pageTick?.(); fillNames().catch(() => {}); } catch { /* the page has left in the meantime */ }
     };
   }
 
@@ -1351,6 +1352,54 @@
     return rows.filter(Boolean);
   }
 
+  /**
+   * .qu names of addresses for lists. The primary name of each address is read in one batched call (Multicall), remembered for
+   * the visit, and a shortened address in a link is replaced by its name.
+   */
+  const nameCache = new Map();
+  async function fillNames(root = app) {
+    if (!contracts.AetherNames?.address || !contracts.Multicall?.address) return;
+    const links = [...root.querySelectorAll('a[href^="/address/0x"]')].filter((el) => /^0x[0-9a-f]+…?[0-9a-f]*$/i.test(el.textContent.trim()) && !el.closest('.page-head'));
+    const addrOf = (el) => el.getAttribute('href').slice(9, 51).toLowerCase();
+    const wanted = [...new Set(links.map(addrOf))].filter((x) => ethers.isAddress(x) && !nameCache.has(x)).slice(0, 150);
+    if (wanted.length) {
+      const names = new ethers.Interface(contracts.AetherNames.abi);
+      const multi = new ethers.Contract(contracts.Multicall.address, contracts.Multicall.abi, provider());
+      try {
+        const [, results] = await multi.aggregate(wanted.map((x) => ({ target: contracts.AetherNames.address, data: names.encodeFunctionData('nameOf', [x]) })));
+        results.forEach((r, i) => nameCache.set(wanted[i], r.success ? names.decodeFunctionResult('nameOf', r.data)[0] : ''));
+      } catch { return; }
+    }
+    for (const el of links) {
+      const n = nameCache.get(addrOf(el));
+      if (!n) continue;
+      el.title = el.getAttribute('href').slice(9, 51);
+      el.textContent = `${n}.qu`;
+      el.classList.remove('hash');
+    }
+  }
+
+  /**
+   * Names that point to the address but are not its primary name: names it registered, and names whose target was changed to it.
+   * Each candidate is checked against the current record.
+   */
+  async function namesPointingTo(a) {
+    const c = contract('AetherNames');
+    const at = contracts.AetherNames.address;
+    const topic = ethers.zeroPadValue(a, 32);
+    const ev = (n) => c.interface.getEvent(n).topicHash;
+    const [own, moved] = await Promise.all([
+      provider().getLogs({ address: at, fromBlock: 0, toBlock: 'latest', topics: [ev('Registered'), null, topic] }),
+      provider().getLogs({ address: at, fromBlock: 0, toBlock: 'latest', topics: [ev('TargetChanged'), null, topic] }),
+    ]);
+    const nodes = [...new Set(moved.map((l) => l.topics[1]))].slice(0, 20);
+    const named = nodes.length ? await provider().getLogs({ address: at, fromBlock: 0, toBlock: 'latest', topics: [ev('Registered'), nodes] }) : [];
+    const candidates = [...new Set([...own, ...named].map((l) => c.interface.parseLog(l).args.name))].slice(0, 20);
+    const now = Math.floor(Date.now() / 1000);
+    const rows = await Promise.all(candidates.map(async (n) => { const [, target, expires] = await c.info(n); return target.toLowerCase() === a.toLowerCase() && Number(expires) > now ? n : null; }));
+    return rows.filter(Boolean);
+  }
+
   async function pageAddress(a, q) {
     app.innerHTML = skeleton();
     const tab = q.get('tab') ?? 'txs';
@@ -1364,6 +1413,8 @@
     const owned = await Promise.all(operated.map(async (x) => ({ ...x, ...(await poolSummary(x.pool).catch(() => ({}))), owed: await poolContract(x.pool).operatorOwed().catch(() => 0n) })));
     let name = '';
     try { name = await new ethers.Contract(contracts.AetherNames.address, contracts.AetherNames.abi, provider()).nameOf(a); } catch { /* no name */ }
+    if (name) nameCache.set(a.toLowerCase(), name);
+    const others = name || info.isContract ? [] : await namesPointingTo(a).catch(() => []);
     const symbol = info.isContract ? await new ethers.Contract(a, TOKEN_ABI, provider()).symbol().catch(() => null) : null;
     const label = labelOf(a);
     const kind = label ? t('addr.system') : info.isContract ? t('addr.contract') : t('addr.account');
@@ -1421,11 +1472,15 @@
       <div class="card">${kv([
         [t('addr.first'), stamp(info.first)], [t('addr.last'), stamp(info.last)],
         [t('addr.received'), `${wei(info.received.value)} ${unit}`], [t('addr.sent'), `${wei(info.sent.value)} ${unit}`], [t('addr.fees'), `${wei(info.sent.fees, 8)} ${unit}`],
-        info.sent.failed && [t('addr.failed'), num(info.sent.failed)], [t('addr.nonce'), num(info.nonce)], name && [t('addr.name'), `${esc(name)}.qu`],
+        info.sent.failed && [t('addr.failed'), num(info.sent.failed)], [t('addr.nonce'), num(info.nonce)], name && [t('addr.name'), `<span class="badge ok">${esc(name)}.qu</span>`],
+        others.length && [t('addr.names'), `${others.map((n) => `<span class="badge">${esc(n)}.qu</span>`).join(' ')} <span class="muted">${esc(t('addr.namesHint'))}</span>${account?.toLowerCase() === a.toLowerCase() ? ` <button type="button" class="text-btn" id="set-primary">${esc(t('addr.setPrimary'))}</button><span class="tool-output hidden" id="set-primary-out"></span>` : ''}`],
         info.isContract && [t('addr.code'), `${num(info.codeSize)} B`], symbol && [t('t.token'), `<a href="/token/${esc(a)}">${esc(symbol)}</a>`],
       ])}</div>
       <div class="tabs">${tabLink('txs', t('nav.txs'), txCount)}${tabLink('transfers', t('addr.transfersTab'), info.tokenTransfers ?? 0)}${tabLink('mined', t('addr.mined'), info.mined.blocks)}${tabLink('pool', t('addr.poolTab'), info.poolPayouts)}${tabLink('tokens', t('addr.tokens'), info.tokens.length)}</div>${body}`;
     $('show-qr').onclick = () => showQr(a);
+    if ($('set-primary')) {
+      txButton($('set-primary'), $('set-primary-out'), (s) => contract('AetherNames', s).setPrimary(others[0]), () => { nameCache.delete(a.toLowerCase()); setTimeout(render, 1500); return t('tool.nameFinished'); });
+    }
     bindFilters(base, tab === 'txs' ? {} : { tab });
   }
 
@@ -1767,19 +1822,39 @@
     return e.shortMessage ?? e.message;
   }
 
-  /** Name registration has two steps so it cannot be front-run. */
+  /**
+   * Name registration has two steps so it cannot be front-run: a commitment, and a minute later the registration itself.
+   * The random salt of the commitment is kept in this browser until the registration is confirmed (it is not sensitive: the commitment
+   * also binds the sender, so nobody else can use it), so a closed page or a rejected second
+   * signature can be finished later (the commitment is valid for a day). A name that points to the account and is its first one is
+   * also set as primary, so it is shown instead of the address.
+   */
+  const pendingNameKey = (me) => `quinvium.pendingName.${stats?.chainId}.${String(me).toLowerCase()}`;
+  function pendingName(me) {
+    try { const p = JSON.parse(store.get(pendingNameKey(me)) ?? 'null'); return p?.name && p?.salt && p?.target ? p : null; } catch { return null; }
+  }
   async function registerName(v, s, progress) {
     need(v, 'name');
     const c = contract('AetherNames', s);
     const me = await s.getAddress();
     const target = v.target || me;
-    if (!(await c.available(v.name))) throw Object.assign(new Error('Unavailable'), { revert: { name: 'Unavailable' } });
-    const secret = ethers.hexlify(ethers.randomBytes(32));
-    const hash = await c.commitment(v.name, me, target, secret);
-    progress(t('tool.nameStep1'));
-    const receipt = await (await c.commit(hash)).wait();
-    const committed = (await receipt.getBlock()).timestamp;
-    const age = Number(await c.MIN_COMMIT_AGE());
+    const [age, maxAge] = (await Promise.all([c.MIN_COMMIT_AGE(), c.MAX_COMMIT_AGE()])).map(Number);
+    let committed = 0;
+    let salt = null;
+    const saved = pendingName(me);
+    if (saved && saved.name === v.name && saved.target.toLowerCase() === target.toLowerCase()) {
+      const at = Number(await c.commitments(await c.commitment(v.name, me, target, saved.salt)));
+      const now = (await s.provider.getBlock('latest')).timestamp;
+      if (at && now <= at + maxAge) { committed = at; salt = saved.salt; progress(t('tool.nameResume')); }
+    }
+    if (!committed) {
+      if (!(await c.available(v.name))) throw Object.assign(new Error('Unavailable'), { revert: { name: 'Unavailable' } });
+      salt = ethers.hexlify(ethers.randomBytes(32));
+      store.set(pendingNameKey(me), JSON.stringify({ name: v.name, target, salt }));
+      progress(t('tool.nameStep1'));
+      const receipt = await (await c.commit(await c.commitment(v.name, me, target, salt))).wait();
+      committed = (await receipt.getBlock()).timestamp;
+    }
     for (;;) {
       const latest = await s.provider.getBlock('latest');
       const left = committed + age - latest.timestamp;
@@ -1788,7 +1863,17 @@
       await new Promise((r) => setTimeout(r, Math.min(left * 1000, 3000)));
     }
     progress(t('tool.nameStep3'));
-    return c.register(v.name, 1, target, secret, { value: await c.pricePerYear(v.name) });
+    const tx = await c.register(v.name, 1, target, salt, { value: await c.pricePerYear(v.name) });
+    const r = await tx.wait();
+    if (r?.status) {
+      store.del(pendingNameKey(me));
+      if (target.toLowerCase() === me.toLowerCase() && !(await c.nameOf(me).catch(() => ''))) {
+        progress(t('tool.namePrimary'));
+        // A rejected signature leaves the name registered; "Set as primary" does it later.
+        try { if ((await (await c.setPrimary(v.name)).wait())?.status) tx.primarySet = true; } catch { /* not set */ }
+      }
+    }
+    return tx;
   }
 
   // Result rows: label and value. An address is a link, status a coloured label, a list rows below each other.
@@ -2006,7 +2091,7 @@
           run: registerName,
           done: (e) => {
             const r = e.find((x) => x.name === 'Registered');
-            return r ? { lines: [line(L('Jméno', 'Name'), r.args.name), line(L('Platí do', 'Valid until'), when(r.args.expires))] } : {};
+            return r ? { lines: [line(L('Jméno', 'Name'), `${r.args.name}.qu`), line(L('Platí do', 'Valid until'), when(r.args.expires))] } : {};
           } },
         { id: 'renew', label: L('Prodloužit o rok', 'Renew one year'), fields: ['name'],
           run: async (v, s) => { const c = contract('AetherNames', s); return c.renew(v.name, 1, { value: await c.pricePerYear(v.name) }); } },
@@ -2181,6 +2266,18 @@
       };
       card.querySelectorAll('[data-task]').forEach((b) => b.addEventListener('click', () => select(tool.tasks.find((k) => k.id === b.dataset.task))));
       select(task);
+      // An unfinished name registration of the connected account: the card opens with it, Register finishes it.
+      if (tool.key === 'names') {
+        walletKnown().then(() => {
+          const unfinished = account && card.isConnected ? pendingName(account) : null;
+          if (!unfinished) return;
+          select(tool.tasks.find((k) => k.id === 'write'));
+          form.elements.name.value = unfinished.name;
+          if (unfinished.target.toLowerCase() !== account.toLowerCase()) form.elements.target.value = unfinished.target;
+          show(esc(t('tool.namePending').replace('{name}', `${unfinished.name}.qu`)));
+          card.open = true;
+        });
+      }
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
         const v = Object.fromEntries(task.fields.map((n) => [n, form.elements[n].value.trim()]).filter(([, x]) => x));
@@ -2202,6 +2299,7 @@
           const r = await tx.wait();
           if (!r.status) throw new Error(t('tool.failed'));
           const result = task.done?.(receiptEvents(r, tool.abi), v, await s.getAddress()) ?? {};
+          if (tx.primarySet) result.note = { cs: t('tool.nameFinished'), en: t('tool.nameFinished') };
           for (const [name, value] of Object.entries(result.fill ?? {})) if (form.elements[name]) form.elements[name].value = value;
           show(`<p class="tool-done"><strong>${t('tool.done')} #${r.blockNumber}</strong> · <a class="hash" href="/tx/${esc(tx.hash)}">${esc(short(tx.hash, 10))}</a></p>${result.lines ? resultHtml(result.lines) : ''}${result.note ? `<p class="tool-note">${esc(pick(result.note))}</p>` : ''}`, 'good');
         } catch (e) {
@@ -3789,7 +3887,7 @@
     const seq = ++renderSeq;
     try {
       const out = await renderPage();
-      if (seq === renderSeq) pageMeta();
+      if (seq === renderSeq) { pageMeta(); fillNames().catch(() => {}); }
       document.querySelectorAll('.js-search').forEach(attachSuggest);
       return out;
     } catch (e) {
