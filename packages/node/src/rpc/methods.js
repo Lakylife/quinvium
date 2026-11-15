@@ -918,6 +918,33 @@ export function createMethods(node) {
       id: Buffer.from(network.nodeId).toString('hex'), publicKey: Buffer.from(network.identity.publicKey).toString('hex'),
       port: network.port, seed: `${Buffer.from(network.identity.publicKey).toString('hex')}@HOST:${network.port}`,
     } : null),
+    /**
+     * Suggestions while typing in the Explorer search: a block by number, a block or transaction by hash, and known addresses
+     * by their first hex digits. `type` narrows it to blocks, txs or addresses. Tokens, pools and names come from their contracts.
+     */
+    aether_suggest: ([q, f = {}] = []) => {
+      const s = String(q ?? '').trim().toLowerCase();
+      const type = ['blocks', 'txs', 'addresses'].includes(f.type) ? f.type : 'all';
+      const limit = Math.min(10, Math.max(1, count(f.limit) ?? 6));
+      const want = (t) => type === 'all' || type === t;
+      const out = [];
+      if (/^\d{1,12}$/.test(s) && want('blocks')) {
+        const h = chain.getHeaderByNumber(BigInt(s));
+        if (h) out.push({ type: 'block', id: s, hash: toHex(h.hash()), time: Number(h.timestamp) });
+      }
+      if (/^0x[0-9a-f]{64}$/.test(s)) {
+        const b = fromHex(s);
+        const h = chain.getHeader(b);
+        if (h && want('blocks')) out.push({ type: 'block', id: String(h.number), hash: s, time: Number(h.timestamp) });
+        else if ((chain.store.txLocation(b) || mempool.has(b)) && want('txs')) out.push({ type: 'tx', id: s, pending: !chain.store.txLocation(b) });
+      }
+      if (/^0x[0-9a-f]{2,40}$/.test(s) && want('addresses')) {
+        for (const a of chain.store.accountsByPrefix(s.slice(2), limit)) {
+          out.push({ type: 'address', id: toHex(a.addr), contract: a.isContract, balance: a.balance.toString() });
+        }
+      }
+      return out.slice(0, limit);
+    },
     aether_search: ([q]) => {
       const s = String(q ?? '').trim();
       if (/^\d+$/.test(s) && chain.getHeaderByNumber(BigInt(s))) return { type: 'block', id: s };

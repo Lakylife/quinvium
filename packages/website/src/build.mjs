@@ -7,10 +7,17 @@ import { fileURLToPath } from 'node:url';
 import { EXPLORER, SITE, icon, pages } from './pages.mjs';
 import { existsSync } from 'node:fs';
 import { markdown } from './markdown.mjs';
+import { translateHtml } from './translate.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, '..', 'public');
-const LANGS = { en: '' };   // the site is English only (user's request, 13 Nov 2026); the content in pages.mjs also has Czech in case it comes back
+const LANGS = { en: '' };   // the site is written in English; the other languages are translated from the finished pages below
+// Languages of the site, as in the Explorer. Each one lives under /<code>/ and is made from i18n/<code>.json.
+const SITE_LANGS = { en: 'English', cs: 'Čeština', de: 'Deutsch', es: 'Español', fr: 'Français', ja: '日本語', zh: '中文', ar: 'العربية' };
+const OG_LOCALE = { en: 'en_US', cs: 'cs_CZ', de: 'de_DE', es: 'es_ES', fr: 'fr_FR', ja: 'ja_JP', zh: 'zh_CN', ar: 'ar_AR' };
+const RTL = new Set(['ar']);
+const langPath = (l, path) => (l === 'en' ? path : `/${l}${path}`);
+const built = [];
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
 rmSync(out, { recursive: true, force: true });
@@ -91,6 +98,7 @@ for (const [lang, prefix] of Object.entries(LANGS)) {
 <meta name="description" content="${esc(p.desc)}">
 <meta name="theme-color" content="#0b1622">
 <link rel="canonical" href="${SITE}${path}">
+<!--alternates-->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Quinvium">
 <meta property="og:title" content="${esc(p.title)}">
@@ -110,6 +118,7 @@ for (const [lang, prefix] of Object.entries(LANGS)) {
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="/site.css">
+<script src="/theme.js"></script>
 <script src="/site.js" defer></script>
 </head>
 <body data-lang="${lang}">
@@ -119,6 +128,8 @@ for (const [lang, prefix] of Object.entries(LANGS)) {
     <a class="brand" href="${u('')}"><img src="/logo.svg" alt="" width="30" height="30"><span>Quinvium</span></a>
     <nav class="nav" id="nav" aria-label="Main menu"><div class="nav-in">${nav}</div><a class="btn primary lg nav-dl" href="${u('download')}">Download${ARROW}</a></nav>
     <div class="tools">
+      <div class="lang-menu" data-lang-menu><button type="button" class="tool-btn" aria-expanded="false" aria-controls="langs" aria-label="Language">${icon('globe')}<span class="lang-code" translate="no">EN</span></button><!--langmenu--></div>
+      <button type="button" class="tool-btn theme-btn" data-theme-toggle aria-label="Switch between light and dark mode" title="Switch between light and dark mode"><span class="sun">${icon('sun')}</span><span class="moon">${icon('moon')}</span></button>
       <a class="btn primary md head-dl" href="${u('download')}">Download${ARROW}</a>
       <button class="menu" id="menu" aria-label="${L('Nabídka', 'Menu')}" aria-expanded="false" aria-controls="nav"><span></span><span></span><span></span></button>
     </div>
@@ -144,7 +155,7 @@ ${p.body}
       <nav class="foot-cols" aria-label="Footer">
         <div><h4>Learn</h4>${foot(['about', 'whitepaper', 'tokenomics', 'roadmap', 'faq'])}</div>
         <div><h4>Use</h4>${foot(['wallets', 'download', 'ecosystem'])}<a href="${EXPLORER}">Explorer</a></div>
-        <div><h4>Mine &amp; build</h4>${foot(['mining', 'developers'])}<a href="${EXPLORER}/docs">Documentation</a><a href="https://testnet.quinvium.com">Testnet</a></div>
+        <div><h4>Mine &amp; build</h4>${foot(['mining', 'developers'])}<a href="${EXPLORER}/api">Documentation and API</a><a href="https://testnet.quinvium.com">Testnet</a></div>
         <div><h4>Community</h4><a href="https://x.com/Quinvium" rel="me">X (Twitter)</a><a href="https://t.me/Quinvium" rel="me">Telegram</a><a href="${GITHUB}">GitHub</a><a href="${GITHUB}/releases">Releases</a><a href="${GITHUB}/issues">Report an issue</a>${foot(['security', 'contact'])}</div>
       </nav>
     </div>
@@ -158,9 +169,8 @@ ${p.body}
 </body>
 </html>
 `;
-    const dir = join(out, path);
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, 'index.html'), html);
+    // Sections slide in as they scroll into view (site.js); the hero and the page heading are there right away.
+    built.push({ path, html: html.replace(/<section class="sec"/g, '<section class="sec reveal"') });
   }
 
   // 404 in both languages on one page (Caddy returns it for unknown paths)
@@ -175,10 +185,48 @@ ${p.body}
   }
 }
 
+// Every page in every language. English is the original; the others come from the translation dictionaries.
+const dicts = Object.fromEntries(Object.keys(SITE_LANGS).filter((l) => l !== 'en').map((l) => {
+  const f = join(here, 'i18n', `${l}.json`);
+  return [l, existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : {}];
+}));
+const missing = Object.fromEntries(Object.keys(dicts).map((l) => [l, new Set()]));
+const langMenu = (cur, path) => `<div class="lang-panel" id="langs" role="menu" translate="no">${Object.entries(SITE_LANGS).map(([l, name]) =>
+  `<a role="menuitem" href="${langPath(l, path)}" hreflang="${l}" lang="${l}" data-l${l === cur ? ' aria-current="true"' : ''}>${name}<small>${l}</small></a>`).join('')}</div>`;
+const alternates = (path) => [...Object.keys(SITE_LANGS).map((l) => `<link rel="alternate" hreflang="${l}" href="${SITE}${langPath(l, path)}">`), `<link rel="alternate" hreflang="x-default" href="${SITE}${path}">`].join('\n');
+/** Links inside the site point to the same language. Files (.pdf, .png …), downloads and the language menu stay as they are. */
+const localize = (html, l) => html.replace(/<a\b[^>]*>/g, (tag) => (/\sdata-l\b/.test(tag) ? tag : tag.replace(/href="\/(?!\/)([^"]*)"/, (m, rest) => {
+  if (rest.startsWith('downloads/') || /\.[a-z0-9]+($|[?#])/i.test(rest.split('#')[0])) return m;
+  return `href="/${l}/${rest}"`;
+})));
+for (const { path, html } of built) {
+  for (const l of Object.keys(SITE_LANGS)) {
+    let page = l === 'en' ? html : translateHtml(html, dicts[l], missing[l]);
+    if (l !== 'en') {
+      page = localize(page, l)
+        .replace('<html lang="en">', `<html lang="${l}"${RTL.has(l) ? ' dir="rtl"' : ''}>`)
+        .replace(`<link rel="canonical" href="${SITE}${path}">`, `<link rel="canonical" href="${SITE}${langPath(l, path)}">`)
+        .replace(`<meta property="og:url" content="${SITE}${path}">`, `<meta property="og:url" content="${SITE}${langPath(l, path)}">`)
+        .replace('<meta property="og:locale" content="en_US">', `<meta property="og:locale" content="${OG_LOCALE[l]}">`)
+        .replace('<body data-lang="en">', `<body data-lang="${l}">`)
+        .replace('<span class="lang-code" translate="no">EN</span>', `<span class="lang-code" translate="no">${l.toUpperCase()}</span>`)
+        .replace(/"inLanguage":"en"/g, `"inLanguage":"${l}"`);
+      urls.push(langPath(l, path));
+    }
+    page = page.replace('<!--alternates-->', alternates(path)).replace('<!--langmenu-->', langMenu(l, path));
+    const dir = join(out, langPath(l, path));
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'index.html'), page);
+  }
+}
+for (const [l, set] of Object.entries(missing)) if (set.size) console.warn(`${l}: ${set.size} texts without a translation (they stay in English)`);
+
 writeFileSync(join(out, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${SITE}/sitemap.xml\n`);
 const lastmod = new Date().toISOString().slice(0, 10);
-writeFileSync(join(out, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((p) => `  <url><loc>${SITE}${p}</loc><lastmod>${lastmod}</lastmod><priority>${p === '/' ? '1.0' : '0.8'}</priority></url>`).join('\n')}\n</urlset>\n`);
-for (const f of ['site.css', 'site.js', 'logo.svg', 'Quinvium-Symbol.ttf']) copyFileSync(join(here, f), join(out, f));
+const english = built.map((b) => b.path);
+const xlinks = (path) => Object.keys(SITE_LANGS).map((l) => `<xhtml:link rel="alternate" hreflang="${l}" href="${SITE}${langPath(l, path)}"/>`).join('');
+writeFileSync(join(out, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${english.flatMap((path) => Object.keys(SITE_LANGS).map((l) => `  <url><loc>${SITE}${langPath(l, path)}</loc><lastmod>${lastmod}</lastmod><priority>${path === '/' ? '1.0' : '0.8'}</priority>${xlinks(path)}</url>`)).join('\n')}\n</urlset>\n`);
+for (const f of ['site.css', 'site.js', 'theme.js', 'logo.svg', 'Quinvium-Symbol.ttf']) copyFileSync(join(here, f), join(out, f));
 copyFileSync(join(here, 'logo.svg'), join(out, 'favicon.svg'));
 for (const f of ['og.png', 'apple-touch-icon.png', 'quinvium-whitepaper.pdf']) { try { copyFileSync(join(here, f), join(out, f)); } catch { console.warn(`chybí ${f}, spusťte node src/og.mjs`); } }
 console.log(`Hotovo: ${urls.length} stránek v ${out}`);

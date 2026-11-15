@@ -47,6 +47,9 @@ const ic = {
   arrowdown: '<path d="M12 4v12M6 11l6 6 6-6M5 21h14"/>',
   ext: '<path d="M7 17L17 7M9 7h8v8"/>',
   copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon: '<path d="M20.5 14.3A8.5 8.5 0 0 1 9.7 3.5a8.5 8.5 0 1 0 10.8 10.8z"/>',
 };
 export const icon = (n) => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ic[n]}</svg>`;
 
@@ -82,22 +85,25 @@ export function pages(L, u, dl = null) {
 <section class="hero">
   <div class="wrap hero-grid">
     <div class="hero-copy">
-      <p class="status-pill"><span class="dot" data-live-dot></span><span data-hero-status data-before="Mainnet launches 14 Nov 2026 at 00:00 CET" data-on="Mainnet live since 14 Nov 2026">Mainnet launches 14 Nov 2026 at 00:00 CET</span></p>
+      <a class="live-chip" href="${EXPLORER}"><span class="live-dot" data-live-dot></span><span class="live-label" data-hero-status data-before="Mainnet starts 14 Nov 2026" data-on="Mainnet is live">Mainnet is live</span><span class="live-block" data-hero-block>Block <b data-hero-height>…</b></span><span class="live-go" aria-hidden="true">${icon('arrow')}</span></a>
       <h1>${L('Blockchain, který těží grafické karty', 'The blockchain mined on graphics cards')}</h1>
       <p class="lead">${L('Quinvium je otevřená síť s Proof-of-Work a plným EVM. Bez premine, bez předprodeje, s peněženkami, které už znáte.', 'Quinvium is an open proof-of-work network with a full EVM. No premine, no presale, and wallets you already know.')}</p>
       <div class="row-btns">${cta(u('wallets'), L('Začít', 'Get started'))}${cta(EXPLORER, L('Otevřít Explorer', 'Open Explorer'), 'ghost')}</div>
     </div>
-    <div class="hero-art" aria-hidden="true">${heroArt()}</div>
+    <div class="hero-art">
+      <div aria-hidden="true">${heroArt()}</div>
+      <div class="chain" data-chain data-explorer="${EXPLORER}" aria-label="Latest blocks"><span class="chain-title">Latest blocks</span><div class="chain-row" data-chain-row></div></div>
+    </div>
   </div>
 </section>
 
 <section class="statbar-wrap">
   <div class="wrap">
     <div class="statbar" data-live>
-      <div><span>Block height</span><strong data-m="height" class="sk"></strong></div>
-      <div><span>Hashrate</span><strong data-m="hashrate" class="sk"></strong></div>
-      <div><span>Avg. block time</span><strong data-m="blocktime" class="sk"></strong></div>
-      <div><span>Mined supply</span><strong data-m="supply" class="sk"></strong></div>
+      <div><i class="st-ic" aria-hidden="true">${icon('cube')}</i><span>Block height</span><strong data-m="height" class="sk"></strong></div>
+      <div><i class="st-ic" aria-hidden="true">${icon('bolt')}</i><span>Hashrate</span><strong data-m="hashrate" class="sk"></strong></div>
+      <div><i class="st-ic" aria-hidden="true">${icon('clock')}</i><span>Avg. block time</span><strong data-m="blocktime" class="sk"></strong></div>
+      <div><i class="st-ic" aria-hidden="true">${icon('coins')}</i><span>Mined supply</span><strong data-m="supply" class="sk"></strong></div>
     </div>
     <p class="live-note" data-live-note data-before="Numbers start moving when mainnet launches on 14 November 2026 at 00:00 CET." data-off="The public node is not answering right now." data-on="Live from rpc.quinvium.com, refreshed every 15 s."></p>
   </div>
@@ -351,7 +357,7 @@ quintium-miner --address VAŠE_ADRESA --node http://127.0.0.1:8545</code></pre>
   <h2>${L('Sólo, nebo pool', 'Solo or pool')}</h2>
   <div class="cards c2">
     ${card('cube', L('Sólo', 'Solo'), L('Celý blok i poplatky dostanete vy, ale s jednou kartou mezi bloky může uplynout dlouhá doba.', 'You get the whole block and its fees, but with one card there can be a long wait between blocks.'))}
-    ${card('users', L('Pool v kontraktu', 'Contract pool'), L('Továrna poolů je přímo v síti. Pool sčítá podíly těžařů a kontrakt vyplácí odměny podle nich. Veřejný pool na mainnetu zatím nikdo neprovozuje.', 'The pool factory is built into the network. A pool counts miner shares and the contract pays rewards by them. Nobody runs a public mainnet pool yet.'))}
+    ${card('users', L('Pool v kontraktu', 'Contract pool'), L('Továrna poolů je přímo v síti. Pool sčítá podíly těžařů a kontrakt vyplácí odměny podle nich. Veřejný pool na mainnetu zatím nikdo neprovozuje.', 'The pool factory is built into the network. A pool counts miner shares and the contract pays rewards by them. The official Quinvium Pool runs at pool.quinvium.com with a 1 % fee.'))}
   </div>
 
   <h2 id="run-a-pool">${L('Provozovat pool', 'Run a pool')}</h2>
@@ -463,7 +469,7 @@ console.log(await provider.getBlockNumber());</code></pre>
     <li>${L('Navíc <code>quinvium_*</code> pro Explorer: statistiky, adresy, tokeny, těžaři, pooly, vyhledávání.', 'Extra <code>quinvium_*</code> methods for the Explorer: stats, addresses, tokens, miners, pools, search.')}</li>
     <li>${L('Veřejné uzly mají vypnuté těžební metody (<code>eth_getWork</code>, <code>eth_submitWork</code>) a limit požadavků.', 'Public nodes have mining methods (<code>eth_getWork</code>, <code>eth_submitWork</code>) switched off and a request limit.')}</li>
   </ul>
-  <p><a class="more" href="${EXPLORER}/docs">${L('Úplná dokumentace RPC a kontraktů →', 'Full RPC and contract documentation →')}</a></p>
+  <p><a class="more" href="${EXPLORER}/api">${L('Úplná dokumentace RPC, REST API a kontraktů →', 'Full RPC, REST API and contract documentation →')}</a></p>
 
   <h2>${L('Vlastní uzel', 'Run a node')}</h2>
   <pre><code>quintium-node --network mainnet</code></pre>
@@ -521,7 +527,7 @@ console.log(await provider.getBlockNumber());</code></pre>
     <li>${L('Síť zatím nese jeden veřejný server a uzly těžařů.', 'The network is carried by one public server and the miners\' nodes so far.')}</li>
   </ul>
   <h2>${L('Nahlášení zranitelnosti', 'Reporting a vulnerability')}</h2>
-  <p class="placeholder">${L('Kontakt pro hlášení bude doplněn. Do té doby chybu nezveřejňujte.', 'A reporting contact will be added. Until then please do not disclose issues publicly.')}</p>
+  <p>${L('Zranitelnosti hlaste soukromě na GitHubu: <a href="https://github.com/Lakylife/quinvium/security/advisories/new">Report a vulnerability</a>. Před opravou je prosím nezveřejňujte.', 'Report vulnerabilities privately on GitHub: <a href="https://github.com/Lakylife/quinvium/security/advisories/new">Report a vulnerability</a>. Please do not disclose them publicly before a fix.')}</p>
   <h2>${L('Rizika', 'Risks')}</h2>
   <p>${L('Quinvium je experimentální software. Malou síť s Proof-of-Work lze krátkodobě přepsat pronajatým výkonem, proto čekejte u větších plateb víc potvrzení. Neukládejte víc, než si můžete dovolit ztratit.', 'Quinvium is experimental software. A small proof-of-work network can be briefly rewritten with rented hashrate, so wait for more confirmations on larger payments. Do not store more than you can afford to lose.')}</p>
 </div></section>`,
@@ -609,7 +615,7 @@ certutil -hashfile Quinvium-${dl ? dl.version : 'x'}-Windows-x64.exe SHA256    #
     <li>${L('Nic na tomto webu není investiční, finanční, daňové ani právní poradenství.', 'Nothing on this site is investment, financial, tax or legal advice.')}</li>
     <li>${L('Za ztrátu prostředků, klíčů nebo dat nese odpovědnost uživatel. Transakce v blockchainu nejdou vrátit.', 'Users are responsible for any loss of funds, keys or data. Blockchain transactions cannot be reversed.')}</li>
     <li>${L('Dodržování předpisů ve vaší zemi, včetně daní a nařízení o kryptoaktivech, je na vás.', 'Complying with the rules in your country, including taxes and crypto-asset regulation, is up to you.')}</li>
-    <li>${L('Web nepoužívá cookies ani sledování. Volba jazyka se ukládá jen ve vašem prohlížeči.', 'This site uses no cookies or tracking. The language choice is stored only in your browser.')}</li>
+    <li>${L('Web nepoužívá cookies ani sledování. Volba jazyka se ukládá jen ve vašem prohlížeči.', 'This site uses no cookies or tracking. The light or dark theme you choose is stored only in your browser.')}</li>
   </ul>
 </div></section>`,
     },

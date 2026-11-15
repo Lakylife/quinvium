@@ -940,3 +940,32 @@ body.compact-nav.home .header-search { display: none; }
 [dir="rtl"] .metric-card strong, [dir="rtl"] .home-stat strong, [dir="rtl"] .latest-value, [dir="rtl"] .chart-value { direction: ltr; unicode-bidi: isolate; text-align: right; }
 [dir="rtl"] .badge, [dir="rtl"] td.num, [dir="rtl"] .row-value, [dir="rtl"] .ribbon-item span { unicode-bidi: plaintext; }
 .watch-list { margin: 0; padding-inline-start: 18px; color: var(--text-2); font-size: 13.5px; line-height: 1.8; }
+
+/* Network switch in the header (explorer. ↔ testnet.) */
+body:not(.embedded) #hnet-wrap { margin-inline-start: auto; }
+body:not(.embedded) #hnet-wrap + .header-search { margin-inline-start: 4px; }
+body.compact-nav #hnet-wrap { order: 2; margin-inline-start: auto; }
+body.compact-nav #hnet-wrap ~ #account-wrap { margin-inline-start: 0; }
+
+/* Search suggestions: a floating panel under the field, one row per match */
+.js-search { position: relative; }
+.suggest { position: absolute; z-index: 1200; top: calc(100% + 6px); inset-inline: 0; max-height: min(420px, 70vh); overflow-y: auto; padding: 6px; border-radius: var(--radius); background: var(--float); box-shadow: var(--shadow-lg); color: var(--text); text-align: start; }
+.suggest[hidden] { display: none; }
+.header-search .suggest { min-width: 340px; inset-inline-start: auto; }
+.sg-item { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 1px 10px; padding: 8px 10px; border-radius: var(--radius-s); color: var(--text); }
+.sg-item:hover, .sg-item.active { background: var(--surface-2); color: var(--text); }
+.sg-type { grid-row: span 2; align-self: center; color: var(--text-3); font-size: 12px; }
+.sg-main { overflow: hidden; font-size: 13.5px; text-overflow: ellipsis; white-space: nowrap; }
+.sg-main b { font-weight: 600; }
+.sg-sub { overflow: hidden; color: var(--text-3); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.sg-empty { margin: 0; padding: 10px; color: var(--text-3); font-size: 13px; }
+
+/* Etherscan-style filter in front of the overview search */
+.hero-search.has-filter { display: flex; align-items: stretch; border-radius: var(--radius); background: #fff; }
+.hero-search.has-filter input { flex: 1; min-width: 0; border-start-start-radius: 0; border-end-start-radius: 0; }
+.search-filter { flex: none; max-width: 40%; height: 52px; padding: 0 30px 0 14px; border: 0; border-start-start-radius: var(--radius); border-end-start-radius: var(--radius); background: #eef2f6; color: #101a26; font: inherit; font-size: 14px; cursor: pointer; }
+@media (max-width: 560px) {
+  .search-filter { max-width: 34%; padding: 0 22px 0 10px; font-size: 13px; }
+  .header-search .suggest { min-width: 0; inset-inline-start: 0; }
+  .sg-item { grid-template-columns: 70px minmax(0, 1fr); }
+}
