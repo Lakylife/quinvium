@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Builds the static quinvium.com website into packages/website/public.
 // Run: node packages/website/src/build.mjs
-import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EXPLORER, SITE, icon, pages } from './pages.mjs';
@@ -228,5 +228,7 @@ const xlinks = (path) => Object.keys(SITE_LANGS).map((l) => `<xhtml:link rel="al
 writeFileSync(join(out, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${english.flatMap((path) => Object.keys(SITE_LANGS).map((l) => `  <url><loc>${SITE}${langPath(l, path)}</loc><lastmod>${lastmod}</lastmod><priority>${path === '/' ? '1.0' : '0.8'}</priority>${xlinks(path)}</url>`)).join('\n')}\n</urlset>\n`);
 for (const f of ['site.css', 'site.js', 'theme.js', 'logo.svg', 'Quinvium-Symbol.ttf']) copyFileSync(join(here, f), join(out, f));
 copyFileSync(join(here, 'logo.svg'), join(out, 'favicon.svg'));
+// Checksum lists of each release (downloads/<version>/SHA256SUMS.txt): the app compares them with GitHub before opening a download.
+if (existsSync(join(here, 'downloads'))) cpSync(join(here, 'downloads'), join(out, 'downloads'), { recursive: true });
 for (const f of ['og.png', 'apple-touch-icon.png', 'quinvium-whitepaper.pdf']) { try { copyFileSync(join(here, f), join(out, f)); } catch { console.warn(`chybí ${f}, spusťte node src/og.mjs`); } }
 console.log(`Hotovo: ${urls.length} stránek v ${out}`);
