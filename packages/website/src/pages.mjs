@@ -546,7 +546,7 @@ console.log(await provider.getBlockNumber());</code></pre>
     <article class="dl">
       <div class="dl-top">${icon(f.icon)}<div><h3>${f.title}</h3><span class="muted small">${f.platform}</span></div></div>
       <p>${f.desc}</p>
-      <a class="btn primary md" href="/downloads/${dl.version}/${f.file}" download>${icon('arrowdown')}${L('Stáhnout', 'Download')} <span class="size">${f.size}</span></a>
+      <a class="btn primary md" href="https://github.com/Lakylife/quinvium/releases/download/v${dl.version}/${f.file}">${icon('arrowdown')}${L('Stáhnout', 'Download')} <span class="size">${f.size}</span></a>
       <details class="sha"><summary>SHA-256</summary><code>${f.sha256}</code><span class="muted small">${f.file}</span></details>
       ${f.note ? `<p class="small muted">${f.note}</p>` : ''}
     </article>`).join('')}</div>
