@@ -25,7 +25,7 @@ Node.js 24 is required. Browser tests (`packages/explorer/test/*.mjs`, `packages
 - Keep changes focused and add tests for new behaviour and for every fixed bug.
 - Run the relevant test suites before opening a pull request.
 - Never commit private keys, recovery phrases, `.env` files or wallet files.
-- User-facing text in the app and the command line exists in English and Czech (`L('cs', 'en')` helpers and `i18n.js` files); the Explorer has five languages. Please add new strings in all existing languages, or in English and mark the rest for translation.
+- User-facing text in the app and the command line exists in English and Czech (`L('cs', 'en')` helpers and `i18n.js` files); the Explorer has eight languages (English, Czech, German, Spanish, French, Japanese, Chinese and right-to-left Arabic). Please add new strings in all existing languages, or in English and mark the rest for translation.
 
 ## Security issues
 
