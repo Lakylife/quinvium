@@ -428,6 +428,7 @@ export class Network extends EventEmitter {
       case MSG.PONG: return undefined;
       case MSG.STATUS: {
         peer.updateHead(b[0], bytesToInt(b[1]), bytesToInt(b[2]));
+        this.emit('peer-head', peer);
         return this._maybeSync(peer);
       }
       case MSG.GET_HEADERS: return this._onGetHeaders(peer, b);
@@ -904,6 +905,25 @@ export class Network extends EventEmitter {
       if (now - p.lastSeen > PEER_TIMEOUT) p.disconnect('uzel neodpovídá');
       else if (p.ready) p.send(MSG.PING, []);
     }
+  }
+
+  /**
+   * Asks a peer for the header right after `parent` in its chain. The answer is the peer's block at that height,
+   * or an earlier one when it does not have `parent` on its main branch. A header without valid work counts as no answer.
+   * Used by the chain watch (watch/peers.js); nothing is downloaded or executed.
+   */
+  async probeHeader(peer, parent) {
+    if (!peer.ready) return null;
+    const raw = await peer.request(MSG.GET_HEADERS, [[parent], intToBytes(1n)], HEADERS_TIMEOUT);
+    if (!Array.isArray(raw) || raw.length !== 1) return null;
+    let h;
+    try {
+      h = Header.fromFields(raw[0]);
+    } catch {
+      return null;
+    }
+    if (h.number > 0n && !this.chain.pow.quickCheck(h)) return null;
+    return h;
   }
 
   _askPeers() {

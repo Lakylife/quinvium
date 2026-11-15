@@ -57,6 +57,21 @@ try {
     if (higher) assert.equal(chosen, higher, `výšky ${ha} a ${hb}`);
     else assert.ok([a.url, b.url].includes(chosen));
   });
+  await step('a node on another branch than the majority is not used and the page says so', async () => {
+    // Two addresses lead to node A (the same chain), node B mines its own branch. B must not be chosen, even when it is higher.
+    const p2 = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    for (const mirror of ['http://mirror-one.test', 'http://mirror-two.test']) {
+      await p2.route(`${mirror}/**`, (route) => route.fetch({ url: a.url }).then((response) => route.fulfill({ response })));
+    }
+    await p2.route('**/config.js', (route) => route.fulfill({ contentType: 'application/javascript', body: `window.AETHER_CONFIG = { walletConnectProjectId: '', rpc: ['${b.url}', 'http://mirror-one.test', 'http://mirror-two.test'] };` }));
+    await waitFor(async () => (await height(a.url)) >= 8 && (await height(b.url)) >= 8, 60000);
+    await p2.goto(`${a.url}/blocks`);
+    await p2.waitForFunction(() => /#\d/.test(document.getElementById('footer-status')?.textContent ?? ''), null, { timeout: 20000 });
+    await p2.waitForFunction(() => [...document.querySelectorAll('.toast')].some((t) => t.textContent.includes('127.0.0.1:8794')), null, { timeout: 20000 });
+    const used = await p2.evaluate(() => localStorage.getItem('aether.rpc'));
+    assert.notEqual(used, b.url, 'the node on the other branch is not used');
+    await p2.close();
+  });
   await step('after the selected node fails the Explorer switches to the second and keeps showing blocks', async () => {
     const [down, other] = chosen === a.url ? [a, b] : [b, a];
     down.proc.kill('SIGKILL');

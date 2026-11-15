@@ -24,7 +24,7 @@
       'home.sub': 'Stav sítě Quinvium v reálném čase.', 'home.tip': 'Poslední blok', 'home.health': 'Stav sítě', 'home.ok': 'V pořádku', 'home.sync': 'Synchronizace',
       'm.height': 'Výška', 'm.supply': 'V oběhu', 'm.fees': 'Poplatky těžařům', 'm.reward': 'Odměna za blok', 'm.hashrate': 'Výkon sítě', 'm.difficulty': 'Obtížnost',
       'm.ofMax': 'z 64 mil.', 'm.feesSub': 'odměna navíc k emisi', 'f.age': 'Stáří', 'f.tx': 'Transakce', 'f.gas': 'Gas', 'f.size': 'Velikost',
-      'sig.title': 'Signalizace forků', 'sig.sub': 'Těžaři mohou do bloku napsat QIP-n a vyjádřit tak podporu návrhu. Je to jen informace, nic se tím nezapíná. Posledních {n} bloků.', 'sig.none': 'Žádný blok v tomto období nesignalizuje žádný návrh.', 'sig.proposal': 'Návrh', 'sig.miners': 'Těžaři', 'sig.how': 'Jak signalizovat a jak se síť mění', 'nh.peers': 'Připojené uzly', 'nh.time': 'Průměrný čas bloku', 'nh.accounts': 'Účty', 'nh.mempool': 'Čekající transakce', 'nh.basefee': 'Základní poplatek', 'nh.tips': 'Dýško pomalu · běžně · rychle', 'nh.halving': 'Další půlení',
+      'watch.title': "Hlídání sítě", 'watch.sub': "Tento uzel se ptá ostatních uzlů na jejich blok a porovnává web a Explorer s GitHubem.", 'watch.peers': "Uzly se stejným blokem", 'watch.differ': "Uzly na jiné větvi", 'watch.incidents': "Hluboké přepisy za 24 h", 'watch.sites': "Web a Explorer", 'watch.siteOk': "Shoda s GitHubem", 'watch.siteChanged': "Změněno: {n}", 'watch.siteWait': "Zatím nezkontrolováno", 'watch.siteOff': "Kontrola vypnutá", 'watch.minority': "Většina uzlů má jiný blok než tento uzel. Tento uzel může být odříznutý od sítě.", 'watch.explorerNodes': "Uzly Exploreru se neshodují: {list} ukazuje jinou větev, Explorer ho nepoužívá.", 'sig.title': 'Signalizace forků', 'sig.sub': 'Těžaři mohou do bloku napsat QIP-n a vyjádřit tak podporu návrhu. Je to jen informace, nic se tím nezapíná. Posledních {n} bloků.', 'sig.none': 'Žádný blok v tomto období nesignalizuje žádný návrh.', 'sig.proposal': 'Návrh', 'sig.miners': 'Těžaři', 'sig.how': 'Jak signalizovat a jak se síť mění', 'nh.peers': 'Připojené uzly', 'nh.time': 'Průměrný čas bloku', 'nh.accounts': 'Účty', 'nh.mempool': 'Čekající transakce', 'nh.basefee': 'Základní poplatek', 'nh.tips': 'Dýško pomalu · běžně · rychle', 'nh.halving': 'Další půlení',
       'sec.viewAll': 'Zobrazit vše →', 't.block': 'Blok', 't.hash': 'Hash', 't.miner': 'Těžař', 't.tx': 'Tx', 't.age': 'Stáří', 't.gas': 'Gas', 't.from': 'Od', 't.to': 'Komu', 't.value': 'Částka',
       't.status': 'Stav', 't.balance': 'Zůstatek', 't.share': 'Podíl', 't.address': 'Adresa', 't.blocks': 'Bloky', 't.last': 'Poslední blok', 't.fee': 'Poplatek', 't.type': 'Typ',
       'x.noBlocks': 'Žádné bloky', 'x.noTxs': 'Zatím žádné transakce', 'x.empty': 'Žádné čekající transakce', 'x.newer': '← Novější', 'x.older': 'Starší →',
@@ -68,7 +68,7 @@
       'home.sub': 'Real-time state of the Quinvium network.', 'home.tip': 'Latest block', 'home.health': 'Network status', 'home.ok': 'Healthy', 'home.sync': 'Syncing',
       'm.height': 'Height', 'm.supply': 'Supply', 'm.fees': 'Fees to miners', 'm.reward': 'Block reward', 'm.hashrate': 'Hashrate', 'm.difficulty': 'Difficulty',
       'm.ofMax': 'of 64M', 'm.feesSub': 'on top of block rewards', 'f.age': 'Age', 'f.tx': 'Transactions', 'f.gas': 'Gas', 'f.size': 'Size',
-      'sig.title': 'Fork signalling', 'sig.sub': 'Miners can write QIP-n into a block to show support for a proposal. It is informative only and activates nothing. Last {n} blocks.', 'sig.none': 'No block in this period signals a proposal.', 'sig.proposal': 'Proposal', 'sig.miners': 'Miners', 'sig.how': 'How to signal and how the network changes', 'nh.peers': 'Connected peers', 'nh.time': 'Average block time', 'nh.accounts': 'Accounts', 'nh.mempool': 'Pending', 'nh.basefee': 'Base fee', 'nh.tips': 'Tip slow · normal · fast', 'nh.halving': 'Next halving',
+      'watch.title': "Network watch", 'watch.sub': "This node asks its peers for their block and compares the website and the Explorer with GitHub.", 'watch.peers': "Peers with the same block", 'watch.differ': "Peers on another branch", 'watch.incidents': "Deep reorganisations in 24 h", 'watch.sites': "Website and Explorer", 'watch.siteOk': "Match GitHub", 'watch.siteChanged': "Changed: {n}", 'watch.siteWait': "Not checked yet", 'watch.siteOff': "Check off", 'watch.minority': "Most peers have a different block than this node. This node may be cut off from the network.", 'watch.explorerNodes': "The Explorer’s nodes disagree: {list} shows another branch; the Explorer does not use it.", 'sig.title': 'Fork signalling', 'sig.sub': 'Miners can write QIP-n into a block to show support for a proposal. It is informative only and activates nothing. Last {n} blocks.', 'sig.none': 'No block in this period signals a proposal.', 'sig.proposal': 'Proposal', 'sig.miners': 'Miners', 'sig.how': 'How to signal and how the network changes', 'nh.peers': 'Connected peers', 'nh.time': 'Average block time', 'nh.accounts': 'Accounts', 'nh.mempool': 'Pending', 'nh.basefee': 'Base fee', 'nh.tips': 'Tip slow · normal · fast', 'nh.halving': 'Next halving',
       'sec.viewAll': 'View all →', 't.block': 'Block', 't.hash': 'Hash', 't.miner': 'Miner', 't.tx': 'Tx', 't.age': 'Age', 't.gas': 'Gas', 't.from': 'From', 't.to': 'To', 't.value': 'Value',
       't.status': 'Status', 't.balance': 'Balance', 't.share': 'Share', 't.address': 'Address', 't.blocks': 'Blocks', 't.last': 'Last block', 't.fee': 'Fee', 't.type': 'Type',
       'x.noBlocks': 'No blocks', 'x.noTxs': 'No transactions yet', 'x.empty': 'No pending transactions', 'x.newer': '← Newer', 'x.older': 'Older →',
@@ -222,16 +222,41 @@
   let reqId = 1;
   let picking = null;
 
-  /** Takes the node with the highest block from the list. The current one stays while it answers and is not behind. */
+  const SETTLED = 6;
+  /** What the Explorer saw when it compared its nodes: which of them show another branch than the majority. */
+  let nodeCheck = { checked: 0, height: null, outliers: [] };
+  const post = (url, method, params = []) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }), signal: AbortSignal.timeout(NODE_PROBE_MS) })
+    .then((r) => r.json()).then((d) => d.result);
+
+  /**
+   * Takes the node with the highest block from the list. The current one stays while it answers and is not behind.
+   * Nodes are also compared with each other: each one is asked for its block a few blocks below the lowest head.
+   * A node whose block differs from the majority follows another branch (or lies); the Explorer does not use it and says so.
+   */
   function pickNode() {
     if (NODES.length < 2) return Promise.resolve(false);
     picking ??= (async () => {
-      const heights = await Promise.all(NODES.map((url) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }), signal: AbortSignal.timeout(NODE_PROBE_MS) })
-        .then((r) => r.json()).then((d) => Number(BigInt(d.result))).catch(() => -1)));
-      const best = Math.max(...heights);
-      const here = heights[NODES.indexOf(rpcBase)] ?? -1;
+      const heights = await Promise.all(NODES.map((url) => post(url, 'eth_blockNumber').then((h) => Number(BigInt(h))).catch(() => -1)));
+      const alive = heights.filter((h) => h >= 0);
+      const settled = alive.length ? Math.min(...alive) - SETTLED : -1;
+      let outliers = [];
+      if (alive.length >= 2 && settled >= 1) {
+        const hashes = await Promise.all(NODES.map((url, i) => (heights[i] < 0 ? null : post(url, 'eth_getBlockByNumber', [`0x${settled.toString(16)}`, false]).then((b) => b?.hash ?? null).catch(() => null))));
+        const votes = new Map();
+        for (const h of hashes) if (h) votes.set(h, (votes.get(h) ?? 0) + 1);
+        const [top, count] = [...votes.entries()].sort((a, b) => b[1] - a[1])[0] ?? [null, 0];
+        // Only a real majority decides. Two nodes against each other: both stay, the page warns.
+        const majority = count * 2 > [...votes.values()].reduce((x, y) => x + y, 0) ? top : null;
+        outliers = NODES.filter((_, i) => hashes[i] && (majority ? hashes[i] !== majority : votes.size > 1));
+        nodeCheck = { checked: votes.size ? [...votes.values()].reduce((x, y) => x + y, 0) : 0, height: settled, outliers, majority: !!majority };
+        if (outliers.length && !nodeCheck.warned) { nodeCheck.warned = true; toast(esc(fill('watch.explorerNodes', { list: outliers.map((u) => new URL(u).host).join(', ') }))); }
+      }
+      const usable = (i) => heights[i] >= 0 && !(nodeCheck.majority && outliers.includes(NODES[i]));
+      const best = Math.max(-1, ...heights.filter((_, i) => usable(i)));
+      const index = NODES.indexOf(rpcBase);
+      const here = index >= 0 && usable(index) ? heights[index] : -1;
       if (best < 0 || (here >= 0 && best - here <= MAX_BEHIND)) return false;
-      rpcBase = NODES[heights.indexOf(best)];
+      rpcBase = NODES[heights.findIndex((h, i) => h === best && usable(i))];
       store.set('aether.rpc', rpcBase);
       live();
       return true;
@@ -2622,6 +2647,27 @@
       app.insertAdjacentHTML('beforeend', `<div class="card"><div class="card-header"><h2>${t('sig.title')}</h2></div><p class="muted">${fill('sig.sub', { n: num(sig.blocks) })} <a href="https://github.com/Lakylife/quinvium/blob/main/docs/GOVERNANCE.md" rel="noopener">${t('sig.how')}</a></p>
         ${rows ? `<div class="table-wrap"><table><thead><tr><th>${t('sig.proposal')}</th><th class="num">${t('t.blocks')}</th><th class="num">${t('t.share')}</th><th class="num">${t('sig.miners')}</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<p class="empty">${t('sig.none')}</p>`}</div>`);
     }
+    // Watch (packages/node/src/watch): do peers have the same blocks, do the website and Explorer match GitHub. An older node does not know it.
+    const w = await rpc('aether_watch').catch(() => null);
+    if (w && route().name === 'network') app.insertAdjacentHTML('beforeend', watchCard(w));
+  }
+
+  function watchCard(w) {
+    const c = w.chain;
+    const site = w.sites;
+    const siteText = !site ? t('watch.siteOff') : site.checkedAt === null ? t('watch.siteWait') : site.ok ? t('watch.siteOk') : fill('watch.siteChanged', { n: num(site.changed.length) });
+    const warn = [];
+    if (c?.minority) warn.push(t('watch.minority'));
+    if (nodeCheck.outliers.length) warn.push(fill('watch.explorerNodes', { list: nodeCheck.outliers.map((u) => new URL(u).host).join(', ') }));
+    const changed = site?.changed?.length ? `<ul class="watch-list">${site.changed.map((x) => `<li><span class="hash">${esc(x.url)}</span></li>`).join('')}</ul>` : '';
+    return `<div class="card"><div class="card-header"><h2>${t('watch.title')}</h2></div><p class="muted">${t('watch.sub')}</p>
+      ${warn.map((x) => `<p class="notice">${esc(x)}</p>`).join('')}${changed}</div>
+      <div class="metric-grid">
+        ${metric(t('watch.peers'), c ? `${num(c.agree)} / ${num(c.checked)}` : '—')}
+        ${metric(t('watch.differ'), c ? num(c.differ) : '—')}
+        ${metric(t('watch.incidents'), c ? num(c.incidents.length) : '—')}
+        ${metric(t('watch.sites'), esc(siteText))}
+      </div>`;
   }
 
   // ------------------------------------------------------------- tokeny a most
@@ -3925,7 +3971,11 @@
     render();
     setInterval(refreshStats, 15000);
     // A node that answers but lags would not raise an error by itself. Once a minute it is compared with the others.
-    if (NODES.length > 1) setInterval(() => { pickNode().then((moved) => { if (moved) refreshStats(); }); }, 60000);
+    if (NODES.length > 1) {
+      // Right away too: a node on another branch than the majority must not stay selected for the first minute.
+      if (stats) pickNode().then((moved) => { if (moved) refreshStats(); });
+      setInterval(() => { pickNode().then((moved) => { if (moved) refreshStats(); }); }, 60000);
+    }
   }
   init();
 })();

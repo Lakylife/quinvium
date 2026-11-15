@@ -939,3 +939,4 @@ body.compact-nav.home .header-search { display: none; }
 /* Numbers with units ("5.99 GH/s", "27.5 %", "0 QU") keep their order; text cells pick their direction from their content. */
 [dir="rtl"] .metric-card strong, [dir="rtl"] .home-stat strong, [dir="rtl"] .latest-value, [dir="rtl"] .chart-value { direction: ltr; unicode-bidi: isolate; text-align: right; }
 [dir="rtl"] .badge, [dir="rtl"] td.num, [dir="rtl"] .row-value, [dir="rtl"] .ribbon-item span { unicode-bidi: plaintext; }
+.watch-list { margin: 0; padding-inline-start: 18px; color: var(--text-2); font-size: 13.5px; line-height: 1.8; }

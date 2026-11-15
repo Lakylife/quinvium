@@ -200,3 +200,22 @@ test('a state from the previous version announces no existing node and no old mi
   const r = detect(old, snap({ headTime: T0 + 50, nodes: [{ id: 'cc'.repeat(16) }], recentMiners: [{ address: '0x' + '56'.repeat(20), first: 50 }] }), T0 + 60);
   assert.deepEqual(r.events, []);
 });
+
+test('the node watch: a changed website file and a peer on another branch go to Telegram once, and the all-clear once', () => {
+  const s = initialState(snap(), T0);
+  const clean = { differ: 0, checked: 4, minority: false, incidents: [], sites: [] };
+  const a = detect(s, snap({ headTime: T0 + 50, watch: clean }), T0 + 60);
+  assert.deepEqual(a.events, []);
+  const bad = { ...clean, differ: 1, sites: ['https://explorer.quinvium.com/app.js'] };
+  const b = detect(a.state, snap({ headTime: T0 + 110, watch: bad }), T0 + 120);
+  assert.deepEqual(kinds(b), ['watch-chain', 'watch-site']);
+  assert.ok(b.events.every((e) => e.channels.join() === 'telegram'));
+  const site = telegramMessage(b.events.find((e) => e.kind === 'watch-site')).text;
+  assert.match(site, /explorer\.quinvium\.com\/app\.js/);
+  assert.doesNotMatch(site, /\d+\.\d+\.\d+\.\d+/, 'no IP address');
+  assert.deepEqual(detect(b.state, snap({ headTime: T0 + 170, watch: bad }), T0 + 180).events, [], 'not repeated');
+  const c = detect(b.state, snap({ headTime: T0 + 230, watch: clean }), T0 + 240);
+  assert.deepEqual(kinds(c), ['watch-site-ok']);
+  const d = detect(c.state, snap({ headTime: T0 + 290, watch: { ...clean, incidents: ['deep-reorg:5'] } }), T0 + 300);
+  assert.deepEqual(kinds(d), ['watch-reorg']);
+});

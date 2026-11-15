@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Nodes watch each other: every two minutes at most, a node asks each peer for its block a few blocks below the head (the answer must carry valid work). A different block means the peer follows another branch; the node logs a warning and reports it in `quinvium_watch`. Deep reorganisations are recorded too. Peers are named by their key, never by IP address.
+- Nodes check the public website and Explorer every 6 hours: each file at quinvium.com, explorer.quinvium.com and testnet.quinvium.com must match the protected main branch on GitHub or this node's release (`site-manifest.json`). A change made outside GitHub is logged as "the website differs from the release". `--no-site-check` turns it off.
+- Explorer with several nodes compares their blocks and uses only nodes that agree with the majority; a node on another branch is named in a notice. The Network page shows the node's watch.
+- Announcer: Telegram alerts for a changed website file, a peer on another branch and deep reorganisations, each once, and an all-clear.
+- Explorer in Japanese, Chinese (Simplified) and Arabic (right-to-left); green dot on `/pools` for miners with a block in the last hour.
+
 ## 2.15.1 (14 November 2026)
 
 - Miner: JSON-RPC over `https://`, so the app and the miner can mine into pools behind HTTPS such as the official pool `https://pool.quinvium.com`. Before, mining into a pool stopped with "address must start with http://".

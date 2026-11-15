@@ -908,6 +908,11 @@ export function createMethods(node) {
       const a = e.access;
       return { chainId: e.chainId, rpcPort: e.rpcPort, p2pPort: e.p2pPort, local: null, lan: [], public: e.public, restricted: true, access: a && { method: a.method, upnp: a.upnp, behindNat: a.behindNat, nat: a.nat, ports: a.ports, checked: a.checked } };
     },
+    /**
+     * What this node's watch sees: do peers have the same blocks at settled heights, did a deep reorganisation happen,
+     * do the public website and Explorer match GitHub and the release. Peers are named by their key, never by IP address.
+     */
+    aether_watch: () => ({ chain: node.chainWatch?.summary() ?? null, sites: node.siteWatch?.summary() ?? null }),
     /** The node's own identity. The key goes into the seed list as `key@host:port`, so a new node recognises the seed. */
     aether_nodeInfo: () => (network ? {
       id: Buffer.from(network.nodeId).toString('hex'), publicKey: Buffer.from(network.identity.publicKey).toString('hex'),

@@ -2,6 +2,18 @@
 // Řádek: "klíč nebo anglický text": [němčina, španělština, francouzština]. Dokumentace pro vývojáře zůstává anglicky.
 window.AetherExplorerText = {
   keys: {
+    "watch.title": ["Netzwerküberwachung", "Vigilancia de la red", "Surveillance du réseau"],
+    "watch.sub": ["Dieser Knoten fragt seine Peers nach ihrem Block und vergleicht Website und Explorer mit GitHub.", "Este nodo pregunta a sus pares por su bloque y compara el sitio web y el Explorer con GitHub.", "Ce nœud demande leur bloc à ses pairs et compare le site web et l’Explorer avec GitHub."],
+    "watch.peers": ["Peers mit gleichem Block", "Pares con el mismo bloque", "Pairs avec le même bloc"],
+    "watch.differ": ["Peers auf anderem Zweig", "Pares en otra rama", "Pairs sur une autre branche"],
+    "watch.incidents": ["Tiefe Reorganisationen in 24 h", "Reorganizaciones profundas en 24 h", "Réorganisations profondes en 24 h"],
+    "watch.sites": ["Website und Explorer", "Sitio web y Explorer", "Site web et Explorer"],
+    "watch.siteOk": ["Wie auf GitHub", "Coinciden con GitHub", "Conformes à GitHub"],
+    "watch.siteChanged": ["Geändert: {n}", "Cambiados: {n}", "Modifiés : {n}"],
+    "watch.siteWait": ["Noch nicht geprüft", "Aún sin comprobar", "Pas encore vérifié"],
+    "watch.siteOff": ["Prüfung aus", "Comprobación desactivada", "Vérification désactivée"],
+    "watch.minority": ["Die meisten Peers haben einen anderen Block als dieser Knoten. Dieser Knoten ist möglicherweise vom Netzwerk abgeschnitten.", "La mayoría de los pares tiene un bloque distinto al de este nodo. Este nodo puede estar aislado de la red.", "La plupart des pairs ont un autre bloc que ce nœud. Ce nœud est peut-être coupé du réseau."],
+    "watch.explorerNodes": ["Die Knoten des Explorers sind sich uneinig: {list} zeigt einen anderen Zweig, der Explorer nutzt ihn nicht.", "Los nodos del Explorer no coinciden: {list} muestra otra rama; el Explorer no lo usa.", "Les nœuds de l’Explorer ne concordent pas : {list} montre une autre branche ; l’Explorer ne l’utilise pas."],
     'f.all': ['Alle', 'Todo', 'Tout'],
     'f.filter': ['Filter', 'Filtros', 'Filtres'],
     'f.range': ['Zeitraum', 'Periodo', 'Période'],

@@ -98,6 +98,13 @@ The node runs in JavaScript. The limit of 10 million gas per block corresponds t
 
 The node is an archive node and does not delete the state of old blocks. With heavy traffic the data will grow quickly; state pruning is not finished yet.
 
+## Nodes watch each other
+
+- **Blocks:** every node verifies every block itself. In addition it asks each peer, at most every two minutes, for its block at a settled height (6 blocks below the head; for a lagging peer, its own head). The answer must carry valid proof of work. A different block means the peer follows another branch: an attack, a network split or other rules. The node warns in its log and in `quinvium_watch`; when most peers disagree it flags itself as possibly cut off (`minority`). Deep reorganisations and refused rewrites are recorded. Peers appear only by their key, never by IP address.
+- **Peer addresses:** nodes exchange addresses and keep them in their database, so the network does not depend on the seed after the first start. Outbound connections take at most one address per /16 range and mostly verified nodes, so a flood of addresses cannot eclipse a node.
+- **Website and Explorer:** every 6 hours a node compares each file at quinvium.com and explorer.quinvium.com (testnet.quinvium.com on testnet) with the protected main branch on GitHub and with the hashes in its own release (`site-manifest.json`, written by `scripts/site-manifest.mjs`). Changes reach main only through a reviewed pull request with signed commits; a file that matches neither is reported after two checks in a row as "the website differs from the release". The check trusts GitHub and the release; it cannot prove who controls the server, only that the served files are the published ones.
+- **Explorer in the browser:** with several nodes in `config.js` it asks each for its block a few blocks deep and uses only nodes that agree with the majority. With two nodes that disagree there is no majority; the page warns and keeps both.
+
 ## Operating guidelines
 
 - Never expose JSON-RPC directly to the internet. Use a reverse proxy with HTTPS and `--rate-limit`.
