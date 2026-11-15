@@ -1824,13 +1824,14 @@
 
   /**
    * Name registration has two steps so it cannot be front-run: a commitment, and a minute later the registration itself.
-   * The secret of the commitment is kept in this browser until the registration is confirmed, so a closed page or a rejected second
+   * The random salt of the commitment is kept in this browser until the registration is confirmed (it is not sensitive: the commitment
+   * also binds the sender, so nobody else can use it), so a closed page or a rejected second
    * signature can be finished later (the commitment is valid for a day). A name that points to the account and is its first one is
    * also set as primary, so it is shown instead of the address.
    */
   const pendingNameKey = (me) => `quinvium.pendingName.${stats?.chainId}.${String(me).toLowerCase()}`;
   function pendingName(me) {
-    try { const p = JSON.parse(store.get(pendingNameKey(me)) ?? 'null'); return p?.name && p?.secret && p?.target ? p : null; } catch { return null; }
+    try { const p = JSON.parse(store.get(pendingNameKey(me)) ?? 'null'); return p?.name && p?.salt && p?.target ? p : null; } catch { return null; }
   }
   async function registerName(v, s, progress) {
     need(v, 'name');
@@ -1839,19 +1840,19 @@
     const target = v.target || me;
     const [age, maxAge] = (await Promise.all([c.MIN_COMMIT_AGE(), c.MAX_COMMIT_AGE()])).map(Number);
     let committed = 0;
-    let secret = null;
+    let salt = null;
     const saved = pendingName(me);
     if (saved && saved.name === v.name && saved.target.toLowerCase() === target.toLowerCase()) {
-      const at = Number(await c.commitments(await c.commitment(v.name, me, target, saved.secret)));
+      const at = Number(await c.commitments(await c.commitment(v.name, me, target, saved.salt)));
       const now = (await s.provider.getBlock('latest')).timestamp;
-      if (at && now <= at + maxAge) { committed = at; secret = saved.secret; progress(t('tool.nameResume')); }
+      if (at && now <= at + maxAge) { committed = at; salt = saved.salt; progress(t('tool.nameResume')); }
     }
     if (!committed) {
       if (!(await c.available(v.name))) throw Object.assign(new Error('Unavailable'), { revert: { name: 'Unavailable' } });
-      secret = ethers.hexlify(ethers.randomBytes(32));
-      store.set(pendingNameKey(me), JSON.stringify({ name: v.name, target, secret }));
+      salt = ethers.hexlify(ethers.randomBytes(32));
+      store.set(pendingNameKey(me), JSON.stringify({ name: v.name, target, salt }));
       progress(t('tool.nameStep1'));
-      const receipt = await (await c.commit(await c.commitment(v.name, me, target, secret))).wait();
+      const receipt = await (await c.commit(await c.commitment(v.name, me, target, salt))).wait();
       committed = (await receipt.getBlock()).timestamp;
     }
     for (;;) {
@@ -1862,7 +1863,7 @@
       await new Promise((r) => setTimeout(r, Math.min(left * 1000, 3000)));
     }
     progress(t('tool.nameStep3'));
-    const tx = await c.register(v.name, 1, target, secret, { value: await c.pricePerYear(v.name) });
+    const tx = await c.register(v.name, 1, target, salt, { value: await c.pricePerYear(v.name) });
     const r = await tx.wait();
     if (r?.status) {
       store.del(pendingNameKey(me));
