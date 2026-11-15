@@ -286,11 +286,34 @@
       if (!(await pickNode())) throw e;
       res = await call();
     }
-    const data = await res.json();
+    let data = await res.json();
+    // The node's per-address limit was reached (other tabs, a wallet on the same connection): wait a little and try again
+    // instead of showing an error.
+    for (let wait = 700; data.error?.code === BUSY && wait <= 6000; wait *= 2) {
+      await sleep(wait + Math.random() * 300);
+      data = await (await call()).json();
+    }
     if (data.error) throw new Error(data.error.message);
     return data.result;
   }
-  const provider = () => new ethers.JsonRpcProvider(rpcBase, undefined, { staticNetwork: true });
+  const BUSY = -32005;
+  const sleep = (ms) => new Promise((r) => { setTimeout(r, ms); });
+  /** One provider per node for contract reads; it batches calls made together and waits out the node's limit like rpc(). */
+  class PatientProvider extends ethers.JsonRpcProvider {
+    async _send(payload) {
+      let out = await super._send(payload);
+      for (let wait = 700; out.some((r) => r.error?.code === BUSY) && wait <= 6000; wait *= 2) {
+        await sleep(wait + Math.random() * 300);
+        out = await super._send(payload);
+      }
+      return out;
+    }
+  }
+  let sharedProvider = null;
+  const provider = () => {
+    if (sharedProvider?.base !== rpcBase) sharedProvider = { base: rpcBase, p: new PatientProvider(rpcBase, undefined, { staticNetwork: true, batchMaxCount: 20 }) };
+    return sharedProvider.p;
+  };
   // Ticker by network: QU on mainnet, tQU on testnet, so a test coin is not confused with a real one.
   /** The currency for display: QU (tQU, dQU), or with the Quinvium symbol (U+E000 from quinvium-symbol.ttf) when chosen in the footer. */
   const nameCache = new Map();   // address -> primary .qu name ('' none), for lists and the header
@@ -2994,7 +3017,7 @@
 
   /** Bridge and token contract addresses for the network the page is connected to. */
   async function deployment() {
-    await refreshStats();
+    if (!stats) await refreshStats();
     deployments ??= await fetch('/deployments.json').then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
     const d = deployments[stats.chainId] ?? null;
     for (const [address, label] of [[d?.swap?.router, 'Swap Router'], [d?.swap?.factory, 'Swap Factory'], [d?.registry, 'Token Registry'], [d?.gateway, 'Bridge Gateway']]) {
