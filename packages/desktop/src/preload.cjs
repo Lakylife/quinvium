@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('desktop', {
   startNode: (network) => invoke('node:start', network),
   stopNode: () => invoke('node:stop'),
   setNetworkOptions: (options) => invoke('node:network', options),
+  setSharePublic: (on) => invoke('share:set', on),
   listDevices: () => invoke('miner:list'),
   cliPath: () => invoke('cli:path'),
   cliInstall: () => invoke('cli:install'),

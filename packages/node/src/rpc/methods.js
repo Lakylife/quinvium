@@ -913,6 +913,18 @@ export function createMethods(node) {
      * do the public website and Explorer match GitHub and the release. Peers are named by their key, never by IP address.
      */
     aether_watch: () => ({ chain: node.chainWatch?.summary() ?? null, sites: node.siteWatch?.summary() ?? null }),
+    // Public RPC nodes of the community that this node has checked itself (watch/public-nodes.js). Addresses only, never IPs.
+    aether_publicNodes: () => node.publicNodes?.list() ?? [],
+    // The app's "Share node publicly": the https address of this node's tunnel, or null to stop. Only this computer and its network.
+    aether_setPublicUrl: ([url]) => {
+      if (!node.publicNodes) throw new RpcError(-32000, 'not available');
+      if (url !== null && url !== undefined && typeof url !== 'string') throw new RpcError(-32602, 'invalid address');
+      try {
+        const own = node.publicNodes.share(url ?? null);
+        if (own) node.network.sendPublicNodes(node.publicNodes.outgoing());
+        return own ? { url: own.url, expires: own.expires } : null;
+      } catch (e) { throw new RpcError(-32602, e.message); }
+    },
     /** The node's own identity. The key goes into the seed list as `key@host:port`, so a new node recognises the seed. */
     aether_nodeInfo: () => (network ? {
       id: Buffer.from(network.nodeId).toString('hex'), publicKey: Buffer.from(network.identity.publicKey).toString('hex'),

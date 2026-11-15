@@ -85,3 +85,14 @@ Dependencies that affect consensus have exact versions. Updating EthereumJS or t
 ## Legal note
 
 In the EU, issuing and offering crypto-assets is governed by the MiCA regulation. A purely mined coin without sales to the public is in a different position than a token sold to investors, but where the line lies is for a lawyer to judge. Anyone who sells coins, promises returns, or runs an exchange or custody service should sort this out with a lawyer **beforehand**. Wallets and the node are designed without custody of other people's funds, which helps but does not settle everything.
+
+
+## Sharing a node from home (community nodes)
+
+The desktop app has **Share node publicly** under Node → Connect to another computer. It is off by default.
+
+- The node opens a tunnel port that only this computer can reach (`--tunnel-port`, 8565 on mainnet). Everything arriving there counts as a request from the internet: mining and node-control methods are refused, peer IP addresses are hidden and each visitor (by `Cf-Connecting-IP`) has the public limit of 1,200 requests a minute.
+- The app starts a Cloudflare quick tunnel (`cloudflared tunnel --url http://127.0.0.1:8565`, no account). The router opens no port and the operator's IP address stays behind Cloudflare; Cloudflare sees the requests that pass through.
+- The tunnel's `https://….trycloudflare.com` address is announced to peers, signed by the node key and valid for two hours (renewed while sharing). Every node that receives it checks the address itself (same chain ID, same block six blocks below its head, head at most 20 blocks behind) before listing it in `quinvium_publicNodes` and passing it on.
+- The Explorer stores the verified list and switches to a community node only when none of its configured nodes answers; it returns to them when they are back.
+- `cloudflared` is downloaded from Cloudflare's GitHub release only, pinned by version and SHA-256 in `packages/desktop/src/share-node.cjs`.

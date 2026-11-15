@@ -142,7 +142,8 @@ test('announcement by hash: only some peers get full messages, yet they reach ev
   const sent = new Map();
   for (const p of hub.net.peers) {
     const send = p.send.bind(p);
-    p.send = (type, body) => { sent.set(`${p.features}:${type}`, (sent.get(`${p.features}:${type}`) ?? 0) + 1); return send(type, body); };
+    const kind = () => (p.features & 1 ? 1 : 0);   // announcements by hash or full messages; other capabilities do not matter here
+    p.send = (type, body) => { sent.set(`${kind()}:${type}`, (sent.get(`${kind()}:${type}`) ?? 0) + 1); return send(type, body); };
   }
   const tx = transfer(hub.chain, w, new Address(new Uint8Array(20).fill(3)), 1n, 0n);
   await hub.chain.mempool.add(tx);

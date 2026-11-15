@@ -11,6 +11,8 @@ export const MSG = Object.freeze({
   NEW_BLOCK: 7, NEW_TXS: 8, GET_PEERS: 9, PEERS: 10, STATUS: 11,
   // Announcement by hash. Sent only to peers that list the FEATURE_ANNOUNCE capability in HELLO.
   NEW_TX_HASHES: 12, GET_TXS: 13, TXS: 14, NEW_BLOCK_HASH: 15,
+  // Signed addresses of public RPC nodes (watch/public-nodes.js). Sent only to peers with FEATURE_PUBLIC_NODES.
+  PUBLIC_NODES: 16,
 });
 
 export const MAX_FRAME = 12 * 1024 * 1024;

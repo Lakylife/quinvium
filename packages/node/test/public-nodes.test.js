@@ -1,0 +1,128 @@
+// Public RPC nodes of the community: signed announcements, checks of each address, and the tunnel port of the RPC server.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import { NodeIdentity } from '../src/p2p/identity.js';
+import { ANNOUNCE_TTL_MS, PublicNodes, signAnnouncement, validUrl, verifyAnnouncement } from '../src/watch/public-nodes.js';
+import { RpcServer } from '../src/rpc/server.js';
+import { MINING_METHODS } from '../src/rpc/methods.js';
+
+const identity = () => new NodeIdentity(crypto.generateKeyPairSync('ed25519').privateKey);
+const hashAt = (n) => `0x${n.toString(16).padStart(64, '0')}`;
+const chain = (head = 100n) => ({ head: { number: head }, store: { canonicalHash: (n) => Buffer.from(hashAt(n).slice(2), 'hex') } });
+/** A fake public node answering JSON-RPC: chain ID, block hashes and head can be set per address. */
+const fakeFetch = (nodes) => async (url, init) => {
+  const n = nodes[url];
+  if (!n) throw new Error('unreachable');
+  const { method, params } = JSON.parse(init.body);
+  const result = method === 'eth_chainId' ? `0x${n.chainId.toString(16)}`
+    : method === 'eth_blockNumber' ? `0x${n.head.toString(16)}`
+      : { hash: n.hash ? n.hash(BigInt(params[0])) : hashAt(BigInt(params[0])) };
+  return { ok: true, json: async () => ({ jsonrpc: '2.0', id: 1, result }) };
+};
+
+test('only plain https host names are accepted, never IP addresses, ports or paths', () => {
+  assert.ok(validUrl('https://quiet-river-1234.trycloudflare.com'));
+  assert.ok(validUrl('https://rpc.example.org'));
+  for (const bad of ['http://rpc.example.org', 'https://203.0.113.7', 'https://[2001:db8::1]', 'https://rpc.example.org:8545',
+    'https://rpc.example.org/x', 'https://user:pw@rpc.example.org', 'https://rpc.example.org?a=1', 'https://localhost', 'https://RPC.example.org', 'x'.repeat(300)]) {
+    assert.equal(validUrl(bad), false, bad);
+  }
+});
+
+test('an announcement is valid only with its own key, network and expiry', () => {
+  const id = identity();
+  const expires = Date.now() + 60_000;
+  const a = { url: 'https://a.trycloudflare.com', key: new Uint8Array(id.publicKey), expires, sig: new Uint8Array(signAnnouncement(id, '52401', 'https://a.trycloudflare.com', expires)) };
+  assert.ok(verifyAnnouncement(a, '52401'));
+  assert.equal(verifyAnnouncement(a, '52402'), false, 'another network');
+  assert.equal(verifyAnnouncement({ ...a, url: 'https://b.trycloudflare.com' }, '52401'), false, 'another address');
+  assert.equal(verifyAnnouncement({ ...a, expires: expires + 1 }, '52401'), false, 'a longer validity');
+  assert.equal(verifyAnnouncement({ ...a, key: new Uint8Array(identity().publicKey) }, '52401'), false, 'someone else\'s key');
+});
+
+test('addresses are listed only after this node checked them: same chain, same settled block, head close', async () => {
+  const good = 'https://good.trycloudflare.com';
+  const fork = 'https://fork.trycloudflare.com';
+  const behind = 'https://behind.trycloudflare.com';
+  const other = 'https://other.trycloudflare.com';
+  const pn = new PublicNodes({
+    chain: chain(100n), identity: identity(), chainId: 52401,
+    fetchImpl: fakeFetch({
+      [good]: { chainId: 52401, head: 101n },
+      [fork]: { chainId: 52401, head: 100n, hash: () => hashAt(999n) },
+      [behind]: { chainId: 52401, head: 50n },
+      [other]: { chainId: 52402, head: 100n },
+    }),
+  });
+  const announce = (url) => { const id = identity(); const expires = Date.now() + 60_000; return { url, key: new Uint8Array(id.publicKey), expires, sig: new Uint8Array(signAnnouncement(id, '52401', url, expires)) }; };
+  assert.equal(pn.receive([good, fork, behind, other].map(announce)), 4);
+  await Promise.all([...pn.entries.values()].map((e) => pn.check(e)));
+  assert.deepEqual(pn.list().map((e) => e.url), [good]);
+  assert.match(pn.list()[0].node, /^[0-9a-f]{16}$/);
+  assert.equal(JSON.stringify(pn.list()).match(/\d+\.\d+\.\d+\.\d+/), null, 'no IP addresses');
+  // Expired, too long or forged announcements are dropped.
+  const late = announce('https://late.trycloudflare.com');
+  assert.equal(pn.receive([{ ...late, expires: Date.now() - 1 }]), 0);
+  assert.equal(pn.receive([{ ...late, expires: Date.now() + ANNOUNCE_TTL_MS * 2 }]), 0);
+  assert.equal(pn.receive([{ ...late, sig: new Uint8Array(64) }]), 0);
+});
+
+test('a sharing node signs its own address and passes on only verified ones', async () => {
+  const url = 'https://mine.trycloudflare.com';
+  const id = identity();
+  const pn = new PublicNodes({ chain: chain(), identity: id, chainId: 52401, fetchImpl: fakeFetch({ [url]: { chainId: 52401, head: 100n } }) });
+  const own = pn.share(url);
+  assert.ok(verifyAnnouncement(own, '52401'));
+  assert.deepEqual(pn.outgoing().map((e) => e.url), [url]);
+  await pn.check(pn.entries.get(url));
+  assert.equal(pn.list()[0].own, true);
+  assert.throws(() => pn.share('https://203.0.113.7'));
+  pn.share(null);
+  assert.deepEqual(pn.outgoing(), []);
+});
+
+test('the tunnel port: every request is foreign, limited per Cf-Connecting-IP, without mining or node control', async () => {
+  const node = { chain: { network: { name: 'mainnet', chainId: 52401n }, head: { number: 1n } }, network: { peers: new Set(), sendPublicNodes() {} }, mempool: {}, work: null, version: 'test', publicNodes: { share: () => ({ url: 'x', expires: 1 }), outgoing: () => [], list: () => [] } };
+  const server = new RpcServer(node, { tunnelPort: 0, rateLimit: 6000 });
+  const req = (ip) => ({ viaTunnel: true, headers: { 'cf-connecting-ip': ip, 'x-forwarded-for': '127.0.0.1' }, socket: { remoteAddress: '127.0.0.1' } });
+  const a = server._caller(req('198.51.100.7'));
+  assert.deepEqual(a, { ip: '198.51.100.7', local: false, tunnel: true });
+  assert.equal(server._caller(req('not an ip')).ip, 'tunnel');
+  for (const m of [...MINING_METHODS, 'aether_setPublicUrl', 'quinvium_setPublicUrl']) {
+    const r = await server.call({ jsonrpc: '2.0', id: 1, method: m, params: [] }, a);
+    assert.equal(r.error?.code, -32601, m);
+  }
+  const listed = await server.call({ jsonrpc: '2.0', id: 1, method: 'quinvium_publicNodes', params: [] }, a);
+  assert.deepEqual(listed.result, []);
+  // One visitor's limit does not use up another's.
+  let n = 0;
+  while (server._allow(a)) n++;
+  assert.equal(n, 1200);
+  assert.ok(server._allow(server._caller(req('198.51.100.8'))));
+  // This computer may set the address; a caller from the internet on the normal port may not.
+  assert.ok((await server.call({ jsonrpc: '2.0', id: 1, method: 'aether_setPublicUrl', params: ['https://x.trycloudflare.com'] })).result);
+  assert.equal((await server.call({ jsonrpc: '2.0', id: 1, method: 'aether_setPublicUrl', params: [null] }, { ip: '198.51.100.9', local: false })).error?.code, -32601);
+});
+
+test('peers exchange signed addresses: the list sent is the list received, older nodes get nothing', async () => {
+  const { Network, FEATURE_PUBLIC_NODES } = await import('../src/p2p/network.js');
+  const { EventEmitter } = await import('node:events');
+  const id = identity();
+  const expires = Date.now() + 60_000;
+  const url = 'https://share.trycloudflare.com';
+  const entry = { url, key: new Uint8Array(id.publicKey), expires, sig: new Uint8Array(signAnnouncement(id, '52401', url, expires)) };
+  const sent = [];
+  const peer = (features) => ({ ready: true, features, send: (type, body) => sent.push({ features, type, body }) });
+  const net = Object.assign(new EventEmitter(), { peers: new Set([peer(1), peer(1 | FEATURE_PUBLIC_NODES)]) });
+  Network.prototype.sendPublicNodes.call(net, [entry]);
+  assert.equal(sent.length, 1, 'only the peer that understands it');
+  const received = [];
+  net.on('public-nodes', (list) => received.push(...list));
+  const from = { misbehave: () => assert.fail('a valid list is not misbehaviour') };
+  Network.prototype._onPublicNodes.call(net, from, sent[0].body);
+  assert.deepEqual(received.map((e) => e.url), [url]);
+  assert.ok(verifyAnnouncement(received[0], '52401'), 'the signature survives the wire');
+  Network.prototype._onPublicNodes.call(net, from, sent[0].body);
+  assert.equal(received.length, 1, 'at most one list a minute from one peer');
+});

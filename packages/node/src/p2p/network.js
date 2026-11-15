@@ -51,7 +51,8 @@ const TX_SYNC_BATCH = 48;
 const TX_SYNC_INTERVAL = 1_000;
 // Capabilities in HELLO. Only a node that supports hash announcements gets them; older ones keep getting full transactions and blocks.
 export const FEATURE_ANNOUNCE = 1;
-const FEATURES = FEATURE_ANNOUNCE;
+export const FEATURE_PUBLIC_NODES = 2;
+const FEATURES = FEATURE_ANNOUNCE | FEATURE_PUBLIC_NODES;
 const MAX_ANNOUNCE = 1024;          // hashes in one announcement
 const MAX_TXS_BYTES = 8 * 1024 * 1024;
 const REQUEST_TTL_MS = 5_000;       // how long to wait for a requested transaction before another peer may offer it
@@ -438,6 +439,7 @@ export class Network extends EventEmitter {
       case MSG.NEW_TX_HASHES: return this._onTxHashes(peer, b);
       case MSG.GET_TXS: return this._onGetTxs(peer, b);
       case MSG.NEW_BLOCK_HASH: return this._onBlockHash(peer, b);
+      case MSG.PUBLIC_NODES: return this._onPublicNodes(peer, b);
       case MSG.GET_PEERS: {
         // Verified and unverified: a seed node does not connect by itself, yet it must relay addresses of the nodes that found it.
         // Fakes do no harm this way: the receiver keeps them aside and gives them only a small share of outbound connections.
@@ -447,6 +449,31 @@ export class Network extends EventEmitter {
         return peer.respond(MSG.PEERS, b[0], list.filter((a) => this._dialable(a)).map((a) => new TextEncoder().encode(a)));
       }
       default: return peer.misbehave(10, `neznámá zpráva ${type}`);
+    }
+  }
+
+  /** Signed public RPC addresses from a peer: [[url, key, expires, signature], ...]. Checking them is up to watch/public-nodes.js. */
+  _onPublicNodes(peer, b) {
+    const list = b[0];
+    if (!Array.isArray(list) || list.length > 32) return peer.misbehave(10, 'neplatný seznam veřejných uzlů');
+    const now = Date.now();
+    if (peer.publicNodesAt && now - peer.publicNodesAt < 60_000) return undefined;   // at most one list a minute per peer
+    peer.publicNodesAt = now;
+    const decoded = [];
+    for (const item of list) {
+      if (!Array.isArray(item) || item.length !== 4 || item.some((x) => !(x instanceof Uint8Array))) continue;
+      decoded.push({ url: new TextDecoder().decode(item[0]), key: item[1], expires: Number(bytesToInt(item[2])), sig: item[3] });
+    }
+    this.emit('public-nodes', decoded, peer);
+    return undefined;
+  }
+
+  /** Sends signed public RPC addresses to every peer that understands them (or only to `only`). */
+  sendPublicNodes(entries, only = null) {
+    if (!entries.length) return;
+    const payload = [entries.map((e) => [new TextEncoder().encode(e.url), e.key, intToBytes(BigInt(e.expires)), e.sig])];
+    for (const p of only ? [only] : this.peers) {
+      if (p.ready && p.features & FEATURE_PUBLIC_NODES) p.send(MSG.PUBLIC_NODES, payload);
     }
   }
 

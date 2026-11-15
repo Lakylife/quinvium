@@ -24,6 +24,7 @@ Použití: quintium-node [volby]
   --rpc-host <adresa>               adresa RPC (výchozí 127.0.0.1)
   --rate-limit <n>                  limit RPC požadavků za minutu na IP (0 = bez limitu)
   --trust-proxy                     IP klienta číst z X-Forwarded-For, jen za vlastní reverzní proxy
+  --tunnel-port <port>              port jen pro tento počítač pro tunel (Sdílet uzel veřejně): vše na něm je cizí, limit podle Cf-Connecting-IP
   --no-mining-rpc                   vypnout getWork, submitWork a submitHashrate, pro veřejné uzly
   --no-site-check                   nekontrolovat web a explorer sítě proti GitHubu
   --stratum-port <port>             port pro minery
@@ -55,6 +56,7 @@ Usage: quintium-node [options]
   --rpc-host <address>              RPC address (default 127.0.0.1)
   --rate-limit <n>                  RPC requests per minute per IP (0 = no limit)
   --trust-proxy                     read the client IP from X-Forwarded-For, only behind your own reverse proxy
+  --tunnel-port <port>              local-only port for a tunnel (Share node publicly): everything on it is foreign, limited per Cf-Connecting-IP
   --no-mining-rpc                   disable getWork, submitWork and submitHashrate, for public nodes
   --no-site-check                   do not check the network's website and explorer against GitHub
   --stratum-port <port>             port for miners
@@ -83,7 +85,7 @@ const { values: v } = parseArgs({
     'stratum-port': { type: 'string' }, 'stratum-host': { type: 'string' }, 'stratum-sessions': { type: 'string' }, 'stratum-sessions-per-ip': { type: 'string' }, 'miner-address': { type: 'string' }, extra: { type: 'string' },
     pool: { type: 'string' }, 'pool-key-file': { type: 'string' },
     explorer: { type: 'string' }, 'dev-mine': { type: 'boolean' }, 'allow-private': { type: 'boolean' }, lan: { type: 'boolean' }, public: { type: 'boolean' }, 'public-host': { type: 'string' }, 'lan-port': { type: 'string' }, verbose: { type: 'boolean' },
-    'trust-proxy': { type: 'boolean' }, 'no-mining-rpc': { type: 'boolean' }, 'no-site-check': { type: 'boolean' },
+    'trust-proxy': { type: 'boolean' }, 'tunnel-port': { type: 'string' }, 'no-mining-rpc': { type: 'boolean' }, 'no-site-check': { type: 'boolean' },
     help: { type: 'boolean' },
   },
 });
@@ -112,7 +114,7 @@ const node = new AetherNode({
   network: v.network, dataDir: v['data-dir'], seeds: v.seeds?.split(',').filter(Boolean), p2pPort: num(v['p2p-port']),
   rpcPort: num(v['rpc-port']), rpcHost: v['rpc-host'] ?? (v.public || v['public-host'] ? '0.0.0.0' : undefined), rateLimit: num(v['rate-limit']), stratumPort: num(v['stratum-port']),
   stratumHost: v['stratum-host'], stratumSessions: num(v['stratum-sessions']), stratumSessionsPerIp: num(v['stratum-sessions-per-ip']), minerAddress: v['miner-address'], extra: v.extra, pool: v.pool, poolKey: v.pool ? poolKey() : undefined, staticDir: explorer, allowPrivate: v['allow-private'], lan: v.lan && v['lan-port'] ? { listenPort: num(v['lan-port']) } : v.lan, verbose: v.verbose,
-  trustProxy: v['trust-proxy'], miningRpc: !v['no-mining-rpc'], siteCheck: !v['no-site-check'],
+  trustProxy: v['trust-proxy'], tunnelPort: v['tunnel-port'] === undefined ? null : num(v['tunnel-port']), miningRpc: !v['no-mining-rpc'], siteCheck: !v['no-site-check'],
   publicAccess: v.public || !!v['public-host'], publicHost: v['public-host'],
 });
 
