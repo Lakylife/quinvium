@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Builds the static quinvium.com website into packages/website/public.
 // Run: node packages/website/src/build.mjs
-import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EXPLORER, SITE, icon, pages } from './pages.mjs';
