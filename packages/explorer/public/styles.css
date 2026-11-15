@@ -980,5 +980,24 @@ body.compact-nav #hnet-wrap ~ #account-wrap { margin-inline-start: 0; }
 body:not(.compact-nav) .main-nav { flex-shrink: 0; }
 body:not(.compact-nav) .header-search { flex: 1 1 200px; max-width: 240px; }
 
-/* Currency shown as QU or as the Quinvium symbol */
-.coin-switch button { min-width: 34px; font-weight: 600; }
+/* Profile icons */
+.avatar.profile { background: none; overflow: hidden; }
+.avatar.profile svg { display: block; width: 100%; height: 100%; }
+.avatar.mini-profile { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-inline-end: 5px; }
+.profile-pick { display: grid; gap: 14px; margin-block: 6px 14px; }
+.profile-preview { width: 56px; height: 56px; }
+.profile-preview svg { width: 100%; height: 100%; display: block; }
+.profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)); gap: 6px; }
+.profile-grid button { padding: 3px; border-radius: 9px; background: none; border: 0; cursor: pointer; }
+.profile-grid button svg { width: 100%; height: auto; display: block; }
+.profile-grid button[aria-checked="true"] { background: var(--surface-2); outline: 2px solid var(--accent); }
+.profile-colors { display: flex; flex-wrap: wrap; gap: 8px; }
+.profile-colors button { width: 26px; height: 26px; border-radius: 50%; border: 0; cursor: pointer; padding: 0; }
+.profile-colors button[aria-checked="true"] { outline: 2px solid var(--text); outline-offset: 2px; }
+.profile-section { padding-block: 4px 14px; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+.profile-section:last-child { border-bottom: 0; margin-bottom: 0; }
+.profile-section h3 { margin: 0 0 8px; font-size: 14px; }
+.profile-current { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.avatar.profile img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.avatar .nft-mark { display: grid; place-items: center; width: 100%; height: 100%; background: var(--surface-2); color: var(--text-2); font-size: 8px; font-weight: 700; }
+.profile-other summary { cursor: pointer; color: var(--accent); margin-block: 6px; }
