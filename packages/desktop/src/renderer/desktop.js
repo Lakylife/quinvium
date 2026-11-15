@@ -116,6 +116,36 @@
     });
   }
 
+  /** The app found that this card is a small part of the network (pool-offer.cjs). One click switches to the pool; nothing happens without it. */
+  function offerPool({ pool, share, rate }) {
+    if (!el('offer-box').hidden) return;
+    const blockTime = lastStats?.blockTimeTarget ?? 15;
+    const hours = blockTime / share / 3600;
+    const time = hours < 48 ? tr('about {n} hours', { n: number(Math.max(1, Math.round(hours))) }) : tr('about {n} days', { n: number(Math.round(hours / 24)) });
+    const percent = share * 100;
+    el('offer-text').textContent = tr('Your card does {rate}, about {share} % of the whole network. Mining solo, you would find a block about once every {time}.', {
+      rate: hashRate(rate), share: percent.toLocaleString(i18n.locale(), { maximumSignificantDigits: 2 }), time,
+    });
+    el('offer-detail').textContent = tr('In the pool {name} you get a small payout from every block the pool finds, by your share of the work. On average it pays the same over time, just regularly. Fee {fee} %, the rewards are held by a contract on the chain.', {
+      name: pool.name, fee: number(pool.fee),
+    });
+    const close = () => { el('offer-box').hidden = true; };
+    el('offer-solo').onclick = close;
+    el('offer-never').onclick = async () => { close(); await d.poolOfferOff(); };
+    el('offer-pool').onclick = async () => {
+      close();
+      if (!(await askPassword(tr('Change mining pool')))) return;
+      try {
+        await d.setPool({ address: pool.address, url: pool.url, name: pool.name });
+        await refresh();
+      } catch (err) {
+        window.showTab('pools');
+        el('p-error').textContent = errorText(err);
+      }
+    };
+    el('offer-box').hidden = false;
+  }
+
   // ---- signing in with a wallet outside the app ------------------------------------------------------------
   const nodePort = () => last?.node.rpc ?? d.testRpcPort ?? (last?.node.network === 'mainnet' ? 8545 : 8546);
   const chainInfo = () => ({
@@ -523,6 +553,7 @@
       el('h-blocks').textContent = e.blocks;
       if (e.shares !== undefined) el('m-shares').textContent = number(e.shares);
     }
+    if (e.type === 'pool-offer') offerPool(e);
     if (e.type === 'stats') {
       showTemperature(e.gpu);
       const s = e.stats;

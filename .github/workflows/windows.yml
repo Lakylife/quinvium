@@ -34,7 +34,7 @@ jobs:
       - run: npm test --workspace packages/contracts
       - run: npm run build --workspace packages/contracts
       - run: node --test packages/bridge/test/relayer.test.js packages/bridge/test/bitcoin.test.js packages/bridge/test/btc-bridge.test.js
-      - run: node --test packages/desktop/test/updater.test.cjs packages/desktop/test/cli-launcher.test.cjs
+      - run: node --test packages/desktop/test/updater.test.cjs packages/desktop/test/cli-launcher.test.cjs packages/desktop/test/pool-offer.test.cjs
       - run: node --test packages/explorer/test/design.test.mjs packages/explorer/test/i18n.test.mjs packages/extension/test/i18n.test.cjs packages/extension/test/kinds.test.cjs packages/extension/test/local-rpc.test.cjs
       - run: node --test packages/announcer/test/announcer.test.js scripts/consensus-guard.test.mjs
       # Mobile layout: every website and Explorer page at phone, tablet and landscape sizes (no sideways scrolling, 16 px fields).
