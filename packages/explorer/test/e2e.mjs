@@ -25,6 +25,9 @@ const [miner, buyer, seller, arbiter] = [
 
 const provider = new ethers.JsonRpcProvider(RPC, undefined, { staticNetwork: true, pollingInterval: 200 });
 let current = miner;
+let rejectRegister = false;
+let names;   // the wallet rejects the second step of a name registration, as when the user closes it
+const REGISTER = ethers.id('register(string,uint256,address,bytes32)').slice(0, 10);
 const results = [];
 const step = async (name, fn) => {
   try {
@@ -80,6 +83,7 @@ try {
       case 'wallet_addEthereumChain': case 'wallet_switchEthereumChain': return { result: null };
       case 'eth_sendTransaction': {
         const t = params[0];
+        if (rejectRegister && String(t.data).startsWith(REGISTER)) return { error: { code: 4001, message: 'User rejected the request.' } };
         try {
           const r = await current.connect(provider).sendTransaction({ to: t.to, data: t.data, value: t.value ?? 0n, gasLimit: t.gas });
           return { result: r.hash };
@@ -232,7 +236,9 @@ try {
     current = buyer;
     const c = card('Jména adres');
     assert.match(await read(c, { name: 'novak-brno' }), /Volné/);
-    assert.match(await act(c, 'write'), /novak-brno/);
+    assert.match(await act(c, 'write'), /novak-brno\.qu[\s\S]*místo vaší adresy/);
+    names = new ethers.Contract('0xae00000000000000000000000000000000000002', ['function nameOf(address) view returns (string)', 'function resolve(string) view returns (address)'], provider);
+    assert.equal(await names.nameOf(buyer.address), 'novak-brno', 'the first name of the account is set as primary in the same flow');
     assert.match(await read(c), new RegExp(buyer.address));
     await fails(c, 'write', {}, /obsazené/);
     await act(c, 'primary');
@@ -240,6 +246,43 @@ try {
     await act(c, 'target', { target: seller.address });
     await act(c, 'transfer', { to: arbiter.address });
     assert.match(await read(c), new RegExp(arbiter.address));
+  });
+
+  await step('Names: an unfinished registration is finished later, the name is shown in lists and on the address page', async () => {
+    current = seller;
+    let c = card('Jména adres');
+    rejectRegister = true;
+    await fails(c, 'write', { name: 'prodejce', target: '' }, /./);
+    rejectRegister = false;
+    assert.equal(await names.resolve('prodejce'), ethers.ZeroAddress, 'only the commitment is on chain');
+    await page.reload();
+    await page.waitForSelector('.tool-card');
+    c = card('Jména adres');
+    assert.equal(await c.evaluate((d) => d.open), true, 'the card opens by itself');
+    assert.match(await output(c).textContent(), /prodejce\.qu není dokončená/);
+    assert.equal(await value(c, 'name'), 'prodejce');
+    const commits = await provider.getTransactionCount(seller.address);
+    await c.locator('[data-run]').click();
+    await until(async () => (await output(c).getAttribute('class')).includes('good'), 120000);
+    assert.match(await output(c).textContent(), /prodejce\.qu/);
+    assert.equal(await provider.getTransactionCount(seller.address), commits + 2, 'no new commitment: registration and primary name only');
+    assert.equal(await names.nameOf(seller.address), 'prodejce');
+    // A name that points to another address is not primary there: the address page says so.
+    current = buyer;
+    await act(c, 'write', { name: 'pro-arbitra', target: seller.address });
+    await act(c, 'target', { name: 'pro-arbitra', target: arbiter.address });
+    await page.goto(`${RPC}/address/${arbiter.address}`);
+    await page.waitForSelector('.address-head');
+    assert.match(await page.locator('#app').innerText(), /pro-arbitra\.qu[\s\S]*není hlavní/);
+    await page.goto(`${RPC}/address/${seller.address}`);
+    await page.waitForSelector('.address-head');
+    assert.match(await page.locator('.address-head h1').innerText(), /prodejce\.qu/);
+    // Lists: the miner funded the seller; the link to the seller shows the name.
+    await page.goto(`${RPC}/address/${miner.address}`);
+    await until(async () => (await page.locator(`a[href="/address/${seller.address.toLowerCase()}"], a[href="/address/${seller.address}"]`).allTextContents()).some((x) => x === 'prodejce.qu'), 20000);
+    await page.goto(`${RPC}/#/apps`);
+    await page.waitForSelector('.tool-card');
+    await page.$$eval('.tool-card', (cards) => cards.forEach((x) => { x.open = true; }));
   });
 
   await step('Custom token: creation and transfer', async () => {
