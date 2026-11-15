@@ -53,17 +53,17 @@
           <a href="/mining" data-nav="mining" data-t="nav.mining">Start mining</a>
         </div>
       </div>
-      <a class="nav-link" href="/api/rest" data-nav="api" data-t="nav.apiTop">API</a>
       <div class="nav-group" data-group="apps,api">
         <button class="nav-link" type="button" aria-expanded="false"><span data-t="nav.more">More</span><svg class="chev" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 3.500 3 3 3-3"/></svg></button>
         <div class="nav-menu">
+          <a href="/api/rest" data-nav="api" data-t="nav.apiTop">API</a>
           <a href="/apps" data-nav="apps" data-t="nav.apps">Apps</a>
           <a href="/api" data-nav="api" data-t="nav.api">Developers</a>
         </div>
       </div>
     </nav>
     <div class="pop-wrap embedded-hide" id="hnet-wrap">
-      <button class="chip" id="hnet-btn" aria-haspopup="menu" aria-expanded="false" title="Network" aria-label="Network"><i class="net-dot" id="hnet-dot"></i><span id="hnet-label">Mainnet</span><svg class="chev" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 3.500 3 3 3-3"/></svg></button>
+      <button class="chip net-icon" id="hnet-btn" aria-haspopup="menu" aria-expanded="false" title="Mainnet" aria-label="Network"><svg class="net-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="18" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M10.8 7.2 6.3 15.8M13.2 7.2l4.5 8.6M7.5 18h9"/></svg><i class="net-dot" id="hnet-dot"></i><span class="sr-only" id="hnet-label">Mainnet</span><svg class="chev" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 3.500 3 3 3-3"/></svg></button>
       <div class="pop net-pop" id="hnet-pop" role="menu">
         <button role="menuitemradio" data-net="mainnet"><i class="net-dot"></i>Mainnet</button>
         <button role="menuitemradio" data-net="testnet"><i class="net-dot testnet"></i>Testnet</button>

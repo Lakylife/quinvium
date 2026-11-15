@@ -1,18 +1,19 @@
-// Read-only REST API in the format of Etherscan's: GET /api?module=account&action=balance&address=0x…
-// Wallets, portfolio trackers and scripts written for Etherscan work against a Quinvium node with only the address changed.
+// The Quinvium REST API, read only: GET /api?module=account&action=balance&address=0x…
+// It uses the common module/action query format of block explorers, so wallets, portfolio trackers and scripts that already
+// speak it work against a Quinvium node with only the address changed.
 // Everything is answered from the node's own JSON-RPC methods, so the same rate limit and the same privacy rules apply:
 // nothing here returns IP addresses, and nothing writes to the chain (no eth_sendRawTransaction).
 const OK = (result) => ({ status: '1', message: 'OK', result });
 const EMPTY = (what) => ({ status: '0', message: `No ${what} found`, result: [] });
 const FAIL = (text) => ({ status: '0', message: 'NOTOK', result: `Error! ${text}` });
-const MAX_OFFSET = 100;          // one page holds at most 100 rows (Etherscan allows more; page through instead)
+const MAX_OFFSET = 100;          // one page holds at most 100 rows (page through for more)
 const MAX_MULTI = 20;
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const HASH = /^0x[0-9a-fA-F]{64}$/;
 const TAG = /^(latest|earliest|pending|safe|finalized|0x[0-9a-fA-F]{1,16})$/;
 const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 
-/** Quantities in Etherscan answers are decimal strings. */
+/** Quantities in the answers are decimal strings. */
 const dec = (v) => (v === null || v === undefined ? '' : BigInt(v).toString());
 const int = (v, fallback) => {
   if (v === undefined || v === null || v === '') return fallback;
@@ -27,7 +28,7 @@ export const COST = { txlist: 5, tokentx: 5, getminedblocks: 5, getLogs: 5, getb
  * @param {URLSearchParams} q
  * @param {(method: string, params?: unknown[]) => Promise<unknown>} call the node's own RPC methods; throws on an RPC error
  */
-export async function etherscan(q, call) {
+export async function restApi(q, call) {
   const module = q.get('module');
   const action = q.get('action');
   const address = q.get('address');
@@ -191,7 +192,7 @@ function blockTag(v, fallback) {
 }
 
 const tokenCache = new Map();
-/** Name, symbol and decimals of a token, read from the contract. Missing values stay empty, as on Etherscan. */
+/** Name, symbol and decimals of a token, read from the contract. Missing values stay empty. */
 async function tokenMeta(call, token) {
   if (tokenCache.has(token)) return tokenCache.get(token);
   const read = async (selector) => call('eth_call', [{ to: token, data: selector }, 'latest']).catch(() => '0x');
@@ -209,7 +210,7 @@ async function tokenMeta(call, token) {
   return meta;
 }
 
-/** proxy module: the read-only JSON-RPC methods with Etherscan's parameter names. */
+/** proxy module: the read-only JSON-RPC methods with the usual parameter names (tag, txhash, to, data …). */
 const PROXY = {
   eth_blockNumber: () => [],
   eth_getBlockByNumber: (q) => [q.get('tag') ?? 'latest', q.get('boolean') === 'true'],

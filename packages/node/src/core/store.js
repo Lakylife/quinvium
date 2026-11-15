@@ -326,7 +326,7 @@ export class Store {
     const out = get('SELECT COUNT(*) AS n, COALESCE(SUM(value),0) AS value, COALESCE(SUM(fee),0) AS fee, COALESCE(SUM(ok=0),0) AS failed, MIN(number) AS first, MAX(number) AS last FROM tx_index WHERE sender=?', a);
     const received = get('SELECT COUNT(*) AS n, COALESCE(SUM(value),0) AS value, MIN(number) AS first, MAX(number) AS last FROM tx_index WHERE recipient=? AND ok=1', a);
     const mined = get('SELECT COUNT(*) AS n, COALESCE(SUM(income),0) AS income, MIN(number) AS first, MAX(number) AS last FROM block_index WHERE miner=?', a);
-    // First and last sent transaction and where the first coins came from, like "Funded by" on Etherscan.
+    // First and last sent transaction and where the first coins came from, shown as "Funded by" in the Explorer.
     const firstSent = get('SELECT number, idx FROM tx_index WHERE sender=? ORDER BY number ASC, idx ASC LIMIT 1', a) ?? null;
     const lastSent = get('SELECT number, idx FROM tx_index WHERE sender=? ORDER BY number DESC, idx DESC LIMIT 1', a) ?? null;
     const funding = get('SELECT number, idx FROM tx_index WHERE recipient=? AND ok=1 AND value>0 ORDER BY number ASC, idx ASC LIMIT 1', a) ?? null;

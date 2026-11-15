@@ -594,22 +594,23 @@ h3, .tile h3 { font-size: 18px; }
 
 /* ---- dark mode: the same layout on a deep navy page. theme.js sets data-theme before the first paint ---- */
 :root[data-theme="dark"] {
-  --page: #0b1220; --tint: #142033; --card: #111b2c; --ink: #e8edf4; --ink-2: #b9c5d4; --ink-3: #8b9bb0; --hair: #223249;
-  --accent: #3b8be0; --accent-hover: #5fa2e8; --accent-soft: #13263f; --accent-2: #2fbf94; --on-accent: #ffffff;
-  --warn: #f0b45a; --warn-soft: #2e230f;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35); --shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.35);
-  --t-blue: #11233a; --t-blue-2: #183153; --t-blue-ink: #7db8f5;
-  --t-amber: #2a2110; --t-amber-2: #3a2e14; --t-amber-ink: #f0c060;
-  --t-green: #0f2a22; --t-green-2: #143a2f; --t-green-ink: #5fd4a8;
-  --t-neutral: #171e29; --t-neutral-2: #232c39; --t-neutral-ink: #b9c5d4;
+  --page: #000000; --tint: #141414; --card: #0c0c0c; --ink: #f4f4f5; --ink-2: #c4c4c8; --ink-3: #8c8c92; --hair: #262626;
+  --accent: #3d8be0; --accent-hover: #63a3ea; --accent-soft: #0f1a27; --accent-2: #2fbf94; --on-accent: #ffffff;
+  --warn: #f0b45a; --warn-soft: #221a0b;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6); --shadow: 0 2px 4px rgba(0, 0, 0, 0.6), 0 12px 32px rgba(0, 0, 0, 0.7);
+  --t-blue: #0b131d; --t-blue-2: #122033; --t-blue-ink: #7db8f5;
+  --t-amber: #17120a; --t-amber-2: #2a200d; --t-amber-ink: #f0c060;
+  --t-green: #08160f; --t-green-2: #0f2a1d; --t-green-ink: #5fd4a8;
+  --t-neutral: #111111; --t-neutral-2: #1d1d1d; --t-neutral-ink: #c4c4c8;
   color-scheme: dark;
 }
-:root[data-theme="dark"] .art .p1 { fill: #12233a; }
-:root[data-theme="dark"] .art .p2 { fill: #183052; }
-:root[data-theme="dark"] .art .p3 { fill: #0f1a2b; stroke: #2a4468; }
-:root[data-theme="dark"] .art .f1, :root[data-theme="dark"] .art .f4 { fill: #1d3757; }
-:root[data-theme="dark"] .art .f2 { fill: #3a2e14; }
-:root[data-theme="dark"] .art .f3 { fill: #143a2f; }
+:root[data-theme="dark"] .art .p1 { fill: #0f0f10; }
+:root[data-theme="dark"] .art .p2 { fill: #18181a; }
+:root[data-theme="dark"] .art .p3 { fill: #050505; stroke: #2c2c2e; }
+:root[data-theme="dark"] .art .f1, :root[data-theme="dark"] .art .f4 { fill: #1f1f22; }
+:root[data-theme="dark"] .art .f2 { fill: #2a200d; }
+:root[data-theme="dark"] .art .f3 { fill: #0f2a1d; }
+:root[data-theme="dark"] .top { background: #000000; }
 
 /* ---- header tools: language and theme ---- */
 .tool-btn { display: inline-flex; align-items: center; gap: 6px; height: 40px; min-width: 40px; justify-content: center; padding: 0 10px; border: 0; border-radius: 12px; background: transparent; color: var(--ink-2); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
@@ -686,3 +687,5 @@ h3, .tile h3 { font-size: 18px; }
   .chain-row a { padding: 8px; }
   .chain-row b { font-size: 13px; }
 }
+:root[data-theme="dark"] pre.mini, :root[data-theme="dark"] .go-arrow { background: rgba(255, 255, 255, 0.07); }
+:root[data-theme="dark"] pre.mini code { color: var(--ink-2); }
