@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { units, translateHtml } from '../src/translate.mjs';
+import { units, translateHtml, lookup } from '../src/translate.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const pub = join(here, '..', 'public');
@@ -26,9 +26,9 @@ test('the English site has texts to translate', () => {
 
 for (const l of LANGS) {
   test(`${l}: every text is translated and keeps its links and markup`, () => {
-    const missing = all.filter((u) => !dicts[l][u]);
+    const missing = all.filter((u) => !lookup(dicts[l], u));
     assert.deepEqual(missing, []);
-    for (const u of all) assert.deepEqual(tags(dicts[l][u]), tags(u), `${l}: ${u.slice(0, 80)}`);
+    for (const u of all) assert.deepEqual(tags(lookup(dicts[l], u)), tags(u), `${l}: ${u.slice(0, 80)}`);
   });
 }
 
@@ -48,4 +48,9 @@ test('a translation never touches code', () => {
   const html = '<p>Run <code>quinvium --help</code> now</p><pre>Run it</pre><script>var Run = 1</script>';
   const out = translateHtml(html, { 'Run <code>quinvium --help</code> now': 'Spusťte <code>quinvium --help</code> hned', 'Run it': 'X' });
   assert.equal(out, '<p>Spusťte <code>quinvium --help</code> hned</p><pre>Run it</pre><script>var Run = 1</script>');
+});
+
+test('a new version number needs no new translation', () => {
+  assert.equal(lookup({ 'Version {ver}. Free.': 'Verze {ver}. Zdarma.' }, 'Version 9.8.7. Free.'), 'Verze 9.8.7. Zdarma.');
+  assert.equal(lookup({}, 'Version 9.8.7.'), null);
 });
