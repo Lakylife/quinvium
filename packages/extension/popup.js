@@ -641,30 +641,94 @@ function importKeyScreen(back) {
 }
 
 function deposit(o) {
-  const code = window.qrcode(0, 'M');
-  code.addData(o.address);
-  code.make();
-  render(`${screenHead(_('Deposit'))}<div class="card qr-card"><div class="qr">${code.createSvgTag({ cellSize: 5, margin: 2, scalable: true })}</div>
+  render(`${screenHead(_('Deposit'))}<div class="card qr-card"><div class="qr">${window.quinviumQr.svg(o.address)}</div>
       <span class="mono" id="deposit-address">${esc(o.address)}</span><button class="primary" id="deposit-copy">${ICONS.copy}<span>${_('Copy address')}</span></button></div>
     <p class="warn">${_('Send only {coin} on {network} to this address. Coins sent from another network can be lost.', { coin: esc(o.network.symbol), network: esc(o.network.name) })}</p>`);
   on('#back', main);
   on('#deposit-copy', async () => { await navigator.clipboard.writeText(o.address); $('#deposit-copy span').textContent = _('Copied'); });
 }
 
+/** A token's icon is drawn from its symbol; the main coin has its own. Foreign logos are not taken over. */
+const assetIcon = (a) => (a.token ? `<i class="asset-ic tint-${[...String(a.symbol)].reduce((n, c) => n + c.charCodeAt(0), 0) % 6}">${esc(String(a.symbol).replace(/^t(?=[A-Z])/, '').slice(0, 3))}</i>` : `<i class="asset-ic coin">${COIN}</i>`);
+const assetAmount = (a) => `${decimal(ethers.formatUnits(a.balance, a.decimals))} ${a.symbol}`;
+
 /** The first step of sending: what, to whom and how much. The fee and summary come in the next step. */
 async function send(o, draft = {}) {
   const tokens = await call('assets').catch(() => []);
-  const assets = [{ symbol: o.network.symbol, decimals: 18, balance: BigInt(o.balance ?? 0).toString() }, ...tokens];
-  render(`${screenHead(_('Send'))}<form id="f">
-      <label>${_('Asset')}<select name="asset">${assets.map((a, i) => `<option value="${i}" ${String(i) === String(draft.asset ?? 0) ? 'selected' : ''}>${esc(a.symbol)}</option>`).join('')}</select></label>
-      <label>${_('Recipient address')}<input name="to" required autocomplete="off" spellcheck="false" placeholder="0x…" value="${esc(draft.to ?? '')}"></label>
-      <label>${_('Amount')}<span class="amount-row"><input name="value" required inputmode="decimal" autocomplete="off" placeholder="${decimal('0.0')}" value="${esc(draft.value ?? '')}"><button type="button" id="max">${_('Max')}</button></span></label>
+  const assets = [{ symbol: o.network.symbol, name: o.network.name, decimals: 18, balance: BigInt(o.balance ?? 0).toString() }, ...tokens];
+  let chosen = Math.min(Number(draft.asset ?? 0), assets.length - 1);
+  const camera = !!navigator.mediaDevices?.getUserMedia && !!window.desktop;
+  render(`${screenHead(_('Send'))}<form id="f" class="send-form">
+      <div class="field"><span class="field-label">${_('Asset')}</span><button type="button" class="asset-pick" id="asset-pick" aria-haspopup="listbox"></button></div>
+      <div class="asset-sheet" id="asset-sheet" hidden>${assets.length > 5 ? `<input id="asset-search" type="search" autocomplete="off" spellcheck="false" placeholder="${_('Search assets')}">` : ''}<div class="asset-list" role="listbox"></div></div>
+      <div class="field"><span class="field-label">${_('Recipient address')}</span><span class="to-row"><input name="to" required autocomplete="off" spellcheck="false" placeholder="0x…" value="${esc(draft.to ?? '')}">
+        ${camera ? `<button type="button" class="icon" id="scan-camera" title="${_('Scan a QR code with the camera')}" aria-label="${_('Scan a QR code with the camera')}">${svg('<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.200"/>')}</button>` : ''}
+        <button type="button" class="icon" id="scan-image" title="${_('Read a QR code from a photo')}" aria-label="${_('Read a QR code from a photo')}">${svg('<rect x="3" y="5" width="18" height="14" rx="2.500"/><circle cx="9" cy="10" r="1.800"/><path d="m21 16-5-5-8 8"/>')}</button>
+        <input type="file" id="scan-file" accept="image/*" hidden></span></div>
+      <div class="scanner" id="scanner" hidden><video id="scan-video" playsinline muted></video><span class="scan-frame" aria-hidden="true"></span><button type="button" id="scan-stop">${_('Cancel')}</button></div>
+      <div class="field"><span class="field-label">${_('Amount')}</span><span class="amount-row"><input name="value" required inputmode="decimal" autocomplete="off" placeholder="${decimal('0.0')}" value="${esc(draft.value ?? '')}"><span class="amount-unit" id="amount-unit"></span><button type="button" id="max">${_('Max')}</button></span></div>
       <small class="dim" id="available"></small>
       <div class="err"></div><button class="primary" type="submit">${_('Review')}</button></form>`);
-  const asset = () => assets[Number($('[name=asset]').value)];
-  const showAvailable = () => { $('#available').textContent = _('Available: {value}', { value: `${decimal(ethers.formatUnits(asset().balance, asset().decimals))} ${asset().symbol}` }); };
-  $('[name=asset]').addEventListener('change', showAvailable);
-  showAvailable();
+  const asset = () => assets[chosen];
+  const showAsset = () => {
+    const a = asset();
+    $('#asset-pick').innerHTML = `${assetIcon(a)}<span class="asset-txt"><b>${esc(a.symbol)}</b><small>${esc(a.name ?? (a.verified ? _('Verified token') : short(a.token)))}</small></span><span class="asset-bal">${esc(assetAmount(a))}</span>${ICONS.chev}`;
+    $('#amount-unit').textContent = a.symbol;
+    $('#available').textContent = _('Available: {value}', { value: assetAmount(a) });
+  };
+  const drawList = (q = '') => {
+    const query = q.trim().toLowerCase();
+    $('#asset-sheet .asset-list').innerHTML = assets.map((a, i) => ({ a, i }))
+      .filter(({ a }) => !query || a.symbol.toLowerCase().includes(query) || (a.token ?? '').toLowerCase().startsWith(query))
+      .map(({ a, i }) => `<button type="button" role="option" aria-selected="${i === chosen}" class="asset-row${i === chosen ? ' on' : ''}" data-i="${i}">${assetIcon(a)}<span class="asset-txt"><b>${esc(a.symbol)}</b><small>${esc(a.name ?? (a.verified ? _('Verified token') : short(a.token)))}</small></span><span class="asset-bal">${esc(decimal(ethers.formatUnits(a.balance, a.decimals)))}</span></button>`).join('')
+      || `<p class="dim">${_('Nothing found')}</p>`;
+  };
+  const sheet = $('#asset-sheet');
+  on('#asset-pick', () => { sheet.hidden = !sheet.hidden; if (!sheet.hidden) { drawList(); $('#asset-search')?.focus(); } });
+  $('#asset-search')?.addEventListener('input', (e) => drawList(e.target.value));
+  sheet.addEventListener('click', (e) => {
+    const row = e.target.closest('[data-i]');
+    if (!row) return;
+    chosen = Number(row.dataset.i);
+    sheet.hidden = true;
+    showAsset();
+  });
+  showAsset();
+  // A scanned code fills in the recipient, and the amount when the payment link carries one.
+  const useScan = (text) => {
+    const p = window.quinviumQr.parsePayment(text);
+    if (!p) { $('.err').textContent = _('The QR code does not contain a Quinvium address.'); return; }
+    if (p.chainId && BigInt(p.chainId) !== BigInt(o.network.chainId ?? p.chainId)) { $('.err').textContent = _('The QR code is for another network.'); return; }
+    $('.err').textContent = '';
+    $('[name=to]').value = p.to;
+    if (p.wei && !asset().token) $('[name=value]').value = ethers.formatEther(p.wei);
+    else if (p.amount) $('[name=value]').value = p.amount;
+    $('[name=value]').focus();
+  };
+  on('#scan-image', () => $('#scan-file').click());
+  $('#scan-file').addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const text = await window.quinviumQr.decodeFile(file).catch(() => null);
+    if (text) useScan(text); else $('.err').textContent = _('No QR code found in the image.');
+  });
+  let scanning = null;
+  const stopScan = () => { scanning?.stop(); scanning = null; $('#scanner').hidden = true; };
+  on('#scan-stop', stopScan);
+  on('#scan-camera', async () => {
+    $('.err').textContent = '';
+    $('#scanner').hidden = false;
+    scanning = window.quinviumQr.scanCamera($('#scan-video'));
+    try {
+      const text = await scanning.result;
+      if (text) useScan(text);
+    } catch {
+      $('.err').textContent = _('The camera is not available. Allow it in the system settings, or read the code from a photo.');
+    } finally {
+      stopScan();
+    }
+  });
   on('#max', () => {
     // Enough of the main coin must remain for the fee, so a reserve for an ordinary transfer is subtracted.
     const a = asset();
@@ -673,7 +737,9 @@ async function send(o, draft = {}) {
     $('[name=value]').value = left > 0n ? ethers.formatUnits(left, a.decimals) : '0';
   });
   bindForm('#f', async (v) => {
+    stopScan();
     const a = asset();
+    v.asset = chosen;
     const to = v.to.trim();
     const value = v.value.trim().replace(',', '.');
     if (!ethers.isAddress(to)) throw new Error(_('Invalid recipient address'));

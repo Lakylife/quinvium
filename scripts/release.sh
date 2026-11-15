@@ -48,6 +48,6 @@ cp -R "$ROOT/packages/explorer/public" "$WORK/quintium/explorer"
 cp "$ROOT"/scripts/windows/* "$WORK/quintium/"
 (cd "$WORK" && zip -qr "$OUT/Quinvium-Uzel-a-Miner-$VERSION-Windows-x64.zip" quintium)
 cp "$ROOT/packages/desktop/release/Quinvium-$VERSION-Windows-x64.exe" "$ROOT/packages/desktop/release/Quinvium-$VERSION-Windows-x64.zip" "$OUT/"
-(cd "$ROOT/packages/extension" && zip -qr "$OUT/Quinvium-Wallet-Chrome-$VERSION.zip" manifest.json background.js content.js inpage.js popup.html popup.css qrcode.js popup.js i18n.js ethers.umd.min.js icons/16.png icons/48.png icons/128.png)
+(cd "$ROOT/packages/extension" && zip -qr "$OUT/Quinvium-Wallet-Chrome-$VERSION.zip" manifest.json background.js content.js inpage.js popup.html popup.css qrcode.js jsqr.js jsqr.js.LICENSE.txt qr-tools.js popup.js i18n.js ethers.umd.min.js icons/16.png icons/48.png icons/128.png)
 (cd "$OUT" && shasum -a 256 ./*.zip ./*.exe > SHA256SUMS.txt)
 ls -la "$OUT"

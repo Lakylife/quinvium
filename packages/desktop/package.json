@@ -1,7 +1,7 @@
 {
   "name": "aether-desktop",
   "productName": "Quinvium",
-  "version": "2.15.1",
+  "version": "2.15.2",
   "description": "Quinvium: peněženka, plný uzel a GPU těžba",
   "author": "Quinvium",
   "main": "src/bootstrap.cjs",
@@ -79,7 +79,8 @@
       ],
       "extendInfo": {
         "CFBundleDisplayName": "Quinvium",
-        "NSHighResolutionCapable": true
+        "NSHighResolutionCapable": true,
+        "NSCameraUsageDescription": "Quinvium uses the camera only to read a QR code with a recipient address when you send a payment."
       }
     },
     "nsis": {

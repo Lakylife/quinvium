@@ -1,7 +1,15 @@
 # Changelog
 
-## Unreleased
+## 2.15.2 (15 November 2026)
 
+- App and Chrome wallet in eight languages: English, Czech, German, Spanish, French, Japanese, Chinese and Arabic (right to left).
+- New lock screen: a centred card with the mark, show/hide password, a Caps Lock hint and what keeps running in the background.
+- Receive: the QR code carries the Quinvium mark in the middle (error correction H, it still scans).
+- Send: an asset picker with icons, balances and search; the recipient can be read from a QR code with the camera (app) or from a photo.
+- Notifications: found blocks, incoming payments, mining that stopped by itself and new versions, each can be switched off in Settings.
+- Updates: the app checks GitHub for a new version, shows what is new and downloads the build; it opens it only when its SHA-256 matches the checksum lists on GitHub and quinvium.com. Installing stays with the user.
+- Menu bar / tray and the Mining page show all blocks found by the payout address, not only this session.
+- Whitepaper PDF with a cover, key facts, contents, running header and page numbers.
 - Nodes watch each other: every two minutes at most, a node asks each peer for its block a few blocks below the head (the answer must carry valid work). A different block means the peer follows another branch; the node logs a warning and reports it in `quinvium_watch`. Deep reorganisations are recorded too. Peers are named by their key, never by IP address.
 - Nodes check the public website and Explorer every 6 hours: each file at quinvium.com, explorer.quinvium.com and testnet.quinvium.com must match the protected main branch on GitHub or this node's release (`site-manifest.json`). A change made outside GitHub is logged as "the website differs from the release". `--no-site-check` turns it off.
 - Explorer with several nodes compares their blocks and uses only nodes that agree with the majority; a node on another branch is named in a notice. The Network page shows the node's watch.

@@ -26,6 +26,9 @@ function usedKeys() {
   for (const m of html.matchAll(/<(?:span|b|strong|summary|h1|p|small)[^>]*\bdata-t[^>]*>([^<]+)</g)) keys.add(m[1]);
   for (const m of background.matchAll(/(?:rpcError\([^,]+, |new Error\()'([A-Z][^']+)'/g)) keys.add(m[1]);
   for (const m of main.matchAll(/new Error\('([^']+)'\)/g)) keys.add(m[1]);
+  for (const m of main.matchAll(/\btr\('((?:[^'\\]|\\.)*)'/g)) keys.add(m[1]);
+  for (const m of main.matchAll(/\bT\('(?:[^'\\]|\\.)*',\s*'((?:[^'\\]|\\.)*)'\)/g)) keys.add(m[1]);
+  for (const m of html.matchAll(/data-t-ph="([^"]+)"/g)) keys.add(m[1]);
   return [...keys];
 }
 

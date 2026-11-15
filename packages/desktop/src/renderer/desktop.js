@@ -42,7 +42,7 @@
     if (name === 'pools') { drawPools(); showRunPool(); }
     if (section === 'explorer') showExplorerPage(path ?? EXPLORER_PAGES[name], name !== 'explorer');
     if (name === 'about') showAbout();
-    if (name === 'settings') showUpdate();
+    if (name === 'settings') { showUpdate(); showNotify(); }
   };
   document.querySelectorAll('nav button[data-tab]').forEach((b) => {
     b.onclick = () => {
@@ -58,20 +58,52 @@
 
   function showLock() {
     el('lock-password').value = '';
+    el('lock-password').type = 'password';
+    el('lock-eye').setAttribute('aria-pressed', 'false');
     el('lock-error').textContent = '';
+    el('lock-caps').hidden = true;
+    showLockStatus();
     el('app-lock').hidden = false;
     el('lock-password').focus();
   }
+  /** What keeps running while the app is locked: the node and mining are in the main process. */
+  function showLockStatus() {
+    const parts = [];
+    if (last?.miner.running) parts.push(tr('Mining continues in the background'));
+    if (lastStats?.height !== undefined) parts.push(tr('Block {n}', { n: number(lastStats.height) }));
+    el('lock-status').textContent = parts.join(' · ');
+  }
+  const eyeLabel = () => tr(el('lock-password').type === 'password' ? 'Show password' : 'Hide password');
+  el('lock-eye').setAttribute('aria-label', eyeLabel());
+  el('lock-eye').title = eyeLabel();
+  el('lock-eye').onclick = () => {
+    const show = el('lock-password').type === 'password';
+    el('lock-password').type = show ? 'text' : 'password';
+    el('lock-eye').setAttribute('aria-pressed', String(show));
+    el('lock-eye').setAttribute('aria-label', eyeLabel());
+    el('lock-eye').title = eyeLabel();
+    el('lock-password').focus();
+  };
+  const capsCheck = (e) => { if (e.getModifierState) el('lock-caps').hidden = !e.getModifierState('CapsLock'); };
+  el('lock-password').addEventListener('keydown', capsCheck);
+  el('lock-password').addEventListener('keyup', capsCheck);
   window.onWalletLocked = showLock;
   window.appLocked = () => !el('app-lock').hidden;
 
   el('lock-form').onsubmit = async (e) => {
     e.preventDefault();
+    el('lock-submit').disabled = true;
     try {
       await call('unlock', { password: el('lock-password').value });
     } catch {
       el('lock-error').textContent = tr('Wrong password');
+      el('lock-form').classList.remove('shake');
+      void el('lock-form').offsetWidth;
+      el('lock-form').classList.add('shake');
+      el('lock-password').select();
       return;
+    } finally {
+      el('lock-submit').disabled = false;
     }
     el('app-lock').hidden = true;
     await window.onWalletChanged?.();
@@ -266,8 +298,11 @@
   /** The payout always goes to the signed-in wallet; no other address can be set. */
   const payoutAddress = async () => (await wallet('address').catch(() => null))?.result ?? null;
   async function fillAddress() {
-    const address = await payoutAddress() ?? (await d.state()).miner.address;
+    const wallet = await payoutAddress();
+    const address = wallet ?? (await d.state()).miner.address;
     el('m-address').textContent = address ?? '—';
+    // The main process uses it for notifications of incoming payments and for its texts.
+    d.setContext({ lang: i18n.lang(), ...(wallet ? { address: wallet } : {}) });
   }
 
   /** A different account means a different payout: running mining switches to the new account immediately, not after a restart. */
@@ -523,7 +558,7 @@
     el('dot').classList.toggle('on', s.node.running);
     if (!s.node.running) el('status').textContent = tr('Node is not running');
     showLoading(s.miner);
-    el('m-blocks').textContent = s.miner.blocks;
+    showMined();
     el('m-shares').textContent = number(s.miner.shares);
     showTemperature(s.miner.gpu);
     document.querySelectorAll('.pool-only').forEach((x) => { x.hidden = !s.miner.pool; });
@@ -534,7 +569,7 @@
     el('h-stop').hidden = !s.miner.running;
     setState('h-state', s.miner.running, tr(s.miner.running ? 'Mining is running' : 'Mining is off'));
     setState('h-node', s.node.running, tr(s.node.running ? 'Node is running' : 'Node is not running'));
-    el('h-blocks').textContent = s.miner.blocks;
+    showMined();
     el('s-about-version').textContent = tr('Version {v}', { v: s.version });
     tail('n-log', s.node.log);
     tail('m-log', s.miner.log);
@@ -549,13 +584,14 @@
     if (e.type === 'miner-log') {
       append('m-log', e.line);
       showLoading(e);
-      el('m-blocks').textContent = e.blocks;
-      el('h-blocks').textContent = e.blocks;
+      if (last) last.miner.blocks = e.blocks;
+      showMined();
       if (e.shares !== undefined) el('m-shares').textContent = number(e.shares);
     }
     if (e.type === 'pool-offer') offerPool(e);
     if (e.type === 'stats') {
       showTemperature(e.gpu);
+      if (e.mined) showMined(e.mined);
       const s = e.stats;
       lastStats = s;
       el('n-height').textContent = number(s.height);
@@ -678,22 +714,63 @@
     reloadExplorer();
   };
 
+  /** Blocks found: all of them by the payout address on this chain, and how many in this mining session. */
+  let minedTotal = null;
+  function showMined(m) {
+    if (m) minedTotal = m;
+    const session = last?.miner.blocks ?? 0;
+    const text = minedTotal ? number(minedTotal.blocks) : String(session);
+    for (const id of ['m-blocks', 'h-blocks']) {
+      el(id).textContent = text;
+      el(id).title = minedTotal ? tr('All blocks of this address; {n} in this session', { n: number(session) }) : '';
+    }
+  }
+
   // ---- settings and About ----------------------------------------------------------------------
+  /**
+   * Updates: a new version is looked up on GitHub; the app downloads it on request and opens it only when its checksum
+   * matches both GitHub and quinvium.com. Installing is the user's step. (Signed remote updates exist only on testnet.)
+   */
   function showUpdate() {
     if (!last) return;
     const u = last.update;
+    const r = last.release ?? {};
     el('s-version').textContent = tr('Version {v}', { v: last.version });
-    el('s-update').textContent = u.error ? tr('Update failed: {reason}', { reason: u.error })
-      : !u.packaged || !u.configured ? tr('Updates are managed by the publisher of this build.')
+    const latest = r.latest;
+    el('s-release').hidden = !latest;
+    if (latest) {
+      el('s-release-title').textContent = tr('Version {v} is available', { v: latest.version });
+      el('s-release-notes').textContent = latest.notes || '';
+      el('s-release-notes').hidden = !latest.notes;
+      el('s-release-get').disabled = !!r.downloading;
+      el('s-release-state').textContent = r.downloading ? tr('Downloading… {p} %', { p: Math.floor((r.downloading.got / Math.max(1, r.downloading.total)) * 100) })
+        : r.file ? tr('Downloaded and verified: {file}. Close Quinvium and run the installer.', { file: r.file.split(/[\\/]/).pop() })
+          : r.error ? tr('Update failed: {reason}', { reason: r.error }) : '';
+    }
+    el('s-update').textContent = latest ? ''
+      : r.error ? tr('Update failed: {reason}', { reason: r.error })
         : u.downloading ? tr('Downloading version {v}…', { v: u.available })
-          : tr('You have the latest version.');
+          : r.checked ? tr('You have the latest version.') : tr('Updates are checked on GitHub every six hours.');
   }
   el('s-check').onclick = async () => {
     el('s-update').textContent = tr('Checking…');
-    const s = await d.checkUpdate();
-    last = { ...last, update: { ...last.update, ...s } };
+    const r = await d.checkRelease();
+    if (last.update.configured) await d.checkUpdate().catch(() => null);
+    last = { ...last, release: r };
     showUpdate();
   };
+  el('s-release-get').onclick = async () => {
+    el('s-release-get').disabled = true;
+    el('s-release-state').textContent = tr('Downloading… {p} %', { p: 0 });
+    const poll = setInterval(async () => { last = { ...last, ...(await d.state()) }; showUpdate(); }, 1000);
+    try { last = { ...last, release: await d.downloadRelease() }; } finally { clearInterval(poll); }
+    showUpdate();
+  };
+  el('s-release-page').onclick = () => { if (last?.release?.latest?.page) window.open(last.release.latest.page); };
+  document.querySelectorAll('[data-notify]').forEach((box) => {
+    box.onchange = () => d.setNotify(box.dataset.notify, box.checked);
+  });
+  const showNotify = () => document.querySelectorAll('[data-notify]').forEach((box) => { box.checked = last?.notify?.[box.dataset.notify] !== false; });
   function showAbout() {
     if (!last) return;
     el('a-version').textContent = tr('Version {v}', { v: last.version });
@@ -717,6 +794,8 @@
   el('s-lang').onchange = async () => {
     i18n.setLang(el('s-lang').value);
     i18n.apply(document);
+    d.setContext({ lang: i18n.lang() });
+    lockOptions();
     await refresh();
     showUpdate();
     start();
@@ -782,9 +861,12 @@
   setInterval(drawCharts, CHART_MS);
   setInterval(showPoolEarnings, CHART_MS * 3);
 
+  function lockOptions(minutes = Number(el('s-lock').value) || 15) {
+    el('s-lock').innerHTML = LOCK_TIMES.map((m) => `<option value="${m}" ${m === minutes ? 'selected' : ''}>${tr('{n} minutes', { n: m })}</option>`).join('');
+  }
   (async () => {
     const minutes = (await wallet('autoLock'))?.result ?? 15;
-    el('s-lock').innerHTML = LOCK_TIMES.map((m) => `<option value="${m}" ${m === minutes ? 'selected' : ''}>${tr('{n} minutes', { n: m })}</option>`).join('');
+    lockOptions(minutes);
     el('s-lock').onchange = () => call('setAutoLock', { minutes: Number(el('s-lock').value) });
     const lockState = await walletStatus();
     if (lockState.initialized && !lockState.unlocked) showLock();
