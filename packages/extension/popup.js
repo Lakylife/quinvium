@@ -49,6 +49,23 @@ const screenHead = (title) => `<header class="screen-head"><button class="icon" 
 // Slow loading must not overwrite a screen the user has opened in the meantime.
 let screenVersion = 0;
 const render = (html) => { screenVersion += 1; app.innerHTML = html; };
+
+/**
+ * The currency can be shown as QU (tQU, dQU) or with the Quinvium symbol (U+E000 from quinvium-symbol.ttf), chosen in the
+ * wallet settings. Only what is shown changes: amounts, transactions and the network stay as they are.
+ */
+const COIN_KEY = 'quinvium.coin';
+let coinSymbol = (() => { try { return localStorage.getItem(COIN_KEY) === 'symbol'; } catch { return false; } })();
+const COIN_RE = /(^|[^A-Za-z0-9])([td]?)QU(?![A-Za-z0-9])/g;
+function showCoin(root) {
+  if (!coinSymbol || !root) return;
+  const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.parentElement?.closest('input, textarea, script, style') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
+  for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+    COIN_RE.lastIndex = 0;
+    if (COIN_RE.test(n.data)) n.data = n.data.replace(COIN_RE, '$1$2\uE000');
+  }
+}
+if (typeof MutationObserver === 'function' && app) new MutationObserver(() => showCoin(app)).observe(app, { childList: true, subtree: true, characterData: true });
 const $ = (s) => app.querySelector(s);
 const on = (s, fn) => $(s)?.addEventListener('click', fn);
 function bindForm(sel, fn) {
@@ -810,7 +827,8 @@ async function settings(o) {
   }
   const minutes = await call('autoLock');
   const lockCard = window.desktop ? '' : `<div class="card"><label>${_('Lock after inactivity')}<select id="auto-lock">${[5, 15, 30, 60].map((m) => `<option value="${m}" ${m === minutes ? 'selected' : ''}>${_('{n} minutes', { n: m })}</option>`).join('')}</select></label></div>`;
-  render(`${screenHead(_('Wallet settings'))}${language}${lockCard}
+  const coinCard = `<div class="card"><label>${_('Show the currency as')}<select id="coin-style"><option value="text" ${coinSymbol ? '' : 'selected'}>QU</option><option value="symbol" ${coinSymbol ? 'selected' : ''}>${_('Quinvium symbol')} \uE000</option></select></label></div>`;
+  render(`${screenHead(_('Wallet settings'))}${language}${coinCard}${lockCard}
     <div class="card"><h2>${_('Node for {name}', { name: esc(o.network.name) })}</h2><form id="r"><label>${_('RPC address')}<input name="rpc" value="${esc(o.network.rpc)}" required spellcheck="false"></label><button type="submit">${_('Save')}</button></form></div>
     <div class="card"><h2>${_('Connected sites')}</h2>${sites.length ? sites.map((s) => `<div class="row"><span class="mono">${esc(s)}</span><button class="link" data-site="${esc(s)}">${_('Disconnect')}</button></div>`).join('') : `<p>${_('None.')}</p>`}</div>
     <div class="card"><h2>${_('Recovery phrase')}</h2><p class="warn">${_('Anyone who sees the phrase owns all your accounts. Show it only when you are alone.')}</p>
@@ -819,6 +837,11 @@ async function settings(o) {
       <form id="k"><label>${_('Password')}<input type="password" name="password" required autocomplete="current-password"></label><button type="submit">${_('Show private key')}</button></form><div id="k-out"></div></div>
     <div class="err"></div><button class="danger" id="logout">${_('Log out')}</button>`);
   if ($('#lang')) $('#lang').onchange = (e) => { window.AetherI18n.setLang(e.target.value); settings(o); };
+  $('#coin-style').onchange = (e) => {
+    coinSymbol = e.target.value === 'symbol';
+    try { localStorage.setItem(COIN_KEY, coinSymbol ? 'symbol' : 'text'); } catch { /* the choice lasts until the window closes */ }
+    settings(o);
+  };
   if ($('#auto-lock')) $('#auto-lock').onchange = (e) => call('setAutoLock', { minutes: Number(e.target.value) });
   bindForm('#r', async (v) => { await call('setRpc', { chainId: o.network.chainId, rpc: v.rpc.trim() }); main(); });
   revealForm('#s', 'revealSeed', (phrase) => (phrase ? `${seedGrid(phrase.split(' '))}${copyButton}` : `<p>${_('This wallet was created from a private key, so it has no recovery phrase.')}</p>`));

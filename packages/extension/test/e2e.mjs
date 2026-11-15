@@ -492,8 +492,8 @@ try {
     await popup.waitForFunction(() => /Odesláno/.test(document.querySelector('#a-history')?.textContent ?? ''), null, { timeout: slow(30000) });
     assert.ok(await popup.locator('#a-history .tx-open').count() > 0, 'poslední pohyby mince');
     await popup.click('#a-send');
-    await popup.waitForSelector('select[name=asset]');
-    assert.equal(await popup.inputValue('select[name=asset]'), '0', 'odeslání má předvybranou minci');
+    await popup.waitForSelector('#asset-pick .asset-ic.coin');
+    assert.match(await popup.textContent('#asset-pick b'), /^[td]?QU$/, 'odeslání má předvybranou minci');
     await popup.click('#back');
   });
 
@@ -555,6 +555,21 @@ try {
     await popup.waitForSelector('#s-out .seed');
     await popup.click('#back');
     await popup.waitForSelector('#addr');
+  });
+
+  await step('the currency can be shown as the Quinvium symbol and back', async () => {
+    await open();
+    await popup.waitForSelector('#settings');
+    await popup.click('#settings');
+    await popup.selectOption('#coin-style', 'symbol');
+    await popup.click('#back');
+    await popup.waitForSelector('#addr');
+    await popup.waitForFunction(() => document.querySelector('#app').innerText.includes('\uE000') && !/\b[td]?QU\b/.test(document.querySelector('#app').innerText));
+    assert.ok(await popup.evaluate(async () => { await document.fonts.load('14px QuinviumSymbol', '\uE000'); return document.fonts.check('14px QuinviumSymbol', '\uE000'); }), 'the symbol font loads');
+    await popup.click('#settings');
+    await popup.selectOption('#coin-style', 'text');
+    await popup.click('#back');
+    await popup.waitForFunction(() => /\b[td]?QU\b/.test(document.querySelector('#app').innerText) && !document.querySelector('#app').innerText.includes('\uE000'));
   });
 
   await step('sign-out requires confirmation and can be undone', async () => {
