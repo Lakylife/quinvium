@@ -7,7 +7,7 @@ import { toHex } from '../util/bytes.js';
 import { blockReceipts, logToRpc } from './format.js';
 import { MINING_METHODS, RpcError, createMethods } from './methods.js';
 import { isLocalCaller } from '../p2p/upnp.js';
-import { COST, etherscan } from './etherscan.js';
+import { COST, restApi } from './rest-api.js';
 
 const MAX_BODY = 5 * 1024 * 1024;
 const MAX_BATCH = 100;
@@ -145,7 +145,7 @@ export class RpcServer {
       // Anyone sends the path, even an ordinary link on someone else's page. An error in it must not crash the node.
       try {
         if (req.url.split('?')[0] === '/health') { this._health(req, res); return; }
-        if (req.url.split('?')[0] === '/api' && /[?&]module=/.test(req.url)) { this._etherscan(req, res); return; }
+        if (req.url.split('?')[0] === '/api' && /[?&]module=/.test(req.url)) { this._restApi(req, res); return; }
         this._static(req, res);
       } catch {
         if (!res.headersSent) res.writeHead(400);
@@ -157,10 +157,10 @@ export class RpcServer {
   }
 
   /**
-   * Etherscan-style REST (rpc/etherscan.js). It goes through the same methods, rate limit and caller rules as JSON-RPC.
+   * REST API with module and action queries (rpc/rest-api.js). It goes through the same methods, rate limit and caller rules as JSON-RPC.
    * Without `module` the path /api stays the Explorer's developer page.
    */
-  _etherscan(req, res) {
+  _restApi(req, res) {
     const caller = this._caller(req);
     const q = new URL(req.url, 'http://x').searchParams;
     const reply = (status, body) => {
@@ -174,7 +174,7 @@ export class RpcServer {
       if (r.error) throw new Error(r.error.message);
       return r.result;
     };
-    etherscan(q, call).then((body) => reply(200, body), (e) => {
+    restApi(q, call).then((body) => reply(200, body), (e) => {
       this.log(`API: ${e.stack ?? e.message}`);
       reply(200, { status: '0', message: 'NOTOK', result: 'Error! Internal error' });
     });

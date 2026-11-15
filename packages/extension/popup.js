@@ -301,7 +301,7 @@ function txLabel(a) {
 }
 /** What was sent: for a token its amount and symbol, nothing for a contract call without coins. */
 const sentAmount = (a, symbol) => (a.token ? `−${unitsText(a.token.amount, a.token.decimals)} ${esc(a.token.symbol)}` : BigInt(a.value ?? 0) > 0n ? `−${coinAmount(a.value)} ${esc(symbol)}` : '');
-/** The app opens the Explorer in its own tab, the extension in a new browser tab. Paths are like on Etherscan: /tx/…, /address/…, /token/…. */
+/** The app opens the Explorer in its own tab, the extension in a new browser tab. Paths are plain: /tx/…, /address/…, /token/…. */
 const canOpenExplorer = (o) => !!window.openExplorer || !!o.network.explorer;
 function openInExplorer(o, path) {
   if (window.openExplorer) return window.openExplorer(path);

@@ -313,6 +313,7 @@
       pageMeta();
       for (const id of ['net-label', 'hnet-label']) $(id).textContent = stats.network === 'mainnet' ? 'Mainnet' : stats.network === 'testnet' ? 'Testnet' : stats.network;
       for (const id of ['net-dot', 'hnet-dot']) $(id).classList.toggle('testnet', stats.network !== 'mainnet');
+      $('hnet-btn').title = $('hnet-label').textContent;
       document.querySelectorAll('.net-pop [data-net]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.net === stats.network)));
       renderWallet();
       if (pageFailed) { pageFailed = false; render(); }
@@ -719,7 +720,7 @@
     if (from && to) return 'self';
     return from ? 'out' : to ? 'in' : null;
   }
-  /** Method as on Etherscan: the called function name, Transfer for a transfer, Contract deployment for a deployment. */
+  /** Method: the called function name, Transfer for a transfer, Contract deployment for a deployment. */
   const humanize = (name) => name.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
   let methodInterfaces = null;
   function methodName(x) {
@@ -818,7 +819,7 @@
     return `${stalled ? `<p class="notice">${esc(fill('home.stalled', { t: ago(tip.timestamp) }))}</p>` : ''}${ribbon(blocks)}`;
   }
 
-  /** Summary as on Etherscan: transactions, fee now, safe block and a 14-day transaction chart. */
+  /** Summary: transactions, fee now, safe block and a 14-day transaction chart. */
   /** The gas price changes with block utilisation (EIP-1559). In a quiet network it is at the minimum; the home page says so, so it does not look fixed. */
   const gasState = (s) => (s.fullness === undefined ? '' : `<small>${esc(s.congested ? t('home.gasBusy')
     : fill('home.gasCalm', { p: (s.fullness * 100).toLocaleString(locale(), { maximumFractionDigits: 1 }) }))}</small>`);
@@ -833,7 +834,7 @@
     </div>`;
   }
 
-  /** Latest blocks as on Etherscan: who mined it, how many transactions, in how many seconds and the actual reward including fees. */
+  /** Latest blocks: who mined it, how many transactions, in how many seconds and the actual reward including fees. */
   const latestBlocks = (list) => (list.length ? `<div class="latest-list">${list.slice(0, HOME_ROWS).map((b, i) => {
     const prev = list[i + 1];
     const solve = prev ? b.timestamp - prev.timestamp : null;
@@ -845,7 +846,7 @@
     </div>`;
   }).join('')}</div>` : `<div class="empty">${t('x.noBlocks')}</div>`);
 
-  /** Latest transactions as on Etherscan: from, to, amount and method. */
+  /** Latest transactions: from, to, amount and method. */
   const latestTxs = (list) => {
     for (const x of list) previews.set(x.hash.toLowerCase(), x);
     return list.length ? `<div class="latest-list">${list.map((x) => `<div class="latest-row rowlink" data-href="/tx/${esc(x.hash)}">
@@ -940,7 +941,7 @@
 
   /** The node counts results only up to 100,000; pagination needs no more. Above this limit the page says so. */
   const countLine = (n, capped = false) => `<p class="result-count">${fill(capped ? 'f.resultsMore' : 'f.results', { n: num(n) })}</p>`;
-  /** Blocks like on Etherscan: miner with the pool name, gas used with utilisation, base fee and the actual reward including fees. */
+  /** Blocks: miner with the pool name, gas used with utilisation, base fee and the actual reward including fees. */
   const blockTable = (list) => `<div class="table-wrap"><table><thead><tr><th>${t('t.block')}</th><th>${t('t.age')}</th><th class="num">${t('t.tx')}</th><th>${t('t.miner')}</th><th>${t('blk.gasUsed')}</th><th class="num">${t('blk.gasLimit')}</th><th class="num">${t('blk.baseFee')}</th><th class="num" title="${esc(t('home.rewardTitle'))}">${t('blk.minerReward')}</th></tr></thead><tbody>
     ${list.map((b) => {
       const used = Number(b.gasUsed ?? 0);
@@ -953,7 +954,7 @@
     }).join('')}</tbody></table></div>`;
   const txStatus = (x) => (x.status === 0 ? `<span class="badge bad">${t('b.fail')}</span>` : `<span class="badge ok">${t('b.ok')}</span>`);
   /**
-   * Transactions as on Etherscan: an eye with a quick preview, method, block, age, from, to, amount and fee.
+   * Transactions: an eye with a quick preview, method, block, age, from, to, amount and fee.
    * @param {string} [viewer] address whose page shows the list: each transaction then shows whether it was sent or received
    */
   const txTable = (list, viewer) => {
@@ -1087,7 +1088,7 @@
     };
   }
 
-  /** 24-hour traffic summary above the transaction list, as on Etherscan. */
+  /** 24-hour traffic summary above the transaction list. */
   const txSummary = (a) => (a ? `<div class="metric-grid">
       ${metric(t('m.txs24'), num(a.txs), esc(fill('m.tps', { tps: a.tps.toLocaleString(locale(), { maximumFractionDigits: 3 }) })))}
       ${metric(t('m.pending1h'), num(a.pendingHour), esc(fill('m.pendingAll', { n: num(a.pending) })))}
@@ -3873,7 +3874,7 @@
   }
 
   // ------------------------------------------------------------- search suggestions
-  // While typing, the search offers matches like Etherscan: blocks, transactions and known addresses from the node,
+  // While typing, the search offers matches: blocks, transactions and known addresses from the node,
   // tokens from the Swap factory, pools from the pool factory and .qu names from their contract. The filter narrows the kinds.
   const SUGGEST_FILTERS = ['all', 'addresses', 'tokens', 'blocks', 'txs', 'pools', 'names'];
   let suggestTokens = null;

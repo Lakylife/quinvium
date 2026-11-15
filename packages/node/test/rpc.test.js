@@ -298,7 +298,7 @@ test('health check /health: height, block age and 503 for a stale block', async 
   await mineBlock();
 });
 
-test('Etherscan-style REST API: balance, transaction list, mined blocks, rewards, proxy, errors', async () => {
+test('REST API with module and action: balance, transaction list, mined blocks, rewards, proxy, errors', async () => {
   const api = async (q) => (await fetch(`http://127.0.0.1:${node.rpc.port}/api?${q}`)).json();
   const bal = await api(`module=account&action=balance&address=${bob.address}&tag=latest`);
   assert.deepEqual([bal.status, bal.message], ['1', 'OK']);

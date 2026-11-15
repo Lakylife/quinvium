@@ -391,7 +391,7 @@ try {
     await page.goto(`${url}/#/address/${user.address}`);
     await page.locator('td .dir').first().waitFor();
     const own = await page.locator('#app').innerText();
-    assert.match(own, /Swap Exact/, 'metoda swapu jako v Etherscanu');
+    assert.match(own, /Swap Exact/, 'metoda swapu podle volané funkce');
     assert.match(own, /Approve/, 'metoda schválení');
     assert.match(own, /Odesláno/);
     // Quick preview under the eye: from a list row, with a link to the details.

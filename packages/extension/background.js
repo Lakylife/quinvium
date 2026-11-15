@@ -351,7 +351,7 @@ function poolName(pool, net) {
 const coinMeta = async (token, net) => (token.toLowerCase() === WRAPPED_COIN ? { symbol: `W${net.symbol}`, decimals: 18 } : tokenMeta(token, net));
 
 /**
- * Account activity like on Etherscan, only easier to understand: sent from the wallet and pending, received payments, transfers
+ * Account activity, easy to understand: sent from the wallet and pending, received payments, transfers
  * tokens in both directions (both sides for a swap), pool payouts and rewards for mined blocks per day.
  * A network without the Quinvium node index (foreign RPC) returns only what this wallet sent.
  */
