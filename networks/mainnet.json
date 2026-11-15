@@ -98,5 +98,19 @@
       "name": "PoolFactory",
       "addedBy": "fork pools at block 1"
     }
+  ],
+  "deployedContracts": [
+    {
+      "name": "QuinviumAvatars",
+      "address": "0x0ADcCf762A0a57c0Dd16a661bf624A478e7677C3",
+      "block": 10878,
+      "note": "ERC-721 profile pictures, SVG on chain; deployed from the Explorer, code = packages/contracts/dist/artifacts.json"
+    },
+    {
+      "name": "Profiles",
+      "address": "0x70538F7040B2ce1eDC2FB91144e9fD67452EeA19",
+      "block": 10881,
+      "note": "profile picture of an address (an NFT it owns); no owner, no fees"
+    }
   ]
 }
