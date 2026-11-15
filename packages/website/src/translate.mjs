@@ -16,7 +16,8 @@ const norm = (s) => s.replace(/\s+/g, ' ').trim();
 const wordy = (s) => {
   const text = norm(s.replace(/<[^>]+>/g, ' '));
   if (!/\p{L}{2,}/u.test(text)) return false;
-  if (/^(https?:\/\/|0x[0-9a-f]|[\w.-]+\.(com|org|io|json|js|css|png|svg|pdf|qu)\b)/i.test(text) && !/\s/.test(text)) return false;
+  if (/^(https?:\/\/|0x[0-9a-f]|[\w.-]+\.(com|org|io|json|js|css|png|svg|pdf|qu|zip|exe|gz|txt|ttf)\b)/i.test(text) && !/\s/.test(text)) return false;
+  if (/^[\d.,]+\s*(kB|MB|GB)$/.test(text)) return false;   // file sizes
   return true;
 };
 
@@ -108,11 +109,25 @@ export function units(html) {
   return out;
 }
 
+/**
+ * The translation of a unit. Version numbers (2.15.2) are not part of the dictionary: a key written with {ver}
+ * matches any version, so a new release needs no new translations.
+ */
+export function lookup(dict, key) {
+  if (dict[key]) return dict[key];
+  const versions = key.match(/(?<![\d.])\d+\.\d+\.\d+(?!\.?\d)/g);
+  if (!versions) return null;
+  const generic = dict[key.replace(/(?<![\d.])\d+\.\d+\.\d+(?!\.?\d)/g, '{ver}')];
+  if (!generic) return null;
+  let i = 0;
+  return generic.replace(/\{ver\}/g, () => versions[Math.min(i++, versions.length - 1)]);
+}
+
 /** The page in another language. `missing` collects English units without a translation. */
 export function translateHtml(html, dict, missing = new Set()) {
   const tree = parse(html);
   walk(tree, (key, set) => {
-    const t = dict[key];
+    const t = lookup(dict, key);
     if (t) set(t);
     else missing.add(key);
   });
