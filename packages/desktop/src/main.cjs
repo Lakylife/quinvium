@@ -198,7 +198,8 @@ function startMiner({ address, device }) {
   const pool = activePool();
   miner.pool = pool?.address ?? null;
   const args = ['--address', address, '--node', pool?.url ?? `http://127.0.0.1:${rpcPort()}`];
-  if (pool) args.push('--pool', pool.address, '--worker', tag || 'rig');
+  // When the pool stops answering, the miner keeps mining solo through this computer's node and returns to the pool later.
+  if (pool) args.push('--pool', pool.address, '--worker', tag || 'rig', '--fallback', `http://127.0.0.1:${rpcPort()}`);
   if (device !== undefined && device !== 'all') args.push('--device', String(device));
   args.push('--intensity', String(power ?? 100));
   if ((power ?? 100) >= 100) setGpuState(GPU_FULL_POWER);
