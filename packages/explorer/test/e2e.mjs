@@ -364,6 +364,21 @@ try {
     assert.doesNotMatch(labels, /[ěščřžýáíéůú]/i, `v anglické kartě nejsou česká slova: ${labels}`);
   });
 
+  await step('Header shows the primary name; the currency can be shown as the Quinvium symbol and back', async () => {
+    current = seller;
+    await page.goto(`${RPC}/address/${seller.address}`);
+    await until(async () => /prodejce\.qu/.test(await page.locator('#login-btn').innerText()), 20000);
+    await page.click('#login-btn');
+    assert.match(await page.locator('#account-pop .pop-name').innerText(), /prodejce\.qu/);
+    await page.click('[data-coin-set="symbol"]');
+    await until(async () => (await page.locator('#app').innerText()).includes('\uE000'), 10000);
+    assert.ok(await page.evaluate(async () => { await document.fonts.load('16px QuinviumSymbol', '\uE000'); return document.fonts.check('16px QuinviumSymbol', '\uE000'); }), 'the symbol font loads');
+    await page.reload();
+    await until(async () => (await page.locator('#app').innerText()).includes('\uE000'), 10000);
+    await page.click('[data-coin-set="text"]');
+    await until(async () => !(await page.locator('#app').innerText()).includes('\uE000') && /dQU/.test(await page.locator('#app').innerText()), 10000);
+  });
+
   await step('The page reports no JavaScript error', async () => {
     assert.deepEqual(errors, []);
   });

@@ -33,7 +33,7 @@
       'mine.sub': 'Těžař dostane odměnu 4 QU za blok a všechny poplatky z transakcí v bloku.', 'b.reward': 'Odměna za blok', 'b.baseFees': 'Základní poplatky', 'b.tips': 'Dýška', 'b.total': 'Těžař celkem', 'mine.own': 'Vlastní Quinvium Miner (Windows, macOS, Linux)',
       'mine.other': 'Běžné Windows minery přes Stratum', 'mine.note': 'Těžit lze na libovolný uzel. Účet ani registrace nejsou potřeba, stačí adresa peněženky.',
       'mine.yourAddr': 'VAŠE_ADRESA', 'apps.sub': 'Hotové kontrakty sítě Quinvium pro různé obory. Čtení je zdarma, zápis podepisuje vaše peněženka.',
-      'tool.read': 'Ověřit', 'tool.write': 'Zapsat do řetězce', 'tool.file': 'Nebo vyberte soubor (zůstává ve vašem počítači)', 'tool.sent': 'Transakce odeslána', 'tool.done': 'Potvrzeno v bloku', 'tool.missing': 'Vyplňte pole', 'tool.failed': 'Transakce v bloku selhala', 'tool.nameStep1': 'Krok 1 ze 2: podepište závazek', 'tool.nameStep2': 'Čekám na ochrannou lhůtu, zbývá', 'tool.nameStep3': 'Krok 2 ze 2: podepište registraci', 'tool.namePrimary': 'Poslední krok: podepište, aby se jméno ukazovalo místo vaší adresy', 'tool.nameResume': 'Pokračuji v rozdělané registraci, závazek už je v řetězci.', 'tool.namePending': 'Registrace jména {name} není dokončená: krok 1 je v řetězci, krok 2 chybí. Klikněte na Dokončit registraci a podepište ho (závazek platí 24 hodin od odeslání).', 'tool.nameFinished': 'Jméno se teď ukazuje místo vaší adresy.', 'tool.nameReady': 'Krok 1 je v řetězci a ochranná lhůta uplynula. Klikněte na Dokončit registraci a potvrďte krok 2 v peněžence.', 'tool.nameFinish': 'Dokončit registraci (krok 2 ze 3)', 'addr.names': 'Jména .qu', 'addr.namesHint': 'Jméno zatím není hlavní, proto se místo adresy neukazuje.', 'addr.setPrimary': 'Nastavit jako hlavní jméno', 'net.title': 'Síť a uzly', 'net.rpcLan': 'RPC v domácí síti', 'net.rpcPublic': 'RPC z internetu', 'net.rpcPublicFwd': 'RPC z internetu (po přesměrování)', 'net.rpcOnlyHere': 'Uzel přijímá jen tento počítač. Sdílení se zapíná v aplikaci Quinvium v části Uzel, Spojit s jiným počítačem.', 'net.rpcHint': 'Do peněženky v telefonu zadejte RPC z domácí sítě, nebo z internetu, když je telefon na mobilních datech.', 'charts.time': 'Čas bloku (s)', 'charts.diff': 'Obtížnost', 'charts.rate': 'Odhad výkonu (H/s)',
+      'tool.read': 'Ověřit', 'tool.write': 'Zapsat do řetězce', 'tool.file': 'Nebo vyberte soubor (zůstává ve vašem počítači)', 'tool.sent': 'Transakce odeslána', 'tool.done': 'Potvrzeno v bloku', 'tool.missing': 'Vyplňte pole', 'tool.failed': 'Transakce v bloku selhala', 'tool.nameStep1': 'Krok 1 ze 2: podepište závazek', 'tool.nameStep2': 'Čekám na ochrannou lhůtu, zbývá', 'tool.nameStep3': 'Krok 2 ze 2: podepište registraci', 'tool.namePrimary': 'Poslední krok: podepište, aby se jméno ukazovalo místo vaší adresy', 'tool.nameResume': 'Pokračuji v rozdělané registraci, závazek už je v řetězci.', 'tool.namePending': 'Registrace jména {name} není dokončená: krok 1 je v řetězci, krok 2 chybí. Klikněte na Dokončit registraci a podepište ho (závazek platí 24 hodin od odeslání).', 'tool.nameFinished': 'Jméno se teď ukazuje místo vaší adresy.', 'coin.text': 'Měnu ukazovat jako QU', 'coin.symbol': 'Měnu ukazovat symbolem Quinvia', 'tool.nameReady': 'Krok 1 je v řetězci a ochranná lhůta uplynula. Klikněte na Dokončit registraci a potvrďte krok 2 v peněžence.', 'tool.nameFinish': 'Dokončit registraci (krok 2 ze 3)', 'addr.names': 'Jména .qu', 'addr.namesHint': 'Jméno zatím není hlavní, proto se místo adresy neukazuje.', 'addr.setPrimary': 'Nastavit jako hlavní jméno', 'net.title': 'Síť a uzly', 'net.rpcLan': 'RPC v domácí síti', 'net.rpcPublic': 'RPC z internetu', 'net.rpcPublicFwd': 'RPC z internetu (po přesměrování)', 'net.rpcOnlyHere': 'Uzel přijímá jen tento počítač. Sdílení se zapíná v aplikaci Quinvium v části Uzel, Spojit s jiným počítačem.', 'net.rpcHint': 'Do peněženky v telefonu zadejte RPC z domácí sítě, nebo z internetu, když je telefon na mobilních datech.', 'charts.time': 'Čas bloku (s)', 'charts.diff': 'Obtížnost', 'charts.rate': 'Odhad výkonu (H/s)',
       'rich.sub': 'Adresy podle zůstatku', 'mem.sub': 'Transakce čekající na vytěžení', 'miners.sub': 'Podle posledních 1000 bloků', 'search.none': 'Nic nenalezeno pro',
       'swap.allTrades': 'Všechny směny →', 'swap.mine': 'Moje likvidita', 'swap.searchPair': 'Hledat dvojici', 'swap.linked': 'Částky jsou svázané kurzem poolu', 'swap.linkedRate': 'Svázáno kurzem poolu: 1 {a} = {rate} {b}', 'swap.newPoolRate': 'Nový pool: poměr částek určí počáteční kurz', 'swap.addMore': 'Přidat', 'swap.withdrawPart': 'Vybrat část', 'swap.youGet': 'Dostanete zpět asi {a} a {b}.', 'swap.everything': 'vše', 'swap.pickPart': 'Vyberte, kolik chcete vybrat.', 'swap.showMore': 'Zobrazit dalších {n} (celkem {total})', 'swap.noMatch': 'Hledání neodpovídá žádná dvojice.', 'bridge.step1': 'Uzamčení', 'bridge.step2': 'Potvrzení', 'bridge.step3': 'Připsání', 'bridge.how2n': 'Nezávislí validátoři počkají, až je převod v řetězci dost hluboko, a podepíšou ho. Potřeba je {threshold} z {count} podpisů.',
       'pools.online': 'Server zveřejněný', 'pools.noServerShort': 'Bez serveru', 'pool.asic': 'ASIC a jiné', 'pool.viaApp': 'V aplikaci Quinvium otevřete Těžba → Kam těžíte, najděte tento pool v seznamu a vyberte ho. Těžba pak poběží na vaši peněženku.', 'pool.asicUrl': 'Adresa poolu', 'pool.asicWorker': 'Pracovník (worker)', 'pool.password': 'Heslo', 'pool.loginNote': 'adresa peněženky pro výplaty, za tečkou název zařízení', 'pool.passwordNote': 'libovolné, pool ho nepoužívá', 'pool.algo': 'Algoritmus', 'pool.algoNote': 'standardní Ethash přes EthereumStratum/1.0.0 i ETHPROXY', 'pool.payout': 'Výplaty', 'pool.payoutNote': 'automaticky z kontraktu, PPLNS za posledních {n} min, poplatek provozovatele {fee}', 'pool.software': 'Program', 'pool.connectNote': 'Těžit jde přes server, který provozovatel zveřejnil. Odměny drží kontrakt: provozovatel si vezme jen poplatek a výplatu může každý těžař vybrat i sám tlačítkem Vybrat.', 'pool.share24': 'Podíl na blocích za 24 h', 'pool.blocks24': '{n} bloků za 24 h', 'pool.findMiner': 'Najít těžaře podle adresy', 'pool.minersTotal': 'celkem {n} těžařů', 'pool.minerNotFound': 'Tato adresa v okně poolu neposlala žádný podíl.', 'pool.allMiners': '← Všichni těžaři', 'pool.createdTitle': 'Pool je založený. Co dál:', 'pools.otherPools': 'Ostatní pooly', 'pools.otherCount': 'dalších poolů: {n}', 'pools.all': 'Všechny pooly ({n})', 'pools.find': 'Hledat pool podle jména nebo adresy', 'pools.minersCol': 'Těžaři', 'pools.createdCol': 'Založen', 'pools.noMatch': 'Hledání „{q}“ neodpovídá žádný pool.',
@@ -77,7 +77,7 @@
       'mine.sub': 'The miner gets a 4 QU block reward plus all transaction fees in the block.', 'b.reward': 'Block reward', 'b.baseFees': 'Base fees', 'b.tips': 'Tips', 'b.total': 'Miner total', 'mine.own': 'Quinvium Miner (Windows, macOS, Linux)',
       'mine.other': 'Common Windows miners via Stratum', 'mine.note': 'Mine on any node. No account needed, just your wallet address.',
       'mine.yourAddr': 'YOUR_ADDRESS', 'apps.sub': 'Ready-made Quinvium contracts for many industries. Reading is free, writing is signed by your wallet.',
-      'tool.read': 'Verify', 'tool.write': 'Write to chain', 'tool.file': 'Or choose a file (stays on your computer)', 'tool.sent': 'Transaction sent', 'tool.done': 'Confirmed in block', 'tool.missing': 'Fill in', 'tool.failed': 'The transaction failed in the block', 'tool.nameStep1': 'Step 1 of 2: sign the commitment', 'tool.nameStep2': 'Waiting for the protection period, left', 'tool.nameStep3': 'Step 2 of 2: sign the registration', 'tool.namePrimary': 'Last step: sign so the name is shown instead of your address', 'tool.nameResume': 'Continuing an unfinished registration; the commitment is already on chain.', 'tool.namePending': 'The registration of {name} is not finished: step 1 is on chain, step 2 is missing. Click Finish registration and sign it (the commitment is valid for 24 hours after it was sent).', 'tool.nameFinished': 'The name is now shown instead of your address.', 'tool.nameReady': 'Step 1 is on chain and the protection period is over. Click Finish registration and confirm step 2 in your wallet.', 'tool.nameFinish': 'Finish registration (step 2 of 3)', 'addr.names': '.qu names', 'addr.namesHint': 'The name is not primary yet, so it is not shown instead of the address.', 'addr.setPrimary': 'Set as primary name', 'net.title': 'Network', 'net.rpcLan': 'RPC on the home network', 'net.rpcPublic': 'RPC from the internet', 'net.rpcPublicFwd': 'RPC from the internet (after forwarding)', 'net.rpcOnlyHere': 'The node accepts only this computer. Turn on sharing in the Quinvium app under Node, Connect to another computer.', 'net.rpcHint': 'In a phone wallet, enter the home network RPC, or the internet RPC when the phone is on mobile data.', 'charts.time': 'Block time (s)', 'charts.diff': 'Difficulty', 'charts.rate': 'Estimated hashrate (H/s)',
+      'tool.read': 'Verify', 'tool.write': 'Write to chain', 'tool.file': 'Or choose a file (stays on your computer)', 'tool.sent': 'Transaction sent', 'tool.done': 'Confirmed in block', 'tool.missing': 'Fill in', 'tool.failed': 'The transaction failed in the block', 'tool.nameStep1': 'Step 1 of 2: sign the commitment', 'tool.nameStep2': 'Waiting for the protection period, left', 'tool.nameStep3': 'Step 2 of 2: sign the registration', 'tool.namePrimary': 'Last step: sign so the name is shown instead of your address', 'tool.nameResume': 'Continuing an unfinished registration; the commitment is already on chain.', 'tool.namePending': 'The registration of {name} is not finished: step 1 is on chain, step 2 is missing. Click Finish registration and sign it (the commitment is valid for 24 hours after it was sent).', 'tool.nameFinished': 'The name is now shown instead of your address.', 'coin.text': 'Show the currency as QU', 'coin.symbol': 'Show the currency as the Quinvium symbol', 'tool.nameReady': 'Step 1 is on chain and the protection period is over. Click Finish registration and confirm step 2 in your wallet.', 'tool.nameFinish': 'Finish registration (step 2 of 3)', 'addr.names': '.qu names', 'addr.namesHint': 'The name is not primary yet, so it is not shown instead of the address.', 'addr.setPrimary': 'Set as primary name', 'net.title': 'Network', 'net.rpcLan': 'RPC on the home network', 'net.rpcPublic': 'RPC from the internet', 'net.rpcPublicFwd': 'RPC from the internet (after forwarding)', 'net.rpcOnlyHere': 'The node accepts only this computer. Turn on sharing in the Quinvium app under Node, Connect to another computer.', 'net.rpcHint': 'In a phone wallet, enter the home network RPC, or the internet RPC when the phone is on mobile data.', 'charts.time': 'Block time (s)', 'charts.diff': 'Difficulty', 'charts.rate': 'Estimated hashrate (H/s)',
       'rich.sub': 'Addresses by balance', 'mem.sub': 'Transactions waiting to be mined', 'miners.sub': 'From the last 1000 blocks', 'search.none': 'Nothing found for',
       'swap.allTrades': 'All swaps →', 'swap.mine': 'My liquidity', 'swap.searchPair': 'Search pair', 'swap.linked': 'The amounts are linked by the pool rate', 'swap.linkedRate': 'Linked by the pool rate: 1 {a} = {rate} {b}', 'swap.newPoolRate': 'New pool: the ratio of the amounts sets the starting rate', 'swap.addMore': 'Add more', 'swap.withdrawPart': 'Withdraw', 'swap.youGet': 'You get back about {a} and {b}.', 'swap.everything': 'all', 'swap.pickPart': 'Choose how much to withdraw.', 'swap.showMore': 'Show {n} more ({total} in total)', 'swap.noMatch': 'No pair matches the search.', 'bridge.step1': 'Lock', 'bridge.step2': 'Confirm', 'bridge.step3': 'Receive', 'bridge.how2n': 'Independent validators wait until the transfer is deep enough in the chain and sign it. {threshold} of {count} signatures are needed.',
       'pools.online': 'Server published', 'pools.noServerShort': 'No server', 'pool.asic': 'ASIC and others', 'pool.viaApp': 'In the Quinvium app open Mining → Where you mine, find this pool in the list and choose it. Mining then runs for your wallet.', 'pool.asicUrl': 'Pool URL', 'pool.asicWorker': 'Worker', 'pool.password': 'Password', 'pool.loginNote': 'your payout wallet address, then a dot and a device name', 'pool.passwordNote': 'anything, the pool ignores it', 'pool.algo': 'Algorithm', 'pool.algoNote': 'standard Ethash over EthereumStratum/1.0.0 or ETHPROXY', 'pool.payout': 'Payouts', 'pool.payoutNote': 'automatic from the contract, PPLNS over the last {n} min, operator fee {fee}', 'pool.software': 'Software', 'pool.connectNote': 'Mining goes through the server the operator published. The contract holds the rewards: the operator only takes the fee, and every miner can also withdraw on their own with the Withdraw button.', 'pool.share24': 'Block share in 24 h', 'pool.blocks24': '{n} blocks in 24 h', 'pool.findMiner': 'Find a miner by address', 'pool.minersTotal': '{n} miners in total', 'pool.minerNotFound': 'This address sent no share in the pool window.', 'pool.allMiners': '← All miners', 'pool.createdTitle': 'Your pool is created. What next:', 'pools.otherPools': 'Other pools', 'pools.otherCount': '{n} more pools', 'pools.all': 'All pools ({n})', 'pools.find': 'Search pools by name or address', 'pools.minersCol': 'Miners', 'pools.createdCol': 'Created', 'pools.noMatch': 'No pool matches “{q}”.',
@@ -132,6 +132,7 @@
   const applyLang = () => {
     document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = t(el.dataset.t); });
     document.querySelectorAll('[data-t-ph]').forEach((el) => { el.placeholder = t(el.dataset.tPh); });
+    document.querySelectorAll('[data-t-title]').forEach((el) => { el.title = t(el.dataset.tTitle); el.setAttribute('aria-label', el.title); });
     $('lang-label').textContent = lang.toUpperCase();
     document.querySelectorAll('#lang-pop button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.lang === lang)));
     document.documentElement.lang = lang;
@@ -282,7 +283,10 @@
   }
   const provider = () => new ethers.JsonRpcProvider(rpcBase, undefined, { staticNetwork: true });
   // Ticker by network: QU on mainnet, tQU on testnet, so a test coin is not confused with a real one.
-  const coin = () => stats?.currency ?? 'QU';
+  /** The currency for display: QU (tQU, dQU), or with the Quinvium symbol (U+E000 from quinvium-symbol.ttf) when chosen in the footer. */
+  const nameCache = new Map();   // address -> primary .qu name ('' none), for lists and the header
+  let coinStyle = store.get('quinvium.coin') === 'symbol' ? 'symbol' : 'text';
+  const coin = () => { const c = stats?.currency ?? 'QU'; return coinStyle === 'symbol' ? c.replace(/QU$/, '\uE000') : c; };
   // Contract names are stored in genesis. The user sees the network's name, not the internal name.
   const CONTRACT_LABELS = { WAET: 'Wrapped QU', AetherNames: 'Quinvium Names' };
   // Contracts deployed after the network started (Swap, bridge, token list) have their address in deployments.json, not in genesis.
@@ -402,18 +406,31 @@
     const b = $('login-btn');
     const wrong = wrongNetwork();
     const shown = !!account && !wrong;
+    const own = account ? nameCache.get(account.toLowerCase()) : '';
+    if (account && !wrong && own === undefined) lookupOwnName(account);
     if (!account) b.textContent = t('wallet.connect');
     else if (wrong) b.textContent = t('wallet.switchBtn');
-    else b.innerHTML = `${avatar(account)}<span>${esc(short(account, 6))}</span>${CHEVRON}`;
+    else b.innerHTML = `${avatar(account)}<span>${esc(own ? `${own}.qu` : short(account, 6))}</span>${CHEVRON}`;
     b.classList.toggle('connected', shown);
     b.classList.toggle('wrong-network', wrong);
     const pop = $('account-pop');
     pop.classList.remove('open');
-    pop.innerHTML = shown ? `<div class="pop-head">${avatar(account, 'large')}<div><strong>${esc(short(account, 8))}</strong><small>${esc(walletNames().w)}</small></div></div>
+    pop.innerHTML = shown ? `<div class="pop-head">${avatar(account, 'large')}<div>${own ? `<strong class="pop-name">${esc(own)}.qu</strong>` : ''}<strong>${esc(short(account, 8))}</strong><small>${esc(walletNames().w)}</small></div></div>
       <button id="account-copy">${t('wallet.copy')}</button><a href="/address/${esc(account)}">${t('wallet.view')}</a>${embedded ? '' : `<button id="account-off">${t('wallet.disconnect')}</button>`}` : '';
     if (!shown) return;
     $('account-copy').onclick = async () => { await navigator.clipboard.writeText(account); toast(t('wallet.copied')); };
     if ($('account-off')) $('account-off').onclick = disconnect;
+  }
+
+  /** The primary .qu name of the connected account for the header; the button is redrawn once it is known. */
+  async function lookupOwnName(a) {
+    const key = a.toLowerCase();
+    nameCache.set(key, '');
+    try {
+      const n = await new ethers.Contract(contracts.AetherNames.address, contracts.AetherNames.abi, provider()).nameOf(a);
+      nameCache.set(key, n);
+      if (n && account?.toLowerCase() === key) renderWallet();
+    } catch { nameCache.delete(key); }
   }
 
   /** The page forgets the connection. A wallet that supports it also revokes its permission. */
@@ -1356,7 +1373,6 @@
    * .qu names of addresses for lists. The primary name of each address is read in one batched call (Multicall), remembered for
    * the visit, and a shortened address in a link is replaced by its name.
    */
-  const nameCache = new Map();
   async function fillNames(root = app) {
     if (!contracts.AetherNames?.address || !contracts.Multicall?.address) return;
     const links = [...root.querySelectorAll('a[href^="/address/0x"]')].filter((el) => /^0x[0-9a-f]+…?[0-9a-f]*$/i.test(el.textContent.trim()) && !el.closest('.page-head'));
@@ -1479,7 +1495,7 @@
       <div class="tabs">${tabLink('txs', t('nav.txs'), txCount)}${tabLink('transfers', t('addr.transfersTab'), info.tokenTransfers ?? 0)}${tabLink('mined', t('addr.mined'), info.mined.blocks)}${tabLink('pool', t('addr.poolTab'), info.poolPayouts)}${tabLink('tokens', t('addr.tokens'), info.tokens.length)}</div>${body}`;
     $('show-qr').onclick = () => showQr(a);
     if ($('set-primary')) {
-      txButton($('set-primary'), $('set-primary-out'), (s) => contract('AetherNames', s).setPrimary(others[0]), () => { nameCache.delete(a.toLowerCase()); setTimeout(render, 1500); return t('tool.nameFinished'); });
+      txButton($('set-primary'), $('set-primary-out'), (s) => contract('AetherNames', s).setPrimary(others[0]), () => { nameCache.delete(a.toLowerCase()); setTimeout(() => { render(); renderWallet(); }, 1500); return t('tool.nameFinished'); });
     }
     bindFilters(base, tab === 'txs' ? {} : { tab });
   }
@@ -2311,6 +2327,7 @@
           const result = task.done?.(receiptEvents(r, tool.abi), v, await s.getAddress()) ?? {};
           if (tx.primarySet) result.note = { cs: t('tool.nameFinished'), en: t('tool.nameFinished') };
           for (const [name, value] of Object.entries(result.fill ?? {})) if (form.elements[name]) form.elements[name].value = value;
+          if (tool.key === 'names' && account) { nameCache.delete(account.toLowerCase()); renderWallet(); }
           show(`<p class="tool-done"><strong>${t('tool.done')} #${r.blockNumber}</strong> · <a class="hash" href="/tx/${esc(tx.hash)}">${esc(short(tx.hash, 10))}</a></p>${result.lines ? resultHtml(result.lines) : ''}${result.note ? `<p class="tool-note">${esc(pick(result.note))}</p>` : ''}`, 'good');
         } catch (e) {
           if (e.nextStep) {
@@ -4110,6 +4127,17 @@
     menus();
     try { contracts = await (await fetch('/contracts.json')).json(); } catch { contracts = {}; }
     document.querySelectorAll('[data-theme-set]').forEach((b) => { b.onclick = () => theme(b.dataset.themeSet); });
+    const coinButtons = () => document.querySelectorAll('[data-coin-set]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.coinSet === coinStyle)));
+    coinButtons();
+    document.querySelectorAll('[data-coin-set]').forEach((b) => {
+      b.onclick = () => {
+        coinStyle = b.dataset.coinSet;
+        store.set('quinvium.coin', coinStyle);
+        coinButtons();
+        refreshStats();
+        render();
+      };
+    });
     $('footer-year').textContent = String(new Date().getFullYear());
     $('to-top').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
     $('login-btn').onclick = () => (account && !wrongNetwork() ? $('account-pop').classList.toggle('open') : connect().catch(() => { /* průvodce už vše řekl */ }));
