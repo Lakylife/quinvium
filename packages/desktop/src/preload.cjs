@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('desktop', {
   explorerInfo: () => invoke('explorer:info'),
   setPower: (value) => invoke('miner:power', value),
   setPool: (pool) => invoke('miner:pool', pool),
+  poolOfferOff: () => invoke('miner:poolOfferOff'),
   runPool: (address) => invoke('node:pool', address),
   checkUpdate: () => invoke('update:check'),
   loadWallet: () => invoke('wallet:load'),

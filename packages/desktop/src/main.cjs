@@ -9,6 +9,7 @@ const versions = require('./versions.cjs');
 const { WalletLink } = require('./wallet-link.cjs');
 const { followHost } = require('./home-network.cjs');
 const cliLauncher = require('./cli-launcher.cjs');
+const { poolOfferDue } = require('./pool-offer.cjs');
 
 const NETWORKS = { mainnet: 8545, testnet: 8546 };
 const P2P_PORTS = { mainnet: 30524, testnet: 30525 };
@@ -188,6 +189,8 @@ function startMiner({ address, device }) {
   miner.counters = null;
   miner.stage = 'start';
   miner.progress = 0;
+  miner.startedAt = Date.now();
+  miner.offered = false;
   const { power, tag } = loadSettings();
   const pool = activePool();
   miner.pool = pool?.address ?? null;
@@ -213,6 +216,7 @@ function startMiner({ address, device }) {
       miner.shares = counters.shares ?? 0;
       miner.history.push(counters.rate);
       if (miner.history.length > HISTORY_POINTS) miner.history.shift();
+      offerPool().catch(() => { /* without the network figures there is simply no offer */ });
     }
     send({ type: 'miner-log', line: l, rate: miner.rate, blocks: miner.blocks, shares: miner.shares, progress: miner.progress, stage: miner.stage });
   });
@@ -226,6 +230,20 @@ function startMiner({ address, device }) {
   });
   send({ type: 'state' });
   return { ok: true };
+}
+
+/** A solo miner below 1 % of the network gets one offer of the official pool per mining session (pool-offer.cjs). */
+async function offerPool() {
+  const base = { network: node.network, pool: activePool(), off: !!loadSettings().poolOfferOff, offered: miner.offered, startedAt: miner.startedAt, now: Date.now(), rates: miner.history };
+  if (!poolOfferDue({ ...base, networkHashrate: 1 })) return;     // cheap checks first, the network is asked only when it may matter
+  miner.offered = true;
+  const stats = await rpc('aether_stats');
+  const due = poolOfferDue({ ...base, offered: false, networkHashrate: Number(stats.hashrate) });
+  if (!due) return;
+  // Only a pool the network's factory knows is offered; its fee comes from the chain, not from this file.
+  const found = (await rpc('aether_pools', [{ query: due.pool.address.toLowerCase(), limit: 1 }]))?.items?.[0];
+  if (!found || found.address.toLowerCase() !== due.pool.address.toLowerCase()) return;
+  send({ type: 'pool-offer', pool: { ...due.pool, name: found.name || due.pool.name, fee: found.feeBps / 100 }, share: due.share, rate: due.rate });
 }
 
 const listDevices = () => new Promise((resolve) => {
@@ -353,6 +371,7 @@ ipcMain.handle('miner:pool', async (_, pool) => {
   }
   return true;
 });
+ipcMain.handle('miner:poolOfferOff', () => { saveSettings({ poolOfferOff: true }); return true; });
 ipcMain.handle('miner:power', async (_, value) => {
   const power = Math.min(100, Math.max(10, Math.round(Number(value) / 10) * 10)) || 100;
   saveSettings({ power });

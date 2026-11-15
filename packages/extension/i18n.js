@@ -5,6 +5,14 @@
   const LOCALES = { en: 'en-US', cs: 'cs-CZ', de: 'de-DE', es: 'es-ES', fr: 'fr-FR' };
   const ORDER = ['cs', 'de', 'es', 'fr'];
   const TEXT = {
+    "Mine in a pool?": ["Těžit v poolu?", "Im Pool minen?", "¿Minar en un pool?", "Miner dans un pool ?"],
+    "Your card does {rate}, about {share} % of the whole network. Mining solo, you would find a block about once every {time}.": ["Vaše karta dává {rate}, asi {share} % celé sítě. Při sólo těžbě byste našli blok zhruba jednou za {time}.", "Ihre Karte schafft {rate}, etwa {share} % des gesamten Netzwerks. Solo würden Sie etwa alle {time} einen Block finden.", "Su tarjeta da {rate}, cerca del {share} % de toda la red. Minando en solitario encontraría un bloque aproximadamente cada {time}.", "Votre carte fait {rate}, environ {share} % de tout le réseau. En solo, vous trouveriez un bloc environ tous les {time}."],
+    "In the pool {name} you get a small payout from every block the pool finds, by your share of the work. On average it pays the same over time, just regularly. Fee {fee} %, the rewards are held by a contract on the chain.": ["V poolu {name} dostáváte malou výplatu z každého bloku, který pool najde, podle svého podílu práce. Za delší dobu je to v průměru stejné, jen pravidelně. Poplatek {fee} %, odměny drží kontrakt na řetězci.", "Im Pool {name} erhalten Sie aus jedem Block, den der Pool findet, eine kleine Auszahlung nach Ihrem Anteil an der Arbeit. Im Durchschnitt ist es auf Dauer gleich viel, nur regelmäßig. Gebühr {fee} %, die Belohnungen hält ein Vertrag auf der Chain.", "En el pool {name} recibe un pequeño pago de cada bloque que encuentra el pool, según su parte del trabajo. A la larga, de media es lo mismo, pero de forma regular. Comisión {fee} %, las recompensas las guarda un contrato en la cadena.", "Dans le pool {name}, vous recevez un petit paiement pour chaque bloc trouvé par le pool, selon votre part du travail. À long terme, c'est en moyenne pareil, mais régulier. Frais {fee} %, les récompenses sont détenues par un contrat sur la chaîne."],
+    "Mine through the pool": ["Těžit přes pool", "Über den Pool minen", "Minar a través del pool", "Miner via le pool"],
+    "Stay solo": ["Zůstat sólo", "Solo bleiben", "Seguir en solitario", "Rester en solo"],
+    "Do not ask again": ["Už se neptat", "Nicht mehr fragen", "No volver a preguntar", "Ne plus demander"],
+    "about {n} hours": ["asi {n} hodin", "etwa {n} Stunden", "unas {n} horas", "environ {n} heures"],
+    "about {n} days": ["asi {n} dní", "etwa {n} Tage", "unos {n} días", "environ {n} jours"],
     "Copied, the clipboard clears in 60 s": ["Zkopírováno, schránka se vymaže za 60 s", "Kopiert, die Zwischenablage wird in 60 s geleert", "Copiado, el portapapeles se borrará en 60 s", "Copié, le presse-papiers sera vidé dans 60 s"],
     "about {n} s": ["asi {n} s", "etwa {n} s", "unos {n} s", "environ {n} s"],
     "about {n} min": ["asi {n} min", "etwa {n} Min.", "unos {n} min", "environ {n} min"],
