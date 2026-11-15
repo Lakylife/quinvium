@@ -130,6 +130,8 @@ quintium-miner --address YOUR_ADDRESS --node http://POOL_SERVER:8545 --pool 0xPO
 
 The Quinvium miner checks for every job that it pays into the chosen pool and carries its address.
 
+With `--fallback http://127.0.0.1:8545` (one or more nodes, separated by commas) the miner keeps mining solo through your own node when the pool stops answering for about 10 seconds, and returns to the pool as soon as it answers again (checked every minute). The app does this by itself.
+
 Creating a pool: open Pools in the Explorer and fill in the name, server address and fee. Then start the server in the app under Settings, Run a pool, or with:
 
 ```

@@ -31,6 +31,7 @@ Volby:
   --intensity <10-100> výkon v procentech, výchozí 100
   --pool <0x...>      těžit do poolu s touto adresou, --node je pak server poolu
   --worker <název>    název zařízení v poolu, výchozí rig
+  --fallback <url,…>  záložní uzly pro sólo těžbu, když hlavní cíl (pool) neodpovídá; po obnovení se miner vrátí
   --help              tato nápověda
 ";
 
@@ -107,6 +108,9 @@ struct Job {
     seal: [u8; 32],
     number: u64,
     target: [u8; 32],
+    /// Where this work came from and where its result goes: a pool server or the miner's own node.
+    node: Arc<str>,
+    pool: bool,
 }
 
 struct Shared {
@@ -146,6 +150,8 @@ fn parse_job(v: &Value) -> Result<Job, String> {
         seal: to32(parse_hex(text(0)?)?)?,
         target: to32(parse_hex(text(2)?)?)?,
         number: u64::from_str_radix(text(3)?.trim_start_matches("0x"), 16).map_err(|e| e.to_string())?,
+        node: Arc::from(""),
+        pool: false,
     })
 }
 
@@ -214,7 +220,7 @@ fn seed_nonce(i: usize) -> u64 {
     (t ^ ((i as u64 + 1) << 56)).wrapping_mul(0x9E37_79B9_7F4A_7C15)
 }
 
-fn gpu_worker(index: usize, source: Source, shared: Arc<Shared>, node: String, intensity: u32) {
+fn gpu_worker(index: usize, source: Source, shared: Arc<Shared>, intensity: u32) {
     let (mut card, mut fallback) = match source.open() {
         Ok(c) => c,
         Err(e) => {
@@ -225,7 +231,7 @@ fn gpu_worker(index: usize, source: Source, shared: Arc<Shared>, node: String, i
     println!("[{}] backend {}", card.name(), card.backend());
     let mut ready: Option<u64> = None;
     let mut nonce = seed_nonce(index);
-    let rpc = Rpc::new(&node).expect("adresa uzlu");
+    let mut rpc: Option<(Arc<str>, Rpc)> = None;
     loop {
         let Some(job) = shared.job.lock().unwrap().clone() else {
             thread::sleep(Duration::from_millis(200));
@@ -279,9 +285,18 @@ fn gpu_worker(index: usize, source: Source, shared: Arc<Shared>, node: String, i
             if res > job.target {
                 continue; // match only in the upper 64 bits
             }
-            let method = if shared.pool { "aether_poolSubmit" } else { "aether_submitWork" };
-            let reply = rpc.call(method, json!([hex(&n.to_be_bytes()), hex(&job.seal), hex(&mix)]));
-            if shared.pool {
+            let method = if job.pool { "aether_poolSubmit" } else { "aether_submitWork" };
+            if rpc.as_ref().map(|(u, _)| u != &job.node).unwrap_or(true) {
+                match Rpc::new(&job.node) {
+                    Ok(r) => rpc = Some((job.node.clone(), r)),
+                    Err(e) => {
+                        eprintln!("[{}] chyba odeslání: {e}", card.name());
+                        continue;
+                    }
+                }
+            }
+            let reply = rpc.as_ref().unwrap().1.call(method, json!([hex(&n.to_be_bytes()), hex(&job.seal), hex(&mix)]));
+            if job.pool {
                 match reply {
                     Ok(v) if v.get("accepted").and_then(Value::as_bool) == Some(true) => {
                         shared.shares.fetch_add(1, Ordering::Relaxed);
@@ -318,6 +333,29 @@ fn gpu_worker(index: usize, source: Source, shared: Arc<Shared>, node: String, i
             }
         }
     }
+}
+
+/// After this many failed requests to the primary target (every 0.5 s) the miner switches to a fallback.
+const FALLBACK_AFTER: u32 = 20;
+/// How often the primary target is tried again while mining on a fallback.
+const FALLBACK_RETRY_SECS: u64 = 60;
+
+/// Solo work from the first fallback node that answers; remembers which one it is.
+fn fallback_work(fallbacks: &[(Arc<str>, Rpc)], on: &mut Option<usize>, address: &str) -> Option<Job> {
+    let start = on.unwrap_or(0);
+    for k in 0..fallbacks.len() {
+        let i = (start + k) % fallbacks.len();
+        let (url, rpc) = &fallbacks[i];
+        if let Ok(mut job) = rpc.call("aether_getWork", json!([address])).and_then(|v| parse_job(&v)) {
+            if *on != Some(i) {
+                println!("Hlavní cíl neodpovídá, těžím sólo přes záložní uzel {url}.");
+            }
+            *on = Some(i);
+            job.node = url.clone();
+            return Some(job);
+        }
+    }
+    None
 }
 
 fn benchmark(backend: &str) -> Result<(), String> {
@@ -401,6 +439,14 @@ fn run() -> Result<(), String> {
     }
     let node = value("--node").unwrap_or_else(|| "http://127.0.0.1:8545".into());
     let rpc = Rpc::new(&node)?;
+    // A pool that stops answering is not a reason to stop mining: the miner then mines solo through these nodes
+    // (its own node first) and goes back to the pool as soon as the pool answers again.
+    let fallbacks: Vec<(Arc<str>, Rpc)> = value("--fallback")
+        .map(|v| v.split(',').map(str::trim).filter(|u| !u.is_empty()).map(String::from).collect::<Vec<_>>())
+        .unwrap_or_default()
+        .into_iter()
+        .map(|u| Rpc::new(&u).map(|r| (Arc::from(u.as_str()), r)))
+        .collect::<Result<_, _>>()?;
     let pool = match value("--pool") {
         Some(p) => {
             let b = parse_hex(&p).map_err(|_| "neplatná adresa poolu")?;
@@ -435,27 +481,65 @@ fn run() -> Result<(), String> {
         rejected: AtomicU64::new(0),
         pool: pool.is_some(),
     });
+    let node_id: Arc<str> = Arc::from(node.as_str());
     match &pool {
         Some(p) => println!("Těžím na adresu {address} do poolu {} přes server {node}", hex(p)),
         None => println!("Těžím na adresu {address} přes uzel {node}"),
     }
     for (i, source) in sources.into_iter().enumerate() {
-        let (s, n) = (shared.clone(), node.clone());
-        thread::spawn(move || gpu_worker(i, source, s, n, intensity));
+        let s = shared.clone();
+        thread::spawn(move || gpu_worker(i, source, s, intensity));
     }
 
     let mut last_seal = [0u8; 32];
     let (mut last_print, mut last_hashes) = (Instant::now(), 0u64);
     let id = hex(&seed_nonce(99).to_be_bytes().repeat(4));
     let mut connected = true;
+    let mut failures = 0u32;
+    let mut on_fallback: Option<usize> = None;
+    let mut last_try_primary = Instant::now();
     loop {
-        let work = match &pool {
-            Some(p) => rpc.call("aether_poolWork", json!([address, worker])).and_then(|v| {
-                let job = parse_job(&v)?;
-                check_pool_job(&v, &job.seal, p, &bytes)?;
+        // While mining on a fallback, the primary target is asked again every 60 s.
+        let try_primary = on_fallback.is_none() || last_try_primary.elapsed() >= Duration::from_secs(FALLBACK_RETRY_SECS);
+        let primary = if try_primary {
+            last_try_primary = Instant::now();
+            Some(match &pool {
+                Some(p) => rpc.call("aether_poolWork", json!([address, worker])).and_then(|v| {
+                    let mut job = parse_job(&v)?;
+                    check_pool_job(&v, &job.seal, p, &bytes)?;
+                    job.node = node_id.clone();
+                    job.pool = true;
+                    Ok(job)
+                }),
+                None => rpc.call("aether_getWork", json!([address])).and_then(|v| parse_job(&v)).map(|mut job| {
+                    job.node = node_id.clone();
+                    job
+                }),
+            })
+        } else {
+            None
+        };
+        let work = match primary {
+            Some(Ok(job)) => {
+                failures = 0;
+                if let Some(i) = on_fallback.take() {
+                    println!("Hlavní cíl {node} znovu odpovídá, opouštím záložní uzel {}.", fallbacks[i].0);
+                }
                 Ok(job)
-            }),
-            None => rpc.call("aether_getWork", json!([address])).and_then(|v| parse_job(&v)),
+            }
+            other => {
+                if let Some(Err(e)) = &other {
+                    failures += 1;
+                    if on_fallback.is_none() && failures < FALLBACK_AFTER {
+                        Err(e.clone())
+                    } else {
+                        fallback_work(&fallbacks, &mut on_fallback, &address)
+                            .ok_or_else(|| e.clone())
+                    }
+                } else {
+                    fallback_work(&fallbacks, &mut on_fallback, &address).ok_or_else(|| "záložní uzel neodpovídá".to_string())
+                }
+            }
         };
         match work {
             Ok(job) => {
