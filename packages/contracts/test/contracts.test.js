@@ -428,3 +428,84 @@ contract Attacker {
   assert.equal(await provider.getBalance(attacker), 2n * WEI, 'vybral jen své');
   assert.equal(await provider.getBalance(artifacts.Escrow.address), vault - 2n * WEI);
 });
+
+test('Quinvium Avatars and profile pictures: on-chain SVG, ownership is checked when set and when shown, foreign and broken NFTs', async () => {
+  const deploy = async (name) => {
+    const f = new ethers.ContractFactory(artifacts[name].abi, artifacts[name].bytecode, alice.connect(provider));
+    const c = await f.deploy();
+    const r = await ok(Promise.resolve(c.deploymentTransaction()));
+    console.log(`${name}: deploy ${r.gasUsed} gas`);
+    return c.getAddress();
+  };
+  const avatarsAt = await deploy('QuinviumAvatars');
+  const profilesAt = await deploy('Profiles');
+  const { createHash } = await import('node:crypto');
+  for (const [n, at] of [['QuinviumAvatars', avatarsAt], ['Profiles', profilesAt]]) {
+    assert.equal(createHash('sha256').update(ethers.getBytes(await provider.getCode(at))).digest('hex'), artifacts[n].runtimeSha256, `${n}: the deployed code matches the hash the Explorer checks`);
+  }
+  const av = (w) => new ethers.Contract(avatarsAt, artifacts.QuinviumAvatars.abi, w.connect(provider));
+  const pr = (w) => new ethers.Contract(profilesAt, artifacts.Profiles.abi, w.connect(provider));
+
+  // Minting: anyone, bounds checked, numbers in order, no coins accepted or held.
+  const minted = await ok(av(bob).mint(6, 2));
+  console.log(`QuinviumAvatars: mint ${minted.gasUsed} gas`);
+  await ok(av(carol).mint(24, 7));
+  await fails(av(carol).mint(0, 0), 'UnknownIcon');
+  await fails(av(carol).mint(25, 0), 'UnknownIcon');
+  await fails(av(carol).mint(1, 8), 'UnknownColor');
+  assert.equal(await av(dave).ownerOf(1), bob.address);
+  assert.equal(await av(dave).totalSupply(), 2n);
+  assert.deepEqual([...(await av(dave).traitsOf(1))].map(Number), [6, 2]);
+  assert.equal(await provider.getBalance(avatarsAt), 0n);
+
+  // The picture: valid SVG text with the same drawing as the Explorer's profiles.js, inside tokenURI JSON.
+  const uri = await av(dave).tokenURI(1);
+  assert.match(uri, /^data:application\/json;base64,/);
+  const meta = JSON.parse(Buffer.from(uri.split(',')[1], 'base64').toString());
+  assert.equal(meta.name, 'Quinvium Avatar #1');
+  assert.match(meta.image, /^data:image\/svg\+xml;base64,/);
+  const svg = Buffer.from(meta.image.split(',')[1], 'base64').toString();
+  assert.equal(svg, await av(dave).svg(1));
+  assert.match(svg, /^<svg xmlns='http:\/\/www\.w3\.org\/2000\/svg' viewBox='0 0 24 24'><rect [^<>]*\/><path [^<>]*\/><\/svg>$/);
+  assert.doesNotMatch(svg, /script|href|on\w+=/i, 'no scripts or links');
+  const paths = [...readFileSync(new URL('../../explorer/public/profiles.js', import.meta.url), 'utf8').matchAll(/^ {4}'([^']+)',$/gm)].map((m) => m[1]);
+  assert.equal(paths.length, 24);
+  assert.ok(svg.includes(`d='${paths[5]}'`) && svg.includes("fill='#D64545'"), 'icon 6 on colour 2 as in the Explorer');
+  await fails(av(dave).tokenURI(99), 'ERC721NonexistentToken');
+
+  // Profiles: only an NFT the sender owns now.
+  await fails(pr(carol).setAvatar(avatarsAt, 1), 'NotTokenOwner');
+  await fails(pr(bob).setAvatar(avatarsAt, 99), 'NotTokenOwner');
+  await fails(pr(bob).setAvatar(dave.address, 1), 'NotTokenOwner');
+  await fails(pr(bob).setAvatar(ethers.ZeroAddress, 1), 'NotTokenOwner');
+  await fails(pr(bob).setAvatar(artifacts.Notary.address, 1), 'NotTokenOwner');
+  await ok(pr(bob).setAvatar(avatarsAt, 1));
+  await ok(pr(carol).setAvatar(avatarsAt, 2));
+  assert.deepEqual([...(await pr(dave).avatarOf(bob.address))], [avatarsAt, 1n, true]);
+  // Sold or moved: the picture stops showing by itself; it shows again when it comes back.
+  await ok(av(bob).transferFrom(bob.address, dave.address, 1));
+  assert.equal((await pr(dave).avatarOf(bob.address))[2], false);
+  const [nfts, ids, valid] = await pr(dave).avatarsOf([bob.address, carol.address, dave.address]);
+  assert.deepEqual([...nfts], [avatarsAt, avatarsAt, ethers.ZeroAddress]);
+  assert.deepEqual([...ids], [1n, 2n, 0n]);
+  assert.deepEqual([...valid], [false, true, false]);
+  await ok(av(dave).transferFrom(dave.address, bob.address, 1));
+  assert.equal((await pr(dave).avatarOf(bob.address))[2], true);
+  await ok(pr(bob).clear());
+  assert.deepEqual([...(await pr(dave).avatarOf(bob.address))], [ethers.ZeroAddress, 0n, false]);
+  assert.deepEqual([...(await pr(dave).avatarOf(carol.address))], [avatarsAt, 2n, true], 'clearing changed only the sender');
+
+  // A foreign NFT that burns all gas in ownerOf cannot break batch reads.
+  const solc = (await import('node:module')).createRequire(import.meta.url)('solc');
+  const source = `pragma solidity ^0.8.28; contract Greedy { address public who; bool public burn; function set(address w) external { who = w; } function setBurn(bool b) external { burn = b; } function ownerOf(uint256) external view returns (address) { if (!burn) return who; uint256 x; while (true) { x++; } } }`;
+  const out = JSON.parse(solc.compile(JSON.stringify({ language: 'Solidity', sources: { 'G.sol': { content: source } }, settings: { evmVersion: 'cancun', outputSelection: { '*': { '*': ['abi', 'evm.bytecode.object'] } } } })));
+  const g = out.contracts['G.sol'].Greedy;
+  const greedy = await new ethers.ContractFactory(g.abi, `0x${g.evm.bytecode.object}`, alice.connect(provider)).deploy();
+  await mineBlock();
+  const gAt = await greedy.getAddress();
+  await ok(new ethers.Contract(gAt, g.abi, alice.connect(provider)).set(dave.address));
+  await ok(pr(dave).setAvatar(gAt, 7, { gasLimit: 300000 }));
+  await ok(new ethers.Contract(gAt, g.abi, alice.connect(provider)).setBurn(true));
+  const [, , v2] = await pr(alice).avatarsOf([dave.address, carol.address]);
+  assert.deepEqual([...v2], [false, true], 'the broken contract only loses its own picture');
+});

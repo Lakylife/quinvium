@@ -370,13 +370,85 @@ try {
     await until(async () => /prodejce\.qu/.test(await page.locator('#login-btn').innerText()), 20000);
     await page.click('#login-btn');
     assert.match(await page.locator('#account-pop .pop-name').innerText(), /prodejce\.qu/);
-    await page.click('[data-coin-set="symbol"]');
+    await page.goto(`${RPC}/apps`);
+    await page.waitForSelector('#profile-card');
+    await page.evaluate(() => { document.querySelector('#profile-card').open = true; });
+    await page.click('#profile-card [data-coin="symbol"]');
+    await page.goto(`${RPC}/address/${seller.address}`);
     await until(async () => (await page.locator('#app').innerText()).includes('\uE000'), 10000);
     assert.ok(await page.evaluate(async () => { await document.fonts.load('16px QuinviumSymbol', '\uE000'); return document.fonts.check('16px QuinviumSymbol', '\uE000'); }), 'the symbol font loads');
     await page.reload();
     await until(async () => (await page.locator('#app').innerText()).includes('\uE000'), 10000);
-    await page.click('[data-coin-set="text"]');
+    await page.goto(`${RPC}/apps`);
+    await page.waitForSelector('#profile-card');
+    await page.evaluate(() => { document.querySelector('#profile-card').open = true; });
+    await page.click('#profile-card [data-coin="text"]');
+    await page.goto(`${RPC}/address/${seller.address}`);
     await until(async () => !(await page.locator('#app').innerText()).includes('\uE000') && /dQU/.test(await page.locator('#app').innerText()), 10000);
+  });
+
+  await step('Profile: both contracts are deployed from the page, an avatar NFT is minted and set, a moved NFT stops showing', async () => {
+    current = buyer;
+    const { readFileSync } = await import('node:fs');
+    const { createHash } = await import('node:crypto');
+    const pub = JSON.parse(readFileSync(new URL('../public/contracts.json', import.meta.url)));
+    const card = page.locator('#profile-card');
+    const openCard = async () => {
+      await page.goto(`${RPC}/apps`);
+      await page.waitForSelector('#profile-card');
+      await page.evaluate(() => { document.querySelector('#profile-card').open = true; });
+    };
+    const reset = () => card.locator('.tool-output').evaluate((n) => { n.className = 'tool-output'; n.textContent = ''; });
+    const done = () => until(async () => (await card.locator('.tool-output').getAttribute('class')).includes('good'), 120000);
+    await openCard();
+    await page.waitForSelector('[data-deploy="Profiles"]');
+    const text = await card.innerText();
+    for (const n of ['QuinviumAvatars', 'Profiles']) assert.ok(text.includes(createHash('sha256').update(Buffer.from(pub[n].bytecode.slice(2), 'hex')).digest('hex')), `SHA-256 of ${n}`);
+    const deployed = {};
+    for (const n of ['QuinviumAvatars', 'Profiles']) {
+      await reset();
+      await page.click(`[data-deploy="${n}"]`);
+      await done();
+      deployed[n] = (await card.locator('.tool-output a[href^="/address/"]').innerText()).trim();
+      assert.ok(ethers.isAddress(deployed[n]));
+    }
+    const route = async (d) => {
+      await page.unroute('**/deployments.json').catch(() => {});
+      await page.route('**/deployments.json', (r) => r.fulfill({ contentType: 'application/json', headers: { 'cache-control': 'no-store' }, body: JSON.stringify({ 52403: d }) }));
+    };
+    await route({ profiles: deployed.QuinviumAvatars, avatars: deployed.Profiles });
+    await openCard();
+    await until(async () => /neodpovídá/.test(await card.innerText()), 20000);
+    await route({ profiles: deployed.Profiles, avatars: deployed.QuinviumAvatars });
+    await openCard();
+    await page.waitForSelector('#profile-card [data-icon="6"]');
+    await page.click('#profile-card [data-icon="6"]');
+    await page.click('#profile-card [data-color="2"]');
+    await reset();
+    await page.click('#profile-mint');
+    await done();
+    await page.waitForSelector('#profile-use');
+    await reset();
+    await page.click('#profile-use');
+    await done();
+    const prof = new ethers.Contract(deployed.Profiles, pub.Profiles.abi, provider);
+    const nft = new ethers.Contract(deployed.QuinviumAvatars, pub.QuinviumAvatars.abi, buyer.connect(provider));
+    const [at, id, valid] = await prof.avatarOf(buyer.address);
+    assert.equal(at, deployed.QuinviumAvatars);
+    assert.ok(valid);
+    assert.deepEqual([...(await nft.traitsOf(id))].map(Number), [6, 2]);
+    await page.goto(`${RPC}/address/${buyer.address}`);
+    await until(async () => (await page.locator('.address-head .avatar.profile svg').count()) === 1, 20000);
+    await page.goto(`${RPC}/address/${miner.address}`);
+    await until(async () => (await page.locator('.mini-profile').count()) > 0, 20000);
+    // Moved away: the picture is gone (a fresh page load reads it again).
+    await (await nft.transferFrom(buyer.address, seller.address, id)).wait();
+    assert.equal((await prof.avatarOf(buyer.address))[2], false);
+    await page.goto(`${RPC}/address/${buyer.address}`);
+    await page.waitForSelector('.address-head .avatar');
+    await new Promise((r) => setTimeout(r, 2000));
+    assert.equal(await page.locator('.address-head .avatar.profile').count(), 0);
+    await page.unroute('**/deployments.json');
   });
 
   await step('The page reports no JavaScript error', async () => {

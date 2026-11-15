@@ -1,4 +1,5 @@
 // Compiling contracts and writing the genesis allocation. System contract addresses are fixed.
+import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -24,6 +25,9 @@ export const PREDEPLOYS = {
 };
 
 // Contracts added by a fork. They do not belong in genesis; a running network would change its first block.
+/** Ordinary contracts the Explorer can deploy (with their bytecode) and then uses only when the code matches. */
+export const DEPLOYED_BY_USERS = ['Profiles', 'QuinviumAvatars'];
+
 export const UPGRADES = {
   PoolFactory: '0xae0000000000000000000000000000000000000c',
 };
@@ -63,6 +67,8 @@ for (const [file, contracts] of Object.entries(out.contracts)) {
   if (!sources[file]) continue;
   for (const [name, c] of Object.entries(contracts)) {
     artifacts[name] = { abi: c.abi, bytecode: `0x${c.evm.bytecode.object}` };
+    // Deployed later by a user from the Explorer: the Explorer checks the code at the configured address against this hash.
+    if (DEPLOYED_BY_USERS.includes(name)) artifacts[name].runtimeSha256 = createHash('sha256').update(Buffer.from(c.evm.deployedBytecode.object, 'hex')).digest('hex');
     if (PREDEPLOYS[name]) {
       if (Object.keys(c.evm.deployedBytecode.immutableReferences ?? {}).length) throw new Error(`${name} nesmí mít immutable`);
       const code = c.evm.deployedBytecode.object;
@@ -92,6 +98,7 @@ writeFileSync(join(genesisDir, 'upgrades.json'), JSON.stringify(upgrades));
 // The Explorer and wallets need only the ABI and addresses.
 const pub = {};
 for (const [name, c] of Object.entries(artifacts)) {
+  if (DEPLOYED_BY_USERS.includes(name)) { pub[name] = { abi: c.abi, bytecode: c.bytecode, runtimeSha256: c.runtimeSha256 }; continue; }
   if (c.address || ['SwapFactory', 'SwapPair', 'SwapRouter', 'AetherToken', 'AetherCollection', 'Multisig', 'AetherPool', 'StableToken', 'WrappedAsset', 'BridgeGateway', 'TokenRegistry'].includes(name)) pub[name] = { address: c.address, abi: c.abi };
 }
 writeFileSync(join(root, 'packages', 'explorer', 'public', 'contracts.json'), JSON.stringify(pub));

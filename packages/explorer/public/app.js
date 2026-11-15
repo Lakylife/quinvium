@@ -33,7 +33,7 @@
       'mine.sub': 'Těžař dostane odměnu 4 QU za blok a všechny poplatky z transakcí v bloku.', 'b.reward': 'Odměna za blok', 'b.baseFees': 'Základní poplatky', 'b.tips': 'Dýška', 'b.total': 'Těžař celkem', 'mine.own': 'Vlastní Quinvium Miner (Windows, macOS, Linux)',
       'mine.other': 'Běžné Windows minery přes Stratum', 'mine.note': 'Těžit lze na libovolný uzel. Účet ani registrace nejsou potřeba, stačí adresa peněženky.',
       'mine.yourAddr': 'VAŠE_ADRESA', 'apps.sub': 'Hotové kontrakty sítě Quinvium pro různé obory. Čtení je zdarma, zápis podepisuje vaše peněženka.',
-      'tool.read': 'Ověřit', 'tool.write': 'Zapsat do řetězce', 'tool.file': 'Nebo vyberte soubor (zůstává ve vašem počítači)', 'tool.sent': 'Transakce odeslána', 'tool.done': 'Potvrzeno v bloku', 'tool.missing': 'Vyplňte pole', 'tool.failed': 'Transakce v bloku selhala', 'tool.nameStep1': 'Krok 1 ze 2: podepište závazek', 'tool.nameStep2': 'Čekám na ochrannou lhůtu, zbývá', 'tool.nameStep3': 'Krok 2 ze 2: podepište registraci', 'tool.namePrimary': 'Poslední krok: podepište, aby se jméno ukazovalo místo vaší adresy', 'tool.nameResume': 'Pokračuji v rozdělané registraci, závazek už je v řetězci.', 'tool.namePending': 'Registrace jména {name} není dokončená: krok 1 je v řetězci, krok 2 chybí. Klikněte na Dokončit registraci a podepište ho (závazek platí 24 hodin od odeslání).', 'tool.nameFinished': 'Jméno se teď ukazuje místo vaší adresy.', 'coin.text': 'Měnu ukazovat jako QU', 'coin.symbol': 'Měnu ukazovat symbolem Quinvia', 'tool.nameReady': 'Krok 1 je v řetězci a ochranná lhůta uplynula. Klikněte na Dokončit registraci a potvrďte krok 2 v peněžence.', 'tool.nameFinish': 'Dokončit registraci (krok 2 ze 3)', 'addr.names': 'Jména .qu', 'addr.namesHint': 'Jméno zatím není hlavní, proto se místo adresy neukazuje.', 'addr.setPrimary': 'Nastavit jako hlavní jméno', 'net.title': 'Síť a uzly', 'net.rpcLan': 'RPC v domácí síti', 'net.rpcPublic': 'RPC z internetu', 'net.rpcPublicFwd': 'RPC z internetu (po přesměrování)', 'net.rpcOnlyHere': 'Uzel přijímá jen tento počítač. Sdílení se zapíná v aplikaci Quinvium v části Uzel, Spojit s jiným počítačem.', 'net.rpcHint': 'Do peněženky v telefonu zadejte RPC z domácí sítě, nebo z internetu, když je telefon na mobilních datech.', 'charts.time': 'Čas bloku (s)', 'charts.diff': 'Obtížnost', 'charts.rate': 'Odhad výkonu (H/s)',
+      'tool.read': 'Ověřit', 'tool.write': 'Zapsat do řetězce', 'tool.file': 'Nebo vyberte soubor (zůstává ve vašem počítači)', 'tool.sent': 'Transakce odeslána', 'tool.done': 'Potvrzeno v bloku', 'tool.missing': 'Vyplňte pole', 'tool.failed': 'Transakce v bloku selhala', 'tool.nameStep1': 'Krok 1 ze 2: podepište závazek', 'tool.nameStep2': 'Čekám na ochrannou lhůtu, zbývá', 'tool.nameStep3': 'Krok 2 ze 2: podepište registraci', 'tool.namePrimary': 'Poslední krok: podepište, aby se jméno ukazovalo místo vaší adresy', 'tool.nameResume': 'Pokračuji v rozdělané registraci, závazek už je v řetězci.', 'tool.namePending': 'Registrace jména {name} není dokončená: krok 1 je v řetězci, krok 2 chybí. Klikněte na Dokončit registraci a podepište ho (závazek platí 24 hodin od odeslání).', 'tool.nameFinished': 'Jméno se teď ukazuje místo vaší adresy.', 'prof.currency': 'Měna', 'prof.symbol': 'symbol Quinvia', 'prof.avatar': 'Profilový obrázek (NFT)', 'prof.deploy1': '1. Nasadit Quinvium Avatars', 'prof.deploy2': '2. Nasadit Profily', 'prof.mintHint': 'Vyberte ikonu a barvu, vyrazte z nich vlastní NFT Quinvium Avatar jen za poplatek do sítě a nastavte ho jako profilový obrázek. Ukazuje se jen, dokud NFT patří vaší adrese.', 'prof.mint': 'Vyrazit avatar (krok 1 ze 2)', 'prof.use': 'Nastavit jako profilový obrázek', 'prof.minted': 'Avatar je vyražený. Teď ho nastavte jako profilový obrázek (krok 2 ze 2).', 'prof.removed': 'Profilový obrázek je odebraný.', 'prof.other': 'Použít jiné NFT, které vlastníte', 'prof.nft': 'Adresa kontraktu NFT', 'prof.tokenId': 'Číslo tokenu', 'prof.otherNote': 'Obrázek cizího NFT se ukáže, jen když je uložený přímo v řetězci. Obrázky z cizích serverů Explorer nenačítá, aby nikdo nesledoval, kdo stránku prohlíží.', 'prof.badNft': 'Zadejte adresu kontraktu a číslo tokenu.', 'prof.tag': 'Identita · Peněženky', 'prof.title': 'Profil', 'prof.desc': 'Profilový obrázek u vaší adresy a jména .qu a zobrazení měny.', 'prof.none': 'Kontrakty Quinvium Avatars a Profily na této síti ještě nejsou. Kdokoli je může nasadit dvěma transakcemi: nemají správce ani poplatky.', 'prof.badCode': 'Kód na nastavených adresách neodpovídá zveřejněným kontraktům, profilové obrázky se proto nepoužijí.', 'prof.source': 'Kód je přesně packages/contracts/dist/artifacts.json z repozitáře na GitHubu. Otisky SHA-256 si můžete porovnat před podpisem.', 'prof.address': 'Adresa kontraktu', 'prof.deployed': 'Kontrakt je nasazený. Adresy obou kontraktů se zapíšou do Exploreru při další aktualizaci, potom si profilový obrázek může nastavit každý.', 'prof.icon': 'Ikona', 'prof.color': 'Barva', 'prof.clear': 'Odebrat ikonu', 'prof.saved': 'Profilový obrázek je nastavený.', 'coin.text': 'Měnu ukazovat jako QU', 'coin.symbol': 'Měnu ukazovat symbolem Quinvia', 'tool.nameReady': 'Krok 1 je v řetězci a ochranná lhůta uplynula. Klikněte na Dokončit registraci a potvrďte krok 2 v peněžence.', 'tool.nameFinish': 'Dokončit registraci (krok 2 ze 3)', 'addr.names': 'Jména .qu', 'addr.namesHint': 'Jméno zatím není hlavní, proto se místo adresy neukazuje.', 'addr.setPrimary': 'Nastavit jako hlavní jméno', 'net.title': 'Síť a uzly', 'net.rpcLan': 'RPC v domácí síti', 'net.rpcPublic': 'RPC z internetu', 'net.rpcPublicFwd': 'RPC z internetu (po přesměrování)', 'net.rpcOnlyHere': 'Uzel přijímá jen tento počítač. Sdílení se zapíná v aplikaci Quinvium v části Uzel, Spojit s jiným počítačem.', 'net.rpcHint': 'Do peněženky v telefonu zadejte RPC z domácí sítě, nebo z internetu, když je telefon na mobilních datech.', 'charts.time': 'Čas bloku (s)', 'charts.diff': 'Obtížnost', 'charts.rate': 'Odhad výkonu (H/s)',
       'rich.sub': 'Adresy podle zůstatku', 'mem.sub': 'Transakce čekající na vytěžení', 'miners.sub': 'Podle posledních 1000 bloků', 'search.none': 'Nic nenalezeno pro',
       'swap.allTrades': 'Všechny směny →', 'swap.mine': 'Moje likvidita', 'swap.searchPair': 'Hledat dvojici', 'swap.linked': 'Částky jsou svázané kurzem poolu', 'swap.linkedRate': 'Svázáno kurzem poolu: 1 {a} = {rate} {b}', 'swap.newPoolRate': 'Nový pool: poměr částek určí počáteční kurz', 'swap.addMore': 'Přidat', 'swap.withdrawPart': 'Vybrat část', 'swap.youGet': 'Dostanete zpět asi {a} a {b}.', 'swap.everything': 'vše', 'swap.pickPart': 'Vyberte, kolik chcete vybrat.', 'swap.showMore': 'Zobrazit dalších {n} (celkem {total})', 'swap.noMatch': 'Hledání neodpovídá žádná dvojice.', 'bridge.step1': 'Uzamčení', 'bridge.step2': 'Potvrzení', 'bridge.step3': 'Připsání', 'bridge.how2n': 'Nezávislí validátoři počkají, až je převod v řetězci dost hluboko, a podepíšou ho. Potřeba je {threshold} z {count} podpisů.',
       'pools.online': 'Server zveřejněný', 'pools.noServerShort': 'Bez serveru', 'pool.asic': 'ASIC a jiné', 'pool.viaApp': 'V aplikaci Quinvium otevřete Těžba → Kam těžíte, najděte tento pool v seznamu a vyberte ho. Těžba pak poběží na vaši peněženku.', 'pool.asicUrl': 'Adresa poolu', 'pool.asicWorker': 'Pracovník (worker)', 'pool.password': 'Heslo', 'pool.loginNote': 'adresa peněženky pro výplaty, za tečkou název zařízení', 'pool.passwordNote': 'libovolné, pool ho nepoužívá', 'pool.algo': 'Algoritmus', 'pool.algoNote': 'standardní Ethash přes EthereumStratum/1.0.0 i ETHPROXY', 'pool.payout': 'Výplaty', 'pool.payoutNote': 'automaticky z kontraktu, PPLNS za posledních {n} min, poplatek provozovatele {fee}', 'pool.software': 'Program', 'pool.connectNote': 'Těžit jde přes server, který provozovatel zveřejnil. Odměny drží kontrakt: provozovatel si vezme jen poplatek a výplatu může každý těžař vybrat i sám tlačítkem Vybrat.', 'pool.share24': 'Podíl na blocích za 24 h', 'pool.blocks24': '{n} bloků za 24 h', 'pool.findMiner': 'Najít těžaře podle adresy', 'pool.minersTotal': 'celkem {n} těžařů', 'pool.minerNotFound': 'Tato adresa v okně poolu neposlala žádný podíl.', 'pool.allMiners': '← Všichni těžaři', 'pool.createdTitle': 'Pool je založený. Co dál:', 'pools.otherPools': 'Ostatní pooly', 'pools.otherCount': 'dalších poolů: {n}', 'pools.all': 'Všechny pooly ({n})', 'pools.find': 'Hledat pool podle jména nebo adresy', 'pools.minersCol': 'Těžaři', 'pools.createdCol': 'Založen', 'pools.noMatch': 'Hledání „{q}“ neodpovídá žádný pool.',
@@ -77,7 +77,7 @@
       'mine.sub': 'The miner gets a 4 QU block reward plus all transaction fees in the block.', 'b.reward': 'Block reward', 'b.baseFees': 'Base fees', 'b.tips': 'Tips', 'b.total': 'Miner total', 'mine.own': 'Quinvium Miner (Windows, macOS, Linux)',
       'mine.other': 'Common Windows miners via Stratum', 'mine.note': 'Mine on any node. No account needed, just your wallet address.',
       'mine.yourAddr': 'YOUR_ADDRESS', 'apps.sub': 'Ready-made Quinvium contracts for many industries. Reading is free, writing is signed by your wallet.',
-      'tool.read': 'Verify', 'tool.write': 'Write to chain', 'tool.file': 'Or choose a file (stays on your computer)', 'tool.sent': 'Transaction sent', 'tool.done': 'Confirmed in block', 'tool.missing': 'Fill in', 'tool.failed': 'The transaction failed in the block', 'tool.nameStep1': 'Step 1 of 2: sign the commitment', 'tool.nameStep2': 'Waiting for the protection period, left', 'tool.nameStep3': 'Step 2 of 2: sign the registration', 'tool.namePrimary': 'Last step: sign so the name is shown instead of your address', 'tool.nameResume': 'Continuing an unfinished registration; the commitment is already on chain.', 'tool.namePending': 'The registration of {name} is not finished: step 1 is on chain, step 2 is missing. Click Finish registration and sign it (the commitment is valid for 24 hours after it was sent).', 'tool.nameFinished': 'The name is now shown instead of your address.', 'coin.text': 'Show the currency as QU', 'coin.symbol': 'Show the currency as the Quinvium symbol', 'tool.nameReady': 'Step 1 is on chain and the protection period is over. Click Finish registration and confirm step 2 in your wallet.', 'tool.nameFinish': 'Finish registration (step 2 of 3)', 'addr.names': '.qu names', 'addr.namesHint': 'The name is not primary yet, so it is not shown instead of the address.', 'addr.setPrimary': 'Set as primary name', 'net.title': 'Network', 'net.rpcLan': 'RPC on the home network', 'net.rpcPublic': 'RPC from the internet', 'net.rpcPublicFwd': 'RPC from the internet (after forwarding)', 'net.rpcOnlyHere': 'The node accepts only this computer. Turn on sharing in the Quinvium app under Node, Connect to another computer.', 'net.rpcHint': 'In a phone wallet, enter the home network RPC, or the internet RPC when the phone is on mobile data.', 'charts.time': 'Block time (s)', 'charts.diff': 'Difficulty', 'charts.rate': 'Estimated hashrate (H/s)',
+      'tool.read': 'Verify', 'tool.write': 'Write to chain', 'tool.file': 'Or choose a file (stays on your computer)', 'tool.sent': 'Transaction sent', 'tool.done': 'Confirmed in block', 'tool.missing': 'Fill in', 'tool.failed': 'The transaction failed in the block', 'tool.nameStep1': 'Step 1 of 2: sign the commitment', 'tool.nameStep2': 'Waiting for the protection period, left', 'tool.nameStep3': 'Step 2 of 2: sign the registration', 'tool.namePrimary': 'Last step: sign so the name is shown instead of your address', 'tool.nameResume': 'Continuing an unfinished registration; the commitment is already on chain.', 'tool.namePending': 'The registration of {name} is not finished: step 1 is on chain, step 2 is missing. Click Finish registration and sign it (the commitment is valid for 24 hours after it was sent).', 'tool.nameFinished': 'The name is now shown instead of your address.', 'prof.currency': 'Currency', 'prof.symbol': 'Quinvium symbol', 'prof.avatar': 'Profile picture (NFT)', 'prof.deploy1': '1. Deploy Quinvium Avatars', 'prof.deploy2': '2. Deploy Profiles', 'prof.mintHint': 'Choose an icon and a colour, mint your own Quinvium Avatar NFT for the network fee only and set it as your profile picture. It shows only while the NFT belongs to your address.', 'prof.mint': 'Mint avatar (step 1 of 2)', 'prof.use': 'Set as profile picture', 'prof.minted': 'The avatar is minted. Now set it as your profile picture (step 2 of 2).', 'prof.removed': 'The profile picture is removed.', 'prof.other': 'Use another NFT you own', 'prof.nft': 'NFT contract address', 'prof.tokenId': 'Token number', 'prof.otherNote': 'A foreign NFT picture shows only when it is stored on chain. The Explorer loads no images from foreign servers, so nobody can track who views the page.', 'prof.badNft': 'Enter the contract address and the token number.', 'prof.tag': 'Identity · Wallets', 'prof.title': 'Profile', 'prof.desc': 'The profile picture next to your address and .qu name, and how the currency is shown.', 'prof.none': 'The Quinvium Avatars and Profiles contracts are not on this network yet. Anyone can deploy them with two transactions: they have no owner and no fees.', 'prof.badCode': 'The code at the configured addresses does not match the published contracts, so profile pictures are not used.', 'prof.source': 'The code is exactly packages/contracts/dist/artifacts.json from the GitHub repository. You can compare the SHA-256 hashes before signing.', 'prof.address': 'Contract address', 'prof.deployed': 'The contract is deployed. The addresses of both contracts go into the Explorer with the next update; then everyone can set a profile picture.', 'prof.icon': 'Icon', 'prof.color': 'Colour', 'prof.clear': 'Remove icon', 'prof.saved': 'The profile picture is set.', 'coin.text': 'Show the currency as QU', 'coin.symbol': 'Show the currency as the Quinvium symbol', 'tool.nameReady': 'Step 1 is on chain and the protection period is over. Click Finish registration and confirm step 2 in your wallet.', 'tool.nameFinish': 'Finish registration (step 2 of 3)', 'addr.names': '.qu names', 'addr.namesHint': 'The name is not primary yet, so it is not shown instead of the address.', 'addr.setPrimary': 'Set as primary name', 'net.title': 'Network', 'net.rpcLan': 'RPC on the home network', 'net.rpcPublic': 'RPC from the internet', 'net.rpcPublicFwd': 'RPC from the internet (after forwarding)', 'net.rpcOnlyHere': 'The node accepts only this computer. Turn on sharing in the Quinvium app under Node, Connect to another computer.', 'net.rpcHint': 'In a phone wallet, enter the home network RPC, or the internet RPC when the phone is on mobile data.', 'charts.time': 'Block time (s)', 'charts.diff': 'Difficulty', 'charts.rate': 'Estimated hashrate (H/s)',
       'rich.sub': 'Addresses by balance', 'mem.sub': 'Transactions waiting to be mined', 'miners.sub': 'From the last 1000 blocks', 'search.none': 'Nothing found for',
       'swap.allTrades': 'All swaps →', 'swap.mine': 'My liquidity', 'swap.searchPair': 'Search pair', 'swap.linked': 'The amounts are linked by the pool rate', 'swap.linkedRate': 'Linked by the pool rate: 1 {a} = {rate} {b}', 'swap.newPoolRate': 'New pool: the ratio of the amounts sets the starting rate', 'swap.addMore': 'Add more', 'swap.withdrawPart': 'Withdraw', 'swap.youGet': 'You get back about {a} and {b}.', 'swap.everything': 'all', 'swap.pickPart': 'Choose how much to withdraw.', 'swap.showMore': 'Show {n} more ({total} in total)', 'swap.noMatch': 'No pair matches the search.', 'bridge.step1': 'Lock', 'bridge.step2': 'Confirm', 'bridge.step3': 'Receive', 'bridge.how2n': 'Independent validators wait until the transfer is deep enough in the chain and sign it. {threshold} of {count} signatures are needed.',
       'pools.online': 'Server published', 'pools.noServerShort': 'No server', 'pool.asic': 'ASIC and others', 'pool.viaApp': 'In the Quinvium app open Mining → Where you mine, find this pool in the list and choose it. Mining then runs for your wallet.', 'pool.asicUrl': 'Pool URL', 'pool.asicWorker': 'Worker', 'pool.password': 'Password', 'pool.loginNote': 'your payout wallet address, then a dot and a device name', 'pool.passwordNote': 'anything, the pool ignores it', 'pool.algo': 'Algorithm', 'pool.algoNote': 'standard Ethash over EthereumStratum/1.0.0 or ETHPROXY', 'pool.payout': 'Payouts', 'pool.payoutNote': 'automatic from the contract, PPLNS over the last {n} min, operator fee {fee}', 'pool.software': 'Software', 'pool.connectNote': 'Mining goes through the server the operator published. The contract holds the rewards: the operator only takes the fee, and every miner can also withdraw on their own with the Withdraw button.', 'pool.share24': 'Block share in 24 h', 'pool.blocks24': '{n} blocks in 24 h', 'pool.findMiner': 'Find a miner by address', 'pool.minersTotal': '{n} miners in total', 'pool.minerNotFound': 'This address sent no share in the pool window.', 'pool.allMiners': '← All miners', 'pool.createdTitle': 'Your pool is created. What next:', 'pools.otherPools': 'Other pools', 'pools.otherCount': '{n} more pools', 'pools.all': 'All pools ({n})', 'pools.find': 'Search pools by name or address', 'pools.minersCol': 'Miners', 'pools.createdCol': 'Created', 'pools.noMatch': 'No pool matches “{q}”.',
@@ -175,10 +175,19 @@
   }
   const when = (sec) => new Date(Number(sec) * 1000).toLocaleString(locale());
   /** A coloured square derived from the address: the same address always looks the same. */
+  /**
+   * The picture an address chose in the Profiles contract (an NFT it owns now) replaces the generated square; fillNames fills it in.
+   * Quinvium Avatars are drawn from their two numbers; another NFT only when its picture is stored on chain (a data: image),
+   * because loading a picture from a foreign server would tell that server who looks at the page.
+   */
+  const profileCache = new Map();   // address -> { html } or null
+  const profileSvg = (a) => profileCache.get(String(a).toLowerCase())?.html ?? null;
   const avatar = (a, cls = '') => {
+    const icon = profileSvg(a);
+    if (icon) return `<i class="avatar profile ${cls}" data-addr="${esc(String(a).toLowerCase())}">${icon}</i>`;
     const h1 = parseInt(String(a).slice(2, 8), 16) % 360;
     const h2 = parseInt(String(a).slice(-6), 16) % 360;
-    return `<i class="avatar ${cls}" style="background:linear-gradient(135deg, hsl(${h1} 55% 52%) 50%, hsl(${h2} 55% 40%) 50%)"></i>`;
+    return `<i class="avatar ${cls}" data-addr="${esc(String(a).toLowerCase())}" style="background:linear-gradient(135deg, hsl(${h1} 55% 52%) 50%, hsl(${h2} 55% 40%) 50%)"></i>`;
   };
   const BLOCK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 8 4.500v9L12 21l-8-4.500v-9L12 3Zm0 9 8-4.500M12 12v9m0-9L4 7.500"/></svg>';
   const EYE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
@@ -430,6 +439,7 @@
       const n = await new ethers.Contract(contracts.AetherNames.address, contracts.AetherNames.abi, provider()).nameOf(a);
       nameCache.set(key, n);
       if (n && account?.toLowerCase() === key) renderWallet();
+      fillNames(document.querySelector('header')).catch(() => {});
     } catch { nameCache.delete(key); }
   }
 
@@ -1374,25 +1384,87 @@
    * the visit, and a shortened address in a link is replaced by its name.
    */
   async function fillNames(root = app) {
-    if (!contracts.AetherNames?.address || !contracts.Multicall?.address) return;
+    if (!contracts.AetherNames?.address || !contracts.Multicall?.address || !root) return;
     const links = [...root.querySelectorAll('a[href^="/address/0x"]')].filter((el) => /^0x[0-9a-f]+…?[0-9a-f]*$/i.test(el.textContent.trim()) && !el.closest('.page-head'));
     const addrOf = (el) => el.getAttribute('href').slice(9, 51).toLowerCase();
-    const wanted = [...new Set(links.map(addrOf))].filter((x) => ethers.isAddress(x) && !nameCache.has(x)).slice(0, 150);
-    if (wanted.length) {
+    const avatars = [...document.querySelectorAll('.avatar[data-addr]')];
+    const profiles = await profileContracts().catch(() => null);
+    const wantNames = [...new Set(links.map(addrOf))].filter((x) => ethers.isAddress(x) && !nameCache.has(x)).slice(0, 150);
+    const wantIcons = profiles ? [...new Set([...links.map(addrOf), ...avatars.map((el) => el.dataset.addr)])].filter((x) => ethers.isAddress(x) && !profileCache.has(x)).slice(0, 150) : [];
+    if (wantNames.length || wantIcons.length) {
       const names = new ethers.Interface(contracts.AetherNames.abi);
+      const prof = new ethers.Interface(contracts.Profiles.abi);
       const multi = new ethers.Contract(contracts.Multicall.address, contracts.Multicall.abi, provider());
+      const calls = wantNames.map((x) => ({ target: contracts.AetherNames.address, data: names.encodeFunctionData('nameOf', [x]) }));
+      if (wantIcons.length) calls.push({ target: profiles.profiles, data: prof.encodeFunctionData('avatarsOf', [wantIcons]) });
       try {
-        const [, results] = await multi.aggregate(wanted.map((x) => ({ target: contracts.AetherNames.address, data: names.encodeFunctionData('nameOf', [x]) })));
-        results.forEach((r, i) => nameCache.set(wanted[i], r.success ? names.decodeFunctionResult('nameOf', r.data)[0] : ''));
+        const [, results] = await multi.aggregate(calls);
+        wantNames.forEach((x, i) => nameCache.set(x, results[i].success ? names.decodeFunctionResult('nameOf', results[i].data)[0] : ''));
+        if (wantIcons.length) {
+          const r = results[wantNames.length];
+          const [nfts, ids, valid] = r.success ? prof.decodeFunctionResult('avatarsOf', r.data) : [[], [], []];
+          const pictures = await avatarPictures(profiles, wantIcons.map((x, i) => (valid[i] ? { nft: nfts[i], id: ids[i] } : null)));
+          wantIcons.forEach((x, i) => profileCache.set(x, pictures[i] ? { html: pictures[i] } : null));
+        }
       } catch { return; }
     }
     for (const el of links) {
-      const n = nameCache.get(addrOf(el));
+      const a = addrOf(el);
+      const n = nameCache.get(a);
+      const icon = profileSvg(a);
+      if (icon && !el.previousElementSibling?.classList.contains('mini-profile')) el.insertAdjacentHTML('beforebegin', `<i class="avatar profile mini-profile" aria-hidden="true">${icon}</i>`);
       if (!n) continue;
-      el.title = el.getAttribute('href').slice(9, 51);
+      el.title = a;
       el.textContent = `${n}.qu`;
       el.classList.remove('hash');
     }
+    for (const el of avatars) {
+      const icon = profileSvg(el.dataset.addr);
+      if (icon && !el.classList.contains('profile')) { el.classList.add('profile'); el.removeAttribute('style'); el.innerHTML = icon; }
+    }
+  }
+
+  /** SHA-256 of bytes as hex. */
+  const sha256Hex = async (bytes) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map((b) => b.toString(16).padStart(2, '0')).join('');
+
+  /**
+   * The Profiles and Quinvium Avatars contracts of this network, only when the code at both addresses is exactly the published
+   * build (deployments.json says where; anyone could deploy something else there).
+   */
+  let profilesChecked = null;
+  async function profileContracts() {
+    const d = await deployment();
+    if (!d?.profiles || !d?.avatars || !contracts.Profiles?.runtimeSha256 || !contracts.QuinviumAvatars?.runtimeSha256) return null;
+    const key = `${d.profiles}/${d.avatars}`;
+    if (profilesChecked?.key !== key) {
+      profilesChecked = { key, ok: (async () => {
+        const [a, b] = await Promise.all([provider().getCode(d.profiles), provider().getCode(d.avatars)]);
+        return (await sha256Hex(ethers.getBytes(a))) === contracts.Profiles.runtimeSha256 && (await sha256Hex(ethers.getBytes(b))) === contracts.QuinviumAvatars.runtimeSha256;
+      })() };
+    }
+    return (await profilesChecked.ok) ? { profiles: d.profiles, avatars: d.avatars } : null;
+  }
+
+  const ONCHAIN_IMAGE = /^data:image\/(png|gif|webp|jpeg|svg\+xml);base64,[A-Za-z0-9+/=]+$/;
+  /** HTML of each NFT picture (or null): Quinvium Avatars from their numbers, others only from an on-chain data: image. */
+  async function avatarPictures(found, list) {
+    const own = new ethers.Contract(found.avatars, contracts.QuinviumAvatars.abi, provider());
+    const nft = (at) => new ethers.Contract(at, ['function tokenURI(uint256) view returns (string)'], provider());
+    return Promise.all(list.map(async (x, i) => {
+      if (!x) return null;
+      try {
+        if (x.nft.toLowerCase() === found.avatars.toLowerCase()) {
+          const [icon, color] = await own.traitsOf(x.id);
+          return window.QuinviumProfiles?.svg(Number(icon), Number(color)) ?? null;
+        }
+        if (i >= 20) return null;
+        const uri = await nft(x.nft).tokenURI(x.id);
+        const m = /^data:application\/json(;base64)?,(.*)$/s.exec(uri);
+        const image = m ? JSON.parse(m[1] ? atob(m[2]) : decodeURIComponent(m[2])).image : null;
+        if (typeof image === 'string' && image.length < 200000 && ONCHAIN_IMAGE.test(image)) return `<img src="${esc(image)}" alt="">`;
+        return '<span class="nft-mark">NFT</span>';
+      } catch { return null; }
+    }));
   }
 
   /**
@@ -2252,7 +2324,13 @@
           ${x.file ? `<label data-field="${x.file}" data-file-label><span>${t('tool.file')}</span><input type="file" data-file="${x.file}"></label>` : ''}
           <div class="tool-actions"><button type="submit" class="primary-btn" data-run></button></div>
         </form><div class="tool-output hidden" aria-live="polite"></div>
-      </details>`).join('')}</div>`;
+      </details>`).join('')}
+      <details class="card tool-card" data-tool="profile" id="profile-card">
+        <summary><span class="tool-tag">${esc(t('prof.tag'))}</span><h2>${esc(t('prof.title'))}</h2><p>${esc(t('prof.desc'))}</p></summary>
+        <div class="profile-body"></div><div class="tool-output hidden" aria-live="polite"></div>
+      </details></div>`;
+    const profileCard = $('profile-card');
+    profileCard.addEventListener('toggle', () => { if (profileCard.open) profileTool(profileCard); });
     app.querySelectorAll('[data-file]').forEach((input) => {
       input.addEventListener('change', async () => {
         const f = input.files[0];
@@ -2261,7 +2339,7 @@
         input.form.elements[input.dataset.file].value = `0x${[...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')}`;
       });
     });
-    app.querySelectorAll('.tool-card').forEach((card) => {
+    app.querySelectorAll('.tool-card:not(#profile-card)').forEach((card) => {
       const tool = TOOLS.find((x) => x.key === card.dataset.tool);
       const form = card.querySelector('form');
       const out = card.querySelector('.tool-output');
@@ -2340,6 +2418,109 @@
         } finally { go.disabled = false; }
       });
     });
+  }
+
+  /**
+   * Profile settings: how the currency is shown (kept in this browser) and the profile picture. The picture is an NFT the
+   * account owns, set in the Profiles contract; a Quinvium Avatar is minted here for the network fee. On a network without the
+   * two contracts the card offers to deploy them: the bytecode is the published build and its SHA-256 is shown before signing.
+   */
+  async function profileTool(card) {
+    const body = card.querySelector('.profile-body');
+    const out = card.querySelector('.tool-output');
+    const show = (html, cls = '') => { out.innerHTML = html; out.className = `tool-output rich ${cls}`; };
+    const P = window.QuinviumProfiles;
+    const coinHtml = () => `<div class="profile-section"><h3>${esc(t('prof.currency'))}</h3>
+      <div class="seg" role="radiogroup"><button type="button" role="radio" data-coin="text" aria-checked="${coinStyle === 'text'}" class="${coinStyle === 'text' ? 'active' : ''}">QU</button><button type="button" role="radio" data-coin="symbol" aria-checked="${coinStyle === 'symbol'}" class="${coinStyle === 'symbol' ? 'active' : ''}">\uE000 ${esc(t('prof.symbol'))}</button></div></div>`;
+    const bindCoin = () => body.querySelectorAll('[data-coin]').forEach((b) => {
+      b.onclick = () => { coinStyle = b.dataset.coin; store.set('quinvium.coin', coinStyle); refreshStats(); profileTool(card); };
+    });
+    const found = await profileContracts().catch(() => null);
+    if (!found) {
+      const d = await deployment();
+      const hashes = await Promise.all(['QuinviumAvatars', 'Profiles'].map(async (n) => [n, ethers.getBytes(contracts[n].bytecode).length, await sha256Hex(ethers.getBytes(contracts[n].bytecode))]));
+      body.innerHTML = `${coinHtml()}<div class="profile-section"><h3>${esc(t('prof.avatar'))}</h3>
+        <p class="tool-hint">${esc(d?.profiles || d?.avatars ? t('prof.badCode') : t('prof.none'))}</p>
+        <dl class="tool-result">${hashes.map(([n, size, h]) => `<dt>${esc(n)}</dt><dd>${num(size)} B · SHA-256 <span class="hash">${esc(h)}</span></dd>`).join('')}</dl>
+        <p class="tool-note">${esc(t('prof.source'))}</p>
+        <div class="tool-actions"><button type="button" class="primary-btn" data-deploy="QuinviumAvatars">${esc(t('prof.deploy1'))}</button><button type="button" class="primary-btn" data-deploy="Profiles">${esc(t('prof.deploy2'))}</button></div></div>`;
+      bindCoin();
+      body.querySelectorAll('[data-deploy]').forEach((b) => {
+        b.onclick = async () => {
+          b.disabled = true;
+          try {
+            const s = await signer();
+            const name = b.dataset.deploy;
+            const c = await new ethers.ContractFactory(contracts[name].abi, contracts[name].bytecode, s).deploy();
+            const tx = c.deploymentTransaction();
+            show(esc(`${t('tool.sent')}: ${tx.hash}`));
+            const r = await provider().waitForTransaction(tx.hash);
+            if (!r?.status || !r.contractAddress) throw new Error(t('tool.failed'));
+            show(`<p class="tool-done"><strong>${t('tool.done')} #${r.blockNumber}</strong> · ${esc(name)} · <a class="hash" href="/tx/${esc(tx.hash)}">${esc(short(tx.hash, 10))}</a></p>
+              <dl class="tool-result"><dt>${esc(t('prof.address'))}</dt><dd><a class="hash" href="/address/${esc(r.contractAddress)}">${esc(r.contractAddress)}</a></dd></dl><p class="tool-note">${esc(t('prof.deployed'))}</p>`, 'good');
+          } catch (err) { show(esc(errorText(err)), 'bad'); } finally { b.disabled = false; }
+        };
+      });
+      return;
+    }
+    const prof = (runner) => new ethers.Contract(found.profiles, contracts.Profiles.abi, runner ?? provider());
+    const avat = (runner) => new ethers.Contract(found.avatars, contracts.QuinviumAvatars.abi, runner ?? provider());
+    let current = '';
+    if (account) {
+      try {
+        const [nft, id, valid] = await prof().avatarOf(account);
+        if (valid) current = (await avatarPictures(found, [{ nft, id }]))[0] ?? '';
+      } catch { /* none */ }
+    }
+    let icon = 1;
+    let color = 0;
+    let minted = null;   // a freshly minted avatar waiting to be set
+    const draw = () => {
+      body.innerHTML = `${coinHtml()}<div class="profile-section"><h3>${esc(t('prof.avatar'))}</h3>
+        ${current ? `<div class="profile-current"><span class="avatar profile large">${current}</span><button type="button" class="ghost-btn" id="profile-clear">${esc(t('prof.clear'))}</button></div>` : ''}
+        <p class="tool-hint">${esc(t('prof.mintHint'))}</p>
+        <div class="profile-pick">
+          <div class="profile-preview">${P.svg(icon, color)}</div>
+          <div class="profile-grid" role="radiogroup" aria-label="${esc(t('prof.icon'))}">${Array.from({ length: P.count }, (_, i) => `<button type="button" role="radio" aria-checked="${i + 1 === icon}" data-icon="${i + 1}">${P.svg(i + 1, color)}</button>`).join('')}</div>
+          <div class="profile-colors" role="radiogroup" aria-label="${esc(t('prof.color'))}">${P.palette.map((c, i) => `<button type="button" role="radio" aria-checked="${i === color}" data-color="${i}" style="background:${c}" aria-label="${i + 1}"></button>`).join('')}</div>
+        </div>
+        <div class="tool-actions">${minted ? `<button type="button" class="primary-btn" id="profile-use">${esc(t('prof.use'))}</button>` : `<button type="button" class="primary-btn" id="profile-mint">${esc(t('prof.mint'))}</button>`}</div>
+        <details class="profile-other"><summary>${esc(t('prof.other'))}</summary>
+          <form class="tool-form" id="profile-nft"><label><span>${esc(t('prof.nft'))}</span><input name="nft" autocomplete="off" spellcheck="false"></label><label><span>${esc(t('prof.tokenId'))}</span><input name="id" inputmode="numeric" autocomplete="off"></label>
+          <p class="tool-note">${esc(t('prof.otherNote'))}</p><div class="tool-actions"><button type="submit" class="primary-btn">${esc(t('prof.use'))}</button></div></form></details></div>`;
+      bindCoin();
+      body.querySelectorAll('[data-icon]').forEach((b) => { b.onclick = () => { icon = Number(b.dataset.icon); minted = null; draw(); }; });
+      body.querySelectorAll('[data-color]').forEach((b) => { b.onclick = () => { color = Number(b.dataset.color); minted = null; draw(); }; });
+      const refresh = () => { if (account) profileCache.delete(account.toLowerCase()); renderWallet(); fillNames(document.body).catch(() => {}); };
+      if ($('profile-mint')) {
+        txButton($('profile-mint'), out, (s) => avat(s).mint(icon, color), (r) => {
+          const ev = r.logs.map((l) => { try { return avat().interface.parseLog(l); } catch { return null; } }).find((e) => e?.name === 'Transfer');
+          minted = ev ? ev.args.tokenId : null;
+          draw();
+          return t('prof.minted');
+        });
+      }
+      if ($('profile-use')) {
+        txButton($('profile-use'), out, (s) => prof(s).setAvatar(found.avatars, minted), () => { minted = null; refresh(); setTimeout(() => profileTool(card), 300); return t('prof.saved'); });
+      }
+      if ($('profile-clear')) txButton($('profile-clear'), out, (s) => prof(s).clear(), () => { refresh(); setTimeout(() => profileTool(card), 300); return t('prof.removed'); });
+      $('profile-nft').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const f = e.target.elements;
+        try {
+          if (!ethers.isAddress(f.nft.value.trim()) || !/^\d+$/.test(f.id.value.trim())) throw new Error(t('prof.badNft'));
+          const s = await signer();
+          const tx = await prof(s).setAvatar(f.nft.value.trim(), BigInt(f.id.value.trim()));
+          show(esc(`${t('tool.sent')}: ${tx.hash}`));
+          const r = await tx.wait();
+          if (!r.status) throw new Error(t('tool.failed'));
+          refresh();
+          show(esc(t('prof.saved')), 'good');
+          setTimeout(() => profileTool(card), 300);
+        } catch (err) { show(esc(errorText(err)), 'bad'); }
+      });
+    };
+    draw();
   }
 
   // ------------------------------------------------------------- pooly
@@ -4127,17 +4308,7 @@
     menus();
     try { contracts = await (await fetch('/contracts.json')).json(); } catch { contracts = {}; }
     document.querySelectorAll('[data-theme-set]').forEach((b) => { b.onclick = () => theme(b.dataset.themeSet); });
-    const coinButtons = () => document.querySelectorAll('[data-coin-set]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.coinSet === coinStyle)));
-    coinButtons();
-    document.querySelectorAll('[data-coin-set]').forEach((b) => {
-      b.onclick = () => {
-        coinStyle = b.dataset.coinSet;
-        store.set('quinvium.coin', coinStyle);
-        coinButtons();
-        refreshStats();
-        render();
-      };
-    });
+
     $('footer-year').textContent = String(new Date().getFullYear());
     $('to-top').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
     $('login-btn').onclick = () => (account && !wrongNetwork() ? $('account-pop').classList.toggle('open') : connect().catch(() => { /* průvodce už vše řekl */ }));
