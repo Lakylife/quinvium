@@ -169,8 +169,8 @@ ${p.body}
 </body>
 </html>
 `;
-    // Sections slide in as they scroll into view (site.js); the hero and the page heading are there right away.
-    built.push({ path, html: html.replace(/<section class="sec"/g, '<section class="sec reveal"') });
+    // Only the home page moves: its sections slide in as they scroll into view and the hero drifts (site.js, site.css).
+    built.push({ path, html: p.slug === '' ? html.replace(/<section class="sec"/g, '<section class="sec reveal"').replace('<body data-lang="en">', '<body data-lang="en" class="home-page">') : html });
   }
 
   // 404 in both languages on one page (Caddy returns it for unknown paths)
@@ -208,7 +208,7 @@ for (const { path, html } of built) {
         .replace(`<link rel="canonical" href="${SITE}${path}">`, `<link rel="canonical" href="${SITE}${langPath(l, path)}">`)
         .replace(`<meta property="og:url" content="${SITE}${path}">`, `<meta property="og:url" content="${SITE}${langPath(l, path)}">`)
         .replace('<meta property="og:locale" content="en_US">', `<meta property="og:locale" content="${OG_LOCALE[l]}">`)
-        .replace('<body data-lang="en">', `<body data-lang="${l}">`)
+        .replace(/<body data-lang="en"/, `<body data-lang="${l}"`)
         .replace('<span class="lang-code" translate="no">EN</span>', `<span class="lang-code" translate="no">${l.toUpperCase()}</span>`)
         .replace(/"inLanguage":"en"/g, `"inLanguage":"${l}"`);
       urls.push(langPath(l, path));

@@ -86,9 +86,23 @@
   // Revealing sections on scroll
   const reveal = document.querySelectorAll('.reveal');
   if ('IntersectionObserver' in window) {
-    const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
+    const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -12% 0px' });
     reveal.forEach((el) => io.observe(el));
   } else reveal.forEach((el) => el.classList.add('in'));
+
+  // Home page: the hero art drifts slower than the page and the chain of blocks a little faster, a light depth effect.
+  const art = document.querySelector('.home-page .hero-art > div:first-child');
+  const chainBox = document.querySelector('.home-page .chain');
+  if (art && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    let ticking = false;
+    const drift = () => {
+      ticking = false;
+      const y = Math.min(scrollY, innerHeight);
+      art.style.transform = `translateY(${(y * 0.22).toFixed(1)}px) rotate(${(y * 0.012).toFixed(2)}deg)`;
+      if (chainBox) chainBox.style.transform = `translateY(${(y * -0.06).toFixed(1)}px)`;
+    };
+    addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(drift); } }, { passive: true });
+  }
 
   // Copying addresses
   document.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', async () => {
