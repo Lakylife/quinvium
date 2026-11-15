@@ -9,14 +9,17 @@
 </head>
 <body>
 <div class="app-lock" id="app-lock" hidden>
-  <form class="lock-card" id="lock-form">
+  <svg class="lock-art" viewBox="0 0 800 800" aria-hidden="true"><polygon class="la1" points="400,40 712,220 712,580 400,760 88,580 88,220"/><polygon class="la2" points="400,140 625,270 625,530 400,660 175,530 175,270"/><polygon class="la3" points="400,240 538,320 538,480 400,560 262,480 262,320"/></svg>
+  <form class="lock-card lock-main" id="lock-form" autocomplete="off">
     <div class="logo logo-big"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="0" y="0" width="64" height="64" rx="14.4" fill="#0B1622"/><path transform="translate(7.13 7.13) scale(0.78)" d="M26.33 36.92L28.75 39.63L37.24 48.48L46.52 58.68L58.57 58.68L46.87 45.48L40.38 38.28L39.46 37.49L38.88 37.14L38.03 36.92L30.54 36.92L30.47 36.85L30.32 36.92L28.9 36.92L28.83 36.85L28.68 36.92ZM32.39 2.75L30.75 2.75L30.04 2.89L29.04 3.18L28.04 3.68L18.55 9.88L8.64 16.59L7.71 17.23L7.21 17.8L6.57 18.66L5.78 20.16L5.64 20.73L5.43 21.8L5.43 42.42L5.71 43.99L6.35 45.55L6.99 46.41L8.28 47.7L15.34 52.4L27.4 60.39L28.54 60.96L29.9 61.25L32.04 61.18L32.89 60.96L34.1 60.39L41.31 55.19L35.82 49.05L35.6 49.12L32.61 51.26L31.82 51.69L31.46 51.83L30.47 51.83L29.61 51.48L21.26 45.77L15.98 42.27L15.27 41.49L14.84 40.63L14.56 39.56L14.56 25.15L14.7 24.51L15.06 23.65L15.34 23.3L16.2 22.44L26.33 15.73L30.39 13.02L31.39 12.74L31.82 12.74L32.61 12.95L34.89 14.38L38.6 16.95L46.09 21.94L47.37 23.08L47.73 23.8L47.94 24.87L47.94 40.2L47.73 41.42L47.37 42.13L46.52 42.92L51.94 48.98L52.08 49.19L52.23 49.19L54.51 47.62L55.36 46.98L55.94 46.41L56.86 44.98L57.15 44.2L57.43 42.7L57.43 21.8L57.22 20.59L56.93 19.66L56.36 18.59L55.79 17.8L54.94 16.95L53.22 15.73L38.88 6.1L34.68 3.46L33.82 3.04Z" fill="#FFCD02"/></svg></div>
     <h1 data-t>Quinvium is locked</h1>
     <p class="dim" id="lock-note" data-t>Enter your wallet password to continue.</p>
-    <label><span data-t>Password</span><input type="password" id="lock-password" autocomplete="current-password" required></label>
-    <div class="err" id="lock-error"></div>
-    <button class="primary cta" type="submit"><span data-t>Unlock</span></button>
+    <div class="pw-field"><input type="password" id="lock-password" autocomplete="current-password" required data-t-ph="Password" placeholder="Password" aria-label="Password"><button type="button" class="pw-eye" id="lock-eye" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+    <p class="caps-hint" id="lock-caps" hidden><span data-t>Caps Lock is on</span></p>
+    <div class="err" id="lock-error" role="alert"></div>
+    <button class="primary cta" type="submit" id="lock-submit"><span data-t>Unlock</span></button>
     <button class="link-button" type="button" id="lock-forgot"><span data-t>Forgot password?</span></button>
+    <p class="lock-status" id="lock-status"></p>
   </form>
 </div>
 <div class="app-lock" id="pw-box" hidden>
@@ -227,8 +230,21 @@
           <div class="panel-row"><b data-t>Appearance</b><div class="seg" id="s-theme" role="group"><button data-theme-set="system"><span data-t>System</span></button><button data-theme-set="light"><span data-t>Light</span></button><button data-theme-set="dark"><span data-t>Dark</span></button></div></div>
         </div>
         <div class="panel">
+          <div class="panel-row"><b data-t>Notifications</b></div>
+          <label class="switch-row"><span data-t>Found blocks</span><input type="checkbox" data-notify="blocks"></label>
+          <label class="switch-row"><span data-t>Incoming payments</span><input type="checkbox" data-notify="payments"></label>
+          <label class="switch-row"><span data-t>Mining stopped by itself</span><input type="checkbox" data-notify="mining"></label>
+          <label class="switch-row"><span data-t>New versions</span><input type="checkbox" data-notify="updates"></label>
+        </div>
+        <div class="panel">
           <div class="panel-row"><b data-t>App updates</b><span class="dim" id="s-version"></span></div>
           <small class="dim" id="s-update"></small>
+          <div class="release" id="s-release" hidden>
+            <b id="s-release-title"></b>
+            <pre class="release-notes" id="s-release-notes"></pre>
+            <div class="row"><button class="primary" id="s-release-get"><span data-t>Download and verify</span></button><button id="s-release-page"><span data-t>Release notes on GitHub</span></button></div>
+            <small class="dim" id="s-release-state" aria-live="polite"></small>
+          </div>
           <div class="row"><button id="s-check"><span data-t>Check for updates</span></button></div>
         </div>
         <div class="panel" id="s-cli" hidden>
@@ -270,6 +286,8 @@
 <script src="wallet/ethers.umd.min.js"></script>
 <script src="wallet/i18n.js"></script>
 <script src="wallet/qrcode.js"></script>
+<script src="wallet/jsqr.js"></script>
+<script src="wallet/qr-tools.js"></script>
 <script src="wallet/config.js"></script>
 <script src="chrome-shim.js"></script>
 <script src="wallet/background.js"></script>

@@ -10,6 +10,8 @@ const { WalletLink } = require('./wallet-link.cjs');
 const { followHost } = require('./home-network.cjs');
 const cliLauncher = require('./cli-launcher.cjs');
 const { poolOfferDue } = require('./pool-offer.cjs');
+const releases = require('./release-check.cjs');
+const vm = require('node:vm');
 
 const NETWORKS = { mainnet: 8545, testnet: 8546 };
 const P2P_PORTS = { mainnet: 30524, testnet: 30525 };
@@ -134,6 +136,7 @@ function startNode(network) {
 
 const stop = (proc) => new Promise((resolve) => {
   if (!proc) { resolve(); return; }
+  proc.stopping = true;   // an ending the user asked for: no "mining stopped" notification
   const t = setTimeout(() => { proc.kill('SIGKILL'); resolve(); }, 6000);
   proc.once('exit', () => { clearTimeout(t); resolve(); });
   proc.kill(isWin ? undefined : 'SIGINT');
@@ -209,7 +212,11 @@ function startMiner({ address, device }) {
     if (used) miner.backend = used[1];
     const m = /Výkon ([\d.]+) ([^\s,]+)/.exec(l);
     if (m) miner.rate = `${m[1]} ${m[2]}`;
-    if (/NALEZEN BLOK/.test(l)) miner.blocks += 1;
+    if (/NALEZEN BLOK/.test(l)) {
+      miner.blocks += 1;
+      minedAt = 0;
+      notify('blocks', tr('Block found'), tr('Your card found a block. The reward goes to {address}.', { address: shortAddress(miner.address) }));
+    }
     const counters = updater.parseMinerLine(l);
     if (counters) {
       miner.counters = counters;
@@ -221,8 +228,10 @@ function startMiner({ address, device }) {
     send({ type: 'miner-log', line: l, rate: miner.rate, blocks: miner.blocks, shares: miner.shares, progress: miner.progress, stage: miner.stage });
   });
   miner.proc.on('error', (e) => push(miner.log, `Miner nelze spustit: ${e.message}`));
+  const started = miner.proc;
   miner.proc.on('exit', (code, signal) => {
     push(miner.log, `Těžař skončil: kód ${code}, signál ${signal}`);
+    if (!started.stopping && !quitting) notify('mining', tr('Mining stopped'), tr('The miner ended unexpectedly. Open Quinvium to start it again.'));
     miner.proc = null;
     keepAwake(false);
     setGpuState(GPU_DRIVER_DEFAULT);
@@ -259,6 +268,8 @@ ipcMain.handle('state', () => ({
   node: { running: !!node.proc, network: node.network, preferred: defaultNetwork(), rpc: rpcPort(), runPool: loadSettings().runPool ?? null, stats: node.stats, log: node.log.slice(-60), seed: loadSettings().seed ?? '', share: accessMode() !== 'off', access: accessMode(), publicHost: loadSettings().publicHost ?? '', endpoints: node.proc ? node.endpoints ?? null : null, lan: lanAddress() },
   miner: { running: !!miner.proc, rate: miner.rate, progress: miner.progress ?? null, stage: miner.stage ?? null, blocks: miner.blocks, shares: miner.shares ?? 0, gpu: miner.gpu ?? null, pool: activePool(), address: miner.address, power: loadSettings().power ?? 100, history: miner.history, log: miner.log.slice(-60) },
   update: { ...update, configured: !!loadSettings().updateUrl, packaged: app.isPackaged },
+  release: { latest: release.latest, checked: release.checked, error: release.error, downloading: release.downloading, file: release.file },
+  notify: Object.fromEntries(NOTIFY_KINDS.map((k) => [k, notifyOn(k)])),
   version: app.getVersion(),
 }));
 ipcMain.handle('node:start', (_, network) => startNode(network));
@@ -424,6 +435,11 @@ function createWindow() {
     if (/^https?:\/\//.test(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
+  // The camera is only for reading a QR code in the wallet window; pages inside the app (the Explorer) never get it.
+  win.webContents.session.setPermissionRequestHandler((contents, permission, callback, details) => {
+    if (permission !== 'media') { callback(true); return; }
+    callback(contents === win?.webContents && (details.mediaTypes ?? []).every((t) => t === 'video'));
+  });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   // Closing the window does not stop the node or mining: the app keeps running in the menu bar / next to the clock.
   win.on('close', (e) => {
@@ -447,10 +463,111 @@ function showWindow() {
   else { win.show(); win.focus(); }
 }
 
+// ---- texts of the main process (tray, notifications) in the language chosen in the window -----------------------
+// The window's dictionary (wallet/i18n.js, the same as in the Chrome wallet) is read once; the window reports the language.
+const appText = (() => {
+  try {
+    const sandbox = { window: {}, localStorage: { getItem: () => null, setItem: () => {} }, document: undefined };
+    vm.createContext(sandbox);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, 'renderer', 'wallet', 'i18n.js'), 'utf8'), sandbox);
+    return sandbox.window.AetherI18n;
+  } catch { return null; }
+})();
+const uiLang = () => loadSettings().lang ?? ((app.getPreferredSystemLanguages?.()[0] ?? app.getLocale()).slice(0, 2));
+function tr(text, vars) {
+  const l = uiLang();
+  const i = appText?.ORDER.indexOf(l) ?? -1;
+  const out = (i >= 0 ? appText.TEXT[text]?.[i] : null) ?? text;
+  return vars ? out.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '') : out;
+}
+const shortAddress = (a) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : '');
+ipcMain.handle('app:context', (_, c) => {
+  const change = {};
+  if (typeof c?.lang === 'string' && /^[a-z]{2}$/.test(c.lang)) change.lang = c.lang;
+  if (typeof c?.address === 'string' && /^0x[0-9a-fA-F]{40}$/.test(c.address)) change.walletAddress = c.address;
+  if (Object.keys(change).length) saveSettings(change);
+  refreshTray();
+  return true;
+});
+
+// ---- notifications: found blocks, incoming payments, mining that stopped by itself, new versions ----------------
+const NOTIFY_KINDS = ['blocks', 'payments', 'mining', 'updates'];
+const notifyOn = (kind) => loadSettings().notify?.[kind] !== false;
+function notify(kind, title, body) {
+  if (!notifyOn(kind) || !Notification.isSupported()) return;
+  const n = new Notification({ title, body, silent: false });
+  n.on('click', showWindow);
+  n.show();
+}
+ipcMain.handle('notify:set', (_, kind, on) => {
+  if (!NOTIFY_KINDS.includes(kind)) throw new Error('Unknown notification');
+  saveSettings({ notify: { ...(loadSettings().notify ?? {}), [kind]: !!on } });
+  return true;
+});
+
+/** New incoming payments to the wallet: the newest ones are remembered, the first look only takes note of them. */
+const PAYMENT_CHECK_MS = 20_000;
+const payments = { key: null, seen: new Set() };
+async function checkPayments() {
+  const address = loadSettings().walletAddress;
+  if (!node.proc || !address || !node.stats) return;
+  const key = `${node.network}:${address.toLowerCase()}`;
+  const r = await rpc('aether_txs', [{ address, direction: 'in', limit: 10 }]).catch(() => null);
+  if (!r) return;
+  const fresh = payments.key === key ? r.items.filter((tx) => !payments.seen.has(tx.hash)) : [];
+  if (payments.key !== key) { payments.key = key; payments.seen.clear(); }
+  for (const tx of r.items) payments.seen.add(tx.hash);
+  if (payments.seen.size > 500) payments.seen = new Set([...payments.seen].slice(-200));
+  for (const tx of fresh.slice(0, 3)) {
+    const value = BigInt(tx.value ?? 0);
+    if (value === 0n) continue;
+    const coin = node.stats?.currency ?? 'QU';
+    const amount = (Number(value / 10n ** 12n) / 1e6).toLocaleString(uiLang(), { maximumFractionDigits: 6 });
+    notify('payments', tr('Payment received'), tr('{amount} {coin} from {from}', { amount, coin, from: shortAddress(tx.from) }));
+  }
+}
+setInterval(() => { checkPayments().catch(() => {}); }, PAYMENT_CHECK_MS);
+
+/** New versions from GitHub, checked on start and every six hours; one notification per version. */
+const RELEASE_CHECK_MS = 6 * 3_600_000;
+const release = { latest: null, checked: null, error: null, downloading: null, file: null };
+async function checkRelease() {
+  try {
+    release.latest = await releases.latest(app.getVersion(), process.platform);
+    release.checked = Date.now();
+    release.error = null;
+  } catch (e) { release.error = e.message; }
+  if (release.latest && loadSettings().notifiedVersion !== release.latest.version) {
+    saveSettings({ notifiedVersion: release.latest.version });
+    notify('updates', tr('New version {v}', { v: release.latest.version }), tr('Quinvium {v} is available. Open Settings to download it.', { v: release.latest.version }));
+  }
+  send({ type: 'state' });
+  return release;
+}
+setTimeout(() => { checkRelease(); }, 20_000);
+setInterval(() => { checkRelease(); }, RELEASE_CHECK_MS);
+ipcMain.handle('release:check', () => checkRelease());
+ipcMain.handle('release:download', async () => {
+  if (!release.latest || release.downloading) return release;
+  release.downloading = { got: 0, total: release.latest.size };
+  release.error = null;
+  try {
+    release.file = await releases.download(release.latest, app.getPath('downloads'), fetch, (got, total) => { release.downloading = { got, total }; });
+    shell.showItemInFolder(release.file);
+  } catch (e) {
+    release.error = e.message;
+  } finally {
+    release.downloading = null;
+    send({ type: 'state' });
+  }
+  return release;
+});
+ipcMain.handle('release:open', () => { if (release.file) shell.showItemInFolder(release.file); return !!release.file; });
+
 // ---- tray: menu bar on macOS, notification area next to the clock on Windows ------------------------------
 let tray = null;
-// Tray texts follow the system language: Czech or English.
-const T = (cs, en) => ((app.getPreferredSystemLanguages?.()[0] ?? app.getLocale()).startsWith('cs') ? cs : en);
+// Tray texts follow the language chosen in the window (tr above).
+const T = (cs, en) => tr(en);
 function trayIcon() {
   const dir = path.join(__dirname, '..', 'assets');
   const image = nativeImage.createFromPath(path.join(dir, process.platform === 'darwin' ? 'trayTemplate.png' : 'tray.png'));
@@ -465,7 +582,8 @@ function trayMenu() {
   const login = app.getLoginItemSettings();
   return Menu.buildFromTemplate([
     { label: node.proc ? `${T('Síť', 'Network')}: ${node.network === 'mainnet' ? 'Mainnet' : 'Testnet'} · ${T('blok', 'block')} ${s?.height?.toLocaleString('en-US') ?? '…'}` : T('Uzel neběží', 'Node is not running'), enabled: false },
-    { label: miner.proc ? `${T('Těžba', 'Mining')}: ${trayRate()} · ${T('nalezené bloky', 'blocks found')} ${miner.blocks}` : T('Těžba je vypnutá', 'Mining is off'), enabled: false },
+    { label: miner.proc ? `${T('Těžba', 'Mining')}: ${trayRate()}` : T('Těžba je vypnutá', 'Mining is off'), enabled: false },
+    ...(minedLabel() ? [{ label: minedLabel(), enabled: false }] : []),
     { type: 'separator' },
     miner.proc
       ? { label: T('Zastavit těžbu', 'Stop mining'), click: () => { stop(miner.proc).then(() => send({ type: 'state' })); } }
@@ -475,6 +593,27 @@ function trayMenu() {
     { label: T('Spouštět po přihlášení', 'Start at login'), type: 'checkbox', checked: !!login.openAtLogin, click: (item) => app.setLoginItemSettings({ openAtLogin: item.checked }) },
     { label: T('Ukončit Quinvium', 'Quit Quinvium'), click: () => app.quit() },
   ]);
+}
+
+/**
+ * Blocks found by the payout address over the whole history of the chain, not only since the app started. The node keeps
+ * the count in its index (aether_addressInfo). In a pool the pool contract mines the blocks, so the address has none of its own.
+ */
+const MINED_CHECK_MS = 30_000;
+let minedAt = 0;
+async function refreshMined() {
+  const address = miner.address ?? loadSettings().lastMining?.address;
+  if (!node.proc || !address || Date.now() - minedAt < MINED_CHECK_MS) return;
+  minedAt = Date.now();
+  const info = await rpc('aether_addressInfo', [address]).catch(() => null);
+  if (info) miner.minedTotal = { address: address.toLowerCase(), network: node.network, blocks: info.mined?.blocks ?? 0 };
+}
+function minedLabel() {
+  const address = (miner.address ?? loadSettings().lastMining?.address)?.toLowerCase();
+  const total = miner.minedTotal?.address === address && miner.minedTotal?.network === node.network ? miner.minedTotal.blocks : null;
+  if (total === null && !miner.proc) return null;
+  const all = `${T('Nalezené bloky celkem', 'Blocks found in total')}: ${total === null ? '…' : total.toLocaleString('en-US')}`;
+  return miner.proc ? `${all} · ${T('teď', 'this session')} ${miner.blocks}` : all;
 }
 
 function refreshTray() {
@@ -500,7 +639,8 @@ setInterval(async () => {
     // RPC addresses and the UPnP result arrive only after the node starts, so the Node page is redrawn as soon as they change.
     const changed = JSON.stringify(endpoints) !== JSON.stringify(node.endpoints ?? null);
     node.endpoints = endpoints;
-    send({ type: 'stats', stats: node.stats, gpu: miner.gpu ?? null });
+    await refreshMined();
+    send({ type: 'stats', stats: node.stats, gpu: miner.gpu ?? null, mined: miner.minedTotal ?? null });
     refreshTray();
     if (changed) send({ type: 'state' });
     resumeMining();
