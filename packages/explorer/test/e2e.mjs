@@ -123,6 +123,21 @@ try {
     });
     return output(c).textContent();
   };
+  /** Name registration: step 1, then the page offers Finish registration as a click of its own. */
+  const register = async (c, values = {}, expected = 'good') => {
+    await clear(c);
+    await c.locator('[data-task="write"]').click();
+    for (const [k, v] of Object.entries(values)) await c.locator(`input[name="${k}"]`).fill(String(v));
+    await c.locator('[data-run]').click();
+    await until(async () => /Dokončit registraci/.test(await c.locator('[data-run]').textContent()), 120000).catch(async () => {
+      throw new Error(`registrace: stránka nenabídla krok 2, ukazuje: ${await output(c).textContent()}`);
+    });
+    assert.match(await output(c).textContent(), /Krok 1 je v řetězci/);
+    await clear(c);
+    await c.locator('[data-run]').click();
+    await until(async () => (await output(c).getAttribute('class')).includes(expected), 120000);
+    return output(c).textContent();
+  };
   const fails = async (c, task, values, text) => assert.match(await act(c, task, values, 'bad'), text);
   const read = async (c, values = {}) => {
     await clear(c);
@@ -236,7 +251,7 @@ try {
     current = buyer;
     const c = card('Jména adres');
     assert.match(await read(c, { name: 'novak-brno' }), /Volné/);
-    assert.match(await act(c, 'write'), /novak-brno\.qu[\s\S]*místo vaší adresy/);
+    assert.match(await register(c), /novak-brno\.qu[\s\S]*místo vaší adresy/);
     names = new ethers.Contract('0xae00000000000000000000000000000000000002', ['function nameOf(address) view returns (string)', 'function resolve(string) view returns (address)'], provider);
     assert.equal(await names.nameOf(buyer.address), 'novak-brno', 'the first name of the account is set as primary in the same flow');
     assert.match(await read(c), new RegExp(buyer.address));
@@ -252,7 +267,7 @@ try {
     current = seller;
     let c = card('Jména adres');
     rejectRegister = true;
-    await fails(c, 'write', { name: 'prodejce', target: '' }, /./);
+    await register(c, { name: 'prodejce', target: '' }, 'bad');
     rejectRegister = false;
     assert.equal(await names.resolve('prodejce'), ethers.ZeroAddress, 'only the commitment is on chain');
     await page.reload();
@@ -261,6 +276,7 @@ try {
     assert.equal(await c.evaluate((d) => d.open), true, 'the card opens by itself');
     assert.match(await output(c).textContent(), /prodejce\.qu není dokončená/);
     assert.equal(await value(c, 'name'), 'prodejce');
+    assert.match(await c.locator('[data-run]').textContent(), /Dokončit registraci/);
     const commits = await provider.getTransactionCount(seller.address);
     await c.locator('[data-run]').click();
     await until(async () => (await output(c).getAttribute('class')).includes('good'), 120000);
@@ -269,7 +285,7 @@ try {
     assert.equal(await names.nameOf(seller.address), 'prodejce');
     // A name that points to another address is not primary there: the address page says so.
     current = buyer;
-    await act(c, 'write', { name: 'pro-arbitra', target: seller.address });
+    await register(c, { name: 'pro-arbitra', target: seller.address });
     await act(c, 'target', { name: 'pro-arbitra', target: arbiter.address });
     await page.goto(`${RPC}/address/${arbiter.address}`);
     await page.waitForSelector('.address-head');

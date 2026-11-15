@@ -33,7 +33,7 @@
       'mine.sub': 'Těžař dostane odměnu 4 QU za blok a všechny poplatky z transakcí v bloku.', 'b.reward': 'Odměna za blok', 'b.baseFees': 'Základní poplatky', 'b.tips': 'Dýška', 'b.total': 'Těžař celkem', 'mine.own': 'Vlastní Quinvium Miner (Windows, macOS, Linux)',
       'mine.other': 'Běžné Windows minery přes Stratum', 'mine.note': 'Těžit lze na libovolný uzel. Účet ani registrace nejsou potřeba, stačí adresa peněženky.',
       'mine.yourAddr': 'VAŠE_ADRESA', 'apps.sub': 'Hotové kontrakty sítě Quinvium pro různé obory. Čtení je zdarma, zápis podepisuje vaše peněženka.',
-      'tool.read': 'Ověřit', 'tool.write': 'Zapsat do řetězce', 'tool.file': 'Nebo vyberte soubor (zůstává ve vašem počítači)', 'tool.sent': 'Transakce odeslána', 'tool.done': 'Potvrzeno v bloku', 'tool.missing': 'Vyplňte pole', 'tool.failed': 'Transakce v bloku selhala', 'tool.nameStep1': 'Krok 1 ze 2: podepište závazek', 'tool.nameStep2': 'Čekám na ochrannou lhůtu, zbývá', 'tool.nameStep3': 'Krok 2 ze 2: podepište registraci', 'tool.namePrimary': 'Poslední krok: podepište, aby se jméno ukazovalo místo vaší adresy', 'tool.nameResume': 'Pokračuji v rozdělané registraci, závazek už je v řetězci.', 'tool.namePending': 'Registrace jména {name} není dokončená: krok 1 je v řetězci, krok 2 chybí. Klikněte na Registrovat a podepište ho (závazek platí 24 hodin od odeslání).', 'tool.nameFinished': 'Jméno se teď ukazuje místo vaší adresy.', 'addr.names': 'Jména .qu', 'addr.namesHint': 'Jméno zatím není hlavní, proto se místo adresy neukazuje.', 'addr.setPrimary': 'Nastavit jako hlavní jméno', 'net.title': 'Síť a uzly', 'net.rpcLan': 'RPC v domácí síti', 'net.rpcPublic': 'RPC z internetu', 'net.rpcPublicFwd': 'RPC z internetu (po přesměrování)', 'net.rpcOnlyHere': 'Uzel přijímá jen tento počítač. Sdílení se zapíná v aplikaci Quinvium v části Uzel, Spojit s jiným počítačem.', 'net.rpcHint': 'Do peněženky v telefonu zadejte RPC z domácí sítě, nebo z internetu, když je telefon na mobilních datech.', 'charts.time': 'Čas bloku (s)', 'charts.diff': 'Obtížnost', 'charts.rate': 'Odhad výkonu (H/s)',
+      'tool.read': 'Ověřit', 'tool.write': 'Zapsat do řetězce', 'tool.file': 'Nebo vyberte soubor (zůstává ve vašem počítači)', 'tool.sent': 'Transakce odeslána', 'tool.done': 'Potvrzeno v bloku', 'tool.missing': 'Vyplňte pole', 'tool.failed': 'Transakce v bloku selhala', 'tool.nameStep1': 'Krok 1 ze 2: podepište závazek', 'tool.nameStep2': 'Čekám na ochrannou lhůtu, zbývá', 'tool.nameStep3': 'Krok 2 ze 2: podepište registraci', 'tool.namePrimary': 'Poslední krok: podepište, aby se jméno ukazovalo místo vaší adresy', 'tool.nameResume': 'Pokračuji v rozdělané registraci, závazek už je v řetězci.', 'tool.namePending': 'Registrace jména {name} není dokončená: krok 1 je v řetězci, krok 2 chybí. Klikněte na Dokončit registraci a podepište ho (závazek platí 24 hodin od odeslání).', 'tool.nameFinished': 'Jméno se teď ukazuje místo vaší adresy.', 'tool.nameReady': 'Krok 1 je v řetězci a ochranná lhůta uplynula. Klikněte na Dokončit registraci a potvrďte krok 2 v peněžence.', 'tool.nameFinish': 'Dokončit registraci (krok 2 ze 3)', 'addr.names': 'Jména .qu', 'addr.namesHint': 'Jméno zatím není hlavní, proto se místo adresy neukazuje.', 'addr.setPrimary': 'Nastavit jako hlavní jméno', 'net.title': 'Síť a uzly', 'net.rpcLan': 'RPC v domácí síti', 'net.rpcPublic': 'RPC z internetu', 'net.rpcPublicFwd': 'RPC z internetu (po přesměrování)', 'net.rpcOnlyHere': 'Uzel přijímá jen tento počítač. Sdílení se zapíná v aplikaci Quinvium v části Uzel, Spojit s jiným počítačem.', 'net.rpcHint': 'Do peněženky v telefonu zadejte RPC z domácí sítě, nebo z internetu, když je telefon na mobilních datech.', 'charts.time': 'Čas bloku (s)', 'charts.diff': 'Obtížnost', 'charts.rate': 'Odhad výkonu (H/s)',
       'rich.sub': 'Adresy podle zůstatku', 'mem.sub': 'Transakce čekající na vytěžení', 'miners.sub': 'Podle posledních 1000 bloků', 'search.none': 'Nic nenalezeno pro',
       'swap.allTrades': 'Všechny směny →', 'swap.mine': 'Moje likvidita', 'swap.searchPair': 'Hledat dvojici', 'swap.linked': 'Částky jsou svázané kurzem poolu', 'swap.linkedRate': 'Svázáno kurzem poolu: 1 {a} = {rate} {b}', 'swap.newPoolRate': 'Nový pool: poměr částek určí počáteční kurz', 'swap.addMore': 'Přidat', 'swap.withdrawPart': 'Vybrat část', 'swap.youGet': 'Dostanete zpět asi {a} a {b}.', 'swap.everything': 'vše', 'swap.pickPart': 'Vyberte, kolik chcete vybrat.', 'swap.showMore': 'Zobrazit dalších {n} (celkem {total})', 'swap.noMatch': 'Hledání neodpovídá žádná dvojice.', 'bridge.step1': 'Uzamčení', 'bridge.step2': 'Potvrzení', 'bridge.step3': 'Připsání', 'bridge.how2n': 'Nezávislí validátoři počkají, až je převod v řetězci dost hluboko, a podepíšou ho. Potřeba je {threshold} z {count} podpisů.',
       'pools.online': 'Server zveřejněný', 'pools.noServerShort': 'Bez serveru', 'pool.asic': 'ASIC a jiné', 'pool.viaApp': 'V aplikaci Quinvium otevřete Těžba → Kam těžíte, najděte tento pool v seznamu a vyberte ho. Těžba pak poběží na vaši peněženku.', 'pool.asicUrl': 'Adresa poolu', 'pool.asicWorker': 'Pracovník (worker)', 'pool.password': 'Heslo', 'pool.loginNote': 'adresa peněženky pro výplaty, za tečkou název zařízení', 'pool.passwordNote': 'libovolné, pool ho nepoužívá', 'pool.algo': 'Algoritmus', 'pool.algoNote': 'standardní Ethash přes EthereumStratum/1.0.0 i ETHPROXY', 'pool.payout': 'Výplaty', 'pool.payoutNote': 'automaticky z kontraktu, PPLNS za posledních {n} min, poplatek provozovatele {fee}', 'pool.software': 'Program', 'pool.connectNote': 'Těžit jde přes server, který provozovatel zveřejnil. Odměny drží kontrakt: provozovatel si vezme jen poplatek a výplatu může každý těžař vybrat i sám tlačítkem Vybrat.', 'pool.share24': 'Podíl na blocích za 24 h', 'pool.blocks24': '{n} bloků za 24 h', 'pool.findMiner': 'Najít těžaře podle adresy', 'pool.minersTotal': 'celkem {n} těžařů', 'pool.minerNotFound': 'Tato adresa v okně poolu neposlala žádný podíl.', 'pool.allMiners': '← Všichni těžaři', 'pool.createdTitle': 'Pool je založený. Co dál:', 'pools.otherPools': 'Ostatní pooly', 'pools.otherCount': 'dalších poolů: {n}', 'pools.all': 'Všechny pooly ({n})', 'pools.find': 'Hledat pool podle jména nebo adresy', 'pools.minersCol': 'Těžaři', 'pools.createdCol': 'Založen', 'pools.noMatch': 'Hledání „{q}“ neodpovídá žádný pool.',
@@ -77,7 +77,7 @@
       'mine.sub': 'The miner gets a 4 QU block reward plus all transaction fees in the block.', 'b.reward': 'Block reward', 'b.baseFees': 'Base fees', 'b.tips': 'Tips', 'b.total': 'Miner total', 'mine.own': 'Quinvium Miner (Windows, macOS, Linux)',
       'mine.other': 'Common Windows miners via Stratum', 'mine.note': 'Mine on any node. No account needed, just your wallet address.',
       'mine.yourAddr': 'YOUR_ADDRESS', 'apps.sub': 'Ready-made Quinvium contracts for many industries. Reading is free, writing is signed by your wallet.',
-      'tool.read': 'Verify', 'tool.write': 'Write to chain', 'tool.file': 'Or choose a file (stays on your computer)', 'tool.sent': 'Transaction sent', 'tool.done': 'Confirmed in block', 'tool.missing': 'Fill in', 'tool.failed': 'The transaction failed in the block', 'tool.nameStep1': 'Step 1 of 2: sign the commitment', 'tool.nameStep2': 'Waiting for the protection period, left', 'tool.nameStep3': 'Step 2 of 2: sign the registration', 'tool.namePrimary': 'Last step: sign so the name is shown instead of your address', 'tool.nameResume': 'Continuing an unfinished registration; the commitment is already on chain.', 'tool.namePending': 'The registration of {name} is not finished: step 1 is on chain, step 2 is missing. Click Register and sign it (the commitment is valid for 24 hours after it was sent).', 'tool.nameFinished': 'The name is now shown instead of your address.', 'addr.names': '.qu names', 'addr.namesHint': 'The name is not primary yet, so it is not shown instead of the address.', 'addr.setPrimary': 'Set as primary name', 'net.title': 'Network', 'net.rpcLan': 'RPC on the home network', 'net.rpcPublic': 'RPC from the internet', 'net.rpcPublicFwd': 'RPC from the internet (after forwarding)', 'net.rpcOnlyHere': 'The node accepts only this computer. Turn on sharing in the Quinvium app under Node, Connect to another computer.', 'net.rpcHint': 'In a phone wallet, enter the home network RPC, or the internet RPC when the phone is on mobile data.', 'charts.time': 'Block time (s)', 'charts.diff': 'Difficulty', 'charts.rate': 'Estimated hashrate (H/s)',
+      'tool.read': 'Verify', 'tool.write': 'Write to chain', 'tool.file': 'Or choose a file (stays on your computer)', 'tool.sent': 'Transaction sent', 'tool.done': 'Confirmed in block', 'tool.missing': 'Fill in', 'tool.failed': 'The transaction failed in the block', 'tool.nameStep1': 'Step 1 of 2: sign the commitment', 'tool.nameStep2': 'Waiting for the protection period, left', 'tool.nameStep3': 'Step 2 of 2: sign the registration', 'tool.namePrimary': 'Last step: sign so the name is shown instead of your address', 'tool.nameResume': 'Continuing an unfinished registration; the commitment is already on chain.', 'tool.namePending': 'The registration of {name} is not finished: step 1 is on chain, step 2 is missing. Click Finish registration and sign it (the commitment is valid for 24 hours after it was sent).', 'tool.nameFinished': 'The name is now shown instead of your address.', 'tool.nameReady': 'Step 1 is on chain and the protection period is over. Click Finish registration and confirm step 2 in your wallet.', 'tool.nameFinish': 'Finish registration (step 2 of 3)', 'addr.names': '.qu names', 'addr.namesHint': 'The name is not primary yet, so it is not shown instead of the address.', 'addr.setPrimary': 'Set as primary name', 'net.title': 'Network', 'net.rpcLan': 'RPC on the home network', 'net.rpcPublic': 'RPC from the internet', 'net.rpcPublicFwd': 'RPC from the internet (after forwarding)', 'net.rpcOnlyHere': 'The node accepts only this computer. Turn on sharing in the Quinvium app under Node, Connect to another computer.', 'net.rpcHint': 'In a phone wallet, enter the home network RPC, or the internet RPC when the phone is on mobile data.', 'charts.time': 'Block time (s)', 'charts.diff': 'Difficulty', 'charts.rate': 'Estimated hashrate (H/s)',
       'rich.sub': 'Addresses by balance', 'mem.sub': 'Transactions waiting to be mined', 'miners.sub': 'From the last 1000 blocks', 'search.none': 'Nothing found for',
       'swap.allTrades': 'All swaps →', 'swap.mine': 'My liquidity', 'swap.searchPair': 'Search pair', 'swap.linked': 'The amounts are linked by the pool rate', 'swap.linkedRate': 'Linked by the pool rate: 1 {a} = {rate} {b}', 'swap.newPoolRate': 'New pool: the ratio of the amounts sets the starting rate', 'swap.addMore': 'Add more', 'swap.withdrawPart': 'Withdraw', 'swap.youGet': 'You get back about {a} and {b}.', 'swap.everything': 'all', 'swap.pickPart': 'Choose how much to withdraw.', 'swap.showMore': 'Show {n} more ({total} in total)', 'swap.noMatch': 'No pair matches the search.', 'bridge.step1': 'Lock', 'bridge.step2': 'Confirm', 'bridge.step3': 'Receive', 'bridge.how2n': 'Independent validators wait until the transfer is deep enough in the chain and sign it. {threshold} of {count} signatures are needed.',
       'pools.online': 'Server published', 'pools.noServerShort': 'No server', 'pool.asic': 'ASIC and others', 'pool.viaApp': 'In the Quinvium app open Mining → Where you mine, find this pool in the list and choose it. Mining then runs for your wallet.', 'pool.asicUrl': 'Pool URL', 'pool.asicWorker': 'Worker', 'pool.password': 'Password', 'pool.loginNote': 'your payout wallet address, then a dot and a device name', 'pool.passwordNote': 'anything, the pool ignores it', 'pool.algo': 'Algorithm', 'pool.algoNote': 'standard Ethash over EthereumStratum/1.0.0 or ETHPROXY', 'pool.payout': 'Payouts', 'pool.payoutNote': 'automatic from the contract, PPLNS over the last {n} min, operator fee {fee}', 'pool.software': 'Software', 'pool.connectNote': 'Mining goes through the server the operator published. The contract holds the rewards: the operator only takes the fee, and every miner can also withdraw on their own with the Withdraw button.', 'pool.share24': 'Block share in 24 h', 'pool.blocks24': '{n} blocks in 24 h', 'pool.findMiner': 'Find a miner by address', 'pool.minersTotal': '{n} miners in total', 'pool.minerNotFound': 'This address sent no share in the pool window.', 'pool.allMiners': '← All miners', 'pool.createdTitle': 'Your pool is created. What next:', 'pools.otherPools': 'Other pools', 'pools.otherCount': '{n} more pools', 'pools.all': 'All pools ({n})', 'pools.find': 'Search pools by name or address', 'pools.minersCol': 'Miners', 'pools.createdCol': 'Created', 'pools.noMatch': 'No pool matches “{q}”.',
@@ -1844,7 +1844,7 @@
     const saved = pendingName(me);
     if (saved && saved.name === v.name && saved.target.toLowerCase() === target.toLowerCase()) {
       const at = Number(await c.commitments(await c.commitment(v.name, me, target, saved.salt)));
-      const now = (await s.provider.getBlock('latest')).timestamp;
+      const now = (await provider().getBlock('latest')).timestamp;
       if (at && now <= at + maxAge) { committed = at; salt = saved.salt; progress(t('tool.nameResume')); }
     }
     if (!committed) {
@@ -1852,16 +1852,21 @@
       salt = ethers.hexlify(ethers.randomBytes(32));
       store.set(pendingNameKey(me), JSON.stringify({ name: v.name, target, salt }));
       progress(t('tool.nameStep1'));
-      const receipt = await (await c.commit(await c.commitment(v.name, me, target, salt))).wait();
-      committed = (await receipt.getBlock()).timestamp;
+      const sent = await c.commit(await c.commitment(v.name, me, target, salt));
+      // Blocks are read from the Explorer's node, not through the wallet: a wallet may report new blocks late.
+      const receipt = await provider().waitForTransaction(sent.hash);
+      if (!receipt?.status) throw new Error(t('tool.failed'));
+      committed = (await provider().getBlock(receipt.blockNumber)).timestamp;
     }
     for (;;) {
-      const latest = await s.provider.getBlock('latest');
+      const latest = await provider().getBlock('latest');
       const left = committed + age - latest.timestamp;
       if (left <= 0) break;
       progress(`${t('tool.nameStep2')} ${left} s`);
       await new Promise((r) => setTimeout(r, Math.min(left * 1000, 3000)));
     }
+    // Step 2 is a click of its own: the wallet's window then opens in front of the user and is not missed.
+    if (!v.finish) throw Object.assign(new Error(t('tool.nameReady')), { nextStep: true });
     progress(t('tool.nameStep3'));
     const tx = await c.register(v.name, 1, target, salt, { value: await c.pricePerYear(v.name) });
     const r = await tx.wait();
@@ -2262,6 +2267,7 @@
         hint.textContent = task.hint ? withCoin(pick(task.hint)) : '';
         hint.classList.toggle('hidden', !task.hint);
         go.textContent = pick(task.label);
+        delete go.dataset.finish;
         out.className = 'tool-output hidden';
       };
       card.querySelectorAll('[data-task]').forEach((b) => b.addEventListener('click', () => select(tool.tasks.find((k) => k.id === b.dataset.task))));
@@ -2275,6 +2281,8 @@
           form.elements.name.value = unfinished.name;
           if (unfinished.target.toLowerCase() !== account.toLowerCase()) form.elements.target.value = unfinished.target;
           show(esc(t('tool.namePending').replace('{name}', `${unfinished.name}.qu`)));
+          go.dataset.finish = '1';
+          go.textContent = t('tool.nameFinish');
           card.open = true;
         });
       }
@@ -2294,7 +2302,9 @@
             return;
           }
           const s = await signer();
+          if (go.dataset.finish) v.finish = true;
           const tx = await task.run(v, s, (text) => show(esc(text)));
+          delete go.dataset.finish;
           show(esc(`${t('tool.sent')}: ${tx.hash}`));
           const r = await tx.wait();
           if (!r.status) throw new Error(t('tool.failed'));
@@ -2303,6 +2313,12 @@
           for (const [name, value] of Object.entries(result.fill ?? {})) if (form.elements[name]) form.elements[name].value = value;
           show(`<p class="tool-done"><strong>${t('tool.done')} #${r.blockNumber}</strong> · <a class="hash" href="/tx/${esc(tx.hash)}">${esc(short(tx.hash, 10))}</a></p>${result.lines ? resultHtml(result.lines) : ''}${result.note ? `<p class="tool-note">${esc(pick(result.note))}</p>` : ''}`, 'good');
         } catch (e) {
+          if (e.nextStep) {
+            go.dataset.finish = '1';
+            go.textContent = t('tool.nameFinish');
+            show(esc(e.message));
+            return;
+          }
           show(esc(e.missing ? `${t('tool.missing')}: ${withCoin(pick(tool.fields[e.missing] ?? L(e.missing, e.missing)))}` : errorText(e)), 'bad');
         } finally { go.disabled = false; }
       });
