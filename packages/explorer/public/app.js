@@ -133,6 +133,7 @@
     document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = t(el.dataset.t); });
     document.querySelectorAll('[data-t-ph]').forEach((el) => { el.placeholder = t(el.dataset.tPh); });
     document.querySelectorAll('[data-t-title]').forEach((el) => { el.title = t(el.dataset.tTitle); el.setAttribute('aria-label', el.title); });
+    document.dispatchEvent(new Event('quinvium:lang'));
     $('lang-label').textContent = lang.toUpperCase();
     document.querySelectorAll('#lang-pop button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.lang === lang)));
     document.documentElement.lang = lang;
@@ -4127,17 +4128,25 @@
     menus();
     try { contracts = await (await fetch('/contracts.json')).json(); } catch { contracts = {}; }
     document.querySelectorAll('[data-theme-set]').forEach((b) => { b.onclick = () => theme(b.dataset.themeSet); });
-    const coinButtons = () => document.querySelectorAll('[data-coin-set]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.coinSet === coinStyle)));
-    coinButtons();
-    document.querySelectorAll('[data-coin-set]').forEach((b) => {
-      b.onclick = () => {
-        coinStyle = b.dataset.coinSet;
-        store.set('quinvium.coin', coinStyle);
-        coinButtons();
-        refreshStats();
-        render();
-      };
-    });
+    // The currency button in the header shows the current style and switches to the other one.
+    const coinButton = () => {
+      const b = $('coin-btn');
+      b.textContent = coinStyle === 'symbol' ? '\uE000' : 'QU';
+      b.title = t(coinStyle === 'symbol' ? 'coin.text' : 'coin.symbol');
+      b.setAttribute('aria-label', b.title);
+      b.setAttribute('aria-pressed', String(coinStyle === 'symbol'));
+      $('coin-nav').textContent = `${t(coinStyle === 'symbol' ? 'coin.text' : 'coin.symbol')} (${coinStyle === 'symbol' ? 'QU' : '\uE000'})`;
+    };
+    coinButton();
+    $('coin-nav').onclick = () => { $('coin-btn').click(); closeNav(); };
+    $('coin-btn').onclick = () => {
+      coinStyle = coinStyle === 'symbol' ? 'text' : 'symbol';
+      store.set('quinvium.coin', coinStyle);
+      coinButton();
+      refreshStats();
+      render();
+    };
+    document.addEventListener('quinvium:lang', coinButton);
     $('footer-year').textContent = String(new Date().getFullYear());
     $('to-top').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
     $('login-btn').onclick = () => (account && !wrongNetwork() ? $('account-pop').classList.toggle('open') : connect().catch(() => { /* průvodce už vše řekl */ }));

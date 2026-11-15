@@ -981,4 +981,16 @@ body:not(.compact-nav) .main-nav { flex-shrink: 0; }
 body:not(.compact-nav) .header-search { flex: 1 1 200px; max-width: 240px; }
 
 /* Currency shown as QU or as the Quinvium symbol */
-.coin-switch button { min-width: 34px; font-weight: 600; }
+.chip.coin-icon { height: 34px; min-width: 34px; padding: 0 8px; justify-content: center; font-weight: 600; font-size: 13px; }
+body:not(.embedded) .chip.coin-icon { margin-inline-start: auto; }
+body:not(.embedded) .chip.coin-icon + #hnet-wrap { margin-inline-start: 0; }
+body.compact-nav .chip.coin-icon { order: 2; margin-inline-start: auto; }
+body.compact-nav .chip.coin-icon + #hnet-wrap { margin-inline-start: 0; }
+.chip.coin-icon[aria-pressed="true"] { font-size: 19px; font-weight: 400; }
+/* On a phone the button moves into the menu so the header keeps one row. */
+.coin-nav { display: none; }
+@media (max-width: 480px) {
+  body.compact-nav .chip.coin-icon { display: none; }
+  body.compact-nav .chip.coin-icon + #hnet-wrap { margin-inline-start: auto; }
+  body.compact-nav .coin-nav { display: flex; }
+}

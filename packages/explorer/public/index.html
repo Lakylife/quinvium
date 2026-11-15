@@ -61,7 +61,9 @@
           <a href="/api" data-nav="api" data-t="nav.api">Developers</a>
         </div>
       </div>
+      <button type="button" class="nav-link coin-nav" id="coin-nav"></button>
     </nav>
+    <button type="button" class="chip coin-icon" id="coin-btn" aria-pressed="false">QU</button>
     <div class="pop-wrap embedded-hide" id="hnet-wrap">
       <button class="chip net-icon" id="hnet-btn" aria-haspopup="menu" aria-expanded="false" title="Mainnet" aria-label="Network"><svg class="net-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="18" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M10.8 7.2 6.3 15.8M13.2 7.2l4.5 8.6M7.5 18h9"/></svg><i class="net-dot" id="hnet-dot"></i><span class="sr-only" id="hnet-label">Mainnet</span><svg class="chev" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 3.500 3 3 3-3"/></svg></button>
       <div class="pop net-pop" id="hnet-pop" role="menu">
@@ -111,10 +113,6 @@
       <div class="pop-wrap" id="lang-wrap">
         <button class="chip" id="lang-btn" aria-haspopup="menu" aria-expanded="false" title="Language" aria-label="Language"><span id="lang-label">EN</span><svg class="chev" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 3.500 3 3 3-3"/></svg></button>
         <div class="pop" id="lang-pop" role="menu"></div>
-      </div>
-      <div class="theme-switch coin-switch" id="coin-switch" role="group" aria-label="Currency">
-        <button data-coin-set="text" data-t-title="coin.text">QU</button>
-        <button data-coin-set="symbol" data-t-title="coin.symbol">&#xE000;</button>
       </div>
       <div class="theme-switch" id="theme-switch" role="group" aria-label="Theme">
         <button data-theme-set="light" aria-label="Light" title="Light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.900 4.900l1.400 1.400M17.700 17.700l1.400 1.400M2 12h2M20 12h2M4.900 19.100l1.400-1.400M17.700 6.300l1.400-1.400"/></svg></button>

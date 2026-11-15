@@ -370,12 +370,12 @@ try {
     await until(async () => /prodejce\.qu/.test(await page.locator('#login-btn').innerText()), 20000);
     await page.click('#login-btn');
     assert.match(await page.locator('#account-pop .pop-name').innerText(), /prodejce\.qu/);
-    await page.click('[data-coin-set="symbol"]');
+    await page.click('#coin-btn');
     await until(async () => (await page.locator('#app').innerText()).includes('\uE000'), 10000);
     assert.ok(await page.evaluate(async () => { await document.fonts.load('16px QuinviumSymbol', '\uE000'); return document.fonts.check('16px QuinviumSymbol', '\uE000'); }), 'the symbol font loads');
     await page.reload();
     await until(async () => (await page.locator('#app').innerText()).includes('\uE000'), 10000);
-    await page.click('[data-coin-set="text"]');
+    await page.click('#coin-btn');
     await until(async () => !(await page.locator('#app').innerText()).includes('\uE000') && /dQU/.test(await page.locator('#app').innerText()), 10000);
   });
 
