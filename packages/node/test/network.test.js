@@ -229,3 +229,41 @@ test('addresses learned from peer exchange survive a restart of the node', async
   assert.ok(!known.includes('10.0.0.5:30524'), 'a private address from a stranger is not kept');
   again.close();
 });
+
+test('a late answer to a timed-out request is not misbehaviour, an unrequested one still is', async () => {
+  const { EventEmitter } = await import('node:events');
+  const { RLP } = await import('@ethereumjs/rlp');
+  const { intToBytes } = await import('../src/util/bytes.js');
+  const ch = Object.assign(new EventEmitter(), { send: () => true, close() {} });
+  const p = new Peer(ch, '203.0.113.7', false);
+  const late = p.request(MSG.GET_HEADERS, [[], intToBytes(1n)], 10).catch((e) => e);
+  assert.match((await late).message, /včas/);
+  const frame = (id) => Buffer.from(RLP.encode([intToBytes(id), []]));
+  p._onFrame(MSG.HEADERS, frame(1n));
+  assert.equal(p.score, 0, 'a late answer to our own request costs nothing');
+  p._onFrame(MSG.HEADERS, frame(1n));
+  p._onFrame(MSG.HEADERS, frame(99n));
+  assert.equal(p.score, 20, 'a repeated or unrequested answer is penalised');
+});
+
+test('a pinned seed is only paused, not banned for an hour; other peers are banned for an hour', async () => {
+  const { EventEmitter } = await import('node:events');
+  const a = await node();
+  a.net.allowPrivate = false;   // with allowPrivate, private addresses are never banned; these are public test addresses
+  const wire = (ip, pinnedSeed) => {
+    const socket = Object.assign(new EventEmitter(), { write: () => true, end() {}, destroy() {}, setNoDelay() {} });
+    a.net._setup(socket, ip, false, 30524);
+    const peer = [...a.net.peers].find((p) => p.address === ip);
+    peer.verified = pinnedSeed;
+    peer.pinnedSeed = pinnedSeed;
+    return peer;
+  };
+  const now = Date.now();
+  wire('203.0.113.7', true).misbehave(100, 'test');
+  wire('203.0.113.8', false).misbehave(100, 'test');
+  const seedFor = a.net.bans.get('203.0.113.7') - now;
+  const otherFor = a.net.bans.get('203.0.113.8') - now;
+  assert.ok(seedFor > 0 && seedFor <= 61_000, `the seed is only paused (${seedFor} ms)`);
+  assert.ok(otherFor > 3_500_000, 'other peers are banned for an hour');
+  await stopAll(a);
+});

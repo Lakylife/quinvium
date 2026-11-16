@@ -11,6 +11,7 @@ const OVER_LIMIT_POINTS = 10;
 const MAX_MSGS_PER_SECOND = 512;
 const MAX_BYTES_PER_SECOND = 64 * 1024 * 1024;
 const MAX_KNOWN = 32_768;
+const MAX_EXPIRED = 256;           // ids of timed-out requests whose late answer is not misbehaviour
 
 /** Rate limiting: `rate` tokens are added per second up to the `burst` cap. */
 export class Bucket {
@@ -58,6 +59,7 @@ export class Peer extends EventEmitter {
     this.lastSeen = Date.now();
     this.nextId = 1n;
     this.pending = new Map();
+    this.expired = new Set();
     this.window = { start: Date.now(), msgs: 0, bytes: 0 };
     this.budget = Object.fromEntries(Object.entries(BUDGET).map(([t, [r, b]]) => [t, new Bucket(r, b)]));
     this.txBudget = new Bucket(64, 256);
@@ -125,6 +127,8 @@ export class Peer extends EventEmitter {
         req.resolve(body[1]);
         return;
       }
+      // A slow but honest peer answers after our timeout: that answer was requested, so it costs nothing.
+      if (this.expired.delete(id)) return;
       this.misbehave(10, 'nevyžádaná odpověď');
       return;
     }
@@ -139,6 +143,8 @@ export class Peer extends EventEmitter {
       const id = this.nextId++;
       const timer = setTimeout(() => {
         this.pending.delete(id);
+        if (this.expired.size >= MAX_EXPIRED) this.expired.delete(this.expired.values().next().value);
+        this.expired.add(id);
         reject(new Error('uzel neodpověděl včas'));
       }, timeout);
       this.pending.set(id, { resolve, reject, timer });
