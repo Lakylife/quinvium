@@ -1,6 +1,36 @@
 // quinvium.com: menu, live mainnet status, adding the network to a wallet, smooth reveal of sections.
 (() => {
-  const RPC = 'https://rpc.quinvium.com';
+  // The network's own RPC nodes, in order. When none answers, verified community nodes take over (quinvium_publicNodes,
+  // remembered in this browser and confirmed by the mainnet chain ID), so the live data survives a server outage.
+  const RPCS = ['https://rpc.quinvium.com'];
+  const RPC = RPCS[0];
+  const CHAIN_ID = '0xccb1';
+  const COMMUNITY_KEY = 'quinvium.publicNodes.site';
+  const NODE_URL = /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+$/;
+  const remembered = () => { try { return (JSON.parse(localStorage.getItem(COMMUNITY_KEY) ?? '[]') ?? []).filter((u) => NODE_URL.test(u)).slice(0, 8); } catch { return []; } };
+  let rpcId = 1;
+  let current = RPC;
+  const post = async (url, method, params = []) => {
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: rpcId++, method, params }), signal: AbortSignal.timeout(8000) });
+    return r.json();
+  };
+  /** One JSON-RPC call: the node in use, then the network's other nodes, then community nodes of the right chain. */
+  const send = async (method, params = []) => {
+    for (const url of [...new Set([current, ...RPCS, ...remembered()])]) {
+      try {
+        if (!RPCS.includes(url) && url !== current && (await post(url, 'eth_chainId')).result !== CHAIN_ID) continue;
+        const d = await post(url, method, params);
+        if (current !== url) current = url;
+        return d;
+      } catch { /* the next node */ }
+    }
+    throw new Error('no node answers');
+  };
+  // The list of community nodes is refreshed from the network's own node while it is up.
+  post(RPC, 'quinvium_publicNodes').then((d) => {
+    const urls = (Array.isArray(d?.result) ? d.result : []).map((n) => String(n?.url ?? '')).filter((u) => NODE_URL.test(u)).slice(0, 8);
+    if (urls.length) try { localStorage.setItem(COMMUNITY_KEY, JSON.stringify([...new Set([...urls, ...remembered()])].slice(0, 8))); } catch { /* private window */ }
+  }).catch(() => {});
   const GENESIS = 1794610800; // 14 Nov 2026 00:00 CET
   const lang = document.body.dataset.lang || 'en';
   // Texts the script writes itself, in every language of the site.
@@ -127,8 +157,8 @@
   const fdot = document.querySelector('[data-foot-dot]');
   const ftext = document.querySelector('[data-foot-text]');
   if (fdot && ftext) {
-    fetch(RPC, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }), signal: AbortSignal.timeout(8000) })
-      .then((r) => r.json()).then((d) => { const h = Number(BigInt(d.result)); ftext.textContent = say('block', h.toLocaleString(LOCALES[lang] ?? 'en-US')); fdot.className = 'dot on'; })
+    send('eth_blockNumber')
+      .then((d) => { const h = Number(BigInt(d.result)); ftext.textContent = say('block', h.toLocaleString(LOCALES[lang] ?? 'en-US')); fdot.className = 'dot on'; })
       .catch(() => { ftext.textContent = say('down'); fdot.className = 'dot off'; });
   }
 
@@ -143,10 +173,8 @@
   const unit = (v, units) => { let i = 0; while (v >= 1000 && i < units.length - 1) { v /= 1000; i += 1; } return `${fmt(v, v < 10 ? 2 : 1)} ${units[i]}`; };
   const set = (k, v) => { const el = live.querySelector(`[data-m="${k}"]`); if (el) el.textContent = v; };
   const ago = (s) => (s < 60 ? `${Math.max(0, Math.round(s))} s` : s < 3600 ? `${Math.round(s / 60)} min` : `${Math.round(s / 3600)} h`);
-  let id = 1;
   const call = async (method, params = []) => {
-    const r = await fetch(RPC, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: id++, method, params }), signal: AbortSignal.timeout(8000) });
-    const d = await r.json();
+    const d = await send(method, params);
     if (d.error) throw new Error(d.error.message);
     return d.result;
   };
