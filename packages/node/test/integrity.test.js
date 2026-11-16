@@ -62,7 +62,7 @@ test('a balance overwritten in the database is detected even while the node keep
   });
   const r = await audit(dataDir, NETWORKS.dev, alloc, { quick: true });
   assert.equal(r.ok, false);
-  assert.match(r.problems[0], /nesouhlasí se svým hashem/);
+  assert.match(r.problems[0], /does not match its hash/);
 });
 
 test('a changed transaction in a stored block is detected', async () => {
@@ -75,7 +75,7 @@ test('a changed transaction in a stored block is detected', async () => {
   });
   const r = await audit(dataDir, NETWORKS.dev, alloc);
   assert.equal(r.ok, false);
-  assert.match(r.problems[0], /blok 3|bloku 3/);
+  assert.match(r.problems[0], /block 3|blok 3|bloku 3/);
 });
 
 test('a changed header is detected; the hash protects it', async () => {
@@ -88,7 +88,7 @@ test('a changed header is detected; the hash protects it', async () => {
   });
   const r = await audit(dataDir, NETWORKS.dev, alloc);
   assert.equal(r.ok, false);
-  assert.match(r.problems[0], /hlavička bloku 2|bloku 2/);
+  assert.match(r.problems[0], /header of block 2|block 2/);
 });
 
 test('a block slipped into the canonical chain is detected', async () => {
@@ -106,7 +106,7 @@ test('a fake balance in the Explorer index is detected', async () => {
   edit(dataDir, (db) => db.prepare('UPDATE accounts SET balance_hex=? WHERE addr=?').run('ffffffffffff', Buffer.from(a.address)));
   const r = await audit(dataDir, NETWORKS.dev, alloc);
   assert.equal(r.ok, false);
-  assert.ok(r.problems.some((p) => /rejstřík zůstatků lže/.test(p)), r.problems.join('; '));
+  assert.ok(r.problems.some((p) => /balance index is wrong/.test(p)), r.problems.join('; '));
 });
 
 test('a miner cannot credit itself extra coins: the network rejects a block with a forged state', async () => {
@@ -124,7 +124,7 @@ test('a miner cannot credit itself extra coins: the network rejects a block with
   db.flush();
   const block = new Block(new Header({ ...fields(template.header), stateRoot: forged }), template.txs);
   const sealed = await seal(chain, block);
-  await assert.rejects(chain.insertBlock(sealed), (e) => e instanceof InvalidBlock && /kořen stavu/.test(e.message));
+  await assert.rejects(chain.insertBlock(sealed), (e) => e instanceof InvalidBlock && /state root/.test(e.message));
   assert.equal(chain.head.number, 2n, 'řetězec se nepohnul');
 });
 
@@ -136,7 +136,7 @@ test('foreign coins cannot be spent: an amount changed after signing points to a
   const json = signed.toJSON();
   const tampered = createFeeMarket1559Tx({ ...json, value: 900n * WEI, type: 2 }, { common: chain.common });
   assert.notDeepEqual(tampered.getSenderAddress().bytes, new Address(victim.address).bytes, 'podpis už nepatří oběti');
-  await assert.rejects(mine(chain, { mutate: (b) => new Block(b.header, [tampered]) }), /transakcí|neplatn|nelze|Invalid|invalid|nonce|sender|balance/i);
+  await assert.rejects(mine(chain, { mutate: (b) => new Block(b.header, [tampered]) }), /transaction|invalid|cannot|Invalid|nonce|sender|balance|insufficient/i);
   await assert.rejects(chain.mempool.add(tampered), /./);
 });
 
@@ -174,7 +174,7 @@ test('checkpoint: the network rejects a foreign branch at the given height even 
   for (let i = 0; i < 8; i++) await mine(attacker, { miner: new Uint8Array(20).fill(9) });
   const results = [];
   for (let n = 1n; n <= 8n; n += 1n) results.push(await chain.insertBlock(attacker.getBlockByNumber(n)).catch((e) => e));
-  assert.ok(results.some((r) => r instanceof InvalidBlock && /kontrolní/.test(r.message)), 'přepis pod kontrolním bodem je zastavený');
+  assert.ok(results.some((r) => r instanceof InvalidBlock && /checkpoint/.test(r.message)), 'přepis pod kontrolním bodem je zastavený');
   assert.equal(chain.head.hash().toString(), honest.head.hash().toString(), 'řetězec zůstal na poctivé větvi');
 });
 
@@ -187,13 +187,13 @@ test('checkpoint: a new node rejects a foreign chain and does not open a databas
   const network = { ...NETWORKS.dev, checkpoints: [{ number: 2n, hash: toHex(honest.getHeaderByNumber(2n).hash()) }] };
   const fresh = await newChain({ network });
   await fresh.insertBlock(fake.getBlockByNumber(1n));
-  await assert.rejects(fresh.insertBlock(fake.getBlockByNumber(2n)), /kontrolnímu bodu/);
+  await assert.rejects(fresh.insertBlock(fake.getBlockByNumber(2n)), /checkpoint/);
   const dataDir = tmpData();
   const onDisk = await newChain({ dataDir });
   await mine(onDisk, { miner: new Uint8Array(20).fill(7) });
   await mine(onDisk, { miner: new Uint8Array(20).fill(7) });
   await onDisk.close();
-  await assert.rejects(Chain.open({ network, dataDir, powDir: POW_DIR }), /kontrolnímu bodu/);
+  await assert.rejects(Chain.open({ network, dataDir, powDir: POW_DIR }), /checkpoint/);
 });
 
 /**

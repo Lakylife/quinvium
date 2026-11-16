@@ -219,9 +219,9 @@ test('Quinvium mainnet and Ethereum require enough confirmations, otherwise the 
   const { MIN_CONFIRMATIONS } = await import('../src/relayer.js');
   const wallet = ethers.Wallet.createRandom();
   const chain = (id, confirmations) => ({ id, name: `síť ${id}`, provider: A.provider, gateway: gateA.target, confirmations });
-  assert.throws(() => new Relayer({ chains: [chain(52401n, 12)], privateKey: wallet.privateKey }), /aspoň 240 potvrzení/);
-  assert.throws(() => new Relayer({ chains: [chain(1n, 12)], privateKey: wallet.privateKey }), /aspoň 64 potvrzení/);
-  assert.throws(() => new Relayer({ chains: [chain(52402n, 0)], privateKey: wallet.privateKey }), /aspoň 1 potvrzení/);
+  assert.throws(() => new Relayer({ chains: [chain(52401n, 12)], privateKey: wallet.privateKey }), /at least 240 confirmations/);
+  assert.throws(() => new Relayer({ chains: [chain(1n, 12)], privateKey: wallet.privateKey }), /at least 64 confirmations/);
+  assert.throws(() => new Relayer({ chains: [chain(52402n, 0)], privateKey: wallet.privateKey }), /at least 1 confirmations/);
   assert.ok(new Relayer({ chains: [chain(52401n, MIN_CONFIRMATIONS[52401])], privateKey: wallet.privateKey }));
   assert.ok(new Relayer({ chains: [chain(52402n, 12)], privateKey: wallet.privateKey }), 'testnet s 12 potvrzeními projde');
 });

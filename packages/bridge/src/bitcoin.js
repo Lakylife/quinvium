@@ -53,7 +53,7 @@ function convertBits(data, from, to, pad) {
   const out = [];
   const max = (1 << to) - 1;
   for (const value of data) {
-    if (value >> from) throw new Error('Neplatná hodnota adresy');
+    if (value >> from) throw new Error('Invalid address value');
     acc = (acc << from) | value;
     bits += from;
     while (bits >= to) {
@@ -65,7 +65,7 @@ function convertBits(data, from, to, pad) {
   if (pad) {
     if (bits) out.push((acc << (to - bits)) & max);
   } else if (bits >= from || (acc << (to - bits)) & max) {
-    throw new Error('Neplatné doplnění adresy');
+    throw new Error('Invalid address padding');
   }
   return out;
 }
@@ -79,17 +79,17 @@ export function encodeSegwit(hrp, version, program) {
 }
 
 export function decodeSegwit(hrp, address) {
-  if (address.length > 90 || (address !== address.toLowerCase() && address !== address.toUpperCase())) throw new Error('Neplatná adresa');
+  if (address.length > 90 || (address !== address.toLowerCase() && address !== address.toUpperCase())) throw new Error('Invalid address');
   const text = address.toLowerCase();
   const split = text.lastIndexOf('1');
-  if (split < 1 || text.slice(0, split) !== hrp || text.length - split < 7) throw new Error('Adresa patří jiné síti');
+  if (split < 1 || text.slice(0, split) !== hrp || text.length - split < 7) throw new Error('The address belongs to another network');
   const values = [...text.slice(split + 1)].map((c) => CHARSET.indexOf(c));
-  if (values.includes(-1)) throw new Error('Neplatný znak v adrese');
+  if (values.includes(-1)) throw new Error('Invalid character in the address');
   const constant = polymod([...expandHrp(hrp), ...values]);
   const version = values[0];
-  if (version > 16 || constant !== (version === 0 ? BECH32 : BECH32M)) throw new Error('Neplatný kontrolní součet adresy');
+  if (version > 16 || constant !== (version === 0 ? BECH32 : BECH32M)) throw new Error('Invalid address checksum');
   const program = Buffer.from(convertBits(values.slice(1, -6), 5, 8, false));
-  if (program.length < 2 || program.length > 40 || (version === 0 && program.length !== 20 && program.length !== 32)) throw new Error('Neplatná délka adresy');
+  if (program.length < 2 || program.length > 40 || (version === 0 && program.length !== 20 && program.length !== 32)) throw new Error('Invalid address length');
   return { version, program };
 }
 
@@ -101,21 +101,21 @@ function decodeBase58Check(address) {
   let n = 0n;
   for (const c of address) {
     const digit = BASE58.indexOf(c);
-    if (digit < 0) throw new Error('Neplatný znak v adrese');
+    if (digit < 0) throw new Error('Invalid character in the address');
     n = n * 58n + BigInt(digit);
   }
   const hex = n.toString(16);
   const body = Buffer.from(hex.padStart(hex.length + (hex.length % 2), '0'), 'hex');
   const zeros = /^1*/.exec(address)[0].length;
   const all = Buffer.concat([Buffer.alloc(zeros), body]);
-  if (all.length !== 25 || !hash256(all.subarray(0, 21)).subarray(0, 4).equals(all.subarray(21))) throw new Error('Neplatný kontrolní součet adresy');
+  if (all.length !== 25 || !hash256(all.subarray(0, 21)).subarray(0, 4).equals(all.subarray(21))) throw new Error('Invalid address checksum');
   return { version: all[0], hash: all.subarray(1, 21) };
 }
 
 /** @returns {Buffer} output script for an address of the given network; an invalid address or another network throws */
 export function addressScript(address, networkName) {
   const net = NETWORKS[networkName];
-  if (!net) throw new Error('Neznámá síť Bitcoinu');
+  if (!net) throw new Error('Unknown Bitcoin network');
   if (address.toLowerCase().startsWith(`${net.hrp}1`)) {
     const { version, program } = decodeSegwit(net.hrp, address);
     return Buffer.from([version === 0 ? OP_0 : OP_1 + version - 1, program.length, ...program]);
@@ -123,7 +123,7 @@ export function addressScript(address, networkName) {
   const { version, hash } = decodeBase58Check(address);
   if (version === net.p2pkh) return Buffer.from([OP_DUP, OP_HASH160, ADDRESS_PUSH, ...hash, OP_EQUALVERIFY, OP_CHECKSIG]);
   if (version === net.p2sh) return Buffer.from([OP_HASH160, ADDRESS_PUSH, ...hash, OP_EQUAL]);
-  throw new Error('Adresa patří jiné síti');
+  throw new Error('The address belongs to another network');
 }
 
 // ---- escrow --------------------------------------------------------------------------------------
@@ -139,7 +139,7 @@ const sortedKeys = (pubkeys) => pubkeys.map((k) => Buffer.from(k)).sort(Buffer.c
  */
 export function custodyScript(pubkeys, threshold, recipient) {
   const keys = sortedKeys(pubkeys);
-  if (keys.length > MAX_KEYS || threshold < 1 || threshold > keys.length) throw new Error('Neplatné nastavení úschovy');
+  if (keys.length > MAX_KEYS || threshold < 1 || threshold > keys.length) throw new Error('Invalid custody settings');
   const prefix = recipient ? [ADDRESS_PUSH, ...Buffer.from(recipient.slice(2), 'hex'), OP_DROP] : [];
   return Buffer.from([...prefix, smallInt(threshold), ...keys.flatMap((k) => [k.length, ...k]), smallInt(keys.length), OP_CHECKMULTISIG]);
 }
@@ -195,7 +195,7 @@ export function serializeTx(tx, witness = false) {
 export function parseTx(raw) {
   let at = 0;
   const take = (n) => {
-    if (at + n > raw.length) throw new Error('Transakce je zkrácená');
+    if (at + n > raw.length) throw new Error('The transaction is truncated');
     at += n;
     return raw.subarray(at - n, at);
   };
@@ -204,13 +204,13 @@ export function parseTx(raw) {
     if (first < 0xfd) return first;
     if (first === 0xfd) return take(2).readUInt16LE();
     if (first === 0xfe) return take(4).readUInt32LE();
-    throw new Error('Transakce je příliš dlouhá');
+    throw new Error('The transaction is too long');
   };
   const version = take(4).readUInt32LE();
   const inputs = Array.from({ length: readVarint() }, () => {
     const txid = Buffer.from(take(32)).reverse().toString('hex');
     const vout = take(4).readUInt32LE();
-    if (readVarint() !== 0) throw new Error('Vstup úschovy nemá mít scriptSig');
+    if (readVarint() !== 0) throw new Error('A custody input must not have a scriptSig');
     return { txid, vout, sequence: take(4).readUInt32LE() };
   });
   const outputs = Array.from({ length: readVarint() }, () => {
@@ -218,7 +218,7 @@ export function parseTx(raw) {
     return { value, script: Buffer.from(take(readVarint())) };
   });
   const locktime = take(4).readUInt32LE();
-  if (at !== raw.length) throw new Error('Za transakcí jsou další data');
+  if (at !== raw.length) throw new Error('There is more data after the transaction');
   return { version, locktime, inputs, outputs };
 }
 
@@ -265,7 +265,7 @@ export function signInput(tx, index, witnessScript, value, privateKey) {
  */
 export function multisigWitness(pubkeys, threshold, signatures, witnessScript) {
   const ordered = sortedKeys(pubkeys).map((k) => signatures.get(k.toString('hex'))).filter(Boolean).slice(0, threshold);
-  if (ordered.length < threshold) throw new Error('Nedostatek podpisů');
+  if (ordered.length < threshold) throw new Error('Not enough signatures');
   return [Buffer.alloc(0), ...ordered, witnessScript];
 }
 

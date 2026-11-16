@@ -157,11 +157,11 @@ try {
   await step('pool server: the node starts with the settings and a wrong address does not crash it', async () => {
     const state = () => win.evaluate(() => window.desktop.state());
     await win.evaluate((a) => window.desktop.runPool(a), ADDRESS);
-    await until(async () => (await state()).node.log.some((l) => /Pool zatím neběží/.test(l)), 30000);
+    await until(async () => (await state()).node.log.some((l) => /The pool does not run yet|Pool zatím neběží/.test(l)), 30000);
     assert.equal((await state()).node.running, true);
     assert.deepEqual((await state()).node.runPool, { network: 'testnet', address: ADDRESS });
     await win.evaluate(() => window.desktop.runPool(''));
-    await until(async () => { const s = await state(); return s.node.running && s.node.runPool === null && s.node.log.some((l) => /Blok|Uzel|RPC/.test(l)); }, 30000);
+    await until(async () => { const s = await state(); return s.node.running && s.node.runPool === null && s.node.log.some((l) => /Block|Blok|Uzel|RPC/.test(l)); }, 30000);
     await win.waitForFunction(() => /block \d/.test(document.getElementById('status').textContent), null, { timeout: 30000 });
     // The node is restarted here on purpose; window requests fail during that moment and continue after it returns.
     errors.splice(0, errors.length, ...errors.filter((e) => !/ERR_CONNECTION_REFUSED/.test(e)));

@@ -137,7 +137,7 @@ export async function auditChain({ network, dataDir, powDir, alloc = loadAlloc()
       const wrong = [];
       for (const { addr, balance_hex: hex } of source.accounts()) {
         const account = await state.getAccountByBytes(u8(addr));
-        if ((account?.balance ?? 0n) !== BigInt(`0x${hex}`)) wrong.push(`rejstřík zůstatků lže u adresy ${toHex(u8(addr))}`);
+        if ((account?.balance ?? 0n) !== BigInt(`0x${hex}`)) wrong.push(`the balance index is wrong for address ${toHex(u8(addr))}`);
         if (wrong.length >= MAX_PROBLEMS) break;
       }
       if (source.headNumber() === height) problems.push(...wrong);

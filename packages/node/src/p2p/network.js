@@ -231,7 +231,7 @@ export class Network extends EventEmitter {
     this.timers.forEach(clearInterval);
     this.chain.off('head', this._onHead);
     this.discovery?.stop();
-    for (const p of this.peers) p.disconnect('vypnutí uzlu');
+    for (const p of this.peers) p.disconnect('node shutting down');
     await new Promise((r) => (this.server ? this.server.close(() => r()) : r()));
   }
 
@@ -301,7 +301,7 @@ export class Network extends EventEmitter {
     const peer = new Peer(channel, ip, inbound);
     peer.listenPort = dialPort;
     this.peers.add(peer);
-    const timeout = setTimeout(() => peer.disconnect('handshake vypršel'), HANDSHAKE_TIMEOUT);
+    const timeout = setTimeout(() => peer.disconnect('handshake timed out'), HANDSHAKE_TIMEOUT);
     channel.on('ready', () => this._sendHello(peer));
     peer.on('message', (type, body) => {
       this._handle(peer, type, body).catch((e) => {
@@ -316,7 +316,7 @@ export class Network extends EventEmitter {
         if (this.bans.size >= MAX_BANS) this.bans.delete(this.bans.keys().next().value);
         this.bans.set(ip, Date.now() + (this._isPinnedSeed(peer) ? SEED_BAN_MS : BAN_MS));
       }
-      peer.disconnect(`zablokován: ${reason}`);
+      peer.disconnect(`banned: ${reason}`);
     });
     peer.on('close', (reason) => {
       clearTimeout(timeout);
@@ -348,12 +348,12 @@ export class Network extends EventEmitter {
     const pinned = peer.inbound ? null : this.pinned.get(`${peer.address}:${dialed}`);
     peer.verified = false;
     if (!publicKey?.length) {
-      if (this.requireIdentity || pinned) return 'uzel neprokázal identitu, je potřeba aktualizace';
+      if (this.requireIdentity || pinned) return 'the peer did not prove its identity, an update is needed';
       return null;
     }
-    if (!verifyHello(publicKey, signature, peer.channel.transcript(), !peer.channel.initiator)) return 'neplatný podpis identity';
-    if (!equal(nodeId, nodeIdOf(publicKey))) return 'identifikátor neodpovídá klíči';
-    if (pinned && !equal(pinned, publicKey)) return 'seed se ohlásil jiným klíčem';
+    if (!verifyHello(publicKey, signature, peer.channel.transcript(), !peer.channel.initiator)) return 'invalid identity signature';
+    if (!equal(nodeId, nodeIdOf(publicKey))) return 'node ID does not match the key';
+    if (pinned && !equal(pinned, publicKey)) return 'the seed presented a different key';
     peer.verified = true;
     peer.pinnedSeed = !!pinned;
     peer.publicKey = publicKey;
@@ -363,26 +363,26 @@ export class Network extends EventEmitter {
   _onHello(peer, b) {
     const { chain } = this;
     const [version, chainId, genesis, headHash, headNumber, headTd, port, nodeId, agent, forkHash, forkNext, idKey, idSig, features] = b;
-    if (bytesToInt(version) !== BigInt(PROTOCOL_VERSION)) return peer.disconnect('jiná verze protokolu');
-    if (bytesToInt(chainId) !== chain.network.chainId) return peer.disconnect('jiná síť');
-    if (!equal(genesis, chain.genesis.hash())) return peer.disconnect('jiný genesis');
+    if (bytesToInt(version) !== BigInt(PROTOCOL_VERSION)) return peer.disconnect('different protocol version');
+    if (bytesToInt(chainId) !== chain.network.chainId) return peer.disconnect('different network');
+    if (!equal(genesis, chain.genesis.hash())) return peer.disconnect('different genesis');
     if (!forkCompatible(chain.network, chain.genesis.hash(), chain.head.number, { hash: forkHash, next: bytesToInt(forkNext) })) {
       this.emit('incompatible', peer);
-      return peer.disconnect('neslučitelná pravidla sítě, je potřeba aktualizace');
+      return peer.disconnect('incompatible network rules, an update is needed');
     }
     if (!(nodeId instanceof Uint8Array) || [idKey, idSig, features].some((x) => x !== undefined && !(x instanceof Uint8Array))) {
-      peer.misbehave(50, 'poškozený handshake');
-      return peer.disconnect('poškozený handshake');
+      peer.misbehave(50, 'malformed handshake');
+      return peer.disconnect('malformed handshake');
     }
-    if (Buffer.compare(nodeId, this.nodeId) === 0) return peer.disconnect('spojení sám se sebou');
+    if (Buffer.compare(nodeId, this.nodeId) === 0) return peer.disconnect('connection to itself');
     const refused = this._checkIdentity(peer, nodeId, idKey, idSig, peer.listenPort);
     if (refused) {
-      if (/podpis|klíč/.test(refused)) peer.misbehave(100, refused);
+      if (/signature|key/.test(refused)) peer.misbehave(100, refused);
       return peer.disconnect(refused);
     }
     peer.features = features?.length ? features[0] : 0;
     for (const p of this.peers) {
-      if (p !== peer && p.nodeId && Buffer.compare(p.nodeId, nodeId) === 0) return peer.disconnect('duplicitní spojení');
+      if (p !== peer && p.nodeId && Buffer.compare(p.nodeId, nodeId) === 0) return peer.disconnect('duplicate connection');
     }
     peer.nodeId = nodeId;
     peer.agent = new TextDecoder().decode(agent).slice(0, 64);
@@ -429,10 +429,10 @@ export class Network extends EventEmitter {
 
   async _handle(peer, type, b) {
     if (type === MSG.HELLO) {
-      if (peer.ready) return peer.misbehave(20, 'opakovaný handshake');
+      if (peer.ready) return peer.misbehave(20, 'repeated handshake');
       return this._onHello(peer, b);
     }
-    if (!peer.ready) return peer.misbehave(50, 'zpráva před handshakem');
+    if (!peer.ready) return peer.misbehave(50, 'message before the handshake');
     switch (type) {
       case MSG.PING: return peer.send(MSG.PONG, []);
       case MSG.PONG: return undefined;
@@ -457,14 +457,14 @@ export class Network extends EventEmitter {
         const list = [...shuffled(store.peersTried(MAX_PEX * 4)).slice(0, half), ...shuffled(store.peersNew(MAX_PEX * 4)).slice(0, half)];
         return peer.respond(MSG.PEERS, b[0], list.filter((a) => this._dialable(a)).map((a) => new TextEncoder().encode(a)));
       }
-      default: return peer.misbehave(10, `neznámá zpráva ${type}`);
+      default: return peer.misbehave(10, `unknown message ${type}`);
     }
   }
 
   /** Signed public RPC addresses from a peer: [[url, key, expires, signature], ...]. Checking them is up to watch/public-nodes.js. */
   _onPublicNodes(peer, b) {
     const list = b[0];
-    if (!Array.isArray(list) || list.length > 32) return peer.misbehave(10, 'neplatný seznam veřejných uzlů');
+    if (!Array.isArray(list) || list.length > 32) return peer.misbehave(10, 'invalid public node list');
     const now = Date.now();
     if (peer.publicNodesAt && now - peer.publicNodesAt < 60_000) return undefined;   // at most one list a minute per peer
     peer.publicNodesAt = now;
@@ -502,8 +502,8 @@ export class Network extends EventEmitter {
 
   _onGetHeaders(peer, b) {
     const [id, locator, limitBytes] = b;
-    if (!Array.isArray(locator) || locator.length > 64) return peer.misbehave(20, 'neplatný lokátor');
-    if (peer.channel.queued > MAX_SEND_QUEUE) return peer.misbehave(25, 'žádá rychleji, než čte');
+    if (!Array.isArray(locator) || locator.length > 64) return peer.misbehave(20, 'invalid locator');
+    if (peer.channel.queued > MAX_SEND_QUEUE) return peer.misbehave(25, 'requests faster than it reads');
     const limit = Math.min(MAX_HEADERS, Number(bytesToInt(limitBytes)));
     const { chain } = this;
     let start = 0n;
@@ -522,8 +522,8 @@ export class Network extends EventEmitter {
 
   _onGetBlocks(peer, b) {
     const [id, hashes] = b;
-    if (!Array.isArray(hashes) || hashes.length > MAX_BLOCKS) return peer.misbehave(20, 'příliš mnoho bloků v požadavku');
-    if (peer.channel.queued > MAX_SEND_QUEUE) return peer.misbehave(25, 'žádá rychleji, než čte');
+    if (!Array.isArray(hashes) || hashes.length > MAX_BLOCKS) return peer.misbehave(20, 'too many blocks in a request');
+    if (peer.channel.queued > MAX_SEND_QUEUE) return peer.misbehave(25, 'requests faster than it reads');
     const out = [];
     let size = 0;
     for (const hash of hashes) {
@@ -541,9 +541,9 @@ export class Network extends EventEmitter {
     try {
       block = Block.decode(b[0], this.chain.common);
     } catch (e) {
-      return peer.misbehave(50, `poškozený blok: ${e.message}`);
+      return peer.misbehave(50, `malformed block: ${e.message}`);
     }
-    if (!this.chain.pow.quickCheck(block.header)) return peer.misbehave(100, 'blok bez platné práce');
+    if (!this.chain.pow.quickCheck(block.header)) return peer.misbehave(100, 'block without valid proof of work');
     return this._insert(peer, block);
   }
 
@@ -553,7 +553,7 @@ export class Network extends EventEmitter {
       if (r.status === 'orphan') this._maybeSync(peer, true);
       return r;
     } catch (e) {
-      if (e instanceof InvalidBlock) peer.misbehave(100, `neplatný blok: ${e.message}`);
+      if (e instanceof InvalidBlock) peer.misbehave(100, `invalid block: ${e.message}`);
       else if (e instanceof TemporaryBlockError) this.temporary = true;
       else if (e instanceof FinalityError) {
         // An honest node from the other part of the network, not an attack: we stop downloading from it for a while but do not block it.
@@ -567,14 +567,14 @@ export class Network extends EventEmitter {
   }
 
   async _onNewTxs(peer, b) {
-    if (!Array.isArray(b[0]) || b[0].length > MAX_TXS) return peer.misbehave(20, 'příliš mnoho transakcí');
+    if (!Array.isArray(b[0]) || b[0].length > MAX_TXS) return peer.misbehave(20, 'too many transactions');
     return this._acceptTxs(peer, b[0]);
   }
 
   /** Transactions from a peer, whether it sent them itself or we asked for them. */
   async _acceptTxs(peer, raws) {
     // Every transaction verifies its signature, so even validly signed spam without funds has a limit.
-    if (!peer.txBudget.take(raws.length)) return peer.misbehave(5, 'příliš mnoho transakcí za sekundu');
+    if (!peer.txBudget.take(raws.length)) return peer.misbehave(5, 'too many transactions per second');
     if (!this.txBudget.take(raws.length)) return undefined;
     const added = [];
     for (const raw of raws) {
@@ -582,7 +582,7 @@ export class Network extends EventEmitter {
       try {
         tx = decodeTx(raw, this.chain.commonAt(this.chain.head.number + 1n));
       } catch {
-        peer.misbehave(10, 'poškozená transakce');
+        peer.misbehave(10, 'malformed transaction');
         continue;
       }
       const key = Buffer.from(tx.hash()).toString('hex');
@@ -594,7 +594,7 @@ export class Network extends EventEmitter {
       } catch (e) {
         if (!(e instanceof MempoolError)) throw e;
         // An invalid signature cannot be explained by delay; the other reasons can.
-        if (/podpis|neplatná transakce/.test(e.message)) peer.misbehave(10, e.message);
+        if (/invalid signature|invalid transaction/.test(e.message)) peer.misbehave(10, e.message);
       }
     }
     if (added.length) this.broadcastTxs(added, peer);
@@ -617,11 +617,11 @@ export class Network extends EventEmitter {
 
   /** Announced hashes: we ask for transactions we do not have yet and that nobody is sending us right now. */
   async _onTxHashes(peer, b) {
-    if (!Array.isArray(b[0]) || b[0].length > MAX_ANNOUNCE) return peer.misbehave(20, 'příliš mnoho hashů');
+    if (!Array.isArray(b[0]) || b[0].length > MAX_ANNOUNCE) return peer.misbehave(20, 'too many hashes');
     const now = Date.now();
     const wanted = [];
     for (const hash of b[0]) {
-      if (!(hash instanceof Uint8Array) || hash.length !== 32) return peer.misbehave(20, 'neplatný hash');
+      if (!(hash instanceof Uint8Array) || hash.length !== 32) return peer.misbehave(20, 'invalid hash');
       const key = Buffer.from(hash).toString('hex');
       peer.markKnown(key);
       if (this.mempool.has(hash)) continue;
@@ -641,8 +641,8 @@ export class Network extends EventEmitter {
 
   _onGetTxs(peer, b) {
     const [id, hashes] = b;
-    if (!Array.isArray(hashes) || hashes.length > MAX_TXS) return peer.misbehave(20, 'příliš mnoho transakcí v požadavku');
-    if (peer.channel.queued > MAX_SEND_QUEUE) return peer.misbehave(25, 'žádá rychleji, než čte');
+    if (!Array.isArray(hashes) || hashes.length > MAX_TXS) return peer.misbehave(20, 'too many transactions in a request');
+    if (peer.channel.queued > MAX_SEND_QUEUE) return peer.misbehave(25, 'requests faster than it reads');
     const out = [];
     let size = 0;
     for (const hash of hashes) {
@@ -659,7 +659,7 @@ export class Network extends EventEmitter {
   /** An announced block: if unknown, we request it from whoever announced it. */
   async _onBlockHash(peer, b) {
     const [hash, number, td] = b;
-    if (!(hash instanceof Uint8Array) || hash.length !== 32) return peer.misbehave(20, 'neplatný hash bloku');
+    if (!(hash instanceof Uint8Array) || hash.length !== 32) return peer.misbehave(20, 'invalid block hash');
     if (td instanceof Uint8Array && bytesToInt(td) > peer.headTd) peer.updateHead(hash, bytesToInt(number), bytesToInt(td));
     if (this.chain.store.blockHas(hash) || this.chain.store.badReason(hash)) return undefined;
     const rows = await peer.request(MSG.GET_BLOCKS, [[hash]]).catch(() => null);
@@ -667,12 +667,12 @@ export class Network extends EventEmitter {
     let block;
     try {
       const header = Header.decode(rows[0][0]);
-      if (!equal(header.hash(), hash)) return peer.misbehave(100, 'uzel poslal jiný blok');
+      if (!equal(header.hash(), hash)) return peer.misbehave(100, 'the peer sent a different block');
       block = Block.decodeBody(header, rows[0][1], this.chain.commonAt);
     } catch (e) {
-      return peer.misbehave(50, `poškozený blok: ${e.message}`);
+      return peer.misbehave(50, `malformed block: ${e.message}`);
     }
-    if (!this.chain.pow.quickCheck(block.header)) return peer.misbehave(100, 'blok bez platné práce');
+    if (!this.chain.pow.quickCheck(block.header)) return peer.misbehave(100, 'block without valid proof of work');
     return this._insert(peer, block);
   }
 
@@ -752,7 +752,7 @@ export class Network extends EventEmitter {
       this.imported = 0;
       const { chain } = this;
       if (peer.ready && peer.headTd > chain.headTd) {
-        if (!failed && !peer.channel.closed && !this.temporary && !this.deepRefused) peer.misbehave(34, 'nedodal slíbený řetězec');
+        if (!failed && !peer.channel.closed && !this.temporary && !this.deepRefused) peer.misbehave(34, 'did not deliver the announced chain');
         peer.updateHead(chain.head.hash(), chain.head.number, chain.headTd);
       }
       this.emit('sync-end', peer);
@@ -771,21 +771,21 @@ export class Network extends EventEmitter {
       const base = this._locator();
       const locator = from ? [from, ...base.slice(0, 62), base[base.length - 1]] : base;
       const raw = await peer.request(MSG.GET_HEADERS, [locator, intToBytes(BigInt(MAX_HEADERS))], HEADERS_TIMEOUT);
-      if (!Array.isArray(raw)) return peer.misbehave(50, 'neplatné hlavičky');
+      if (!Array.isArray(raw)) return peer.misbehave(50, 'invalid headers');
       if (raw.length === 0) return undefined;
-      if (raw.length > MAX_HEADERS) return peer.misbehave(50, 'příliš mnoho hlaviček');
+      if (raw.length > MAX_HEADERS) return peer.misbehave(50, 'too many headers');
       let headers;
       try {
         headers = raw.map((f) => Header.fromFields(f));
       } catch (e) {
-        return peer.misbehave(50, `poškozená hlavička: ${e.message}`);
+        return peer.misbehave(50, `malformed header: ${e.message}`);
       }
       for (const h of headers) {
-        if (!this.chain.pow.quickCheck(h)) return peer.misbehave(100, 'hlavička bez platné práce');
+        if (!this.chain.pow.quickCheck(h)) return peer.misbehave(100, 'header without valid proof of work');
       }
       for (let i = 1; i < headers.length; i++) {
         if (!equal(headers[i].parentHash, headers[i - 1].hash()) || headers[i].number !== headers[i - 1].number + 1n) {
-          return peer.misbehave(100, 'hlavičky nenavazují');
+          return peer.misbehave(100, 'headers do not connect');
         }
       }
       if (!(await this._deepForkAllowed(peer, headers))) return undefined;
@@ -800,15 +800,15 @@ export class Network extends EventEmitter {
       for (let i = 0; i < wanted.length;) {
         const batch = wanted.slice(i, i + MAX_BLOCKS);
         const rows = await peer.request(MSG.GET_BLOCKS, [batch.map((h) => h.hash())]);
-        if (!Array.isArray(rows) || rows.length === 0) return peer.misbehave(20, 'uzel neposlal bloky');
+        if (!Array.isArray(rows) || rows.length === 0) return peer.misbehave(20, 'the peer sent no blocks');
         for (let j = 0; j < rows.length; j++) {
           let block;
           try {
             const header = Header.decode(rows[j][0]);
-            if (!equal(header.hash(), batch[j]?.hash() ?? new Uint8Array(0))) return peer.misbehave(100, 'uzel poslal jiný blok');
+            if (!equal(header.hash(), batch[j]?.hash() ?? new Uint8Array(0))) return peer.misbehave(100, 'the peer sent a different block');
             block = Block.decodeBody(header, rows[j][1], this.chain.commonAt);
           } catch (e) {
-            return peer.misbehave(50, `poškozený blok: ${e.message}`);
+            return peer.misbehave(50, `malformed block: ${e.message}`);
           }
           const r = await this._insert(peer, block);
           if (!r || !peer.ready) return undefined;
@@ -832,12 +832,12 @@ export class Network extends EventEmitter {
     const ancestor = chain.getHeader(first[0].parentHash);
     if (!ancestor || !chain.isCanonical(ancestor.hash(), ancestor.number)) return true;
     if (chain.head.number - ancestor.number <= BigInt(C.maxReorgDepth)) return true;
-    if (ancestor.number <= chain.passedCheckpoint()) return this._refuseDeep(peer, ancestor, 'větev je pod kontrolním bodem');
+    if (ancestor.number <= chain.passedCheckpoint()) return this._refuseDeep(peer, ancestor, 'the branch is below a checkpoint');
     if (chain.deepPermit && equal(chain.deepPermit.hash, ancestor.hash()) && chain.deepPermit.until > Date.now()) return true;
     // Height and difficulty are checked before computing Ethash. Otherwise the other side chooses the height and the cache of its epoch would be
     // computed forever: a single header with height 10^30 would block the whole node.
     if (first[0].number !== ancestor.number + 1n) {
-      peer.misbehave(100, 'hlavička hluboké větve má špatnou výšku');
+      peer.misbehave(100, 'a deep branch header has a wrong height');
       return false;
     }
     const minDifficulty = chain.network.minDifficulty ?? 1n;
@@ -846,7 +846,7 @@ export class Network extends EventEmitter {
     const branch = new Map();
     const headerOf = (hash) => {
       const h = branch.get(Buffer.from(hash).toString('hex')) ?? chain.getHeader(hash);
-      if (!h) throw new Error('chybí předek pro výpočet obtížnosti');
+      if (!h) throw new Error('missing ancestor for the difficulty calculation');
       return h;
     };
     const latest = BigInt(chain.now() + C.futureTimeLimit);
@@ -859,23 +859,23 @@ export class Network extends EventEmitter {
     for (;;) {
       for (const h of headers) {
         if (h.difficulty < minDifficulty) {
-          peer.misbehave(100, 'hlavička hluboké větve má obtížnost pod minimem sítě');
+          peer.misbehave(100, 'a deep branch header has difficulty below the network minimum');
           return false;
         }
         if (h.timestamp <= tip.timestamp || h.timestamp > latest) {
-          peer.misbehave(100, 'hlavička hluboké větve má neplatný čas');
+          peer.misbehave(100, 'a deep branch header has an invalid time');
           return false;
         }
         let expected;
         try { expected = nextDifficulty(tip, headerOf, chain.network); } catch { expected = null; }
         if (h.difficulty !== expected) {
-          peer.misbehave(100, 'hlavička hluboké větve má špatnou obtížnost');
+          peer.misbehave(100, 'a deep branch header has a wrong difficulty');
           return false;
         }
         branch.set(Buffer.from(h.hash()).toString('hex'), h);
         tip = h;
         if (!(await chain.pow.verify(h))) {
-          peer.misbehave(100, 'hlavička hluboké větve bez platné práce');
+          peer.misbehave(100, 'a deep branch header without valid proof of work');
           return false;
         }
         theirs += h.difficulty;
@@ -883,25 +883,25 @@ export class Network extends EventEmitter {
       }
       if (theirs >= DEEP_REORG_WORK_RATIO * ours) break;
       if (headers.length < MAX_HEADERS || checked >= MAX_DEEP_HEADERS || this.stopped || !peer.ready) {
-        return this._refuseDeep(peer, ancestor, `větev nese ${theirs} práce, potřeba je ${DEEP_REORG_WORK_RATIO * ours}`);
+        return this._refuseDeep(peer, ancestor, `the branch carries ${theirs} work, ${DEEP_REORG_WORK_RATIO * ours} is needed`);
       }
       const last = headers[headers.length - 1];
       const raw = await peer.request(MSG.GET_HEADERS, [[last.hash()], intToBytes(BigInt(MAX_HEADERS))], HEADERS_TIMEOUT);
       if (!Array.isArray(raw) || raw.length > MAX_HEADERS) {
-        peer.misbehave(50, 'neplatné hlavičky');
+        peer.misbehave(50, 'invalid headers');
         return false;
       }
       try {
         headers = raw.map((f) => Header.fromFields(f));
       } catch (e) {
-        peer.misbehave(50, `poškozená hlavička: ${e.message}`);
+        peer.misbehave(50, `malformed header: ${e.message}`);
         return false;
       }
-      if (headers.length === 0) return this._refuseDeep(peer, ancestor, 'větev skončila bez dostatečné práce');
+      if (headers.length === 0) return this._refuseDeep(peer, ancestor, 'the branch ended without enough work');
       let prev = last;
       for (const h of headers) {
         if (!equal(h.parentHash, prev.hash()) || h.number !== prev.number + 1n) {
-          peer.misbehave(100, 'hlavičky nenavazují');
+          peer.misbehave(100, 'headers do not connect');
           return false;
         }
         prev = h;
@@ -944,7 +944,7 @@ export class Network extends EventEmitter {
     const now = Date.now();
     for (const p of this.peers) {
       p.forgive(FORGIVE_POINTS);
-      if (now - p.lastSeen > PEER_TIMEOUT) p.disconnect('uzel neodpovídá');
+      if (now - p.lastSeen > PEER_TIMEOUT) p.disconnect('peer does not respond');
       else if (p.ready) p.send(MSG.PING, []);
     }
   }

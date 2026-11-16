@@ -96,7 +96,7 @@ impl Device {
         let slice = staging.slice(..);
         slice.map_async(wgpu::MapMode::Read, |_| {});
         self.wait();
-        let out = slice.get_mapped_range().expect("mapování bufferu").to_vec();
+        let out = slice.get_mapped_range().expect("buffer mapping").to_vec();
         staging.unmap();
         out
     }
@@ -117,7 +117,7 @@ pub fn build_dag(d: &Device, epoch: u64, report: &dyn Fn(u32)) -> Result<Dag, St
     let chunk_bytes = d.chunk_bytes;
     let count = full_size.div_ceil(chunk_bytes);
     if count > 6 {
-        return Err("DAG se nevejde do limitů této karty".into());
+        return Err("the DAG does not fit into the limits of this card".into());
     }
     let cache_buf = d.storage((cache.len() * 4) as u64, STAGE);
     d.queue.write_buffer(&cache_buf, 0, bytemuck::cast_slice(&cache));
@@ -170,7 +170,7 @@ pub fn build_dag(d: &Device, epoch: u64, report: &dyn Fn(u32)) -> Result<Dag, St
         }
         report((done as u64 * 100 / items_total as u64) as u32);
     }
-    eprintln!("[{}] DAG hotový za {:.1} s", d.name, started.elapsed().as_secs_f32());
+    eprintln!("[{}] DAG ready in {:.1} s", d.name, started.elapsed().as_secs_f32());
 
     // A check of randomly spread items: a card error is revealed before mining in vain.
     for k in 0..16u64 {
@@ -180,7 +180,7 @@ pub fn build_dag(d: &Device, epoch: u64, report: &dyn Fn(u32)) -> Result<Dag, St
         let bytes = d.read_back(&chunks[chunk], off, 64);
         let got: &[u32] = bytemuck::cast_slice(&bytes);
         if got != ethash::dataset_item(&cache, item as u32) {
-            return Err(format!("položka DAG {item} nesouhlasí s výpočtem na procesoru, zkontrolujte stabilitu karty"));
+            return Err(format!("DAG item {item} does not match the CPU calculation, check the stability of the card"));
         }
     }
     Ok(Dag { epoch, full_size, cache, chunks, chunk_bytes })
@@ -291,15 +291,15 @@ impl Card for WgpuCard {
     }
 
     fn cache(&self) -> &[u32] {
-        &self.dag.as_ref().expect("DAG je připravený").cache
+        &self.dag.as_ref().expect("DAG is ready").cache
     }
 
     fn full_size(&self) -> u64 {
-        self.dag.as_ref().expect("DAG je připravený").full_size
+        self.dag.as_ref().expect("DAG is ready").full_size
     }
 
     fn search(&mut self, header: &[u8; 32], start: u64, target: (u32, u32)) -> SearchResult {
-        let dag = self.dag.as_ref().expect("DAG je připravený");
-        self.searcher.as_mut().expect("DAG je připravený").run(&self.device, dag, header, start, target)
+        let dag = self.dag.as_ref().expect("DAG is ready");
+        self.searcher.as_mut().expect("DAG is ready").run(&self.device, dag, header, start, target)
     }
 }

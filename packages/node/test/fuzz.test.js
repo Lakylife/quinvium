@@ -57,7 +57,7 @@ test('changing any header field is rejected even with valid work, and the honest
 
   // The changed miner gets the reward instead of the honest one, but then the state does not match.
   const forgedMiner = await seal(victim, new Block(new Header({ ...fieldsOf(h), miner: flip(h.miner) }), block.txs));
-  await assert.rejects(victim.insertBlock(forgedMiner), /kořen stavu/);
+  await assert.rejects(victim.insertBlock(forgedMiner), /state root/);
   assert.equal((await victim.insertBlock(block)).status, 'added');
 });
 

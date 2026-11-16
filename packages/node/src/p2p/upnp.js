@@ -70,7 +70,7 @@ export function discover({ timeout = 3000, addresses } = {}) {
     for (const address of binds) {
       const sock = dgram.createSocket('udp4');
       socks.push(sock);
-      sock.on('error', () => { try { sock.close(); } catch { /* už zavřený */ } });
+      sock.on('error', () => { try { sock.close(); } catch { /* already closed */ } });
       sock.on('message', (msg, rinfo) => {
         const location = /^location:\s*(\S+)/im.exec(msg.toString('latin1'))?.[1];
         if (!location) return;

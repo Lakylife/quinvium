@@ -350,8 +350,8 @@ await provider.getBlockNumber();</code></pre>
 
   <h2>${L('Vlastní uzel a miner', 'Your own node and miner')}</h2>
   <p>${L('Uzel z příkazové řádky a miner <code>quintium-miner</code> pro grafické karty:', 'The command-line node and the <code>quintium-miner</code> GPU miner:')}</p>
-  <pre><code>quintium-node --network mainnet --miner-address VAŠE_ADRESA
-quintium-miner --address VAŠE_ADRESA --node http://127.0.0.1:8545</code></pre>
+  <pre><code>quintium-node --network mainnet --miner-address YOUR_ADDRESS
+quintium-miner --address YOUR_ADDRESS --node http://127.0.0.1:8545</code></pre>
   <p>${L('Uzel nabízí i Stratum (port 3333), takže jde použít i jiný miner pro Ethash. Pro přístup z místní sítě spusťte uzel se <code>--stratum-host 0.0.0.0</code>.', 'The node also offers Stratum (port 3333), so other Ethash miners work too. For miners on your local network start the node with <code>--stratum-host 0.0.0.0</code>.')}</p>
 
   <h2>${L('Sólo, nebo pool', 'Solo or pool')}</h2>

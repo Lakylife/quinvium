@@ -70,17 +70,17 @@ for (const [file, contracts] of Object.entries(out.contracts)) {
     // Deployed later by a user from the Explorer: the Explorer checks the code at the configured address against this hash.
     if (DEPLOYED_BY_USERS.includes(name)) artifacts[name].runtimeSha256 = createHash('sha256').update(Buffer.from(c.evm.deployedBytecode.object, 'hex')).digest('hex');
     if (PREDEPLOYS[name]) {
-      if (Object.keys(c.evm.deployedBytecode.immutableReferences ?? {}).length) throw new Error(`${name} nesmí mít immutable`);
+      if (Object.keys(c.evm.deployedBytecode.immutableReferences ?? {}).length) throw new Error(`${name} must not have immutables`);
       const code = c.evm.deployedBytecode.object;
-      if (code.length / 2 > 24576) throw new Error(`${name} překračuje limit velikosti kódu: ${code.length / 2} B`);
+      if (code.length / 2 > 24576) throw new Error(`${name} exceeds the code size limit: ${code.length / 2} B`);
       alloc[PREDEPLOYS[name]] = { code: `0x${code}` };
       artifacts[name].address = PREDEPLOYS[name];
       console.log(`${name.padEnd(20)} ${PREDEPLOYS[name]} ${String(code.length / 2).padStart(6)} B`);
     }
     if (UPGRADES[name]) {
-      if (Object.keys(c.evm.deployedBytecode.immutableReferences ?? {}).length) throw new Error(`${name} nesmí mít immutable`);
+      if (Object.keys(c.evm.deployedBytecode.immutableReferences ?? {}).length) throw new Error(`${name} must not have immutables`);
       const code = c.evm.deployedBytecode.object;
-      if (code.length / 2 > 24576) throw new Error(`${name} překračuje limit velikosti kódu: ${code.length / 2} B`);
+      if (code.length / 2 > 24576) throw new Error(`${name} exceeds the code size limit: ${code.length / 2} B`);
       upgrades[name] = { address: UPGRADES[name], code: `0x${code}` };
       artifacts[name].address = UPGRADES[name];
       console.log(`${name.padEnd(20)} ${UPGRADES[name]} ${String(code.length / 2).padStart(6)} B`);

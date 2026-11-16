@@ -2,7 +2,7 @@
   "name": "aether",
   "private": true,
   "version": "2.0.0",
-  "description": "Quinvium: vlastn\u00ed programovateln\u00fd Proof-of-Work blockchain s GPU t\u011b\u017ebou",
+  "description": "Quinvium: a programmable Proof-of-Work blockchain with GPU mining",
   "workspaces": [
     "packages/node",
     "packages/contracts",

@@ -85,7 +85,7 @@ function installPath({ dir, platform, home, shell, profile, run = execFile }) {
     try { text = fs.readFileSync(file, 'utf8'); } catch { /* the profile does not exist yet */ }
     if (text.includes(dir) || text.includes(sh(dir))) return Promise.resolve({ ok: true, added: false, file });   // the path in the profile is quoted
     const lead = text && !text.endsWith('\n') ? '\n' : '';
-    fs.appendFileSync(file, `${lead}\n# Quinvium: příkazy quinvium a quintium v terminálu\nexport PATH="${sh(dir)}:$PATH"\n`);
+    fs.appendFileSync(file, `${lead}\n# Quinvium: the quinvium and quintium commands in the terminal\nexport PATH="${sh(dir)}:$PATH"\n`);
     return Promise.resolve({ ok: true, added: true, file });
   } catch (e) {
     return Promise.resolve({ ok: false, error: e.message });

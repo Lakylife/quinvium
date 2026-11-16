@@ -14,6 +14,6 @@ window.addEventListener('message', (e) => {
     if (!port) connect();
     port.postMessage({ id, method, params });
   } catch {
-    window.postMessage({ source: 'aether-content', id, error: { code: 4900, message: 'Peněženka byla aktualizována, obnovte stránku' } }, window.location.origin);
+    window.postMessage({ source: 'aether-content', id, error: { code: 4900, message: 'The wallet was updated, reload the page' } }, window.location.origin);
   }
 });

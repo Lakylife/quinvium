@@ -2,7 +2,7 @@
   "name": "@aether/contracts",
   "version": "2.0.0",
   "type": "module",
-  "description": "Systémové chytré kontrakty sítě Quintium",
+  "description": "System smart contracts of the Quinvium network",
   "scripts": {
     "build": "node build.js",
     "test": "node --no-warnings --test test/*.test.js"

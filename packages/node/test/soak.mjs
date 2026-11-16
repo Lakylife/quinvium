@@ -111,7 +111,7 @@ const minerLog = DEV ? '' : readFileSync(join(dir, 'miner.log'), 'utf8');
 console.log(JSON.stringify({
   sekund: seconds, vyska: Number(stats.height), vysky: Object.fromEntries(Object.entries(heads).map(([k, v]) => [k, Number(v.number)])), shoda: same,
   odeslano: sent, potvrzeno: confirmed, vMempoolu: stats.mempool, odmitnuto: refused, casBloku: Number(avg.toFixed(1)), obtiznost: stats.difficulty,
-  poplatky: stats.fees, nalezeno: (minerLog.match(/NALEZEN/g) ?? []).length, odmitnuteBloky: (minerLog.match(/blok odmítnut/g) ?? []).length, chybyVLogu: errors,
+  poplatky: stats.fees, nalezeno: (minerLog.match(/NALEZEN/g) ?? []).length, odmitnuteBloky: (minerLog.match(/block rejected/g) ?? []).length, chybyVLogu: errors,
 }, null, 1));
 for (const p of Object.values(procs)) p.kill('SIGINT');
 await sleep(2000);

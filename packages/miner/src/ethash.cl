@@ -1,5 +1,5 @@
-// Ethash pro OpenCL: stejný algoritmus jako ethash.rs a shader.rs. Každé řešení se před odesláním ověří na procesoru.
-// Makra doplňuje cl.rs: PARTS je počet bufferů DAG, PART_BITS velikost jednoho z nich ve stránkách po 128 bajtech.
+// Ethash for OpenCL: the same algorithm as ethash.rs and shader.rs. Every solution is checked on the CPU before it is submitted.
+// Macros are filled in by cl.rs: PARTS is the number of DAG buffers, PART_BITS the size of one of them in pages of 128 bytes.
 #define FNV_PRIME 0x01000193U
 #define FNV(x, y) (((x) * FNV_PRIME) ^ (y))
 #define ROL(x, n) rotate((ulong)(x), (ulong)(n))
@@ -11,7 +11,7 @@ __constant ulong RC[24] = {
   0x000000000000800AUL, 0x800000008000000AUL, 0x8000000080008081UL, 0x8000000000008080UL, 0x0000000080000001UL, 0x8000000080008008UL,
 };
 
-// Jedno kolo Keccak-f1600 nad proměnnými a0..a24.
+// One round of Keccak-f1600 over the variables a0..a24.
 #define KECCAK_ROUND(r) { \
   c0 = a0 ^ a5 ^ a10 ^ a15 ^ a20; c1 = a1 ^ a6 ^ a11 ^ a16 ^ a21; c2 = a2 ^ a7 ^ a12 ^ a17 ^ a22; \
   c3 = a3 ^ a8 ^ a13 ^ a18 ^ a23; c4 = a4 ^ a9 ^ a14 ^ a19 ^ a24; \
@@ -32,7 +32,7 @@ __constant ulong RC[24] = {
   ulong b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23, b24; \
   for (uint r = 0; r < 24; r++) KECCAK_ROUND(r) }
 
-// Keccak-512 ze 64 bajtů v poli s[8]; používá se při výpočtu DAG.
+// Keccak-512 of 64 bytes in the array s[8]; used when computing the DAG.
 static inline void keccak512_64(ulong *s) {
   ulong a0 = s[0], a1 = s[1], a2 = s[2], a3 = s[3], a4 = s[4], a5 = s[5], a6 = s[6], a7 = s[7], a8 = 0x8000000000000001UL;
   ulong a9 = 0, a10 = 0, a11 = 0, a12 = 0, a13 = 0, a14 = 0, a15 = 0, a16 = 0, a17 = 0, a18 = 0, a19 = 0, a20 = 0, a21 = 0, a22 = 0, a23 = 0, a24 = 0;
@@ -50,7 +50,7 @@ static inline void keccak512_64(ulong *s) {
 #define DAG_ARGS __global const uint16 *restrict d0, __global const uint16 *restrict d1, __global const uint16 *restrict d2, __global const uint16 *restrict d3
 #endif
 
-// Stránka DAG je 128 bajtů, tedy dvě položky uint16 po sobě.
+// A DAG page is 128 bytes, that is two uint16 items in a row.
 typedef union { uint16 v[2]; uint w[32]; } mix_t;
 
 __kernel void search(__global volatile uint *restrict output, DAG_ARGS,
@@ -109,7 +109,7 @@ __kernel void search(__global volatile uint *restrict output, DAG_ARGS,
   }
 }
 
-// Položky DAG jsou 64 bajtů. Výstup jde do jedné části, posun určuje volající.
+// DAG items are 64 bytes. The output goes into one part, the caller sets the offset.
 __kernel void dag_items(__global uint16 *restrict out, __global const uint16 *restrict cache, uint start, uint out_base, uint rows) {
   const uint item = start + get_global_id(0);
   union { uint16 v; uint w[16]; ulong q[8]; } s;

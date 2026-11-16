@@ -35,7 +35,7 @@ macro_rules! api {
         }
         impl Api {
             fn load() -> Result<Api, String> {
-                let mut last = String::from("knihovna OpenCL nenalezena");
+                let mut last = String::from("OpenCL library not found");
                 for name in LIBRARIES {
                     match unsafe { Library::new(name) } {
                         Ok(lib) => unsafe {
@@ -85,7 +85,7 @@ fn check(code: Int, what: &str) -> Result<(), String> {
     if code == SUCCESS {
         Ok(())
     } else {
-        Err(format!("OpenCL {what}: chyba {code}"))
+        Err(format!("OpenCL {what}: error {code}"))
     }
 }
 
@@ -258,7 +258,7 @@ impl Engine {
             let mut log = vec![0u8; size];
             unsafe { (self.api.build_info)(program, self.device, PROGRAM_BUILD_LOG, size, log.as_mut_ptr().cast(), null_mut()) };
             let text = String::from_utf8_lossy(&log);
-            return Err(format!("překlad výpočtu selhal: {}", text.chars().take(600).collect::<String>()));
+            return Err(format!("kernel compilation failed: {}", text.chars().take(600).collect::<String>()));
         }
         Ok(program)
     }
@@ -267,7 +267,7 @@ impl Engine {
         let name = CString::new(name).map_err(|e| e.to_string())?;
         let mut code = 0;
         let k = unsafe { (self.api.create_kernel)(program, name.as_ptr(), &mut code) };
-        check(code, "jádro").map(|_| k)
+        check(code, "kernel").map(|_| k)
     }
 
     fn arg<T>(&self, kernel: Handle, index: u32, value: &T) -> Result<(), String> {
@@ -299,7 +299,7 @@ impl Engine {
         let cache = ethash::generate_cache(ethash::cache_size(epoch), &ethash::seed_hash(epoch));
         let full_size = ethash::dataset_size(epoch);
         if self.memory < full_size + full_size / 8 {
-            return Err("DAG se nevejde do paměti karty".into());
+            return Err("the DAG does not fit into the card memory".into());
         }
         // One buffer may be at most `max_alloc`. The part size is a power of two so a page can be found by shifting.
         let mut part_bytes = 1u64 << 63;
@@ -350,8 +350,8 @@ impl Engine {
             self.arg(kernel, 4, &rows)?;
             let t = Instant::now();
             let global = [n];
-            check(unsafe { (self.api.run)(self.queue, kernel, 1, null(), global.as_ptr(), null(), 0, null(), null_mut()) }, "výpočet DAG")?;
-            check(unsafe { (self.api.finish)(self.queue) }, "čekání na DAG")?;
+            check(unsafe { (self.api.run)(self.queue, kernel, 1, null(), global.as_ptr(), null(), 0, null(), null_mut()) }, "DAG generation")?;
+            check(unsafe { (self.api.finish)(self.queue) }, "waiting for the DAG")?;
             done += n as u32;
             let ms = t.elapsed().as_millis();
             if ms < DAG_MS.0 {
@@ -365,7 +365,7 @@ impl Engine {
             (self.api.release_kernel)(kernel);
             (self.api.release_mem)(cache_buffer);
         }
-        eprintln!("[{}] DAG hotový za {:.1} s", self.name, started.elapsed().as_secs_f32());
+        eprintln!("[{}] DAG ready in {:.1} s", self.name, started.elapsed().as_secs_f32());
 
         // A card or driver error shows up immediately, not after hours of futile mining.
         for k in 0..16u64 {
@@ -374,9 +374,9 @@ impl Engine {
             let offset = (item * 64 - part as u64 * part_bytes) as usize;
             let mut got = [0u32; 16];
             let code = unsafe { (self.api.read)(self.queue, self.parts[part], 1, offset, 64, got.as_mut_ptr().cast(), 0, null(), null_mut()) };
-            check(code, "čtení DAG")?;
+            check(code, "reading the DAG")?;
             if got != ethash::dataset_item(&cache, item as u32) {
-                return Err(format!("položka DAG {item} nesouhlasí s výpočtem na procesoru"));
+                return Err(format!("DAG item {item} does not match the CPU calculation"));
             }
         }
 
@@ -416,7 +416,7 @@ impl Card for Engine {
             for n in found.nonces {
                 let (_, result) = ethash::hashimoto_light(&self.cache, self.full_size, &header, n);
                 if result > limit {
-                    return Err(format!("karta vrátila chybné řešení pro nonce {n}"));
+                    return Err(format!("the card returned a wrong solution for nonce {n}"));
                 }
                 checked += 1;
             }
@@ -424,7 +424,7 @@ impl Card for Engine {
                 return Ok(());
             }
         }
-        Err("karta nenašla žádné řešení na snadném cíli".into())
+        Err("the card found no solution on an easy target".into())
     }
 
     fn cache(&self) -> &[u32] {

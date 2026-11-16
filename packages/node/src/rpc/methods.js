@@ -26,11 +26,11 @@ const FILTER_TTL = 300_000;
 const MAX_FILTERS = 1024;
 const MAX_PROOF_SLOTS = 1024;
 const hexAddress = (a) => {
-  if (typeof a !== 'string' || !/^0x[0-9a-fA-F]{40}$/.test(a)) throw new RpcError(-32602, 'neplatná adresa');
+  if (typeof a !== 'string' || !/^0x[0-9a-fA-F]{40}$/.test(a)) throw new RpcError(-32602, 'invalid address');
   return createAddressFromString(a);
 };
 const hexHash = (h) => {
-  if (typeof h !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(h)) throw new RpcError(-32602, 'neplatný hash');
+  if (typeof h !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(h)) throw new RpcError(-32602, 'invalid hash');
   return fromHex(h);
 };
 const pad32 = (bytes) => {
@@ -95,7 +95,7 @@ export function createMethods(node) {
     if (typeof tag === 'object' && tag !== null) {
       if (tag.blockHash) {
         const h = chain.getHeader(hexHash(tag.blockHash));
-        if (!h) throw new RpcError(-32001, 'blok nenalezen');
+        if (!h) throw new RpcError(-32001, 'block not found');
         return h;
       }
       return resolve(tag.blockNumber);
@@ -108,9 +108,9 @@ export function createMethods(node) {
       case 'finalized': return chain.getHeaderByNumber(head.number > BigInt(C.maxReorgDepth) ? head.number - BigInt(C.maxReorgDepth) : 0n);
       default: {
         let n;
-        try { n = BigInt(tag); } catch { throw new RpcError(-32602, 'neplatné číslo bloku'); }
+        try { n = BigInt(tag); } catch { throw new RpcError(-32602, 'invalid block number'); }
         const h = chain.getHeaderByNumber(n);
-        if (!h) throw new RpcError(-32001, 'blok nenalezen');
+        if (!h) throw new RpcError(-32001, 'block not found');
         return h;
       }
     }
@@ -147,8 +147,8 @@ export function createMethods(node) {
   const collectLogs = (f) => {
     const from = f.blockHash ? chain.getHeader(hexHash(f.blockHash))?.number : resolve(f.fromBlock ?? 'latest').number;
     const to = f.blockHash ? from : resolve(f.toBlock ?? 'latest').number;
-    if (from === undefined || from === null) throw new RpcError(-32001, 'blok nenalezen');
-    if (to - from > MAX_LOG_RANGE) throw new RpcError(-32005, `rozsah může mít nejvýše ${MAX_LOG_RANGE} bloků`);
+    if (from === undefined || from === null) throw new RpcError(-32001, 'block not found');
+    if (to - from > MAX_LOG_RANGE) throw new RpcError(-32005, `the range can be at most ${MAX_LOG_RANGE} blocks`);
     const addresses = f.address ? [f.address].flat().map((a) => hexAddress(a).bytes) : undefined;
     const topics = f.topics?.map((t) => (t == null ? null : Array.isArray(t) ? t.map(fromHex) : fromHex(t)));
     let rows;
@@ -170,7 +170,7 @@ export function createMethods(node) {
   };
 
   const newFilter = (kind, data) => {
-    if (filters.size >= MAX_FILTERS) throw new RpcError(-32005, 'příliš mnoho filtrů');
+    if (filters.size >= MAX_FILTERS) throw new RpcError(-32005, 'too many filters');
     const id = toHex(randomBytes(16));
     filters.set(id, { kind, ...data, lastBlock: chain.head.number, seenTx: new Set(), at: Date.now() });
     return id;
@@ -264,7 +264,7 @@ export function createMethods(node) {
   const count = (v) => {
     if (v === undefined || v === null || v === '') return undefined;
     const n = Number(v);
-    if (!Number.isSafeInteger(n) || n < 0) throw new RpcError(-32602, `neplatné číslo ${v}`);
+    if (!Number.isSafeInteger(n) || n < 0) throw new RpcError(-32602, `invalid number ${v}`);
     return n;
   };
   const paging = (f) => ({ limit: Math.min(MAX_PAGE, count(f.limit) ?? 25) || 25, offset: Math.min(MAX_OFFSET, count(f.offset) ?? 0) });
@@ -339,7 +339,7 @@ export function createMethods(node) {
       return toHex(pad32(value));
     },
     eth_getProof: async ([a, slots, tag]) => {
-      if (!Array.isArray(slots) || slots.length > MAX_PROOF_SLOTS) throw new RpcError(-32602, `nejvýše ${MAX_PROOF_SLOTS} položek`);
+      if (!Array.isArray(slots) || slots.length > MAX_PROOF_SLOTS) throw new RpcError(-32602, `at most ${MAX_PROOF_SLOTS} items`);
       const s = await state(resolve(tag));
       return getMerkleStateProof(s.stateManager, hexAddress(a), slots.map((x) => pad32(fromHex(x))));
     },
@@ -384,7 +384,7 @@ export function createMethods(node) {
       try {
         tx = decodeTx(fromHex(raw), chain.commonAt(chain.head.number + 1n));
       } catch (e) {
-        throw new RpcError(-32000, `neplatná transakce: ${e.message}`);
+        throw new RpcError(-32000, `invalid transaction: ${e.message}`);
       }
       try {
         await node.sendTx(tx);
@@ -396,7 +396,7 @@ export function createMethods(node) {
     },
     eth_call: ([c, tag]) => evm('call', c, tag),
     eth_estimateGas: ([c, tag]) => evm('estimate', c, tag),
-    eth_createAccessList: () => { throw new RpcError(-32601, 'metoda není podporována'); },
+    eth_createAccessList: () => { throw new RpcError(-32601, 'method not supported'); },
     eth_getLogs: ([f]) => collectLogs(f ?? {}),
     eth_newFilter: ([f]) => newFilter('log', { filter: f ?? {} }),
     eth_newBlockFilter: () => newFilter('block', {}),
@@ -404,12 +404,12 @@ export function createMethods(node) {
     eth_uninstallFilter: ([id]) => filters.delete(id),
     eth_getFilterLogs: ([id]) => {
       const f = filters.get(id);
-      if (f?.kind !== 'log') throw new RpcError(-32000, 'filtr nenalezen');
+      if (f?.kind !== 'log') throw new RpcError(-32000, 'filter not found');
       return collectLogs(f.filter);
     },
     eth_getFilterChanges: ([id]) => {
       const f = filters.get(id);
-      if (!f) throw new RpcError(-32000, 'filtr nenalezen');
+      if (!f) throw new RpcError(-32000, 'filter not found');
       f.at = Date.now();
       const head = chain.head.number;
       if (f.kind === 'pending') {
@@ -430,7 +430,7 @@ export function createMethods(node) {
     eth_mining: () => (work?.hashrate() ?? 0n) > 0n,
     eth_hashrate: () => quantity(work?.hashrate() ?? 0n),
     eth_getWork: async () => {
-      if (!node.minerAddress) throw new RpcError(-32000, 'uzel nemá nastavenou adresu výplaty, použijte aether_getWork nebo --miner-address');
+      if (!node.minerAddress) throw new RpcError(-32000, 'the node has no payout address, use aether_getWork or --miner-address');
       return formatWork(await requireWork(node.minerAddress));
     },
     aether_getWork: async ([a]) => formatWork(await requireWork(hexAddress(a).bytes)),
@@ -1041,7 +1041,7 @@ export function createMethods(node) {
   }
 
   async function evm(kind, call, tag) {
-    if (typeof call !== 'object' || call === null) throw new RpcError(-32602, 'chybí parametry volání');
+    if (typeof call !== 'object' || call === null) throw new RpcError(-32602, 'missing call parameters');
     const header = resolve(tag);
     try {
       if (vm) return await vm.run(kind, header, call);
@@ -1054,12 +1054,12 @@ export function createMethods(node) {
   }
 
   function requirePool() {
-    if (!node.pool) throw new RpcError(-32000, 'tento uzel nevede pool');
+    if (!node.pool) throw new RpcError(-32000, 'this node does not run a pool');
     return node.pool;
   }
 
   async function requireWork(miner) {
-    if (!work) throw new RpcError(-32000, 'těžba není zapnutá');
+    if (!work) throw new RpcError(-32000, 'mining is not enabled');
     try {
       return await work.getWork(miner);
     } catch (e) {
@@ -1074,7 +1074,7 @@ export function createMethods(node) {
   // A public node (--no-mining-rpc) neither hands out nor accepts work: building a template would delay block processing
   // and anyone could fake the reported hashrate. Miners belong on their own node or on Stratum.
   if (node.miningRpc === false) {
-    const off = () => { throw new RpcError(-32601, 'těžba přes RPC je na tomto uzlu vypnutá'); };
+    const off = () => { throw new RpcError(-32601, 'mining over RPC is disabled on this node'); };
     for (const name of MINING_METHODS) methods[name] = off;
   }
 

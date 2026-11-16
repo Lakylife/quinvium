@@ -23,7 +23,7 @@ const chain = {
 parentPort.on('message', async ({ id, kind, header, params }) => {
   try {
     if (kind === 'index') {
-      if (!INDEX_QUERIES.includes(params.name)) throw new Error('neznámý dotaz');
+      if (!INDEX_QUERIES.includes(params.name)) throw new Error('unknown query');
       parentPort.postMessage({ id, result: chain.store[params.name](...params.args) });
       return;
     }

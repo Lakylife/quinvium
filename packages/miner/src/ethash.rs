@@ -169,7 +169,7 @@ mod tests {
     }
 
     #[test]
-    fn velikosti() {
+    fn sizes() {
         assert_eq!(cache_size(0), 16776896);
         assert_eq!(dataset_size(0), 1073739904);
         assert_eq!(cache_size(1), 16907456);
@@ -177,7 +177,7 @@ mod tests {
     }
 
     #[test]
-    fn skutecny_blok_22_z_etherea() {
+    fn real_ethereum_block_22() {
         let cache = generate_cache(cache_size(0), &seed_hash(0));
         let header = hex32("372eca2454ead349c3df0ab5d00b0b706b23e49d469387db91811cee0358fc6d");
         let (mix, result) = hashimoto_light(&cache, dataset_size(0), &header, 0x495732e0ed7a801c);
@@ -186,9 +186,9 @@ mod tests {
     }
 
     #[test]
-    fn skutecne_bloky_etherea_napric_epochami() {
+    fn real_ethereum_blocks_across_epochs() {
         // The same blocks as in the node test; the miner and the node must agree byte for byte.
-        let vektory = [
+        let vectors = [
             (30000u64, "76a35fb221d2f471375c7db942b0513b9d0e2589711988cfb2ecdfaf5e171ba3", "a8e9c2db86671707", "dc0b2bc9e4f3fd8ce5d0d971a78d035fa964cf5714ae772990fe4d4562902dba"),
             (59999u64, "1aeb7bf2c3b1f3a89f7d319bc546711d6f7876dcf3691479ab3b03461f73a5c3", "0d14080598b6cb24", "f12fe4060d0077ddd44643927a723a1eeec138b9c1e88b29df53f36c3e69a78b"),
             (60000u64, "6715fced93c1adb320c3a53a48dc8ef4974be091406249cbc251e2af6badf5e2", "15b925123675bb6c", "0d89d35d270e4a6147db970f12372ca72753a14756a7cfe811fe716a4ff5d64d"),
@@ -198,12 +198,12 @@ mod tests {
             (12000000u64, "1940ee93bb48f1982b9fc546ae69ca9a59de4e55f9944900b3abf04436eb1ee1", "b62c052c3d4a3866", "114f16f97d044682678844ea69212d6764998107ccb698fc6ae4fd2d71a33104"),
             (15537393u64, "8ca1efe3b67419eadf7d1a1f4cc9b18e5131a189908624708bd0d28d07eeedb6", "62a3ee77461d4fc9", "4cbec03dddd4b939730a7fe6048729604d4266e82426d472a2b2024f3cc4043f"),
         ];
-        for (cislo, seal, nonce, mix) in vektory {
-            let epoch = cislo / 30000;
+        for (number, seal, nonce, mix) in vectors {
+            let epoch = number / 30000;
             let cache = generate_cache(cache_size(epoch), &seed_hash(epoch));
             let nonce = u64::from_str_radix(nonce, 16).unwrap();
             let (digest, _) = hashimoto_light(&cache, dataset_size(epoch), &hex32(seal), nonce);
-            assert_eq!(digest, hex32(mix), "blok {cislo}, epocha {epoch}");
+            assert_eq!(digest, hex32(mix), "block {number}, epoch {epoch}");
         }
     }
 }

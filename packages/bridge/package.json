@@ -3,6 +3,6 @@
   "version": "2.3.0",
   "private": true,
   "type": "module",
-  "description": "Validátor mostu Quinvium: řetězce EVM a Bitcoin",
+  "description": "Quinvium bridge validator: EVM chains and Bitcoin",
   "bin": { "aether-bridge": "src/cli.js" }
 }

@@ -26,42 +26,43 @@ test('a valid signature passes', () => {
 
 test('a changed description or a foreign key is rejected', () => {
   const signature = sign(manifest());
-  assert.throws(() => verifyManifest(manifest({ version: '9.9.9' }), signature, pub), /Podpis/);
+  assert.throws(() => verifyManifest(manifest({ version: '9.9.9' }), signature, pub), /signature/);
   const other = crypto.generateKeyPairSync('ed25519').privateKey;
-  assert.throws(() => verifyManifest(manifest(), sign(manifest(), other), pub), /Podpis/);
-  assert.throws(() => verifyManifest(manifest(), 'smetí', pub), /Podpis/);
+  assert.throws(() => verifyManifest(manifest(), sign(manifest(), other), pub), /signature/);
+  assert.throws(() => verifyManifest(manifest(), 'smetí', pub), /signature/);
 });
 
 test("the built-in key does not accept another publisher's signature", () => {
-  assert.throws(() => verifyManifest(manifest(), sign(manifest())), /Podpis/);
+  assert.throws(() => verifyManifest(manifest(), sign(manifest())), /signature/);
 });
 
 test('not even a signed description may point outside the updates folder', () => {
   for (const file of ['../../zlo.zip', 'http://zlo.cz/a.zip', 'C:\\a.zip', 'aplikace.exe']) {
     const text = manifest({ file });
-    assert.throws(() => verifyManifest(text, sign(text), pub), /název/);
+    assert.throws(() => verifyManifest(text, sign(text), pub), /name/);
   }
   for (const size of [0, -1, 1.5, 2 ** 40]) {
     const text = manifest({ size });
-    assert.throws(() => verifyManifest(text, sign(text), pub), /velikost/);
+    assert.throws(() => verifyManifest(text, sign(text), pub), /size/);
   }
 });
 
 test('the platform is in the signature: a Windows package cannot reach a Mac', () => {
   const text = manifest();
   assert.equal(verifyManifest(text, sign(text), pub, 'win32').platform, 'win32');
-  assert.throws(() => verifyManifest(text, sign(text), pub, 'darwin'), /jinou platformu/);
+  assert.throws(() => verifyManifest(text, sign(text), pub, 'darwin'), /another platform/);
   const without = manifest({ platform: undefined });
-  assert.throws(() => verifyManifest(without, sign(without), pub), /platformu/);
+  assert.throws(() => verifyManifest(without, sign(without), pub), /platform/);
   const unknown = manifest({ platform: 'linux' });
-  assert.throws(() => verifyManifest(unknown, sign(unknown), pub), /platformu/);
+  assert.throws(() => verifyManifest(unknown, sign(unknown), pub), /platform/);
 });
 
 test("the miner's line is converted to numbers", () => {
-  assert.deepEqual(parseMinerLine('Výkon 3.91 MH/s, nalezené bloky 2, osiřelé 1, odmítnuté 0'), { rate: 3910000, found: 2, stale: 1, rejected: 0, shares: 0 });
-  assert.deepEqual(parseMinerLine('Výkon 424.00 kH/s, nalezené bloky 0, osiřelé 0, odmítnuté 0').rate, 424000);
-  assert.equal(parseMinerLine('[karta] NALEZEN BLOK #5'), null);
-  assert.equal(parseMinerLine('Výkon 3.91 MH/s, nalezené bloky 2, osiřelé 1, odmítnuté 0, podíly 75').shares, 75, 'v poolu přibývají podíly');
+  assert.deepEqual(parseMinerLine('Hashrate 3.91 MH/s, blocks found 2, stale 1, rejected 0'), { rate: 3910000, found: 2, stale: 1, rejected: 0, shares: 0 });
+  assert.deepEqual(parseMinerLine('Hashrate 424.00 kH/s, blocks found 0, stale 0, rejected 0').rate, 424000);
+  assert.equal(parseMinerLine('[card] BLOCK FOUND #5'), null);
+  assert.equal(parseMinerLine('Výkon 2.00 MH/s, nalezené bloky 1, osiřelé 0, odmítnuté 0').found, 1, 'older miners wrote the line in Czech');
+  assert.equal(parseMinerLine('Hashrate 3.91 MH/s, blocks found 2, stale 1, rejected 0, shares 75').shares, 75, 'v poolu přibývají podíly');
 });
 
 test('a downloaded package must match its hash, otherwise it is deleted', async () => {
@@ -73,9 +74,9 @@ test('a downloaded package must match its hash, otherwise it is deleted', async 
   try {
     const good = { file: 'a.zip', size: body.length, sha256: crypto.createHash('sha256').update(body).digest('hex') };
     assert.equal(fs.readFileSync(await downloadPackage(base, good, dir)).toString(), 'obsah aktualizace');
-    await assert.rejects(downloadPackage(base, { ...good, sha256: 'cd'.repeat(32) }, dir), /nesouhlasí/);
+    await assert.rejects(downloadPackage(base, { ...good, sha256: 'cd'.repeat(32) }, dir), /does not match/);
     assert.equal(fs.existsSync(path.join(dir, 'a.zip')), false, 'nepodařený soubor nezůstane');
-    await assert.rejects(downloadPackage(base, { ...good, size: 5 }, dir), /nesouhlasí/);
+    await assert.rejects(downloadPackage(base, { ...good, size: 5 }, dir), /does not match/);
     assert.equal(fs.existsSync(path.join(dir, 'a.zip')), false, 'větší soubor se přeruší a smaže');
   } finally {
     server.close();
@@ -112,10 +113,10 @@ test('the ZIP package unpacks unchanged and the miner can be started', () => {
 
 test('a path outside the version folder or a package without the app is rejected and nothing is chosen', () => {
   const dir = emptyDir();
-  assert.throws(() => versions.installVersion(makePackage({ 'jinde/app.asar': 'x' }), dir, '2.3.0'), /Neplatná cesta/);
+  assert.throws(() => versions.installVersion(makePackage({ 'jinde/app.asar': 'x' }), dir, '2.3.0'), /Invalid path/);
   // On Windows the backslash is a separator: this entry would be written two folders above the version folder.
-  assert.throws(() => versions.installVersion(makePackage({ ...GOOD, 'resources/a\\..\\..\\zlo.txt': 'x' }), dir, '2.3.0'), /Neplatná cesta/);
-  assert.throws(() => versions.installVersion(makePackage({ 'resources/bin/x': 'x' }), dir, '2.3.0'), /chybí aplikace/);
+  assert.throws(() => versions.installVersion(makePackage({ ...GOOD, 'resources/a\\..\\..\\zlo.txt': 'x' }), dir, '2.3.0'), /Invalid path/);
+  assert.throws(() => versions.installVersion(makePackage({ 'resources/bin/x': 'x' }), dir, '2.3.0'), /lacks the app/);
   assert.equal(versions.pickVersion(dir, '2.2.0'), null);
   assert.equal(fs.existsSync(path.join(dir, '2.3.0')), false, 'rozdělaná složka se nepoužije');
 });

@@ -237,7 +237,7 @@ test('a late answer to a timed-out request is not misbehaviour, an unrequested o
   const ch = Object.assign(new EventEmitter(), { send: () => true, close() {} });
   const p = new Peer(ch, '203.0.113.7', false);
   const late = p.request(MSG.GET_HEADERS, [[], intToBytes(1n)], 10).catch((e) => e);
-  assert.match((await late).message, /včas/);
+  assert.match((await late).message, /in time/);
   const frame = (id) => Buffer.from(RLP.encode([intToBytes(id), []]));
   p._onFrame(MSG.HEADERS, frame(1n));
   assert.equal(p.score, 0, 'a late answer to our own request costs nothing');

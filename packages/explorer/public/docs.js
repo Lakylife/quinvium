@@ -6,13 +6,13 @@
   // Network values are filled in according to the node the Explorer is connected to.
   const EXAMPLES = {
     startDev: { lang: 'bash', code: () => `npm install
-node packages/node/src/cli.js --network dev --dev-mine --miner-address 0xVASE_ADRESA` },
+node packages/node/src/cli.js --network dev --dev-mine --miner-address 0xYOUR_ADDRESS` },
 
     newKey: { lang: 'js', run: true, code: () => `import { ethers } from 'ethers';
 
 const wallet = ethers.Wallet.createRandom();
-console.log('adresa', wallet.address);
-console.log('klíč', wallet.privateKey);` },
+console.log('address', wallet.address);
+console.log('private key', wallet.privateKey);` },
 
     blockNumber: { lang: 'bash', run: true, code: (n) => `curl -s -X POST ${n.rpc} -H 'Content-Type: application/json' \\
   -d '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}'` },
@@ -20,13 +20,13 @@ console.log('klíč', wallet.privateKey);` },
     stats: { lang: 'bash', run: true, code: (n) => `curl -s -X POST ${n.rpc} -H 'Content-Type: application/json' \\
   -d '{"jsonrpc":"2.0","id":1,"method":"quinvium_stats","params":[]}'` },
 
-    restBalance: { lang: 'bash', run: true, code: (n) => `curl -s "${n.rpc}/api?module=account&action=balance&address=0xVASE_ADRESA&tag=latest"` },
+    restBalance: { lang: 'bash', run: true, code: (n) => `curl -s "${n.rpc}/api?module=account&action=balance&address=0xYOUR_ADDRESS&tag=latest"` },
 
-    restTxlist: { lang: 'bash', run: true, code: (n) => `curl -s "${n.rpc}/api?module=account&action=txlist&address=0xVASE_ADRESA&page=1&offset=10&sort=desc"` },
+    restTxlist: { lang: 'bash', run: true, code: (n) => `curl -s "${n.rpc}/api?module=account&action=txlist&address=0xYOUR_ADDRESS&page=1&offset=10&sort=desc"` },
 
     restJs: { lang: 'js', run: true, code: (n) => `const api = '${n.rpc}/api';
 
-const query = new URLSearchParams({ module: 'account', action: 'txlist', address: '0xVASE_ADRESA', page: '1', offset: '25', sort: 'desc' });
+const query = new URLSearchParams({ module: 'account', action: 'txlist', address: '0xYOUR_ADDRESS', page: '1', offset: '25', sort: 'desc' });
 const { status, message, result } = await (await fetch(\`\${api}?\${query}\`)).json();
 console.log(status, message, Array.isArray(result) ? result.length : result);` },
 
@@ -52,7 +52,7 @@ console.log(await signer.getAddress());` },
 
 const provider = new ethers.JsonRpcProvider('${n.rpc}');
 const height = await provider.getBlockNumber();
-const balance = await provider.getBalance('0xVASE_ADRESA');
+const balance = await provider.getBalance('0xYOUR_ADDRESS');
 console.log(height, ethers.formatEther(balance), '${n.coin}');` },
 
     send: { lang: 'js', run: true, code: (n) => `import { ethers } from 'ethers';
@@ -60,9 +60,9 @@ console.log(height, ethers.formatEther(balance), '${n.coin}');` },
 const provider = new ethers.JsonRpcProvider('${n.rpc}');
 const wallet = new ethers.Wallet(process.env.QUINVIUM_KEY, provider);
 
-const tx = await wallet.sendTransaction({ to: '0xPRIJEMCE', value: ethers.parseEther('0.1') });
+const tx = await wallet.sendTransaction({ to: '0xRECIPIENT', value: ethers.parseEther('0.1') });
 const receipt = await tx.wait();
-console.log('blok', receipt.blockNumber, 'poplatek', ethers.formatEther(receipt.fee));` },
+console.log('block', receipt.blockNumber, 'fee', ethers.formatEther(receipt.fee));` },
 
     deploy: { lang: 'js', run: true, code: (n) => `import solc from 'solc';
 import { ethers } from 'ethers';
@@ -108,8 +108,8 @@ const notary = new ethers.Contract('${n.address.Notary}', [
   'function verify(bytes32 hash, address author) view returns (bool exists, uint64 timestamp, uint64 revokedAt, string note)',
 ], wallet);
 
-const hash = ethers.keccak256(ethers.toUtf8Bytes('obsah dokumentu ' + Date.now()));
-await (await notary.notarize(hash, 'Kupní smlouva')).wait();
+const hash = ethers.keccak256(ethers.toUtf8Bytes('document content ' + Date.now()));
+await (await notary.notarize(hash, 'Purchase agreement')).wait();
 console.log(await notary.verify(hash, wallet.address));` },
 
     names: { lang: 'js', run: true, slow: true, code: (n) => `import { ethers } from 'ethers';
@@ -124,7 +124,7 @@ const names = new ethers.Contract('${n.address.AetherNames}', [
   'function resolve(string name) view returns (address)',
 ], wallet);
 
-const name = 'moje-firma';
+const name = 'my-company';
 const secret = ethers.hexlify(ethers.randomBytes(32));
 const hash = await names.commitment(name, wallet.address, wallet.address, secret);
 await (await names.commit(hash)).wait();
@@ -144,9 +144,9 @@ const credentials = new ethers.Contract('${n.address.Credentials}', [
   'function isValid(address issuer, bytes32 id) view returns (bool)',
 ], wallet);
 
-const id = ethers.keccak256(ethers.toUtf8Bytes('diplom ' + Date.now()));
-await (await credentials.registerIssuer('Moje škola', 'skola.example')).wait();
-await (await credentials.issue(id, wallet.address, ethers.id('diplom'), 0)).wait();
+const id = ethers.keccak256(ethers.toUtf8Bytes('diploma ' + Date.now()));
+await (await credentials.registerIssuer('My School', 'school.example')).wait();
+await (await credentials.issue(id, wallet.address, ethers.id('diploma'), 0)).wait();
 console.log(await credentials.isValid(wallet.address, id));` },
 
     multicall: { lang: 'js', run: true, code: (n) => `import { ethers } from 'ethers';
@@ -156,7 +156,7 @@ const multicall = new ethers.Contract('${n.address.Multicall}', [
   'function balances(address[] accounts) view returns (uint256[])',
 ], provider);
 
-console.log(await multicall.balances(['0xVASE_ADRESA', '${n.address.WAET}']));` },
+console.log(await multicall.balances(['0xYOUR_ADDRESS', '${n.address.WAET}']));` },
 
     logs: { lang: 'js', run: true, code: (n) => `import { ethers } from 'ethers';
 
@@ -172,7 +172,7 @@ for (const e of events) console.log(e.blockNumber, e.args.author, e.args.note);`
     wsEthers: { lang: 'js', run: true, stream: true, code: (n) => `import { ethers } from 'ethers';
 
 const provider = new ethers.WebSocketProvider('${n.ws}');
-provider.on('block', (number) => console.log('nový blok', number));` },
+provider.on('block', (number) => console.log('new block', number));` },
 
     wsRaw: { lang: 'js', run: true, stream: true, code: (n) => `const ws = new WebSocket('${n.ws}');
 
@@ -182,7 +182,7 @@ ws.onopen = () => ws.send(JSON.stringify({
 ws.onmessage = (e) => console.log(e.data);` },
 
     getwork: { lang: 'bash', run: true, code: (n) => `curl -s -X POST ${n.rpc} -H 'Content-Type: application/json' \\
-  -d '{"jsonrpc":"2.0","id":1,"method":"quinvium_getWork","params":["0xVASE_ADRESA"]}'` },
+  -d '{"jsonrpc":"2.0","id":1,"method":"quinvium_getWork","params":["0xYOUR_ADDRESS"]}'` },
 
     fees: { lang: 'bash', run: true, code: (n) => `curl -s -X POST ${n.rpc} -H 'Content-Type: application/json' \\
   -d '{"jsonrpc":"2.0","id":1,"method":"quinvium_feeEstimates","params":[]}'` },
@@ -194,13 +194,13 @@ const wallet = new ethers.Wallet(process.env.QUINVIUM_KEY, provider);
 
 const { tiers } = await provider.send('quinvium_feeEstimates', []);
 const tx = await wallet.sendTransaction({
-  to: '0xPRIJEMCE',
+  to: '0xRECIPIENT',
   value: ethers.parseEther('0.1'),
   maxPriorityFeePerGas: tiers.fast.tip,
   maxFeePerGas: tiers.fast.maxFee,
 });
 const receipt = await tx.wait();
-console.log('blok', receipt.blockNumber, 'poplatek', ethers.formatEther(receipt.fee));` },
+console.log('block', receipt.blockNumber, 'fee', ethers.formatEther(receipt.fee));` },
 
     runNode: { lang: 'bash', code: () => `node packages/node/src/cli.js --network testnet --rpc-port 8546 --rate-limit 600` },
   };
@@ -299,6 +299,8 @@ console.log('blok', receipt.blockNumber, 'poplatek', ethers.formatEther(receipt.
       ['quinvium_signals', '[{blocks}]', L('Signalizace forků: kolik bloků za posledních N (výchozí asi den) nese `QIP-n`. Jen informace, nic se tím nezapíná', 'Fork signalling: how many of the last N blocks (about a day by default) carry `QIP-n`. Informative only; nothing activates from it')],
       ['quinvium_watch', '[]', L('Hlídání: mají uzly na usazené výšce stejný blok, hluboké přepisy, shoduje se web a Explorer s GitHubem. Uzly jsou jen podle klíče, bez IP adres', 'Watch: do peers have the same block at a settled height, deep reorganisations, do the website and Explorer match GitHub. Peers by key only, no IP addresses')],
       ['quinvium_nodeInfo', '[]', L('Identita uzlu: veřejný klíč a záznam seedu `klíč@HOST:port`', 'Node identity: public key and seed entry `key@HOST:port`')],
+      ['quinvium_publicNodes', '[]', L('Ověřené veřejné uzly komunity (adresa, ID uzlu, výška), které sdílejí svůj uzel přes tunel', 'Verified public community nodes (URL, node ID, height) that share their node through a tunnel')],
+      ['quinvium_setPublicUrl', '[url]', L('Ohlásí veřejnou adresu tohoto uzlu ostatním, nebo ji s `null` zruší. Jen z tohoto počítače', 'Announces the public URL of this node to the others, or withdraws it with `null`. Only from this computer')],
       ['quinvium_endpoints', '[]', L('Adresy RPC uzlu pro tento počítač, místní síť a internet. Volající z internetu vidí jen veřejnou adresu', 'The node’s RPC addresses for this computer, the local network and the internet. Callers from the internet see only the public address')],
       ['quinvium_suggest', '[query, {type, limit}]', L('Návrhy při psaní do hledání: blok podle čísla, blok nebo transakce podle hashe a známé adresy podle začátku. `type` je `blocks`, `txs` nebo `addresses`', 'Suggestions while typing a search: a block by number, a block or transaction by hash and known addresses by their first digits. `type` is `blocks`, `txs` or `addresses`')],
       ['quinvium_search', '[query]', L('Hledání bloku, transakce nebo adresy', 'Searches blocks, transactions and addresses')],
@@ -328,6 +330,7 @@ console.log('blok', receipt.blockNumber, 'poplatek', ethers.formatEther(receipt.
     ['--no-site-check', L('Nekontroluje web a Explorer sítě proti GitHubu (jinak jednou za 6 hodin)', 'Does not check the network’s website and Explorer against GitHub (otherwise every 6 hours)')],
     ['--no-mining-rpc', L('Vypne `eth_getWork`, `eth_submitWork` a `eth_submitHashrate`, pro veřejné uzly', 'Disables `eth_getWork`, `eth_submitWork` and `eth_submitHashrate`, for public nodes')],
     ['--trust-proxy', L('Číst IP klienta z `X-Forwarded-For`, jen za vlastní proxy', 'Read client IP from `X-Forwarded-For`, only behind your own proxy')],
+    ['--tunnel-port', L('Port jen pro tento počítač, na který vede tunel (Sdílet uzel veřejně). Vše na něm se bere jako cizí, limit podle `Cf-Connecting-IP`', 'A local-only port that a tunnel leads to (Share node publicly). Everything on it counts as foreign, limited per `Cf-Connecting-IP`')],
     ['--stratum-port', L('Port pro minery', 'Miner port')],
     ['--stratum-host', L('Adresa Stratum, `0.0.0.0` pro minery v síti', 'Stratum bind address, `0.0.0.0` for networked miners')],
     ['--stratum-sessions', L('Kolik zařízení obslouží Stratum, výchozí 1024. Změřeno 10 000', 'How many devices Stratum serves, default 1024. Measured at 10,000')],

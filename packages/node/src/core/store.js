@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS tx_index(
 CREATE INDEX IF NOT EXISTS tx_index_sender ON tx_index(sender, number DESC, idx DESC);
 CREATE INDEX IF NOT EXISTS tx_index_recipient ON tx_index(recipient, number DESC, idx DESC);
 CREATE INDEX IF NOT EXISTS tx_index_time ON tx_index(time);
--- Odesílatel a příjemce převodu tokenu, s číslem bloku: historie adresy jde od nejnovějšího bez řazení všech záznamů.
+-- Sender and recipient of a token transfer, with the block number: the history of an address goes from the newest without sorting all rows.
 DROP INDEX IF EXISTS logs_t1;
 DROP INDEX IF EXISTS logs_t2;
 CREATE INDEX IF NOT EXISTS logs_t1_number ON logs(t1, t0, number, log_idx);
@@ -72,7 +72,7 @@ CREATE TRIGGER IF NOT EXISTS accounts_remove AFTER DELETE ON accounts BEGIN
   UPDATE counters SET v=v-1 WHERE k='accounts';
   UPDATE counters SET v=v-1 WHERE k='holders' AND OLD.balance_hex<>'0';
 END;
--- Počet všech transakcí pro přehled: počítat COUNT(*) přes miliony řádků při každé návštěvě by trvalo.
+-- Count of all transactions for the overview: running COUNT(*) over millions of rows on every visit would take too long.
 CREATE TRIGGER IF NOT EXISTS txs_add AFTER INSERT ON tx_index BEGIN
   UPDATE counters SET v=v+1 WHERE k='txs';
 END;
@@ -238,7 +238,7 @@ export class Store {
     });
     args.push(limit + 1);
     const rows = this.db.prepare(`SELECT number,tx_idx,log_idx FROM logs WHERE ${where.join(' AND ')} ORDER BY number,log_idx LIMIT ?`).all(...args);
-    if (rows.length > limit) throw new Error(`dotaz vrací více než ${limit} logů, zužte rozsah`);
+    if (rows.length > limit) throw new Error(`the query returns more than ${limit} logs, narrow the range`);
     return rows;
   }
 

@@ -54,7 +54,7 @@ test('blocks can be filtered by miner, content, time and range', async () => {
   assert.deepEqual(await numbers({ fromBlock: 2, toBlock: 3 }), [3, 2]);
   const second = c.getHeaderByNumber(2n);
   assert.deepEqual(await numbers({ fromTime: Number(second.timestamp), toTime: Number(second.timestamp) }), [2]);
-  await assert.rejects(methods.aether_blocks([{ fromBlock: 'x' }]), /neplatné číslo/);
+  await assert.rejects(methods.aether_blocks([{ fromBlock: 'x' }]), /invalid number/);
 });
 
 test('transactions can be filtered by address, direction, kind and amount', async () => {

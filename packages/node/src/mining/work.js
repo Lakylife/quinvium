@@ -74,7 +74,7 @@ export class WorkManager extends EventEmitter {
 
   /** Returns work for the given payout address. The template is refreshed on a new block or a queue change. */
   async getWork(miner) {
-    if (this.network?.behind) throw new WorkError('uzel se synchronizuje');
+    if (this.network?.behind) throw new WorkError('the node is syncing');
     const c = this.current.get(toHex(miner));
     const age = c ? Date.now() - c.builtAt : Infinity;
     const fresh = c && equal(c.headHash, this.chain.head.hash())
@@ -93,10 +93,10 @@ export class WorkManager extends EventEmitter {
    */
   async submit(nonce, sealHash, mixDigest) {
     const tpl = this.templates.get(toHex(sealHash));
-    if (!tpl) return { accepted: false, reason: 'neznámá nebo stará práce' };
+    if (!tpl) return { accepted: false, reason: 'unknown or stale work' };
     const fields = Object.fromEntries(Object.entries(tpl.header).filter(([k]) => !k.startsWith('_')));
     const block = new Block(new Header({ ...fields, nonce, mixHash: mixDigest }), tpl.txs);
-    if (!this.chain.pow.quickCheck(block.header)) return { accepted: false, reason: 'výsledek nesplňuje obtížnost' };
+    if (!this.chain.pow.quickCheck(block.header)) return { accepted: false, reason: 'result does not meet the difficulty' };
     try {
       const r = await this.chain.insertBlock(block);
       if (r.status === 'added' || r.status === 'reorg') {

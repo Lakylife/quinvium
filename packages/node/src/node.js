@@ -64,7 +64,7 @@ export class AetherNode extends EventEmitter {
   async start() {
     const o = this.opts;
     const network = typeof o.network === 'string' ? NETWORKS[o.network] : o.network;
-    if (!network) throw new Error(`Neznámá síť ${o.network}`);
+    if (!network) throw new Error(`Unknown network ${o.network}`);
     const dataDir = o.dataDir ?? join(homedir(), '.aether', network.name);
     this.dataDir = dataDir;
     this.chain = await Chain.open({ network, dataDir, alloc: o.alloc ?? loadAlloc(), now: o.now, powDir: o.powDir });

@@ -80,7 +80,7 @@ export class ChainWatch extends EventEmitter {
         this.warned.add(key);
         const what = theirs ? `${verdict.theirs.slice(0, 14)}…` : L('nemá náš předchozí blok', 'lacks our previous block');
         this.log(L(
-          `VAROVÁNÍ: uzel ${id} má na výšce ${verdict.height} jiný blok (${what}, u nás ${verdict.ours.slice(0, 14)}…). Sleduje jinou větev.`,
+          L(`VAROVÁNÍ: uzel ${id} má na výšce ${verdict.height} jiný blok (${what}, u nás ${verdict.ours.slice(0, 14)}…). Sleduje jinou větev.`, `WARNING: node ${id} has a different block at height ${verdict.height} (${what}, ours ${verdict.ours.slice(0, 14)}…). It follows another branch.`),
           `WARNING: node ${id} has a different block at height ${verdict.height} (${what}, ours ${verdict.ours.slice(0, 14)}…). It follows another branch.`,
         ));
         this.emit('disagree', { peer: id, ...verdict });

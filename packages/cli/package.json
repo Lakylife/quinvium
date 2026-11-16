@@ -3,7 +3,7 @@
   "version": "2.15.2",
   "private": true,
   "type": "module",
-  "description": "Příkazová řádka Quinvium: peněženka, převody, swap, most, pooly, těžba a uzel",
+  "description": "Quinvium command line: wallet, transfers, swap, bridge, pools, mining and the node",
   "bin": { "quinvium": "bin/quintium.js", "quintium": "bin/quintium.js" },
   "engines": { "node": ">=24" }
 }

@@ -42,10 +42,10 @@ export class Header {
   hash() { return (this._hash ??= keccak(this.encode())); }
 
   static fromFields(v) {
-    if (!Array.isArray(v) || v.length !== 15) throw new Error('hlavička má špatný počet polí');
+    if (!Array.isArray(v) || v.length !== 15) throw new Error('header has a wrong number of fields');
     const [parentHash, miner, stateRoot, txRoot, receiptsRoot, logsBloom, difficulty, number, gasLimit, gasUsed,
       timestamp, extraData, baseFee, mixHash, nonce] = v;
-    for (const x of v) if (!(x instanceof Uint8Array)) throw new Error('hlavička obsahuje vnořený seznam');
+    for (const x of v) if (!(x instanceof Uint8Array)) throw new Error('header contains a nested list');
     return new Header({
       parentHash, miner, stateRoot, txRoot, receiptsRoot, logsBloom, extraData, mixHash, nonce,
       difficulty: bytesToInt(difficulty), number: bytesToInt(number), gasLimit: bytesToInt(gasLimit),
@@ -80,7 +80,7 @@ export class Block {
 
   /** @param {object|((number: bigint) => object)} common configuration, or a function returning it by height */
   static fromParts(header, rawTxs, common) {
-    if (!Array.isArray(rawTxs)) throw new Error('tělo bloku není seznam');
+    if (!Array.isArray(rawTxs)) throw new Error('block body is not a list');
     const c = typeof common === 'function' ? common(header.number) : common;
     return new Block(header, rawTxs.map((r) => decodeTx(r, c)));
   }
@@ -89,14 +89,14 @@ export class Block {
 
   static decode(bytes, common) {
     const v = RLP.decode(bytes);
-    if (!Array.isArray(v) || v.length !== 2) throw new Error('blok má špatný formát');
+    if (!Array.isArray(v) || v.length !== 2) throw new Error('block has a wrong format');
     return Block.fromParts(Header.fromFields(v[0]), v[1], common);
   }
 }
 
 export function decodeTx(raw, common) {
-  if (!(raw instanceof Uint8Array)) throw new Error('transakce není bajtový řetězec');
+  if (!(raw instanceof Uint8Array)) throw new Error('transaction is not a byte string');
   const tx = createTxFromRLP(raw, { common });
-  if (tx.type > 2) throw new Error(`typ transakce ${tx.type} není podporován`);
+  if (tx.type > 2) throw new Error(`transaction type ${tx.type} is not supported`);
   return tx;
 }

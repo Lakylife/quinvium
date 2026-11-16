@@ -61,7 +61,7 @@ test('an attacker relaying the connection between two nodes does not get through
   a.net.on('peer-disconnected', (_, reason) => reasons.push(reason));
   a.net.connect('127.0.0.1', mitm.address().port);
   assert.ok(await until(() => reasons.length > 0), 'spojení se ukončí');
-  assert.match(reasons[0], /podpis identity/);
+  assert.match(reasons[0], /identity signature/);
   assert.equal(a.net.peerCount, 0);
   assert.equal(b.net.peerCount, 0);
   mitm.close();
@@ -76,7 +76,7 @@ test('seed with a pinned key: the right key passes, a foreign one does not', asy
   const reasons = [];
   wrong.net.on('peer-disconnected', (_, reason) => reasons.push(reason));
   assert.ok(await until(() => reasons.length > 0));
-  assert.match(reasons[0], /jiným klíčem/);
+  assert.match(reasons[0], /different key/);
   assert.equal(wrong.net.peerCount, 0);
   await stopAll(good, wrong, b);
 });
@@ -93,6 +93,6 @@ test('an older node without an identity passes only where no identity is require
   strict.net.on('peer-disconnected', (_, reason) => reasons.push(reason));
   strict.net.connect('127.0.0.1', legacy.net.port);
   assert.ok(await until(() => reasons.length > 0));
-  assert.match(reasons[0], /identitu/);
+  assert.match(reasons[0], /identity/);
   await stopAll(open, strict, legacy);
 });

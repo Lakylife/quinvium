@@ -2,7 +2,7 @@
 name = "quintium-miner"
 version = "2.10.0"
 edition = "2021"
-description = "GPU miner sítě Quinvium (Ethash přes Vulkan, DirectX 12 a Metal)"
+description = "GPU miner for the Quinvium network (Ethash over OpenCL, Vulkan, DirectX 12 and Metal)"
 license = "MIT"
 
 [dependencies]

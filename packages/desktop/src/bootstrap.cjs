@@ -19,7 +19,7 @@ while (folder && !started) {
     require(path.join(chosen.folder, 'app.asar', 'src', 'main.cjs'));
     started = true;
   } catch (e) {
-    console.error(`Verze ${chosen.version} se nedá spustit: ${e.message}`);
+    console.error(`Version ${chosen.version} cannot start: ${e.message}`);
     rejectVersion(folder, chosen.version);
     app.setVersion(installed);
     delete process.env.AETHER_RESOURCES;

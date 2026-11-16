@@ -63,7 +63,7 @@ export async function ethCall(chain, header, params) {
   const res = await runOnce(chain, header, call, limit);
   if (res.exceptionError) {
     if (res.exceptionError.error === 'revert') throw revertError(res);
-    throw new RpcCallError(`chyba EVM: ${res.exceptionError.error}`);
+    throw new RpcCallError(`EVM error: ${res.exceptionError.error}`);
   }
   return res.returnValue;
 }
@@ -80,7 +80,7 @@ export async function estimateGas(chain, header, params) {
   const top = await attempt(cap);
   if (!top.ok) {
     if (top.res?.exceptionError?.error === 'revert') throw revertError(top.res);
-    throw new RpcCallError(`transakce selže: ${top.res?.exceptionError?.error ?? 'málo gasu'}`);
+    throw new RpcCallError(`execution reverted: ${top.res?.exceptionError?.error ?? 'out of gas'}`);
   }
   let lo = intrinsic - 1n;
   let hi = cap;

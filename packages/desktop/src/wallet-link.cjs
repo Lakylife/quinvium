@@ -192,7 +192,7 @@ class WalletLink {
     return new Promise((resolve, reject) => {
       let text = '';
       req.setEncoding('utf8');
-      req.on('data', (d) => { text += d; if (text.length > MAX_BODY) reject(new Error('příliš dlouhé')); });
+      req.on('data', (d) => { text += d; if (text.length > MAX_BODY) reject(new Error('too long')); });
       req.on('end', () => { try { resolve(JSON.parse(text)); } catch (e) { reject(e); } });
     });
   }
