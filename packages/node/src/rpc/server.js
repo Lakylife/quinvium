@@ -89,19 +89,24 @@ export class RpcServer {
     this.heavy = new Map();   // limit key -> { tail: Promise, waiting: number }
   }
 
-  /** Runs `fn` after the caller's previous heavy request has finished. */
-  _serial(caller, fn) {
+  /**
+   * Waits for the caller's previous heavy request to finish. Returns null when too many are waiting,
+   * otherwise `{ turn, release }`: await `turn`, run the request, then always call `release`.
+   */
+  _heavySlot(caller) {
     const key = caller.tunnel ? `tunnel:${limitKey(caller.ip)}` : limitKey(caller.ip);
     const q = this.heavy.get(key) ?? { tail: Promise.resolve(), waiting: 0 };
     if (q.waiting >= MAX_HEAVY_WAITING) return null;
     q.waiting += 1;
     this.heavy.set(key, q);
-    const run = q.tail.then(fn, fn);
-    q.tail = run.catch(() => {}).finally(() => {
+    let release;
+    const done = new Promise((resolve) => { release = resolve; });
+    const turn = q.tail;
+    q.tail = done.finally(() => {
       q.waiting -= 1;
       if (q.waiting === 0 && this.heavy.get(key) === q) this.heavy.delete(key);
     });
-    return run;
+    return { turn, release };
   }
 
   async start() {
@@ -157,21 +162,21 @@ export class RpcServer {
     if (typeof fn !== 'function') return { jsonrpc: '2.0', id, error: { code: -32601, message: `metoda ${req.method} neexistuje` } };
     if (!caller.local && (this.localOnly.has(req.method) || ALWAYS_LOCAL.has(req.method) || (caller.tunnel && MINING_METHODS.includes(req.method)))) return { jsonrpc: '2.0', id, error: { code: -32601, message: `metoda ${req.method} je dostupná jen z místní sítě` } };
     const params = Array.isArray(req.params) ? req.params : [];
-    const run = () => fn(params, caller);
+    let slot = null;
+    if (!caller.local && HEAVY_METHODS.has(req.method)) {
+      slot = this._heavySlot(caller);
+      if (slot === null) return { jsonrpc: '2.0', id, error: { code: -32005, message: 'too many heavy requests at once, try again shortly' } };
+    }
     try {
-      let result;
-      if (!caller.local && HEAVY_METHODS.has(req.method)) {
-        const queued = this._serial(caller, run);
-        if (queued === null) return { jsonrpc: '2.0', id, error: { code: -32005, message: 'too many heavy requests at once, try again shortly' } };
-        result = await queued;
-      } else {
-        result = await run();
-      }
+      if (slot) await slot.turn;
+      const result = await fn(params, caller);
       return { jsonrpc: '2.0', id, result: result === undefined ? null : result };
     } catch (e) {
       if (e instanceof RpcError) return { jsonrpc: '2.0', id, error: { code: e.code, message: e.message, data: e.data } };
       this.log(`RPC ${req.method}: ${e.stack ?? e.message}`);
       return { jsonrpc: '2.0', id, error: { code: -32603, message: e.message } };
+    } finally {
+      slot?.release();
     }
   }
 
