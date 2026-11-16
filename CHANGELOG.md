@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 2.16.0 (16 November 2026)
+
+- English is the default language everywhere: node log, errors, RPC and Stratum messages, miner output, app log and package descriptions. Czech stays a translation (`QUINTIUM_LANG=cs`, or the app window in Czech).
+- The network keeps working without our servers: home nodes open only the node port in the router by UPnP (`--upnp`, switch "Accept connections from other nodes"); the public server is also a seed by IP address; the Chrome wallet, the website and the Explorer switch to verified community nodes (chain ID and genesis checked) when the main RPC is down; `nodes.json` with community nodes is saved into the GitHub Pages sites.
+- The app asks once, at the first mining start, whether to share the node publicly, and warns when mining earns nothing (the node does not answer, has no peers, sees no new block, or the card computes nothing).
+- The node and the miner stop together with the app (`--exit-with-parent`), so a crash no longer leaves a node holding the ports.
+- Explorer: a "Who serves the data" card on the Network page with the visitor's own node; documents `quinvium_publicNodes`, `quinvium_setPublicUrl`, `--tunnel-port`, `--upnp` and `--exit-with-parent`.
+- Security fixes from the review of 16 November (#39): RPC limits for heavy calls, public node list, Explorer node choice, pool and Stratum flooding.
+- P2P: a seed is no longer banned for a slow sync, second mainnet seed (#38, issue #37).
+
+### Earlier, unreleased until now
+
 - Miner: `--fallback <url,…>` keeps mining solo through your own node when the pool stops answering and returns to the pool when it answers again; the app passes its own node.
 - Community nodes: the app's "Share node publicly" (off by default) opens a Cloudflare quick tunnel to a local-only tunnel port of the node (`--tunnel-port`; every request there is foreign, limited per `Cf-Connecting-IP`, no mining or control methods). The node announces the address to its peers signed by its node key (`PUBLIC_NODES`, short validity); every node checks an address itself before listing it in `quinvium_publicNodes`. The Explorer falls back to those nodes when its configured nodes do not answer. cloudflared is downloaded only from the official release, pinned by version and SHA-256. Draft Cloudflare Worker for one stable address in `ops/cloudflare/`.
 - Explorer: .qu name registration can be finished later, step 2 is its own click, the first name becomes primary; primary names in lists, on the address page and in the wallet menu.
