@@ -24,6 +24,10 @@ const CREDIT_BYTES = 12;
 const MAX_CREDIT = (1n << 96n) - 1n;
 const MAX_JOBS = 16_384;
 const MAX_SESSIONS = 16_384;
+// Devices that have not delivered a single share yet. Asking for work is free, so anyone can create them in bulk; they are
+// evicted among themselves and never push out the work of a device that is really mining.
+const MAX_FRESH_SESSIONS = 4096;
+const MAX_FRESH_JOBS = 4096;
 const DEVICE_PAGE = 200;             // connected devices per page
 const MAX_DEVICE_PAGE = 500;
 const MAX_QUEUE = 4096;
@@ -112,7 +116,10 @@ export class PoolServer {
     Object.assign(this, { chain, work, mempool, address, key, send, call, estimate, minShareDifficulty, stateFile, log });
     this.sender = privateToAddress(key);
     this.sessions = new Map();   // address.device -> state
+    this.fresh = new Set();      // ids of sessions without an accepted share, oldest first
     this.jobs = new Map();       // sealHash -> { block, session, target }
+    this.freshJobs = new Set();  // sealHashes of jobs of fresh sessions, oldest first
+    this.provenJobs = new Set(); // sealHashes of jobs of sessions that delivered a share, oldest first
     this.queue = [];             // { header, number, parent }
     this.seen = new Set();
     this.miners = new Set();
@@ -170,12 +177,32 @@ export class PoolServer {
     const id = `${toHex(miner)}.${worker}`;
     let s = this.sessions.get(id);
     if (!s) {
-      if (this.sessions.size >= MAX_SESSIONS) this.sessions.delete(this.sessions.keys().next().value);
-      s = { id, miner, difficulty: null, shares: 0, since: Date.now(), done: 0n, windowStart: Date.now(), previous: 0n, seen: Date.now() };
+      if (this.fresh.size >= MAX_FRESH_SESSIONS) this._dropSession(this.fresh.values().next().value);
+      if (this.sessions.size >= MAX_SESSIONS) this._dropSession(this.fresh.size ? this.fresh.values().next().value : this.sessions.keys().next().value);
+      s = { id, miner, difficulty: null, shares: 0, since: Date.now(), done: 0n, windowStart: Date.now(), previous: 0n, seen: Date.now(), proven: false };
       this.sessions.set(id, s);
+      this.fresh.add(id);
     }
     s.seen = Date.now();
     return s;
+  }
+
+  _dropSession(id) {
+    this.sessions.delete(id);
+    this.fresh.delete(id);
+  }
+
+  /** Jobs of devices that already mined something and of new devices are evicted separately. */
+  _addJob(key, job) {
+    this.jobs.set(key, job);
+    const list = job.session.proven ? this.provenJobs : this.freshJobs;
+    const limit = job.session.proven ? MAX_JOBS : MAX_FRESH_JOBS;
+    list.add(key);
+    while (list.size > limit) {
+      const old = list.values().next().value;
+      list.delete(old);
+      this.jobs.delete(old);
+    }
   }
 
   /**
@@ -253,8 +280,7 @@ export class PoolServer {
       const header = new Header({ ...copy(template.header), extraData: shareExtra(miner, s.difficulty) });
       const job = { base: template, block: new Block(header, template.txs), session: s, difficulty: s.difficulty, target: targetForDifficulty(s.difficulty) };
       s.job = job;
-      this.jobs.set(toHex(header.sealHash()), job);
-      if (this.jobs.size > MAX_JOBS) this.jobs.delete(this.jobs.keys().next().value);
+      this._addJob(toHex(header.sealHash()), job);
     }
     const { header } = s.job.block;
     return {
@@ -299,6 +325,12 @@ export class PoolServer {
     }
     s.shares += 1;
     s.done += job.difficulty;
+    if (!s.proven) {
+      s.proven = true;
+      this.fresh.delete(s.id);
+      // Its current job moves among the protected ones; the next jobs are created there.
+      if (this.freshJobs.delete(key)) this._addJob(key, job);
+    }
     this.stats.shares += 1;
     this.miners.add(toHex(s.miner));
 

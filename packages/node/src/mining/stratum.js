@@ -12,6 +12,9 @@ const STALE_JOBS = 8;
 const MAX_SUBMITS_PER_SECOND = 8;      // results come only at network difficulty; honestly they are rare
 const MAX_SESSIONS = 1024;
 const MAX_SESSIONS_PER_IP = 128;
+// A miner logs in once; asking for work happens on a new block. More than this means someone creates devices or jobs in bulk.
+const MAX_LOGINS = 4;
+const MAX_WORK_REQUESTS_PER_SECOND = 4;
 const unprefixed = (h) => h.replace(/^0x/, '');
 
 class Session {
@@ -26,6 +29,8 @@ class Session {
     this.jobs = new Map();
     this.lastTarget = null;
     this.rate = { start: 0, n: 0 };
+    this.logins = 0;
+    this.workRate = { start: 0, n: 0 };
     socket.setEncoding('utf8');
     socket.setNoDelay(true);
     socket.setTimeout(600_000, () => socket.destroy());
@@ -52,6 +57,7 @@ class Session {
   reply(id, result, error = null) { this.send({ id, jsonrpc: '2.0', result, error }); }
 
   _login(raw) {
+    if (++this.logins > MAX_LOGINS) { this.socket.destroy(); return false; }
     const [address, ...rest] = String(raw ?? '').split('.');
     if (!/^0x[0-9a-fA-F]{40}$/.test(address)) return false;
     this.miner = fromHex(address);
@@ -65,6 +71,16 @@ class Session {
     if (now - this.rate.start >= 1000) this.rate = { start: now, n: 0 };
     this.rate.n += 1;
     if (this.rate.n <= MAX_SUBMITS_PER_SECOND) return true;
+    this.socket.destroy();
+    return false;
+  }
+
+  /** Each request for work can create a new job, so it has its own limit. */
+  _allowWork() {
+    const now = Date.now();
+    if (now - this.workRate.start >= 1000) this.workRate = { start: now, n: 0 };
+    this.workRate.n += 1;
+    if (this.workRate.n <= MAX_WORK_REQUESTS_PER_SECOND) return true;
     this.socket.destroy();
     return false;
   }
@@ -94,6 +110,7 @@ class Session {
         return undefined;
       }
       case 'eth_getWork': {
+        if (!this._allowWork()) return undefined;
         if (!this.miner) return this.reply(id, null, { code: -1, message: 'Log in first' });
         const work = await this._work();
         return work ? this.reply(id, this._proxyJob(work)) : this.reply(id, null, { code: -1, message: 'The node is syncing' });

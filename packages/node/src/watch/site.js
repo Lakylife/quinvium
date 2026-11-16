@@ -136,7 +136,7 @@ export class SiteWatch extends EventEmitter {
     this.state = { checkedAt: this.now(), error: null, files, changed };
     for (const c of fresh) {
       this.log(L(
-        L(`VAROVÁNÍ: web se liší od vydání: ${c.url} neodpovídá GitHubu (${this.repo}, ${this.branch}) ani vydání tohoto uzlu.`, `WARNING: the website differs from the release: ${c.url} matches neither GitHub (${this.repo}, ${this.branch}) nor the release of this node.`),
+        L(L(`VAROVÁNÍ: web se liší od vydání: ${c.url} neodpovídá GitHubu (${this.repo}, ${this.branch}) ani vydání tohoto uzlu.`, `WARNING: the website differs from the release: ${c.url} matches neither GitHub (${this.repo}, ${this.branch}) nor the release of this node.`), `WARNING: the website differs from the release: ${c.url} matches neither GitHub (${this.repo}, ${this.branch}) nor the release of this node.`),
         `WARNING: the website differs from the release: ${c.url} matches neither GitHub (${this.repo}, ${this.branch}) nor this node's release.`,
       ));
       this.emit('changed', c);

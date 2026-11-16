@@ -234,7 +234,7 @@
   let community = (() => { try { return (JSON.parse(store.get(COMMUNITY_KEY) ?? '[]') ?? []).filter((u) => COMMUNITY_URL.test(u)).slice(0, 8); } catch { return []; } })();
   const candidates = () => (NODES.length ? [...new Set([...NODES, ...community])] : []);
   const savedRpc = store.get('aether.rpc');
-  let rpcBase = NODES.length ? (candidates().includes(savedRpc) ? savedRpc : NODES[0]) : savedRpc || location.origin;
+  let rpcBase = NODES.length ? (NODES.includes(savedRpc) ? savedRpc : NODES[0]) : savedRpc || location.origin;
   let stats = null;
   let contracts = {};
   let reqId = 1;
@@ -256,11 +256,16 @@
     if (LIST.length < 2) return Promise.resolve(false);
     picking ??= (async () => {
       const heights = await Promise.all(LIST.map((url) => post(url, 'eth_blockNumber').then((h) => Number(BigInt(h))).catch(() => -1)));
-      const alive = heights.filter((h) => h >= 0);
+      // Community nodes never vote against the network's own nodes: anyone can announce several of them, and a majority
+      // of announced nodes must not be able to declare the network's own node an outlier. They count only among themselves,
+      // when none of the network's own nodes answers.
+      const ownAlive = LIST.some((url, i) => heights[i] >= 0 && NODES.includes(url));
+      const voters = (i) => heights[i] >= 0 && (!ownAlive || NODES.includes(LIST[i]));
+      const alive = heights.filter((h, i) => voters(i));
       const settled = alive.length ? Math.min(...alive) - SETTLED : -1;
       let outliers = [];
       if (alive.length >= 2 && settled >= 1) {
-        const hashes = await Promise.all(LIST.map((url, i) => (heights[i] < 0 ? null : post(url, 'eth_getBlockByNumber', [`0x${settled.toString(16)}`, false]).then((b) => b?.hash ?? null).catch(() => null))));
+        const hashes = await Promise.all(LIST.map((url, i) => (!voters(i) ? null : post(url, 'eth_getBlockByNumber', [`0x${settled.toString(16)}`, false]).then((b) => b?.hash ?? null).catch(() => null))));
         const votes = new Map();
         for (const h of hashes) if (h) votes.set(h, (votes.get(h) ?? 0) + 1);
         const [top, count] = [...votes.entries()].sort((a, b) => b[1] - a[1])[0] ?? [null, 0];
@@ -279,7 +284,8 @@
       const here = index >= 0 && pool(index) ? heights[index] : -1;
       if (best < 0 || (here >= 0 && best - here <= MAX_BEHIND)) return false;
       rpcBase = LIST[heights.findIndex((h, i) => h === best && pool(i))];
-      store.set('aether.rpc', rpcBase);
+      // Only the network's own nodes are remembered; a community node is a stopgap for this visit.
+      if (NODES.includes(rpcBase)) store.set('aether.rpc', rpcBase);
       if (!NODES.includes(rpcBase)) toast(esc(fill('net.community', { host: new URL(rpcBase).host })));
       live();
       return true;
@@ -4251,6 +4257,8 @@
   async function nameSuggestion(q) {
     const name = q.replace(/\.qu$/, '');
     if (!contracts.AetherNames || !/^[a-z0-9-]{1,63}$/.test(name)) return [];
+    // A community node is not trusted to say where a name points: a wrong answer would send people's coins elsewhere.
+    if (NODES.length && !NODES.includes(rpcBase)) return [];
     const target = await new ethers.Contract(contracts.AetherNames.address, contracts.AetherNames.abi, provider()).resolve(name).catch(() => ethers.ZeroAddress);
     return target && target !== ethers.ZeroAddress ? [{ type: 'name', id: target, name: `${name}.qu` }] : [];
   }
