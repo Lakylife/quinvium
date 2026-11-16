@@ -649,10 +649,20 @@
     el('m-error').textContent = '';
     try {
       await d.startMiner({ address: await payoutAddress(), device: el('m-device').value });
+      offerSharing();
     } catch (e) {
       el('m-error').textContent = errorText(e);
     }
     refresh();
+  }
+  /** Asked once, at the first mining start: community nodes keep the Explorer, the website and wallets working when the servers are down. */
+  async function offerSharing() {
+    const s = await d.state();
+    if (s.share?.on || s.share?.asked || !el('share-box').hidden) return;
+    const close = () => { el('share-box').hidden = true; };
+    el('share-no').onclick = async () => { close(); await d.shareAsked(); };
+    el('share-yes').onclick = async () => { close(); try { await d.setSharePublic(true); } finally { refresh(); } };
+    el('share-box').hidden = false;
   }
   const stopMining = async () => { await d.stopMiner(); refresh(); };
   el('m-start').onclick = startMining;

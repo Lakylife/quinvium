@@ -335,11 +335,12 @@ ipcMain.handle('state', () => ({
   release: { latest: release.latest, checked: release.checked, error: release.error, downloading: release.downloading, file: release.file },
   notify: Object.fromEntries(NOTIFY_KINDS.map((k) => [k, notifyOn(k)])),
   version: app.getVersion(),
-  share: { on: !!loadSettings().sharePublic, status: share.status, url: share.url, error: share.error },
+  share: { on: !!loadSettings().sharePublic, asked: !!loadSettings().shareAsked, status: share.status, url: share.url, error: share.error },
 }));
 // Share node publicly on or off. The node restarts, because the tunnel port is opened only when sharing is on.
+ipcMain.handle('share:asked', () => { saveSettings({ shareAsked: true }); return true; });
 ipcMain.handle('share:set', async (_, on) => {
-  saveSettings({ sharePublic: !!on });
+  saveSettings({ sharePublic: !!on, shareAsked: true });
   await stopSharing();
   // Mining keeps running and resumes when the node is back, as after other node settings.
   if (node.proc) {
