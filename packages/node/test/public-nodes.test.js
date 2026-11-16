@@ -10,14 +10,17 @@ import { MINING_METHODS } from '../src/rpc/methods.js';
 const identity = () => new NodeIdentity(crypto.generateKeyPairSync('ed25519').privateKey);
 const hashAt = (n) => `0x${n.toString(16).padStart(64, '0')}`;
 const chain = (head = 100n) => ({ head: { number: head }, store: { canonicalHash: (n) => Buffer.from(hashAt(n).slice(2), 'hex') } });
-/** A fake public node answering JSON-RPC: chain ID, block hashes and head can be set per address. */
+/** Node keys of the fake nodes: the key that announced each address, unless a node sets another. */
+const keyOf = new Map();
+/** A fake public node answering JSON-RPC: chain ID, block hashes, head and node key can be set per address. */
 const fakeFetch = (nodes) => async (url, init) => {
   const n = nodes[url];
   if (!n) throw new Error('unreachable');
   const { method, params } = JSON.parse(init.body);
   const result = method === 'eth_chainId' ? `0x${n.chainId.toString(16)}`
     : method === 'eth_blockNumber' ? `0x${n.head.toString(16)}`
-      : { hash: n.hash ? n.hash(BigInt(params[0])) : hashAt(BigInt(params[0])) };
+      : method === 'quinvium_nodeInfo' ? { publicKey: n.publicKey ?? keyOf.get(url) ?? null }
+        : { hash: n.hash ? n.hash(BigInt(params[0])) : hashAt(BigInt(params[0])) };
   return { ok: true, json: async () => ({ jsonrpc: '2.0', id: 1, result }) };
 };
 
@@ -55,7 +58,7 @@ test('addresses are listed only after this node checked them: same chain, same s
       [other]: { chainId: 52402, head: 100n },
     }),
   });
-  const announce = (url) => { const id = identity(); const expires = Date.now() + 60_000; return { url, key: new Uint8Array(id.publicKey), expires, sig: new Uint8Array(signAnnouncement(id, '52401', url, expires)) }; };
+  const announce = (url) => { const id = identity(); keyOf.set(url, Buffer.from(id.publicKey).toString('hex')); const expires = Date.now() + 60_000; return { url, key: new Uint8Array(id.publicKey), expires, sig: new Uint8Array(signAnnouncement(id, '52401', url, expires)) }; };
   assert.equal(pn.receive([good, fork, behind, other].map(announce)), 4);
   await Promise.all([...pn.entries.values()].map((e) => pn.check(e)));
   assert.deepEqual(pn.list().map((e) => e.url), [good]);
@@ -71,6 +74,7 @@ test('addresses are listed only after this node checked them: same chain, same s
 test('a sharing node signs its own address and passes on only verified ones', async () => {
   const url = 'https://mine.trycloudflare.com';
   const id = identity();
+  keyOf.set(url, Buffer.from(id.publicKey).toString('hex'));
   const pn = new PublicNodes({ chain: chain(), identity: id, chainId: 52401, fetchImpl: fakeFetch({ [url]: { chainId: 52401, head: 100n } }) });
   const own = pn.share(url);
   assert.ok(verifyAnnouncement(own, '52401'));
@@ -125,4 +129,25 @@ test('peers exchange signed addresses: the list sent is the list received, older
   assert.ok(verifyAnnouncement(received[0], '52401'), 'the signature survives the wire');
   Network.prototype._onPublicNodes.call(net, from, sent[0].body);
   assert.equal(received.length, 1, 'at most one list a minute from one peer');
+});
+
+test('an address is listed only when it leads to the node that signed it, and each node key has one address', async () => {
+  const theirs = 'https://rpc.example.org';
+  const proxy = 'https://proxy.example.org';
+  const attacker = identity();
+  const owner = identity();
+  const pn = new PublicNodes({
+    chain: chain(100n), identity: identity(), chainId: 52401,
+    // Someone else's working node (and a proxy to it) answers with its own key, not the attacker's.
+    fetchImpl: fakeFetch({ [theirs]: { chainId: 52401, head: 100n, publicKey: Buffer.from(owner.publicKey).toString('hex') }, [proxy]: { chainId: 52401, head: 100n, publicKey: Buffer.from(owner.publicKey).toString('hex') } }),
+  });
+  const sign = (id, url, expires) => ({ url, key: new Uint8Array(id.publicKey), expires, sig: new Uint8Array(signAnnouncement(id, '52401', url, expires)) });
+  const now = Date.now();
+  assert.equal(pn.receive([sign(attacker, theirs, now + 60_000)]), 1);
+  await Promise.all([...pn.entries.values()].map((e) => pn.check(e)));
+  assert.deepEqual(pn.list(), [], 'signed by a key that does not run the node');
+  // A newer announcement of the same key moves the entry; it does not add a second one.
+  assert.equal(pn.receive([sign(attacker, proxy, now + 120_000)]), 1);
+  assert.deepEqual([...pn.entries.keys()], [proxy]);
+  assert.equal(pn.receive([sign(attacker, theirs, now + 90_000)]), 0, 'an older announcement of the same key is ignored');
 });

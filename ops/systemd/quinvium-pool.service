@@ -2,6 +2,7 @@
 # The pool contract address comes from /etc/quinvium/pool.env (POOL_ADDRESS=0x...). The node keeps its gas account
 # key in /var/lib/quinvium/pool/pool.key (created once, never printed); fund that account with a little QU.
 # Miners: HTTPS JSON-RPC through Caddy (pool.quinvium.com) and Stratum on port 4444 (3333 is the Stratum port of the main node).
+# Miners use aether_poolWork and aether_poolSubmit; solo getWork and submitHashrate are off, and every caller has a rate limit.
 [Unit]
 Description=Quinvium mining pool server
 After=network-online.target quinvium-mainnet.service
@@ -13,7 +14,7 @@ User=quinvium
 Group=quinvium
 WorkingDirectory=/opt/quinvium
 EnvironmentFile=/etc/quinvium/pool.env
-ExecStart=/usr/bin/node /opt/quinvium/packages/node/src/cli.js --network mainnet --data-dir /var/lib/quinvium/pool --rpc-host 127.0.0.1 --rpc-port 8555 --p2p-port 30534 --stratum-host 0.0.0.0 --stratum-port 4444 --trust-proxy --pool ${POOL_ADDRESS}
+ExecStart=/usr/bin/node /opt/quinvium/packages/node/src/cli.js --network mainnet --data-dir /var/lib/quinvium/pool --rpc-host 127.0.0.1 --rpc-port 8555 --p2p-port 30534 --stratum-host 0.0.0.0 --stratum-port 4444 --rate-limit 3000 --trust-proxy --no-mining-rpc --pool ${POOL_ADDRESS}
 Restart=always
 RestartSec=5
 LimitNOFILE=65536
