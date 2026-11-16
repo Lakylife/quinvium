@@ -32,6 +32,7 @@ Options:
   --pool <0x...>      mine into the pool with this address, --node is then the pool server
   --worker <name>     device name in the pool, default rig
   --fallback <url,…>  backup nodes for solo mining when the main target (pool) does not respond; the miner returns once it is back
+  --exit-with-parent  stop when standard input closes (the app that started the miner is gone)
   --help              this help
 ";
 
@@ -432,6 +433,17 @@ fn run() -> Result<(), String> {
         return benchmark(&backend);
     }
 
+    if flag("--exit-with-parent") {
+        // The app keeps our standard input open. When it ends without stopping us (crash, force quit),
+        // the input closes and the miner stops instead of keeping the card busy for the next start.
+        thread::spawn(|| {
+            let mut sink = [0u8; 64];
+            let mut input = std::io::stdin();
+            while matches!(std::io::Read::read(&mut input, &mut sink), Ok(n) if n > 0) {}
+            eprintln!("Standard input closed, stopping.");
+            std::process::exit(0);
+        });
+    }
     let address = value("--address").ok_or("missing --address, see --help")?;
     let bytes = parse_hex(&address).map_err(|_| "invalid address")?;
     if bytes.len() != 20 {

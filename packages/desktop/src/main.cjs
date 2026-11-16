@@ -172,8 +172,9 @@ function startNode(network) {
   if (!TEST_RPC_PORT) saveSettings({ network });
   const dataDir = path.join(app.getPath('userData'), 'chain', CHAIN_FOLDERS[network] ?? network);
   fs.mkdirSync(dataDir, { recursive: true });
-  node.proc = spawn(process.execPath, [nodeBundle, '--network', network, '--data-dir', dataDir, '--explorer', explorerDir, ...networkArgs(network)], {
-    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', QUINTIUM_LANG: nodeLang() }, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true,
+  node.proc = spawn(process.execPath, [nodeBundle, '--network', network, '--data-dir', dataDir, '--explorer', explorerDir, '--exit-with-parent', ...networkArgs(network)], {
+    // stdin stays an open pipe: when the app ends without stopping the node (crash, force quit), the node notices and stops.
+    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', QUINTIUM_LANG: nodeLang() }, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
   });
   follow(node.proc, (l) => { push(node.log, l); send({ type: 'node-log', line: l }); });
   node.proc.on('exit', (code) => {
@@ -260,9 +261,9 @@ function startMiner({ address, device }) {
   // When the pool stops answering, the miner keeps mining solo through this computer's node and returns to the pool later.
   if (pool) args.push('--pool', pool.address, '--worker', tag || 'rig', '--fallback', `http://127.0.0.1:${rpcPort()}`);
   if (device !== undefined && device !== 'all') args.push('--device', String(device));
-  args.push('--intensity', String(power ?? 100));
+  args.push('--intensity', String(power ?? 100), '--exit-with-parent');
   if ((power ?? 100) >= 100) setGpuState(GPU_FULL_POWER);
-  miner.proc = spawn(minerPath, args, { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+  miner.proc = spawn(minerPath, args, { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
   saveSettings({ lastMining: { address, device: device ?? 'all' } });   // the tray can start mining again without the window
   keepAwake(true);
   follow(miner.proc, (l) => {

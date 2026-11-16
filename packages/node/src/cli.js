@@ -43,6 +43,7 @@ Použití: quintium-node [volby]
   --lan-port <port>                 port hledání v místní síti, jen pro oddělené testy
   --allow-private                   povolit uzly v lokální síti
   --verbose                         podrobný výpis sítě
+  --exit-with-parent                skončit, když se zavře standardní vstup (aplikace, která uzel spustila, zmizela)
   --help                            tato nápověda
 `, `${VERSION}
 
@@ -75,6 +76,7 @@ Usage: quintium-node [options]
   --lan-port <port>                 local discovery port, only for separate tests
   --allow-private                   allow nodes on the local network
   --verbose                         detailed network log
+  --exit-with-parent                stop when standard input closes (the app that started the node is gone)
   --help                            this help
 `);
 
@@ -84,7 +86,7 @@ const { values: v } = parseArgs({
     'p2p-port': { type: 'string' }, 'rpc-port': { type: 'string' }, 'rpc-host': { type: 'string' }, 'rate-limit': { type: 'string' },
     'stratum-port': { type: 'string' }, 'stratum-host': { type: 'string' }, 'stratum-sessions': { type: 'string' }, 'stratum-sessions-per-ip': { type: 'string' }, 'miner-address': { type: 'string' }, extra: { type: 'string' },
     pool: { type: 'string' }, 'pool-key-file': { type: 'string' },
-    explorer: { type: 'string' }, 'dev-mine': { type: 'boolean' }, 'allow-private': { type: 'boolean' }, lan: { type: 'boolean' }, public: { type: 'boolean' }, 'public-host': { type: 'string' }, 'lan-port': { type: 'string' }, verbose: { type: 'boolean' },
+    explorer: { type: 'string' }, 'dev-mine': { type: 'boolean' }, 'allow-private': { type: 'boolean' }, lan: { type: 'boolean' }, public: { type: 'boolean' }, 'public-host': { type: 'string' }, 'lan-port': { type: 'string' }, verbose: { type: 'boolean' }, 'exit-with-parent': { type: 'boolean' },
     'trust-proxy': { type: 'boolean' }, 'tunnel-port': { type: 'string' }, 'no-mining-rpc': { type: 'boolean' }, 'no-site-check': { type: 'boolean' },
     help: { type: 'boolean' },
   },
@@ -170,6 +172,14 @@ const shutdown = async () => {
 };
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
+// The app keeps a pipe open to our standard input. If the app crashes or is force-quit, the pipe closes
+// and the node stops properly instead of running on and holding the ports for the next start.
+if (v['exit-with-parent']) {
+  process.stdin.on('end', shutdown);
+  process.stdin.on('close', shutdown);
+  process.stdin.on('error', shutdown);
+  process.stdin.resume();
+}
 }
 
 main().catch((e) => {
