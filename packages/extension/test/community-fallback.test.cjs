@@ -7,6 +7,7 @@ const vm = require('node:vm');
 const { join } = require('node:path');
 
 const source = readFileSync(join(__dirname, '..', 'background.js'), 'utf8');
+const GENESIS = '0x49c889ad9d4f44869cf7f97a6e079a50dbf13974263b1afedec3b774ebeeac39';
 
 function load(fetchImpl, stored = {}) {
   const any = new Proxy(function () {}, { get: (t, k) => (k === 'then' ? undefined : any), apply: () => any, construct: () => any });
@@ -45,10 +46,12 @@ test('with the main server down, the wallet uses a community node with the right
   const calls = [];
   const { rpc } = load(net({
     'https://wrong.example': (m) => (m === 'eth_chainId' ? '0x1' : '0x99'),
-    'https://good.example': (m) => (m === 'eth_chainId' ? '0xccb1' : '0x20'),
-  }, calls), { 'community.52401': ['https://wrong.example', 'https://good.example'] });
+    'https://good.example': (m) => (m === 'eth_chainId' ? '0xccb1' : m === 'eth_getBlockByNumber' ? { hash: GENESIS } : '0x20'),
+    'https://fork.example': (m) => (m === 'eth_chainId' ? '0xccb1' : m === 'eth_getBlockByNumber' ? { hash: '0x' + '22'.repeat(32) } : '0x77'),
+  }, calls), { 'community.52401': ['https://wrong.example', 'https://fork.example', 'https://good.example'] });
   assert.equal(await rpc('eth_blockNumber'), '0x20');
   assert.ok(!calls.includes('https://wrong.example eth_blockNumber'), 'a node of another chain is never used');
+  assert.ok(!calls.includes('https://fork.example eth_blockNumber'), 'a node with another genesis is never used');
   calls.length = 0;
   assert.equal(await rpc('eth_blockNumber'), '0x20');
   assert.equal(calls.join(), 'https://good.example eth_blockNumber', 'the found node is used directly for a while');

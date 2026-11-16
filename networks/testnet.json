@@ -33,7 +33,8 @@
     "stratum": 3334
   },
   "seeds": [
-    "2df5ea8b9b4e18c552a001434e6b7ed0fc99348a03478fd809de1f92fde2f78d@seed.quinvium.com:30525"
+    "2df5ea8b9b4e18c552a001434e6b7ed0fc99348a03478fd809de1f92fde2f78d@seed.quinvium.com:30525",
+    "2df5ea8b9b4e18c552a001434e6b7ed0fc99348a03478fd809de1f92fde2f78d@72.61.21.209:30525"
   ],
   "publicRpc": [
     "https://rpc1.quinvium.com"

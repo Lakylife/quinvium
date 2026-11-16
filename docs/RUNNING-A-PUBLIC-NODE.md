@@ -65,11 +65,11 @@ For an outage of one machine to go unnoticed, four things are needed:
 | What | How | Status in code |
 | --- | --- | --- |
 | At least two nodes in different places (different power and connectivity) | servers with different providers | ready, more operators needed |
-| A new node finds the network even if one server is down | a seed name with the address of every server in DNS, listed in `seeds` | the node records all addresses behind a name |
-| The Explorer keeps working | the Explorer reads `rpc: [...]` from `config.js` and picks the node with the highest block, switching on failure | tested in `packages/explorer/test/failover.mjs` |
+| A new node finds the network even if one server is down | several seeds of different operators in `seeds`, at least one by IP address so DNS is not needed | the node records all addresses behind a name and remembers every peer it met |
+| The Explorer, the website and wallets keep working | `rpc: [...]` in `config.js`, then community nodes from `quinvium_publicNodes` and `nodes.json` (written at each Pages deploy by `ops/pages/nodes.mjs`); a community node is used only with the expected chain ID and genesis | `packages/explorer/test/failover.mjs`, `packages/node/test/outage.test.js`, `packages/extension/test/community-fallback.test.cjs` |
 | An outage is noticed | an uptime monitor on `/health` | `/health` returns 200 or 503 |
 
-Mining: when a pool server goes down, its miners stop until they switch elsewhere. Common miners (lolMiner, T-Rex) support a backup pool in their settings. `quintium-miner` currently takes one `--node` address.
+Mining: when a pool server goes down, `quintium-miner` mines solo through the backup nodes given with `--fallback` (the app passes its own node) and returns to the pool later. Common miners (lolMiner, T-Rex) support a backup pool in their settings. The app warns when mining earns nothing (no answer, no peers, no new blocks).
 
 ## Network upgrades
 

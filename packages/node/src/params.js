@@ -58,6 +58,8 @@ export const NETWORKS = Object.freeze({
     seeds: [
       '2df5ea8b9b4e18c552a001434e6b7ed0fc99348a03478fd809de1f92fde2f78d@seed.quinvium.com:30524',   // public server, identity key pinned
       '90ddc6a87538e33f494e0d0b9f7c481c8fb9fe94479827b4c0ce9ed1dce9c6cb@45.13.234.150:30524',   // community relay node (issue #37), identity key pinned
+      // The public server again by IP address: new nodes still find it when the quinvium.com domain or its DNS is unavailable.
+      '2df5ea8b9b4e18c552a001434e6b7ed0fc99348a03478fd809de1f92fde2f78d@72.61.21.209:30524',
     ],
     forks: [{ ...POOLS, block: 1n }],
   },
@@ -68,7 +70,10 @@ export const NETWORKS = Object.freeze({
     minDifficulty: 2n ** 16n,
     genesisExtra: 'Quinvium: vlastni sit pro kazdy obor / testnet',   // new name since testnet-5 (13 Nov 2026), mainnet and dev unchanged
     ports: { p2p: 30525, rpc: 8546, stratum: 3334 },
-    seeds: ['2df5ea8b9b4e18c552a001434e6b7ed0fc99348a03478fd809de1f92fde2f78d@seed.quinvium.com:30525'],   // public server (docs/RUNNING-A-PUBLIC-NODE.md), identity key pinned
+    seeds: [
+      '2df5ea8b9b4e18c552a001434e6b7ed0fc99348a03478fd809de1f92fde2f78d@seed.quinvium.com:30525',   // public server (docs/RUNNING-A-PUBLIC-NODE.md), identity key pinned
+      '2df5ea8b9b4e18c552a001434e6b7ed0fc99348a03478fd809de1f92fde2f78d@72.61.21.209:30525',   // the same server by IP, without DNS
+    ],
     forks: [{ ...POOLS, block: 1n }],
   },
   dev: {

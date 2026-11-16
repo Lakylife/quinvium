@@ -1,51 +1,66 @@
 // quinvium.com: menu, live mainnet status, adding the network to a wallet, smooth reveal of sections.
 (() => {
-  // The network's own RPC nodes, in order. When none answers, verified community nodes take over (quinvium_publicNodes,
-  // remembered in this browser and confirmed by the mainnet chain ID), so the live data survives a server outage.
+  // The network's own RPC nodes, in order. When none answers, community nodes take over: those listed by the network's
+  // nodes (quinvium_publicNodes), those saved in this site's /nodes.json at each deploy and those remembered in this browser.
+  // A community node is used only after it shows the mainnet chain ID and genesis, so the live data survives a server outage.
   const RPCS = ['https://rpc.quinvium.com'];
   const RPC = RPCS[0];
   const CHAIN_ID = '0xccb1';
+  const GENESIS_HASH = '0x49c889ad9d4f44869cf7f97a6e079a50dbf13974263b1afedec3b774ebeeac39';
   const COMMUNITY_KEY = 'quinvium.publicNodes.site';
   const NODE_URL = /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+$/;
-  const remembered = () => { try { return (JSON.parse(localStorage.getItem(COMMUNITY_KEY) ?? '[]') ?? []).filter((u) => NODE_URL.test(u)).slice(0, 8); } catch { return []; } };
+  const clean = (list) => (Array.isArray(list) ? list : []).map((n) => String(n?.url ?? n ?? '')).filter((u) => NODE_URL.test(u));
+  const remembered = () => { try { return clean(JSON.parse(localStorage.getItem(COMMUNITY_KEY) ?? '[]')).slice(0, 16); } catch { return []; } };
+  const remember = (urls) => { if (urls.length) try { localStorage.setItem(COMMUNITY_KEY, JSON.stringify([...new Set([...urls, ...remembered()])].slice(0, 16))); } catch { /* private window */ } };
   let rpcId = 1;
   let current = RPC;
+  const verified = new Set(RPCS);
   const post = async (url, method, params = []) => {
     const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: rpcId++, method, params }), signal: AbortSignal.timeout(8000) });
     return r.json();
   };
-  /** One JSON-RPC call: the node in use, then the network's other nodes, then community nodes of the right chain. */
+  /** A community node must be on mainnet: the same chain ID and the same genesis block. */
+  const ours = async (url) => {
+    if (verified.has(url)) return true;
+    const [id, genesis] = await Promise.all([post(url, 'eth_chainId'), post(url, 'eth_getBlockByNumber', ['0x0', false])]);
+    if (id.result !== CHAIN_ID || genesis.result?.hash !== GENESIS_HASH) return false;
+    verified.add(url);
+    return true;
+  };
+  // Saved with the site at each deploy (ops/pages/nodes.mjs), so a first visit during an outage also knows community nodes.
+  const saved = fetch('/nodes.json', { signal: AbortSignal.timeout(5000) }).then((r) => (r.ok ? r.json() : {})).then((d) => clean(d?.[52401])).catch(() => []);
+  /** One JSON-RPC call: the node in use, then the network's other nodes, then verified community nodes. */
   const send = async (method, params = []) => {
-    for (const url of [...new Set([current, ...RPCS, ...remembered()])]) {
+    for (const url of [...new Set([current, ...RPCS, ...remembered(), ...await saved])]) {
       try {
-        if (!RPCS.includes(url) && url !== current && (await post(url, 'eth_chainId')).result !== CHAIN_ID) continue;
+        if (!(await ours(url))) continue;
         const d = await post(url, method, params);
-        if (current !== url) current = url;
+        current = url;
         return d;
       } catch { /* the next node */ }
     }
     throw new Error('no node answers');
   };
-  // The list of community nodes is refreshed from the network's own node while it is up.
-  post(RPC, 'quinvium_publicNodes').then((d) => {
-    const urls = (Array.isArray(d?.result) ? d.result : []).map((n) => String(n?.url ?? '')).filter((u) => NODE_URL.test(u)).slice(0, 8);
-    if (urls.length) try { localStorage.setItem(COMMUNITY_KEY, JSON.stringify([...new Set([...urls, ...remembered()])].slice(0, 8))); } catch { /* private window */ }
-  }).catch(() => {});
+  // The list of community nodes is refreshed from whichever node answers, so it stays fresh even while the main server is down.
+  const community = send('quinvium_publicNodes').then((d) => { const urls = clean(d?.result); remember(urls); return urls; }).catch(() => []);
   const GENESIS = 1794610800; // 14 Nov 2026 00:00 CET
   const lang = document.body.dataset.lang || 'en';
   // Texts the script writes itself, in every language of the site.
   const TEXT = {
-    en: { none: 'No browser wallet found. Install MetaMask or use the Quinvium app.', ok: 'Network added.', no: 'The request was rejected in the wallet.', block: 'Mainnet · block #{n}', down: 'Mainnet · status unavailable', ago: '{t} ago' },
-    cs: { none: 'Peněženka v prohlížeči nenalezena. Nainstalujte MetaMask nebo použijte aplikaci Quinvium.', ok: 'Síť je přidaná.', no: 'Požadavek byl v peněžence odmítnut.', block: 'Mainnet · blok #{n}', down: 'Mainnet · stav nedostupný', ago: 'před {t}' },
-    de: { none: 'Keine Browser-Wallet gefunden. Installieren Sie MetaMask oder nutzen Sie die Quinvium-App.', ok: 'Netzwerk hinzugefügt.', no: 'Die Anfrage wurde in der Wallet abgelehnt.', block: 'Mainnet · Block #{n}', down: 'Mainnet · Status nicht verfügbar', ago: 'vor {t}' },
-    es: { none: 'No se encontró una cartera en el navegador. Instale MetaMask o use la app Quinvium.', ok: 'Red añadida.', no: 'La solicitud fue rechazada en la cartera.', block: 'Mainnet · bloque #{n}', down: 'Mainnet · estado no disponible', ago: 'hace {t}' },
-    fr: { none: 'Aucun portefeuille de navigateur trouvé. Installez MetaMask ou utilisez l’app Quinvium.', ok: 'Réseau ajouté.', no: 'La demande a été refusée dans le portefeuille.', block: 'Mainnet · bloc #{n}', down: 'Mainnet · état indisponible', ago: 'il y a {t}' },
-    ja: { none: 'ブラウザーのウォレットが見つかりません。MetaMask をインストールするか、Quinvium アプリを使ってください。', ok: 'ネットワークを追加しました。', no: 'ウォレットでリクエストが拒否されました。', block: 'メインネット · ブロック #{n}', down: 'メインネット · 状態を取得できません', ago: '{t}前' },
-    zh: { none: '未找到浏览器钱包。请安装 MetaMask 或使用 Quinvium 应用。', ok: '网络已添加。', no: '请求在钱包中被拒绝。', block: '主网 · 区块 #{n}', down: '主网 · 状态不可用', ago: '{t}前' },
-    ar: { none: 'لم يُعثر على محفظة في المتصفح. ثبّت MetaMask أو استخدم تطبيق Quinvium.', ok: 'أُضيفت الشبكة.', no: 'رُفض الطلب في المحفظة.', block: 'الشبكة الرئيسية · الكتلة #{n}', down: 'الشبكة الرئيسية · الحالة غير متاحة', ago: 'منذ {t}' },
+    en: { none: 'No browser wallet found. Install MetaMask or use the Quinvium app.', ok: 'Network added.', no: 'The request was rejected in the wallet.', block: 'Mainnet · block #{n}', down: 'Mainnet · status unavailable', ago: '{t} ago', nodes: 'Community nodes sharing data right now: {n}' },
+    cs: { none: 'Peněženka v prohlížeči nenalezena. Nainstalujte MetaMask nebo použijte aplikaci Quinvium.', ok: 'Síť je přidaná.', no: 'Požadavek byl v peněžence odmítnut.', block: 'Mainnet · blok #{n}', down: 'Mainnet · stav nedostupný', ago: 'před {t}', nodes: 'Komunitních uzlů, které teď sdílejí data: {n}' },
+    de: { none: 'Keine Browser-Wallet gefunden. Installieren Sie MetaMask oder nutzen Sie die Quinvium-App.', ok: 'Netzwerk hinzugefügt.', no: 'Die Anfrage wurde in der Wallet abgelehnt.', block: 'Mainnet · Block #{n}', down: 'Mainnet · Status nicht verfügbar', ago: 'vor {t}', nodes: 'Community-Knoten, die gerade Daten teilen: {n}' },
+    es: { none: 'No se encontró una cartera en el navegador. Instale MetaMask o use la app Quinvium.', ok: 'Red añadida.', no: 'La solicitud fue rechazada en la cartera.', block: 'Mainnet · bloque #{n}', down: 'Mainnet · estado no disponible', ago: 'hace {t}', nodes: 'Nodos de la comunidad que comparten datos ahora: {n}' },
+    fr: { none: 'Aucun portefeuille de navigateur trouvé. Installez MetaMask ou utilisez l’app Quinvium.', ok: 'Réseau ajouté.', no: 'La demande a été refusée dans le portefeuille.', block: 'Mainnet · bloc #{n}', down: 'Mainnet · état indisponible', ago: 'il y a {t}', nodes: 'Nœuds de la communauté qui partagent des données en ce moment : {n}' },
+    ja: { none: 'ブラウザーのウォレットが見つかりません。MetaMask をインストールするか、Quinvium アプリを使ってください。', ok: 'ネットワークを追加しました。', no: 'ウォレットでリクエストが拒否されました。', block: 'メインネット · ブロック #{n}', down: 'メインネット · 状態を取得できません', ago: '{t}前', nodes: '現在データを共有しているコミュニティノード: {n}' },
+    zh: { none: '未找到浏览器钱包。请安装 MetaMask 或使用 Quinvium 应用。', ok: '网络已添加。', no: '请求在钱包中被拒绝。', block: '主网 · 区块 #{n}', down: '主网 · 状态不可用', ago: '{t}前', nodes: '当前共享数据的社区节点：{n}' },
+    ar: { none: 'لم يُعثر على محفظة في المتصفح. ثبّت MetaMask أو استخدم تطبيق Quinvium.', ok: 'أُضيفت الشبكة.', no: 'رُفض الطلب في المحفظة.', block: 'الشبكة الرئيسية · الكتلة #{n}', down: 'الشبكة الرئيسية · الحالة غير متاحة', ago: 'منذ {t}', nodes: 'عُقد المجتمع التي تشارك البيانات الآن: {n}' },
   };
   const LOCALES = { en: 'en-US', cs: 'cs-CZ', de: 'de-DE', es: 'es-ES', fr: 'fr-FR', ja: 'ja-JP', zh: 'zh-CN', ar: 'ar-u-nu-latn' };
   const say = (k, n) => (TEXT[lang] ?? TEXT.en)[k].replace('{n}', n ?? '').replace('{t}', n ?? '');
+  // How many community nodes serve the network's data right now: an invitation to join them.
+  const countEl = document.querySelector('[data-community-count]');
+  if (countEl) community.then((urls) => { if (urls.length) { countEl.textContent = say('nodes', urls.length); countEl.hidden = false; } });
 
   // Light and dark: the choice is remembered; without it the system decides (theme.js)
   document.querySelectorAll('[data-theme-toggle]').forEach((b) => b.addEventListener('click', () => {
