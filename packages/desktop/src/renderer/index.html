@@ -112,6 +112,7 @@
             <div class="load-top"><span id="m-load-text"></span><b id="m-load-pct">0 %</b></div>
             <div class="load-bar"><i id="m-load-bar"></i></div>
           </div>
+          <div class="err" id="m-warning" role="status" hidden></div>
           <div class="err" id="m-error"></div>
         </div>
         <button class="mode-row" id="m-mode-open"><span><b data-t>Where you mine</b><small class="dim" id="m-mode-name"></small></span><span class="dim" data-t>Change</span></button>
@@ -189,11 +190,14 @@
         </div>
         <p class="hint" id="n-hint"></p>
         <details id="n-join">
-          <summary data-t>Connect to another computer</summary>
+          <summary data-t>Connections and access</summary>
           <p class="hint" data-t>Computers on the same network find each other. Enter an address only if they do not connect.</p>
           <p class="hint" id="n-lan"></p>
           <label><span data-t>Address of the other computer</span><input id="n-seed" placeholder="192.168.1.20" spellcheck="false" autocomplete="off"></label>
-          <label><span data-t>Who can connect to this node</span><select id="n-access">
+          <label class="switch-row"><input type="checkbox" id="n-upnp"><span data-t>Accept connections from other nodes</span></label>
+          <p class="hint" data-t>Recommended. The router opens only the port for connections between nodes, so the network stays connected when a server is down. The wallet, the Explorer and mining stay closed to others.</p>
+          <p class="hint" id="n-upnp-state"></p>
+          <label><span data-t>Who can use the RPC and the Explorer of this node</span><select id="n-access">
             <option value="off" data-t>Only this computer</option>
             <option value="lan" data-t>Computers and phones on this network</option>
             <option value="internet" data-t>Anyone from the internet (automatic)</option>

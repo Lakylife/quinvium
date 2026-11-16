@@ -177,3 +177,23 @@ test("the router's response is read with a limit", async () => {
   const big = new Response(new ReadableStream({ pull(c) { c.enqueue(new Uint8Array(65536).fill(97)); } }));
   assert.equal((await readText(big, 1000)).length, 1000);
 });
+
+test('only the network port: the router opens P2P, no RPC address is announced and nothing is asked on the internet', async () => {
+  const router = await fakeRouter();
+  const logs = [];
+  let looked = false;
+  try {
+    const access = new PublicAccess({ ports: [{ port: 30524, name: 'P2P' }], lookup: false, log: (l) => logs.push(l), discover: async () => router.location, localAddress: async () => '192.168.1.50', fetch: (url, init) => { if (String(url) === IP_LOOKUP) looked = true; return fetch(url, init); } });
+    const s = await access.start();
+    assert.equal(s.upnp, true);
+    const maps = router.calls.filter((c) => c.action === 'AddPortMapping');
+    assert.equal(maps.length, 1);
+    assert.match(maps[0].body, /<NewExternalPort>30524</);
+    assert.equal(looked, false, 'the public address is not looked up');
+    assert.ok(logs.some((l) => /30524/.test(l) && /other nodes can connect/.test(l)), logs.join('\n'));
+    assert.ok(!logs.some((l) => /RPC/.test(l)), 'no RPC address is announced');
+    await access.stop();
+  } finally {
+    await router.close();
+  }
+});

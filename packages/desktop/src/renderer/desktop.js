@@ -516,6 +516,10 @@
       hint = tr('Phones on mobile data cannot connect. Choose the internet option for that.');
     }
     el('n-access-hint').textContent = hint;
+    const open = e?.p2pOpen;
+    el('n-upnp-state').textContent = !s.node.running || s.node.access === 'internet' || !s.node.upnp ? ''
+      : open === true ? tr('Port {port} is open in the router, other nodes can connect.', { port: e?.p2pPort ?? '' })
+      : open === false ? tr('The router did not open port {port} (UPnP is off or not supported). The node still connects out; to accept connections, forward TCP port {port} in the router.', { port: e?.p2pPort ?? '' }) : '';
     // Share node publicly: switch state and what the tunnel is doing.
     const sh = s.share ?? {};
     if (document.activeElement !== el('n-share-public')) el('n-share-public').checked = !!sh.on;
@@ -543,7 +547,7 @@
     const s = await d.state();
     last = s;
     seedSet = !!s.node.seed;
-    if (!seedShown) { el('n-seed').value = s.node.seed; el('n-access').value = s.node.access ?? (s.node.share ? 'lan' : 'off'); el('n-public-host').value = s.node.publicHost ?? ''; el('m-power').value = s.miner.power; seedShown = true; }
+    if (!seedShown) { el('n-seed').value = s.node.seed; el('n-access').value = s.node.access ?? (s.node.share ? 'lan' : 'off'); el('n-public-host').value = s.node.publicHost ?? ''; el('n-upnp').checked = s.node.upnp !== false; el('m-power').value = s.miner.power; seedShown = true; }
     el('m-power-value').textContent = `${el('m-power').value} %`;
     el('version').textContent = tr('Version {v}', { v: s.version });
     el('n-lan').textContent = s.node.lan ? tr('This computer has the address {ip} on the local network.', { ip: s.node.lan }) : '';
@@ -557,6 +561,8 @@
     networkShown = true;
     followNode(s);
     el('m-start').hidden = s.miner.running;
+    el('m-warning').hidden = !s.miner.warning;
+    el('m-warning').textContent = s.miner.warning ?? '';
     el('m-stop').hidden = !s.miner.running;
     setState('m-state', s.miner.running, tr(s.miner.running ? 'Mining is running' : 'Mining is off'));
     setState('n-state', s.node.running, tr(s.node.running ? 'Node is running' : 'Node is not running'));
@@ -633,7 +639,7 @@
   el('n-seed-save').onclick = async () => {
     el('n-seed-error').textContent = '';
     try {
-      await d.setNetworkOptions({ seed: el('n-seed').value, access: el('n-access').value, publicHost: el('n-public-host').value });
+      await d.setNetworkOptions({ seed: el('n-seed').value, access: el('n-access').value, publicHost: el('n-public-host').value, upnp: el('n-upnp').checked });
     } catch (e) {
       el('n-seed-error').textContent = errorText(e);
     }
