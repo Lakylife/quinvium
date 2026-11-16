@@ -128,6 +128,11 @@ export class AetherNode extends EventEmitter {
       if (o.pool) ports.push({ port: this.stratum.port, name: 'Stratum' });
       this.publicAccess = new PublicAccess({ ports, host: o.publicHost ?? null, lookup: o.publicLookup ?? true, log: this.log, ...o.publicAccessOptions });
       this.publicAccess.start().catch((e) => this.log(`UPnP: ${e.message}`));
+    } else if (o.upnp) {
+      // Only the network port: other nodes can then connect to this one, as with Bitcoin and Ethereum nodes at home.
+      // RPC, the Explorer and Stratum stay closed; the public address is not looked up on the internet.
+      this.p2pAccess = new PublicAccess({ ports: [{ port: this.network.port, name: 'P2P' }], lookup: false, log: this.log, ...o.publicAccessOptions });
+      this.p2pAccess.start().catch((e) => this.log(`UPnP: ${e.message}`));
     }
     this.timers = [
       this.journal && setInterval(() => this.mempool.save(this.journal), JOURNAL_MS),
@@ -201,6 +206,7 @@ export class AetherNode extends EventEmitter {
       local: `http://127.0.0.1:${port}`,
       lan: [...new Set(lan)].map((ip) => `http://${ip}:${port}`),
       public: host ? `http://${host.includes(':') && !host.startsWith('[') ? `[${host}]` : host}:${port}` : null,
+      p2pOpen: this.p2pAccess ? this.p2pAccess.info().upnp : access ? access.upnp : null,
       access: access && { method: access.method, upnp: access.upnp, behindNat: access.behindNat, nat: access.nat, error: access.error, ports: access.ports, internal: access.internal, checked: access.checked },
     };
   }
@@ -208,6 +214,7 @@ export class AetherNode extends EventEmitter {
   async stop() {
     clearTimeout(this.poolRetry);
     await this.publicAccess?.stop();
+    await this.p2pAccess?.stop();
     this.siteWatch?.stop();
     this.chainWatch?.stop();
     clearInterval(this.publicNodesTimer);

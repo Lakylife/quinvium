@@ -331,6 +331,8 @@ console.log('block', receipt.blockNumber, 'fee', ethers.formatEther(receipt.fee)
     ['--no-mining-rpc', L('Vypne `eth_getWork`, `eth_submitWork` a `eth_submitHashrate`, pro veřejné uzly', 'Disables `eth_getWork`, `eth_submitWork` and `eth_submitHashrate`, for public nodes')],
     ['--trust-proxy', L('Číst IP klienta z `X-Forwarded-For`, jen za vlastní proxy', 'Read client IP from `X-Forwarded-For`, only behind your own proxy')],
     ['--tunnel-port', L('Port jen pro tento počítač, na který vede tunel (Sdílet uzel veřejně). Vše na něm se bere jako cizí, limit podle `Cf-Connecting-IP`', 'A local-only port that a tunnel leads to (Share node publicly). Everything on it counts as foreign, limited per `Cf-Connecting-IP`')],
+    ['--exit-with-parent', L('Uzel skončí, když se zavře jeho standardní vstup. Aplikace Quinvium tak po pádu nenechá běžet uzel, který drží porty', 'The node stops when its standard input closes. This way the Quinvium app does not leave a node running and holding the ports after a crash')],
+    ['--upnp', L('Otevře v routeru přes UPnP jen port pro spojení mezi uzly, aby se k uzlu mohly připojit ostatní. RPC, Explorer a Stratum zůstávají zavřené', 'Opens only the port for connections between nodes in the router (UPnP), so other nodes can connect to this one. RPC, the Explorer and Stratum stay closed')],
     ['--stratum-port', L('Port pro minery', 'Miner port')],
     ['--stratum-host', L('Adresa Stratum, `0.0.0.0` pro minery v síti', 'Stratum bind address, `0.0.0.0` for networked miners')],
     ['--stratum-sessions', L('Kolik zařízení obslouží Stratum, výchozí 1024. Změřeno 10 000', 'How many devices Stratum serves, default 1024. Measured at 10,000')],

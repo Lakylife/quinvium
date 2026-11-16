@@ -149,6 +149,9 @@ function networkArgs(network) {
   if (access !== 'off') args.push('--rpc-host', '0.0.0.0', '--stratum-host', '0.0.0.0', '--rate-limit', '6000');
   // From the internet: the router opens ports itself (UPnP) and the node finds out its public address, which it then shows to wallets.
   if (access === 'internet') args.push('--public', ...(publicHost ? ['--public-host', publicHost] : []));
+  // Otherwise the router opens only the port for connections between nodes, so other nodes can reach this one
+  // (as Bitcoin and Ethereum nodes at home do). Tests and users who turn it off keep the router untouched.
+  else if (settings.upnp !== false && !process.env.AETHER_P2P_PORT) args.push('--upnp');
   // Pool server: the key only pays gas for shares; the contract holds the miners' coins.
   if (runPool?.network === network) args.push('--pool', runPool.address, '--pool-key-file', path.join(app.getPath('userData'), `pool-${network}.key`));
   // Share node publicly: a port for the tunnel only, on this computer; every request on it counts as foreign.
@@ -172,8 +175,9 @@ function startNode(network) {
   if (!TEST_RPC_PORT) saveSettings({ network });
   const dataDir = path.join(app.getPath('userData'), 'chain', CHAIN_FOLDERS[network] ?? network);
   fs.mkdirSync(dataDir, { recursive: true });
-  node.proc = spawn(process.execPath, [nodeBundle, '--network', network, '--data-dir', dataDir, '--explorer', explorerDir, ...networkArgs(network)], {
-    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', QUINTIUM_LANG: nodeLang() }, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true,
+  node.proc = spawn(process.execPath, [nodeBundle, '--network', network, '--data-dir', dataDir, '--explorer', explorerDir, '--exit-with-parent', ...networkArgs(network)], {
+    // stdin stays an open pipe: when the app ends without stopping the node (crash, force quit), the node notices and stops.
+    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', QUINTIUM_LANG: nodeLang() }, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
   });
   follow(node.proc, (l) => { push(node.log, l); send({ type: 'node-log', line: l }); });
   node.proc.on('exit', (code) => {
@@ -260,9 +264,9 @@ function startMiner({ address, device }) {
   // When the pool stops answering, the miner keeps mining solo through this computer's node and returns to the pool later.
   if (pool) args.push('--pool', pool.address, '--worker', tag || 'rig', '--fallback', `http://127.0.0.1:${rpcPort()}`);
   if (device !== undefined && device !== 'all') args.push('--device', String(device));
-  args.push('--intensity', String(power ?? 100));
+  args.push('--intensity', String(power ?? 100), '--exit-with-parent');
   if ((power ?? 100) >= 100) setGpuState(GPU_FULL_POWER);
-  miner.proc = spawn(minerPath, args, { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+  miner.proc = spawn(minerPath, args, { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
   saveSettings({ lastMining: { address, device: device ?? 'all' } });   // the tray can start mining again without the window
   keepAwake(true);
   follow(miner.proc, (l) => {
@@ -325,17 +329,18 @@ const listDevices = () => new Promise((resolve) => {
 const walletFile = () => path.join(app.getPath('userData'), 'wallet.json');
 
 ipcMain.handle('state', () => ({
-  node: { running: !!node.proc, network: node.network, preferred: defaultNetwork(), rpc: rpcPort(), runPool: loadSettings().runPool ?? null, stats: node.stats, log: node.log.slice(-60), seed: loadSettings().seed ?? '', share: accessMode() !== 'off', access: accessMode(), publicHost: loadSettings().publicHost ?? '', endpoints: node.proc ? node.endpoints ?? null : null, lan: lanAddress() },
-  miner: { running: !!miner.proc, rate: miner.rate, progress: miner.progress ?? null, stage: miner.stage ?? null, blocks: miner.blocks, shares: miner.shares ?? 0, gpu: miner.gpu ?? null, pool: activePool(), address: miner.address, power: loadSettings().power ?? 100, history: miner.history, log: miner.log.slice(-60) },
+  node: { running: !!node.proc, network: node.network, preferred: defaultNetwork(), rpc: rpcPort(), runPool: loadSettings().runPool ?? null, stats: node.stats, log: node.log.slice(-60), seed: loadSettings().seed ?? '', share: accessMode() !== 'off', access: accessMode(), publicHost: loadSettings().publicHost ?? '', upnp: loadSettings().upnp !== false, endpoints: node.proc ? node.endpoints ?? null : null, lan: lanAddress() },
+  miner: { running: !!miner.proc, rate: miner.rate, progress: miner.progress ?? null, stage: miner.stage ?? null, blocks: miner.blocks, shares: miner.shares ?? 0, gpu: miner.gpu ?? null, pool: activePool(), address: miner.address, power: loadSettings().power ?? 100, history: miner.history, log: miner.log.slice(-60), warning: miner.warning ?? null },
   update: { ...update, configured: !!loadSettings().updateUrl, packaged: app.isPackaged },
   release: { latest: release.latest, checked: release.checked, error: release.error, downloading: release.downloading, file: release.file },
   notify: Object.fromEntries(NOTIFY_KINDS.map((k) => [k, notifyOn(k)])),
   version: app.getVersion(),
-  share: { on: !!loadSettings().sharePublic, status: share.status, url: share.url, error: share.error },
+  share: { on: !!loadSettings().sharePublic, asked: !!loadSettings().shareAsked, status: share.status, url: share.url, error: share.error },
 }));
 // Share node publicly on or off. The node restarts, because the tunnel port is opened only when sharing is on.
+ipcMain.handle('share:asked', () => { saveSettings({ shareAsked: true }); return true; });
 ipcMain.handle('share:set', async (_, on) => {
-  saveSettings({ sharePublic: !!on });
+  saveSettings({ sharePublic: !!on, shareAsked: true });
   await stopSharing();
   // Mining keeps running and resumes when the node is back, as after other node settings.
   if (node.proc) {
@@ -355,7 +360,7 @@ ipcMain.handle('node:network', async (_, options) => {
   const access = ACCESS_MODES.includes(options?.access) ? options.access : options?.share ? 'lan' : 'off';
   const publicHost = String(options?.publicHost ?? '').trim();
   if (publicHost && !/^[A-Za-z0-9.-]{1,253}$/.test(publicHost)) throw new Error('Enter the public address, for example 203.0.113.7 or node.example.com');
-  saveSettings({ seed, share: access !== 'off', access, publicHost });
+  saveSettings({ seed, share: access !== 'off', access, publicHost, ...(typeof options?.upnp === 'boolean' ? { upnp: options.upnp } : {}) });
   // Settings are passed to the node at start. Mining keeps running and resumes when the node is back.
   if (node.proc) {
     const { network } = node;
@@ -696,7 +701,7 @@ function minedLabel() {
 function refreshTray() {
   if (!tray || tray.isDestroyed()) return;
   tray.setContextMenu(trayMenu());
-  tray.setToolTip(miner.proc ? `Quinvium · ${T('těží', 'mining')} ${trayRate()}` : 'Quinvium');
+  tray.setToolTip(miner.proc ? `Quinvium · ${T('těží', 'mining')} ${trayRate()}${miner.warning ? ` · ⚠ ${miner.warning}` : ''}` : 'Quinvium');
 }
 
 function createTray() {
@@ -721,9 +726,46 @@ setInterval(async () => {
     refreshTray();
     if (changed) send({ type: 'state' });
     resumeMining();
+    checkMining(true);
     if (loadSettings().sharePublic && !share.tunnel && share.status === 'off') startSharing();
-  } catch { /* the node is still starting */ }
+  } catch { checkMining(false); /* the node is still starting or not answering */ }
 }, 3000);
+
+/**
+ * Mining that runs but earns nothing: the node lost every connection, the chain stopped moving, the node does not answer
+ * or the card computes nothing. The user is told once per problem (notification, tray, Mining page), not left in the dark.
+ */
+const HEALTH = { noPeersMs: 180_000, stalledMs: 600_000, noAnswerMs: 60_000, noHashMs: 300_000 };
+const health = { since: {}, warned: null };
+function checkMining(answered) {
+  if (!miner.proc) { health.since = {}; health.warned = null; miner.warning = null; return; }
+  const now = Date.now();
+  const s = node.stats;
+  const flag = (key, bad) => { if (!bad) delete health.since[key]; else health.since[key] ??= now; return bad && now - health.since[key]; };
+  if (s && s.height !== health.height) { health.height = s.height; health.heightAt = now; }
+  const solo = !activePool();
+  const preparing = miner.progress !== null && miner.progress !== undefined;
+  const problems = [
+    ['noAnswer', flag('noAnswer', !answered) >= HEALTH.noAnswerMs, () => tr('The node of this app does not answer, so the card has no work.')],
+    ['noPeers', flag('noPeers', solo && answered && s?.peers === 0) >= HEALTH.noPeersMs, () => tr('The node has no connection to other nodes. Blocks found now would not reach the network.')],
+    ['stalled', solo && answered && health.heightAt && now - health.heightAt >= HEALTH.stalledMs, () => tr('No new block for {min} minutes. The node may be cut off from the network.', { min: Math.round((now - health.heightAt) / 60_000) })],
+    ['noHash', flag('noHash', !preparing && (miner.counters?.rate ?? 0) === 0) >= HEALTH.noHashMs, () => tr('The card has not computed anything for several minutes.')],
+  ].find(([, bad]) => bad);
+  if (!problems) {
+    if (health.warned) notify('mining', tr('Mining works again'), tr('The problem is gone, mining continues.'));
+    health.warned = null;
+    if (miner.warning) { miner.warning = null; send({ type: 'state' }); refreshTray(); }
+    return;
+  }
+  const [key, , text] = problems;
+  miner.warning = text();
+  if (health.warned !== key) {
+    health.warned = key;
+    notify('mining', tr('Mining is not earning'), miner.warning);
+    send({ type: 'state' });
+    refreshTray();
+  }
+}
 
 /** Mining interrupted by an update continues as soon as the node is ready. */
 function resumeMining() {

@@ -39,10 +39,12 @@ Použití: quintium-node [volby]
   --dev-mine                        vestavěný procesorový miner, jen pro síť dev
   --public                          přístup z internetu: otevře porty v routeru (UPnP) a zjistí veřejnou adresu
   --public-host <adresa>            veřejná adresa nebo doména uzlu, když ji chcete zadat ručně
+  --upnp                            otevřít v routeru (UPnP) jen port pro spojení mezi uzly, RPC zůstává zavřené
   --lan                             najít uzly v místní síti automaticky
   --lan-port <port>                 port hledání v místní síti, jen pro oddělené testy
   --allow-private                   povolit uzly v lokální síti
   --verbose                         podrobný výpis sítě
+  --exit-with-parent                skončit, když se zavře standardní vstup (aplikace, která uzel spustila, zmizela)
   --help                            tato nápověda
 `, `${VERSION}
 
@@ -71,10 +73,12 @@ Usage: quintium-node [options]
   --dev-mine                        built-in CPU miner, dev network only
   --public                          access from the internet: open ports in the router (UPnP) and find the public address
   --public-host <address>           public address or domain of the node, to set it by hand
+  --upnp                            open only the port for connections between nodes in the router (UPnP), RPC stays closed
   --lan                             find nodes on the local network automatically
   --lan-port <port>                 local discovery port, only for separate tests
   --allow-private                   allow nodes on the local network
   --verbose                         detailed network log
+  --exit-with-parent                stop when standard input closes (the app that started the node is gone)
   --help                            this help
 `);
 
@@ -84,7 +88,7 @@ const { values: v } = parseArgs({
     'p2p-port': { type: 'string' }, 'rpc-port': { type: 'string' }, 'rpc-host': { type: 'string' }, 'rate-limit': { type: 'string' },
     'stratum-port': { type: 'string' }, 'stratum-host': { type: 'string' }, 'stratum-sessions': { type: 'string' }, 'stratum-sessions-per-ip': { type: 'string' }, 'miner-address': { type: 'string' }, extra: { type: 'string' },
     pool: { type: 'string' }, 'pool-key-file': { type: 'string' },
-    explorer: { type: 'string' }, 'dev-mine': { type: 'boolean' }, 'allow-private': { type: 'boolean' }, lan: { type: 'boolean' }, public: { type: 'boolean' }, 'public-host': { type: 'string' }, 'lan-port': { type: 'string' }, verbose: { type: 'boolean' },
+    explorer: { type: 'string' }, 'dev-mine': { type: 'boolean' }, 'allow-private': { type: 'boolean' }, lan: { type: 'boolean' }, public: { type: 'boolean' }, 'public-host': { type: 'string' }, upnp: { type: 'boolean' }, 'lan-port': { type: 'string' }, verbose: { type: 'boolean' }, 'exit-with-parent': { type: 'boolean' },
     'trust-proxy': { type: 'boolean' }, 'tunnel-port': { type: 'string' }, 'no-mining-rpc': { type: 'boolean' }, 'no-site-check': { type: 'boolean' },
     help: { type: 'boolean' },
   },
@@ -115,7 +119,7 @@ const node = new AetherNode({
   rpcPort: num(v['rpc-port']), rpcHost: v['rpc-host'] ?? (v.public || v['public-host'] ? '0.0.0.0' : undefined), rateLimit: num(v['rate-limit']), stratumPort: num(v['stratum-port']),
   stratumHost: v['stratum-host'], stratumSessions: num(v['stratum-sessions']), stratumSessionsPerIp: num(v['stratum-sessions-per-ip']), minerAddress: v['miner-address'], extra: v.extra, pool: v.pool, poolKey: v.pool ? poolKey() : undefined, staticDir: explorer, allowPrivate: v['allow-private'], lan: v.lan && v['lan-port'] ? { listenPort: num(v['lan-port']) } : v.lan, verbose: v.verbose,
   trustProxy: v['trust-proxy'], tunnelPort: v['tunnel-port'] === undefined ? null : num(v['tunnel-port']), miningRpc: !v['no-mining-rpc'], siteCheck: !v['no-site-check'],
-  publicAccess: v.public || !!v['public-host'], publicHost: v['public-host'],
+  publicAccess: v.public || !!v['public-host'], publicHost: v['public-host'], upnp: v.upnp,
 });
 
 // An error while handling one request must not end the whole node. The database is consistent after every block.
@@ -170,6 +174,14 @@ const shutdown = async () => {
 };
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
+// The app keeps a pipe open to our standard input. If the app crashes or is force-quit, the pipe closes
+// and the node stops properly instead of running on and holding the ports for the next start.
+if (v['exit-with-parent']) {
+  process.stdin.on('end', shutdown);
+  process.stdin.on('close', shutdown);
+  process.stdin.on('error', shutdown);
+  process.stdin.resume();
+}
 }
 
 main().catch((e) => {

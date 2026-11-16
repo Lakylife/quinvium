@@ -144,17 +144,73 @@ async function currentNetwork() {
   return all[await local.get('chainId', 52401)] ?? DEFAULT_NETWORKS[52401];
 }
 
+// Verified public nodes of the community (the app's "Share node publicly"), as the network's own nodes list them
+// (quinvium_publicNodes). They are remembered, so the wallet still works when the network's own server is down.
+// Only for the built-in networks with their default node, and only after a node confirms the right chain ID.
+// Signing stays in the wallet, so a community node can at worst show wrong data or refuse a transaction.
+const COMMUNITY_URL = /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+$/;
+const COMMUNITY_REFRESH_MS = 600_000;
+const communityAt = {};
+const fallbackUntil = {};
+const usesDefaultNode = (n) => !self.AETHER_LOCAL_RPC && !self.AETHER_TEST_RPC && DEFAULT_NETWORKS[n.chainId]?.rpc === n.rpc && /^https:/.test(n.rpc);
+
+async function post(url, method, params, timeout = 8000) {
+  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }), signal: AbortSignal.timeout(timeout) });
+  return res.json();
+}
+
+function refreshCommunity(n, url) {
+  if (Date.now() - (communityAt[n.chainId] ?? 0) < COMMUNITY_REFRESH_MS) return;
+  communityAt[n.chainId] = Date.now();
+  post(url, 'quinvium_publicNodes', []).then(async (d) => {
+    const urls = (Array.isArray(d?.result) ? d.result : []).map((x) => String(x?.url ?? '')).filter((u) => COMMUNITY_URL.test(u)).slice(0, 8);
+    if (!urls.length) return;
+    const key = `community.${n.chainId}`;
+    await local.set(key, [...new Set([...urls, ...await local.get(key, [])])].slice(0, 8));
+  }).catch(() => {});
+}
+
+/** The first community node that answers with the right chain ID, or null. */
+async function communityNode(n) {
+  const cached = fallbackUntil[n.chainId];
+  if (cached && cached.until > Date.now()) return cached.url;
+  for (const url of await local.get(`community.${n.chainId}`, [])) {
+    if (!COMMUNITY_URL.test(url)) continue;
+    try {
+      const d = await post(url, 'eth_chainId', [], 4000);
+      if (BigInt(d?.result ?? -1) !== BigInt(n.chainId)) continue;
+      fallbackUntil[n.chainId] = { url, until: Date.now() + 60_000 };
+      return url;
+    } catch { /* the next one */ }
+  }
+  return null;
+}
+
 async function rpc(method, params = [], net) {
   const n = net ?? await currentNetwork();
-  let res;
-  try {
-    res = await fetch(n.rpc, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) });
-  } catch {
-    throw rpcError(-32603, `Node ${n.rpc} is not reachable`);
+  const fallback = usesDefaultNode(n);
+  // While the default node is down, calls go straight to the community node found last, for a minute at a time.
+  const tried = [];
+  for (const url of [fallbackUntil[n.chainId]?.until > Date.now() ? fallbackUntil[n.chainId].url : null, n.rpc].filter(Boolean)) {
+    tried.push(url);
+    try {
+      const data = await post(url, method, params, 15000);
+      if (url === n.rpc && fallback) { delete fallbackUntil[n.chainId]; refreshCommunity(n, n.rpc); }
+      return answer(data);
+    } catch (e) {
+      if (e.answered) throw e;
+      if (url !== n.rpc) delete fallbackUntil[n.chainId];
+    }
   }
-  const data = await res.json();
-  if (data.error) throw Object.assign(new Error(data.error.message), { code: data.error.code, data: data.error.data });
-  return data.result;
+  const other = fallback ? await communityNode(n) : null;
+  if (other && !tried.includes(other)) {
+    try { return answer(await post(other, method, params, 15000)); } catch (e) { if (e.answered) throw e; delete fallbackUntil[n.chainId]; }
+  }
+  throw rpcError(-32603, `Node ${n.rpc} is not reachable`);
+}
+function answer(data) {
+  if (data?.error) throw Object.assign(new Error(data.error.message), { code: data.error.code, data: data.error.data, answered: true });
+  return data?.result;
 }
 
 // ---- approvals -----------------------------------------------------------------

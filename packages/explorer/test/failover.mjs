@@ -28,7 +28,7 @@ const waitFor = async (fn, ms = 30000) => {
     if (await fn().catch(() => false)) return;
     await new Promise((r) => { setTimeout(r, 200); });
   }
-  throw new Error('vypršel čas');
+  throw new Error('timed out');
 };
 
 const a = startNode(8791);
@@ -39,7 +39,7 @@ const step = async (name, fn) => {
   try { await fn(); console.log(`[OK]   ${name}`); } catch (e) { failed++; console.log(`[FAIL] ${name}: ${e.message}`); }
 };
 try {
-  await waitFor(async () => (await height(a.url)) >= 2 && (await height(b.url)) >= 2);
+  await waitFor(async () => (await height(a.url)) >= 2 && (await height(b.url)) >= 2, 120000);   // the first block needs the Ethash cache (about 20 s)
   browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   const errors = [];

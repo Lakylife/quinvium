@@ -254,8 +254,13 @@ export class PublicAccess {
         }
       } catch { /* without the internet the router's address stays, or unknown */ }
     }
-    if (this.state.host !== host && host) {
-      const rpc = this.ports.find((p) => p.name === 'RPC')?.port;
+    const rpcPort = this.ports.find((p) => p.name === 'RPC')?.port;
+    if (!rpcPort && this.state.upnp && !this.state.opened) {
+      this.state.opened = true;
+      this.log(L(`Port ${this.state.ports.join(', ')} pro spojení mezi uzly je otevřený v routeru, ostatní uzly se mohou připojit k tomuto`, `Port ${this.state.ports.join(', ')} for connections between nodes is open in the router, other nodes can connect to this one`));
+    }
+    if (this.state.host !== host && host && rpcPort) {
+      const rpc = rpcPort;
       const url = rpc ? `http://${host}:${rpc}` : host;
       const reach = this.state.nat === 'double' ? L(', funguje až po přesměrování portů na modemu', ', works only after forwarding the ports on the modem') : this.state.upnp ? L(', porty otevřené v routeru', ', ports opened in the router') : this.manualHost ? '' : L(`, funguje až po ručním přesměrování TCP portu ${rpc ?? ''} v routeru na tento počítač`, `, works only after forwarding TCP port ${rpc ?? ''} in the router to this computer`);
       this.log(L(`RPC pro peněženky z internetu: ${url}${reach}`, `RPC for wallets from the internet: ${url}${reach}`));
