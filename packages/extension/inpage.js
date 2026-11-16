@@ -16,7 +16,7 @@
     get selectedAddress() { return accounts[0] ?? null; },
     isConnected: () => true,
     request({ method, params }) {
-      if (typeof method !== 'string') return Promise.reject(Object.assign(new Error('Neplatný požadavek'), { code: -32600 }));
+      if (typeof method !== 'string') return Promise.reject(Object.assign(new Error('Invalid request'), { code: -32600 }));
       return new Promise((resolve, reject) => {
         const id = nextId++;
         pending.set(id, { resolve, reject });

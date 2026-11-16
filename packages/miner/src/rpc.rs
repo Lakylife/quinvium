@@ -19,14 +19,14 @@ impl Rpc {
         } else if let Some(r) = url.strip_prefix("http://") {
             (false, r)
         } else {
-            return Err("adresa uzlu musí začínat http:// nebo https://".into());
+            return Err("the node address must start with http:// or https://".into());
         };
         let (authority, path) = match rest.find('/') {
             Some(i) => (&rest[..i], rest[i..].to_string()),
             None => (rest, "/".to_string()),
         };
         let (host, port) = match authority.rsplit_once(':') {
-            Some((h, p)) => (h.to_string(), p.parse().map_err(|_| "neplatný port uzlu")?),
+            Some((h, p)) => (h.to_string(), p.parse().map_err(|_| "invalid node port")?),
             None => (authority.to_string(), if tls { 443 } else { 80 }),
         };
         Ok(Rpc { tls, host, port, path })
@@ -38,7 +38,7 @@ impl Rpc {
             .to_socket_addrs()
             .map_err(|e| e.to_string())?
             .next()
-            .ok_or("nelze přeložit adresu uzlu")?;
+            .ok_or("cannot resolve the node address")?;
         let mut s = TcpStream::connect_timeout(&addr, Duration::from_secs(5)).map_err(|e| e.to_string())?;
         s.set_read_timeout(Some(Duration::from_secs(30))).ok();
         s.set_nodelay(true).ok();
@@ -63,12 +63,12 @@ impl Rpc {
             s.read_to_end(&mut raw).map_err(|e| e.to_string())?;
         }
         let text = String::from_utf8_lossy(&raw);
-        let i = text.find("\r\n\r\n").ok_or("neplatná odpověď uzlu")?;
+        let i = text.find("\r\n\r\n").ok_or("invalid node response")?;
         let head = text[..i].to_ascii_lowercase();
         let body = if head.contains("transfer-encoding: chunked") { dechunk(&text[i + 4..]) } else { text[i + 4..].to_string() };
         let v: Value = serde_json::from_str(&body).map_err(|e| e.to_string())?;
         if let Some(err) = v.get("error").filter(|e| !e.is_null()) {
-            return Err(err.get("message").and_then(Value::as_str).unwrap_or("chyba uzlu").to_string());
+            return Err(err.get("message").and_then(Value::as_str).unwrap_or("node error").to_string());
         }
         Ok(v.get("result").cloned().unwrap_or(Value::Null))
     }

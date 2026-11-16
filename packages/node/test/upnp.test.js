@@ -137,7 +137,7 @@ test('aether_endpoints: the node lists RPC for this computer, the local network 
     assert.equal(f.result.access.internal, undefined);
     assert.equal(f.result.public, `http://203.0.113.7:${shared.rpc.port}`);
     for (const m of ['eth_getWork', 'aether_getWork', 'eth_submitWork', 'aether_submitWork', 'eth_submitHashrate']) {
-      assert.match((await far(m, ['0x' + '11'.repeat(20)])).error?.message ?? '', /jen z místní sítě/, m);
+      assert.match((await far(m, ['0x' + '11'.repeat(20)])).error?.message ?? '', /only from the local network/, m);
     }
     assert.equal((await far('eth_chainId')).result, `0x${NETWORKS.dev.chainId.toString(16)}`, 'běžné dotazy fungují dál');
     const near = await fetch(`http://127.0.0.1:${shared.rpc.port}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_submitHashrate', params: ['0x1', '0x' + '00'.repeat(32)] }) }).then((x) => x.json());

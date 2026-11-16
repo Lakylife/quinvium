@@ -95,7 +95,7 @@ test('a node with old software disconnects cleanly from the network after a fork
   a.on('peer-disconnected', (_, r) => reasons.push(r));
   b.on('peer-disconnected', (_, r) => reasons.push(r));
   b.connect('127.0.0.1', a.port);
-  assert.ok(await until(() => reasons.some((r) => /neslučitelná pravidla/.test(r))), `důvody: ${reasons.join('; ')}`);
+  assert.ok(await until(() => reasons.some((r) => /incompatible network rules/.test(r))), `důvody: ${reasons.join('; ')}`);
   assert.equal(old.head.number, 0n, 'starý uzel nepřevzal nic z nové větve');
   await a.stop(); await b.stop();
 });
@@ -144,5 +144,5 @@ test('the pools fork adds the factory exactly at its height and a second node re
   old.setClock(Number(blocks[1].header.timestamp));
   await old.insertBlock(blocks[1]);
   old.setClock(Number(blocks[2].header.timestamp));
-  await assert.rejects(old.insertBlock(blocks[2]), /kořen stavu/);
+  await assert.rejects(old.insertBlock(blocks[2]), /state root/);
 });

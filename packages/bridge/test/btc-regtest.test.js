@@ -17,7 +17,7 @@ const { BITCOIND } = process.env;
 const RPC_PORT = 18998;
 const LOGIN = { user: 'aether', password: 'test' };
 
-test('real Bitcoin Core: deposit, withdrawal and valid signatures according to the network', { skip: BITCOIND ? false : 'nastavte BITCOIND=/cesta/k/bitcoind' }, async () => {
+test('real Bitcoin Core: deposit, withdrawal and valid signatures according to the network', { skip: BITCOIND ? false : 'set BITCOIND=/path/to/bitcoind' }, async () => {
   const proc = spawn(BITCOIND, ['-regtest', `-datadir=${mkdtempSync(join(tmpdir(), 'aether-regtest-'))}`, `-rpcport=${RPC_PORT}`, '-port=18999', '-listen=0', `-rpcuser=${LOGIN.user}`, `-rpcpassword=${LOGIN.password}`, '-fallbackfee=0.0002'], { stdio: 'ignore' });
   const people = Array.from({ length: 3 }, () => ethers.Wallet.createRandom());
   const [admin, guardian, alice] = people;

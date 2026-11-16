@@ -94,7 +94,7 @@ export class Relayer {
     for (const c of chains) {
       const need = MIN_CONFIRMATIONS[Number(c.id)] ?? 1;
       if (!Number.isInteger(c.confirmations) || c.confirmations < need) {
-        throw new Error(`${c.name}: potřeba je aspoň ${need} potvrzení, nastaveno ${c.confirmations}`);
+        throw new Error(`${c.name}: at least ${need} confirmations are needed, set to ${c.confirmations}`);
       }
     }
     this.chains = new Map(chains.map((c) => {
@@ -111,7 +111,7 @@ export class Relayer {
   /** A message from a source other than the EVM gateway, for example a Bitcoin deposit. */
   enqueue(message) {
     const dst = this.chains.get(message.dstChain);
-    if (!dst) throw new Error(`Neznámý cílový řetězec ${message.dstChain}`);
+    if (!dst) throw new Error(`Unknown destination chain ${message.dstChain}`);
     const id = messageId(dst.gateway.target, message);
     if (!this.state.data.pending[id]) {
       this.state.data.pending[id] = message;
@@ -123,7 +123,7 @@ export class Relayer {
   /** One pass. An error on one chain does not stop the others; it is retried next time. */
   async tick() {
     for (const chain of this.chains.values()) {
-      try { await this.scan(chain); } catch (e) { this.log(`${chain.name}: čtení selhalo: ${e.shortMessage ?? e.message}`); }
+      try { await this.scan(chain); } catch (e) { this.log(`${chain.name}: reading failed: ${e.shortMessage ?? e.message}`); }
     }
     for (const [id, message] of Object.entries(this.state.data.pending)) {
       try { await this.handle(id, message); } catch (e) { this.log(`${id.slice(0, 10)}: ${e.shortMessage ?? e.message}`); }
@@ -149,7 +149,7 @@ export class Relayer {
     const dst = this.chains.get(dstChain);
     if (!dst) return;       // Bitcoin and chains this validator does not watch
     if (ethers.dataLength(recipient) !== 20) {
-      this.log(`${chain.name}: zpráva ${nonce} nemá adresu příjemce, přeskakuji`);
+      this.log(`${chain.name}: message ${nonce} has no recipient address, skipping`);
       return;
     }
     // The sender and the send number belong to the message for refunds: a cancelled transfer goes back to exactly that sender.
@@ -186,7 +186,7 @@ export class Relayer {
       const ordered = [...signatures.entries()].sort(([a], [b]) => (BigInt(a) < BigInt(b) ? -1 : 1)).slice(0, threshold).map(([, s]) => s);
       await dst.gateway.deliver.staticCall(wire(message), ordered);
       await dst.gateway.deliver(wire(message), ordered);
-      this.log(`${id.slice(0, 10)}: doručuji ${message.amount} na ${message.recipient}`);
+      this.log(`${id.slice(0, 10)}: delivering ${message.amount} to ${message.recipient}`);
     }
   }
 
@@ -204,7 +204,7 @@ export class Relayer {
     const src = this.chains.get(message.srcChain);
     if (!src || !message.sender || message.sendId === undefined) {
       // A Bitcoin deposit or a refund itself: there is no sender on this side; refunds must take their own path.
-      this.log(`${id.slice(0, 10)}: zrušeno, vrácení tento validátor neobslouží`);
+      this.log(`${id.slice(0, 10)}: cancelled, this validator does not handle the refund`);
       this.finish(id);
       return;
     }
@@ -212,11 +212,11 @@ export class Relayer {
     const back = refundMessage(message, route.local);
     const reverse = await src.gateway.routes(routeKey(back.srcChain, back.srcToken));
     if (!reverse.enabled) {
-      this.log(`${id.slice(0, 10)}: zrušeno, ale zpáteční trasa je zavřená, zkusím to znovu`);
+      this.log(`${id.slice(0, 10)}: cancelled, but the return route is closed, will try again`);
       return;
     }
     this.enqueue(back);
-    this.log(`${id.slice(0, 10)}: zrušeno, vracím ${message.amount} odesílateli ${message.sender}`);
+    this.log(`${id.slice(0, 10)}: cancelled, returning ${message.amount} to the sender ${message.sender}`);
     this.finish(id);
   }
 

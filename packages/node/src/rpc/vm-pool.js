@@ -49,7 +49,7 @@ export class VmPool {
    * @returns {Promise<any>} hex result, rows of the query for the index
    */
   run(kind, header, params) {
-    if (this.queue.length >= MAX_QUEUE) return Promise.reject(new VmBusyError('uzel je přetížený, zkuste to za chvíli'));
+    if (this.queue.length >= MAX_QUEUE) return Promise.reject(new VmBusyError('the node is overloaded, try again shortly'));
     return new Promise((resolve, reject) => {
       this.queue.push({ kind, header: header?.encode(), params, resolve, reject });
       this._next();
@@ -79,7 +79,7 @@ export class VmPool {
     timer = setTimeout(() => {
       worker.terminate();
       release(this.stopped ? worker : this._spawn());
-      job.reject(new RpcCallError(`výpočet překročil limit ${this.timeoutMs} ms`));
+      job.reject(new RpcCallError(`execution exceeded the limit of ${this.timeoutMs} ms`));
     }, this.timeoutMs);
     worker.on('message', onMessage);
     worker.postMessage({ id, kind: job.kind, header: job.header, params: job.params });
@@ -87,7 +87,7 @@ export class VmPool {
 
   async stop() {
     this.stopped = true;
-    for (const job of this.queue) job.reject(new VmBusyError('uzel se vypíná'));
+    for (const job of this.queue) job.reject(new VmBusyError('the node is shutting down'));
     this.queue = [];
     await Promise.all(this.idle.map((w) => w.terminate()));
     this.idle = [];

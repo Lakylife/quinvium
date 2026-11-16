@@ -91,7 +91,7 @@ export class Chain extends EventEmitter {
     const genesis = await buildGenesis(this.network, this.store, this.common, this.alloc);
     const stored = this.store.canonicalHash(0);
     if (stored && !equal(stored, genesis.hash())) {
-      throw new Error(`Databáze patří jiné síti: genesis ${toHex(stored)}, očekáváno ${toHex(genesis.hash())}`);
+      throw new Error(`The database belongs to another network: genesis ${toHex(stored)}, expected ${toHex(genesis.hash())}`);
     }
     this.genesis = genesis;
     if (!stored) {
@@ -109,7 +109,7 @@ export class Chain extends EventEmitter {
     this.pow.setHorizon(this.head.number);
     for (const [number, hash] of this.checkpoints) {
       const stored = number <= this.head.number ? this.store.canonicalHash(number) : null;
-      if (stored && !equal(stored, hash)) throw new Error(`Databáze neodpovídá kontrolnímu bodu v bloku ${number}: uzel je na cizí větvi a musí stáhnout řetězec znovu.`);
+      if (stored && !equal(stored, hash)) throw new Error(`The database does not match the checkpoint at block ${number}: the node is on a foreign branch and must download the chain again.`);
     }
   }
 
@@ -197,7 +197,7 @@ export class Chain extends EventEmitter {
   nextDifficulty(parent) {
     return nextDifficulty(parent, (h) => {
       const header = this.getHeader(h);
-      if (!header) throw new Error('chybí předek pro výpočet obtížnosti');
+      if (!header) throw new Error('missing ancestor for the difficulty calculation');
       return header;
     }, this.network);
   }
@@ -219,28 +219,28 @@ export class Chain extends EventEmitter {
 
   /** Header rules that do not depend on the block content. */
   async validateHeader(h, parent) {
-    if (h.number !== parent.number + 1n) throw new InvalidBlock('špatná výška');
-    if (h.timestamp <= parent.timestamp) throw new InvalidBlock('čas bloku není větší než čas rodiče');
-    if (h.timestamp > BigInt(this.now() + C.futureTimeLimit)) throw new TemporaryBlockError('blok je příliš v budoucnosti');
-    if (h.extraData.length > C.maxExtraData) throw new InvalidBlock('extraData je příliš dlouhé');
-    if (h.gasUsed > h.gasLimit) throw new InvalidBlock('gasUsed překračuje gasLimit');
-    if (!gasLimitValid(h.gasLimit, parent.gasLimit, rulesAt(this.network, h.number).maxGasLimit)) throw new InvalidBlock('neplatná změna gasLimit');
-    if (h.baseFee !== nextBaseFee(parent)) throw new InvalidBlock('špatný base fee');
-    if (h.difficulty !== this.nextDifficulty(parent)) throw new InvalidBlock('špatná obtížnost');
-    if (!(await this.pow.verify(h))) throw new InvalidBlock('neplatný Proof of Work');
+    if (h.number !== parent.number + 1n) throw new InvalidBlock('wrong height');
+    if (h.timestamp <= parent.timestamp) throw new InvalidBlock('block time is not later than the parent time');
+    if (h.timestamp > BigInt(this.now() + C.futureTimeLimit)) throw new TemporaryBlockError('block is too far in the future');
+    if (h.extraData.length > C.maxExtraData) throw new InvalidBlock('extraData is too long');
+    if (h.gasUsed > h.gasLimit) throw new InvalidBlock('gasUsed exceeds gasLimit');
+    if (!gasLimitValid(h.gasLimit, parent.gasLimit, rulesAt(this.network, h.number).maxGasLimit)) throw new InvalidBlock('invalid gasLimit change');
+    if (h.baseFee !== nextBaseFee(parent)) throw new InvalidBlock('wrong base fee');
+    if (h.difficulty !== this.nextDifficulty(parent)) throw new InvalidBlock('wrong difficulty');
+    if (!(await this.pow.verify(h))) throw new InvalidBlock('invalid proof of work');
   }
 
   async _validateBody(block) {
     const encoded = block.encode();
-    if (encoded.length > C.maxBlockBytes) throw new InvalidBlock('blok je příliš velký');
+    if (encoded.length > C.maxBlockBytes) throw new InvalidBlock('block is too large');
     for (const tx of block.txs) {
-      if (tx.serialize().length > C.maxTxBytes) throw new InvalidBlock('transakce je příliš velká');
+      if (tx.serialize().length > C.maxTxBytes) throw new InvalidBlock('transaction is too large');
       if (tx.type === 0 && !tx.supports(Capability.EIP155ReplayProtection)) {
-        throw new InvalidBlock('transakce bez ochrany chainId');
+        throw new InvalidBlock('transaction without chainId replay protection');
       }
     }
     const txRoot = await orderedRoot(block.txs.map((t) => t.serialize()), this.commonAt(block.header.number));
-    if (!equal(txRoot, block.header.txRoot)) throw new InvalidBlock('špatný kořen transakcí');
+    if (!equal(txRoot, block.header.txRoot)) throw new InvalidBlock('wrong transactions root');
   }
 
   /** Replays the transaction at its place in the block and returns how it ended. Nothing is stored. */
@@ -260,10 +260,10 @@ export class Chain extends EventEmitter {
       store: this.store, common: this.commonAt(h.number), parent, ctx: h, txs: block.txs, mode: 'verify',
       ancestorHash: this._ancestorLookup(parent), pow: this.pow, upgrades: upgradesAt(this.network, h.number),
     });
-    if (!equal(res.stateRoot, h.stateRoot)) throw new InvalidBlock('špatný kořen stavu');
-    if (!equal(res.receiptsRoot, h.receiptsRoot)) throw new InvalidBlock('špatný kořen účtenek');
-    if (res.gasUsed !== h.gasUsed) throw new InvalidBlock('špatné gasUsed');
-    if (!equal(res.logsBloom, h.logsBloom)) throw new InvalidBlock('špatný bloom');
+    if (!equal(res.stateRoot, h.stateRoot)) throw new InvalidBlock('wrong state root');
+    if (!equal(res.receiptsRoot, h.receiptsRoot)) throw new InvalidBlock('wrong receipts root');
+    if (res.gasUsed !== h.gasUsed) throw new InvalidBlock('wrong gasUsed');
+    if (!equal(res.logsBloom, h.logsBloom)) throw new InvalidBlock('wrong logs bloom');
     return res;
   }
 
@@ -276,20 +276,20 @@ export class Chain extends EventEmitter {
       const h = block.header;
       const hash = h.hash();
       const bad = this.store.badReason(hash);
-      if (bad) throw new InvalidBlock(`dříve odmítnutý blok: ${bad}`);
+      if (bad) throw new InvalidBlock(`previously rejected block: ${bad}`);
       if (this.store.blockHas(hash)) return { status: 'known', hash };
       const parent = this.getHeader(h.parentHash);
       if (!parent) return { status: 'orphan', hash };
-      if (this.store.badReason(h.parentHash)) throw new InvalidBlock('rodič je neplatný');
+      if (this.store.badReason(h.parentHash)) throw new InvalidBlock('parent is invalid');
       if (h.number + BigInt(C.maxReorgDepth) <= this.head.number) {
         // Deep below the tip only a branch the network verified in advance, and only on top of the canonical ancestor or another side branch.
         const deep = this._deepPermitted(h.number - 1n)
           && (equal(h.parentHash, this.deepPermit.hash) || !this.isCanonical(h.parentHash, parent.number));
-        if (!deep) throw new FinalityError('blok je pod hranicí finality');
+        if (!deep) throw new FinalityError('block is below the finality limit');
       }
       const fixed = this.checkpoints.get(h.number);
-      if (fixed && !equal(fixed, hash)) throw new InvalidBlock(`blok neodpovídá kontrolnímu bodu ${h.number}`);
-      if (h.number <= this.passedCheckpoint()) throw new InvalidBlock('blok je pod kontrolním bodem');
+      if (fixed && !equal(fixed, hash)) throw new InvalidBlock(`block does not match the checkpoint ${h.number}`);
+      if (h.number <= this.passedCheckpoint()) throw new InvalidBlock('block is below a checkpoint');
 
       // The block is not marked invalid here. The hash covers only the header, so an attacker could attach
       // a forged body to a valid block: recording the hash would cut the node off from the correct chain forever.
@@ -399,7 +399,7 @@ export class Chain extends EventEmitter {
     while (!this.isCanonical(cursor.hash(), cursor.number)) {
       path.unshift(cursor);
       cursor = this.getHeader(cursor.parentHash);
-      if (!cursor) throw new Error('přerušená větev');
+      if (!cursor) throw new Error('broken branch');
     }
     const ancestor = cursor;
     const depth = Number(this.head.number - ancestor.number);
@@ -407,7 +407,7 @@ export class Chain extends EventEmitter {
       if (!this._deepPermitted(ancestor.number)) {
         this.reorgs.refused += 1;
         this.emit('finality-violation', { hash: block.hash(), depth });
-        throw new FinalityError(`reorganizace o ${depth} bloků je za hranicí finality`);
+        throw new FinalityError(`a reorganisation of ${depth} blocks is beyond the finality limit`);
       }
       // The branch stays a side branch until it has twice the work of our branch since the common ancestor.
       const base = this.getTd(ancestor.hash());

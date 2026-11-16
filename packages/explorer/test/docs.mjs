@@ -95,9 +95,9 @@ try {
   mkdirSync(scratch, { recursive: true });
 
   const fillIn = (code, id) => code
-    .replaceAll('0xVASE_ADRESA', owner.address)
-    .replaceAll('0xPRIJEMCE', ethers.Wallet.createRandom().address)
-    .replaceAll('moje-firma', `firma-${id}-${Date.now()}`.toLowerCase());
+    .replaceAll('0xYOUR_ADDRESS', owner.address)
+    .replaceAll('0xRECIPIENT', ethers.Wallet.createRandom().address)
+    .replaceAll('my-company', `company-${id}-${Date.now()}`.toLowerCase());
 
   const runJs = (id, code) => new Promise((resolve, reject) => {
     const file = join(scratch, `${id}.mjs`);

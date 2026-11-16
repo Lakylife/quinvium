@@ -16,7 +16,7 @@ const ACCESSES = 64;
 const FNV_PRIME = 0x01000193;
 
 if (new Uint8Array(new Uint32Array([1]).buffer)[0] !== 1) {
-  throw new Error('Ethash vyžaduje little-endian procesor');
+  throw new Error('Ethash needs a little-endian processor');
 }
 
 const fnv = (a, b) => (Math.imul(a, FNV_PRIME) ^ b) >>> 0;

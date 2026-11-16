@@ -97,7 +97,7 @@ class Session {
       case 'mining.extranonce.subscribe': return this.send({ id, error: null, result: true });
       case 'mining.authorize': {
         const ok = this._login(params[0]);
-        this.send({ id, error: ok ? null : [24, 'Neplatná adresa výplaty', null], result: ok });
+        this.send({ id, error: ok ? null : [24, 'Invalid payout address', null], result: ok });
         if (ok) await this.pushWork();
         return undefined;
       }
@@ -106,14 +106,14 @@ class Session {
         this.mode = 'proxy';
         const ok = this._login(params[0]);
         if (m.worker) this.worker = String(m.worker).slice(0, 32);
-        this.reply(id, ok, ok ? null : { code: -1, message: 'Neplatná adresa výplaty' });
+        this.reply(id, ok, ok ? null : { code: -1, message: 'Invalid payout address' });
         return undefined;
       }
       case 'eth_getWork': {
         if (!this._allowWork()) return undefined;
-        if (!this.miner) return this.reply(id, null, { code: -1, message: 'Nejprve se přihlaste' });
+        if (!this.miner) return this.reply(id, null, { code: -1, message: 'Log in first' });
         const work = await this._work();
-        return work ? this.reply(id, this._proxyJob(work)) : this.reply(id, null, { code: -1, message: 'Uzel se synchronizuje' });
+        return work ? this.reply(id, this._proxyJob(work)) : this.reply(id, null, { code: -1, message: 'The node is syncing' });
       }
       case 'eth_submitWork': {
         const r = await this._submit(fromHex(params[0]), fromHex(params[1]), fromHex(params[2]));
@@ -125,7 +125,7 @@ class Session {
         return this.reply(id, true);
       }
       default:
-        return this.send({ id, error: [20, 'Neznámá metoda', null], result: null });
+        return this.send({ id, error: [20, 'Unknown method', null], result: null });
     }
   }
 
@@ -178,13 +178,13 @@ class Session {
   async _submitNiceHash(id, params) {
     const [, jobId, nonceSuffix] = params;
     const w = this.jobs.get(jobId);
-    if (!w) return this.send({ id, error: [21, 'Stará práce', null], result: false });
+    if (!w) return this.send({ id, error: [21, 'Stale job', null], result: false });
     const nonce = fromHex(this.extranonce + unprefixed(String(nonceSuffix)));
-    if (nonce.length !== 8) return this.send({ id, error: [20, 'Neplatné nonce', null], result: false });
+    if (nonce.length !== 8) return this.send({ id, error: [20, 'Invalid nonce', null], result: false });
     const { mixDigest } = await this.server.chain.pow.compute(w.sealHash, nonce, w.number);
     const r = await this._submit(nonce, w.sealHash, mixDigest);
     this._count(r);
-    return this.send({ id, error: r.accepted ? null : [20, r.reason ?? 'Odmítnuto', null], result: r.accepted });
+    return this.send({ id, error: r.accepted ? null : [20, r.reason ?? 'Rejected', null], result: r.accepted });
   }
 }
 

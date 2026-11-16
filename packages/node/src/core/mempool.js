@@ -96,32 +96,32 @@ export class Mempool {
    */
   async add(tx, { local = false, addedAt = Date.now() } = {}) {
     const hash = toHex(tx.hash());
-    if (this.byHash.has(hash)) throw new MempoolError('transakce už je ve frontě');
-    if (this.chain.store.txLocation(tx.hash())) throw new MempoolError('transakce už je potvrzená');
-    if (tx.type > 2) throw new MempoolError('nepodporovaný typ transakce');
+    if (this.byHash.has(hash)) throw new MempoolError('transaction is already in the queue');
+    if (this.chain.store.txLocation(tx.hash())) throw new MempoolError('transaction is already confirmed');
+    if (tx.type > 2) throw new MempoolError('unsupported transaction type');
     const size = tx.serialize().length;
-    if (size > C.maxTxBytes) throw new MempoolError('transakce je příliš velká');
-    if (!tx.isSigned() || !tx.isValid()) throw new MempoolError(`neplatná transakce: ${tx.getValidationErrors().join(', ')}`);
-    if (tx.type === 0 && !tx.supports(Capability.EIP155ReplayProtection)) throw new MempoolError('chybí ochrana chainId');
+    if (size > C.maxTxBytes) throw new MempoolError('transaction is too large');
+    if (!tx.isSigned() || !tx.isValid()) throw new MempoolError(`invalid transaction: ${tx.getValidationErrors().join(', ')}`);
+    if (tx.type === 0 && !tx.supports(Capability.EIP155ReplayProtection)) throw new MempoolError('missing chainId replay protection');
 
     const head = this.chain.head;
-    if (tx.gasLimit > head.gasLimit || tx.gasLimit > MAX_TX_GAS) throw new MempoolError('gas překračuje limit transakce');
-    if (tx.gasLimit < tx.getIntrinsicGas()) throw new MempoolError('gas je nižší než základní cena transakce');
-    if (maxFee(tx) < C.minBaseFee) throw new MempoolError('poplatek je pod minimem sítě');
+    if (tx.gasLimit > head.gasLimit || tx.gasLimit > MAX_TX_GAS) throw new MempoolError('gas exceeds the transaction limit');
+    if (tx.gasLimit < tx.getIntrinsicGas()) throw new MempoolError('intrinsic gas too low');
+    if (maxFee(tx) < C.minBaseFee) throw new MempoolError('fee is below the network minimum');
 
     let sender;
     try {
       sender = tx.getSenderAddress();
     } catch (e) {
-      throw new MempoolError(`neplatný podpis: ${e.message}`);
+      throw new MempoolError(`invalid signature: ${e.message}`);
     }
 
     const state = await this.chain.stateAt(head.stateRoot);
     const account = await state.stateManager.getAccount(sender);
     const stateNonce = account?.nonce ?? 0n;
     const balance = account?.balance ?? 0n;
-    if (tx.nonce < stateNonce) throw new MempoolError('nonce je příliš nízké');
-    if (tx.nonce > stateNonce + MAX_NONCE_GAP) throw new MempoolError('nonce je příliš vysoké');
+    if (tx.nonce < stateNonce) throw new MempoolError('nonce too low');
+    if (tx.nonce > stateNonce + MAX_NONCE_GAP) throw new MempoolError('nonce too high');
 
     const key = sender.toString();
     let list = this.bySender.get(key);
@@ -130,15 +130,15 @@ export class Mempool {
     // Otherwise one small account could keep transactions in the queue for free that would never pay.
     let committed = cost(tx);
     for (const e of list?.values() ?? []) if (e.tx.nonce < tx.nonce) committed += cost(e.tx);
-    if (balance < committed) throw new MempoolError('nedostatek prostředků');
+    if (balance < committed) throw new MempoolError('insufficient funds for gas * price + value');
 
     const existing = list?.get(tx.nonce);
     if (existing) {
       const needFee = (maxFee(existing.tx) * REPLACE_BUMP) / 100n;
       const needTip = (maxTip(existing.tx) * REPLACE_BUMP) / 100n;
-      if (maxFee(tx) < needFee || maxTip(tx) < needTip) throw new MempoolError('náhrada musí mít alespoň o 10 % vyšší poplatek');
+      if (maxFee(tx) < needFee || maxTip(tx) < needTip) throw new MempoolError('replacement transaction underpriced: the fee must be at least 10% higher');
     } else if (list && list.size >= MAX_PER_SENDER) {
-      throw new MempoolError('příliš mnoho čekajících transakcí od jednoho odesílatele');
+      throw new MempoolError('too many pending transactions from one sender');
     }
 
     // A full queue pushes out the cheapest. Whoever does not pay more than it stays out. The space of a transaction being replaced is
@@ -147,7 +147,7 @@ export class Mempool {
     const freedBytes = existing ? existing.size : 0;
     while (this.byHash.size - freedCount >= this.maxPool || this.bytes - freedBytes + size > MAX_POOL_BYTES) {
       const lowest = this._lowest(key);
-      if (!lowest || maxFee(lowest.tx) >= maxFee(tx)) throw new MempoolError('fronta je plná, zvyšte poplatek');
+      if (!lowest || maxFee(lowest.tx) >= maxFee(tx)) throw new MempoolError('the queue is full, raise the fee');
       this._remove(lowest.tx);
     }
     if (existing) {

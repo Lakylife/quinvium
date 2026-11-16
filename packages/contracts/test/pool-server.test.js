@@ -90,9 +90,9 @@ test('batch encoding is the same as ABI', () => {
 
 test('without a pool, pool mining does not work and a foreign contract does not start a pool', async () => {
   assert.equal(await rpc('aether_poolInfo'), null);
-  await assert.rejects(rpc('aether_poolWork', [alice.address]), /nevede pool/);
-  await assert.rejects(node.startPool(ethers.getBytes(alice.address), payerKey), /není pool z továrny/);
-  await assert.rejects(node.startPool(ethers.getBytes(artifacts.Notary.address), payerKey), /není pool z továrny/);
+  await assert.rejects(rpc('aether_poolWork', [alice.address]), /does not run a pool/);
+  await assert.rejects(node.startPool(ethers.getBytes(alice.address), payerKey), /is not a pool from the factory/);
+  await assert.rejects(node.startPool(ethers.getBytes(artifacts.Notary.address), payerKey), /is not a pool from the factory/);
   assert.equal(node.pool, undefined);
 });
 
@@ -115,8 +115,8 @@ test('each miner hashes its own header and shares go to the contract', async () 
     assert.equal(r.accepted, false);
     assert.match(r.reason, reason);
   };
-  await reject(new Uint8Array(8), new Uint8Array(32), /obtížnost|práce/);
-  await reject(new Uint8Array(8), new Uint8Array(32), /stará/, '0x' + '11'.repeat(32));
+  await reject(new Uint8Array(8), new Uint8Array(32), /difficulty|work/);
+  await reject(new Uint8Array(8), new Uint8Array(32), /stale/, '0x' + '11'.repeat(32));
 
   const n = BigInt(number);
   const a = await solve(sealA, n, target, (v) => v > targetForDifficulty(64n));
@@ -124,7 +124,7 @@ test('each miner hashes its own header and shares go to the contract', async () 
   const r = await rpc('aether_poolSubmit', [ethers.hexlify(a.nonce), sealA, ethers.hexlify(a.mixDigest)]);
   assert.equal(r.accepted, true);
   assert.equal(r.block, null);
-  await reject(a.nonce, a.mixDigest, /už byl/);
+  await reject(a.nonce, a.mixDigest, /already submitted/);
   assert.equal((await rpc('aether_poolSubmit', [ethers.hexlify(b.nonce), sealB, ethers.hexlify(b.mixDigest)])).accepted, true);
 
   const info = await rpc('aether_poolInfo');

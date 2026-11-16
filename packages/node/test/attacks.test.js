@@ -70,7 +70,7 @@ test('a forged block body does not poison an honest block with the same hash', a
 
   const forged = new Block(block.header, []);
   assert.deepEqual(forged.hash(), block.hash(), 'hash kryje jen hlavičku');
-  await assert.rejects(victim.insertBlock(forged), /kořen transakcí/);
+  await assert.rejects(victim.insertBlock(forged), /transactions root/);
 
   const r = await victim.insertBlock(block);
   assert.equal(r.status, 'added', 'pravý blok musí projít');
@@ -148,7 +148,7 @@ test('the queue accepts no more than the sender can afford in total', async () =
   const c = await newChain({ alloc: { [bytesToHex(a.address)]: { balance: 21000n * 3n * GWEI * 2n } } });
   const to = new Address(wallet().address);
   for (let i = 0n; i < 2n; i++) await c.mempool.add(transfer(c, a, to, 0n, i, { fee: 3n * GWEI }));
-  await assert.rejects(c.mempool.add(transfer(c, a, to, 0n, 2n, { fee: 3n * GWEI })), /nedostatek prostředků/);
+  await assert.rejects(c.mempool.add(transfer(c, a, to, 0n, 2n, { fee: 3n * GWEI })), /insufficient funds/);
 });
 
 test('the queue has a memory cap even for large transactions', async () => {
@@ -415,6 +415,6 @@ test('a deep branch with invented difficulty is rejected before the node starts 
   });
   assert.ok(await until(() => evil.channel.closed, 5000), 'uzel útočníka odpojí');
   assert.equal(verified, 0, 'žádný výpočet Ethash pro podvrženou větev');
-  assert.ok(reasons.some((r) => /špatnou obtížnost/.test(r)), `důvody: ${reasons.join('; ')}`);
+  assert.ok(reasons.some((r) => /wrong difficulty/.test(r)), `důvody: ${reasons.join('; ')}`);
   await v.net.stop();
 });

@@ -103,7 +103,7 @@ test('a database of another network refuses to open', async () => {
   const dir = tmpData();
   const c = await Chain.open({ network: NETWORKS.dev, dataDir: dir });
   await c.close();
-  await assert.rejects(Chain.open({ network: NETWORKS.testnet, dataDir: dir }), /jiné síti/);
+  await assert.rejects(Chain.open({ network: NETWORKS.testnet, dataDir: dir }), /another network/);
 });
 
 // ---- block safety rules -------------------------------------------------
@@ -116,14 +116,14 @@ const tamper = async (c, patch) => {
 };
 
 for (const [name, patch, re] of [
-  ['špatný kořen stavu', { stateRoot: new Uint8Array(32).fill(7) }, /kořen stavu/],
-  ['špatný kořen transakcí', { txRoot: new Uint8Array(32).fill(7) }, /kořen transakcí/],
-  ['špatný kořen účtenek', { receiptsRoot: new Uint8Array(32).fill(7) }, /kořen účtenek/],
-  ['vymyšlený base fee', { baseFee: 999n * GWEI }, /base fee/],
-  ['vymyšlený gas limit', { gasLimit: 100_000_000n }, /gasLimit/],
-  ['příliš nízká obtížnost', { difficulty: 2n }, /obtížnost/],
-  ['gasUsed nad limitem', { gasUsed: 30_000_000n }, /gasUsed/],
-  ['příliš dlouhé extraData', { extraData: new Uint8Array(33) }, /extraData/],
+  ['wrong state root', { stateRoot: new Uint8Array(32).fill(7) }, /state root/],
+  ['wrong transactions root', { txRoot: new Uint8Array(32).fill(7) }, /transactions root/],
+  ['wrong receipts root', { receiptsRoot: new Uint8Array(32).fill(7) }, /receipts root/],
+  ['made-up base fee', { baseFee: 999n * GWEI }, /base fee/],
+  ['made-up gas limit', { gasLimit: 100_000_000n }, /gasLimit/],
+  ['too low difficulty', { difficulty: 2n }, /difficulty/],
+  ['gasUsed over the limit', { gasUsed: 30_000_000n }, /gasUsed/],
+  ['too long extraData', { extraData: new Uint8Array(33) }, /extraData/],
 ]) {
   test(`the block is rejected: ${name}`, async () => {
     const c = await newChain();
@@ -135,14 +135,14 @@ for (const [name, patch, re] of [
 
 test('a block without valid PoW is rejected', async () => {
   const c = await newChain();
-  await assert.rejects(c.insertBlock(await tamper(c, {})), /Proof of Work|obtížnost/);
+  await assert.rejects(c.insertBlock(await tamper(c, {})), /proof of work|difficulty/);
 });
 
 test('block time must increase and must not be too far in the future', async () => {
   const c = await newChain();
   await mine(c);
-  await assert.rejects(c.insertBlock(await seal(c, await tamper(c, { timestamp: c.head.timestamp }))), /čas bloku/);
-  await assert.rejects(c.insertBlock(await seal(c, await tamper(c, { timestamp: BigInt(c.now() + 1000) }))), /budoucnosti/);
+  await assert.rejects(c.insertBlock(await seal(c, await tamper(c, { timestamp: c.head.timestamp }))), /block time/);
+  await assert.rejects(c.insertBlock(await seal(c, await tamper(c, { timestamp: BigInt(c.now() + 1000) }))), /future/);
 });
 
 test('a block with an invalid transaction is invalid as a whole', async () => {
@@ -154,7 +154,7 @@ test('a block with an invalid transaction is invalid as a whole', async () => {
   const { orderedRoot } = await import('../src/core/executor.js');
   const f = Object.fromEntries(Object.entries(t.header).filter(([k]) => !k.startsWith('_')));
   const forged = new Block(new Header({ ...f, txRoot: await orderedRoot([bad.serialize()], c.common) }), [bad]);
-  await assert.rejects(c.insertBlock(await seal(c, forged)), /neplatná transakce/);
+  await assert.rejects(c.insertBlock(await seal(c, forged)), /invalid transaction/);
 });
 
 test("an invalid transaction in a block is detected by our own check, not by the library's error text", async () => {
@@ -170,11 +170,11 @@ test("an invalid transaction in a block is detected by our own check, not by the
     return seal(c, new Block(new Header({ ...f, txRoot: await orderedRoot([tx.serialize()], c.common) }), [tx]));
   };
   const cases = [
-    [transfer(c, a, to, 1n, 5n), /špatné nonce/],
-    [transfer(c, a, to, 50n * WEI, 0n), /nedostatek prostředků/],
-    [transfer(c, a, to, 1n, 0n, { fee: GWEI / 2n, tip: 1n }), /základní poplatek bloku/],
-    [legacy(c, a, to, 1n, 0n, { gasPrice: GWEI / 2n }), /základní poplatek bloku/],
-    [transfer(c, a, to, 1n, 0n, { gas: 20_000n }), /základní cena transakce/],
+    [transfer(c, a, to, 1n, 5n), /wrong nonce/],
+    [transfer(c, a, to, 50n * WEI, 0n), /insufficient funds/],
+    [transfer(c, a, to, 1n, 0n, { fee: GWEI / 2n, tip: 1n }), /block base fee/],
+    [legacy(c, a, to, 1n, 0n, { gasPrice: GWEI / 2n }), /block base fee/],
+    [transfer(c, a, to, 1n, 0n, { gas: 20_000n }), /intrinsic gas too low/],
     [transfer(c, k, to, 1n, 0n), /EIP-3607/],
   ];
   for (const [tx, reason] of cases) {
@@ -263,9 +263,9 @@ test('an invalid heavier branch is rejected and the chain stays untouched', asyn
   const bad = await seal(y, new Block(new Header({ ...f, stateRoot: new Uint8Array(32).fill(1) }), []));
   x.setClock(y.now());
   await x.insertBlock(good);
-  await assert.rejects(x.insertBlock(bad), /kořen stavu/);
+  await assert.rejects(x.insertBlock(bad), /state root/);
   assert.deepEqual(x.head.hash(), head);
-  await assert.rejects(x.insertBlock(bad), /dříve odmítnutý/);
+  await assert.rejects(x.insertBlock(bad), /previously rejected/);
 });
 
 test('rolling finality: the network rejects a rewrite deeper than the limit even with more work', async () => {
@@ -344,11 +344,11 @@ test('the mempool rejects a bad signature, nonce, missing funds and a low fee', 
   const a = wallet(); const b = wallet();
   const c = await newChain({ alloc: fund(a, WEI) });
   const to = new Address(b.address);
-  await assert.rejects(c.mempool.add(transfer(c, b, to, 1n, 0n)), /nedostatek/);
-  await assert.rejects(c.mempool.add(transfer(c, a, to, 2n * WEI, 0n)), /nedostatek/);
-  await assert.rejects(c.mempool.add(transfer(c, a, to, 1n, 500n)), /příliš vysoké/);
-  await assert.rejects(c.mempool.add(transfer(c, a, to, 1n, 0n, { fee: 10n, tip: 1n })), /pod minimem/);
-  await assert.rejects(c.mempool.add(transfer(c, a, to, 1n, 0n, { gas: 20000n })), /základní cena|gasLimit is too low/);
+  await assert.rejects(c.mempool.add(transfer(c, b, to, 1n, 0n)), /insufficient funds/);
+  await assert.rejects(c.mempool.add(transfer(c, a, to, 2n * WEI, 0n)), /insufficient funds/);
+  await assert.rejects(c.mempool.add(transfer(c, a, to, 1n, 500n)), /too high/);
+  await assert.rejects(c.mempool.add(transfer(c, a, to, 1n, 0n, { fee: 10n, tip: 1n })), /below the network minimum/);
+  await assert.rejects(c.mempool.add(transfer(c, a, to, 1n, 0n, { gas: 20000n })), /intrinsic gas too low|gasLimit is too low/);
   await c.mempool.add(transfer(c, a, to, 1n, 0n));
   assert.equal(c.mempool.size, 1);
 });
@@ -358,7 +358,7 @@ test('replacing a transaction requires a higher fee', async () => {
   const c = await newChain({ alloc: fund(a) });
   const to = new Address(b.address);
   await c.mempool.add(transfer(c, a, to, 1n, 0n, { fee: 10n * GWEI, tip: GWEI }));
-  await assert.rejects(c.mempool.add(transfer(c, a, to, 2n, 0n, { fee: 10n * GWEI, tip: GWEI })), /10 %/);
+  await assert.rejects(c.mempool.add(transfer(c, a, to, 2n, 0n, { fee: 10n * GWEI, tip: GWEI })), /10%/);
   await c.mempool.add(transfer(c, a, to, 2n, 0n, { fee: 20n * GWEI, tip: 2n * GWEI }));
   assert.equal(c.mempool.size, 1);
 });

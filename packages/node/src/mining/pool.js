@@ -134,7 +134,7 @@ export class PoolServer {
   async start() {
     const data = Buffer.concat([selector('isPool(address)'), addressWord(this.address)]);
     const result = await this.call({ to: toHex(FACTORY), data: toHex(data) });
-    if (BigInt(result === '0x' ? 0 : result) !== 1n) throw new PoolError(`${toHex(this.address)} není pool z továrny, těžba do něj se nespustí`);
+    if (BigInt(result === '0x' ? 0 : result) !== 1n) throw new PoolError(`${toHex(this.address)} is not a pool from the factory, mining into it will not start`);
     this._loadMiners();
     this.timers = [
       setInterval(() => this.flush().catch((e) => this._fail(e)), FLUSH_MS),
@@ -298,21 +298,21 @@ export class PoolServer {
     const job = this.jobs.get(key);
     if (!job) {
       this.stats.stale += 1;
-      return { accepted: false, stale: true, reason: 'neznámá nebo stará práce' };
+      return { accepted: false, stale: true, reason: 'unknown or stale work' };
     }
     const reject = (reason) => {
       this.stats.rejected += 1;
       return { accepted: false, reason };
     };
     const id = key + toHex(nonce);
-    if (this.seen.has(id)) return reject('podíl už byl odeslán');
-    if (nonce.length !== 8 || mixDigest.length !== 32) return reject('neplatný formát');
-    if (bytesToBigInt(quickResult(sealHash, nonce, mixDigest)) > job.target) return reject('podíl nesplňuje obtížnost');
+    if (this.seen.has(id)) return reject('share already submitted');
+    if (nonce.length !== 8 || mixDigest.length !== 32) return reject('invalid format');
+    if (bytesToBigInt(quickResult(sealHash, nonce, mixDigest)) > job.target) return reject('share does not meet the difficulty');
     const { header: h, txs } = job.block;
     const { mixDigest: mix, result } = await this.chain.pow.compute(sealHash, nonce, h.number);
-    if (!equal(mix, mixDigest)) return reject('neplatná práce');
+    if (!equal(mix, mixDigest)) return reject('invalid work');
     const value = bytesToBigInt(result);
-    if (value > job.target) return reject('podíl nesplňuje obtížnost');
+    if (value > job.target) return reject('share does not meet the difficulty');
     this.seen.add(id);
     if (this.seen.size > MAX_JOBS) this.seen.delete(this.seen.values().next().value);
 
@@ -427,7 +427,7 @@ export class PoolServer {
         return tx;
       }
     }
-    throw new PoolError('výplata se nevešla do limitu transakce');
+    throw new PoolError('the payout does not fit into the transaction limit');
   }
 
   /** Hashrate of one device from accepted shares, zero for a device that has not reported for a long time. */

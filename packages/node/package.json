@@ -2,7 +2,7 @@
   "name": "@aether/node",
   "version": "2.0.0",
   "type": "module",
-  "description": "Plný uzel sítě Quinvium",
+  "description": "Full node of the Quinvium network",
   "bin": {
     "quintium-node": "src/cli.js"
   },

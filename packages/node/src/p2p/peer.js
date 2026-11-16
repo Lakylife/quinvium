@@ -73,7 +73,7 @@ export class Peer extends EventEmitter {
     this.known = new Set();       // hashes of transactions the peer has or was sent
     channel.on('frame', (type, payload) => this._onFrame(type, payload));
     channel.on('close', (reason) => {
-      for (const p of this.pending.values()) { clearTimeout(p.timer); p.reject(new Error('uzel se odpojil')); }
+      for (const p of this.pending.values()) { clearTimeout(p.timer); p.reject(new Error('peer disconnected')); }
       this.pending.clear();
       this.emit('close', reason);
     });
@@ -102,20 +102,20 @@ export class Peer extends EventEmitter {
   _onFrame(type, payload) {
     this.lastSeen = Date.now();
     if (!this._withinLimits(payload.length)) {
-      this.misbehave(20, 'příliš mnoho zpráv');
+      this.misbehave(20, 'too many messages');
       return;
     }
     // The per-type limit is checked before decoding; a surplus message costs almost nothing.
     const bucket = this.budget[type];
     if (bucket && !bucket.take()) {
-      this.misbehave(OVER_LIMIT_POINTS, `příliš mnoho zpráv typu ${type}`);
+      this.misbehave(OVER_LIMIT_POINTS, `too many messages of type ${type}`);
       return;
     }
     let body;
     try {
       body = payload.length ? RLP.decode(payload) : [];
     } catch {
-      this.misbehave(50, 'poškozená zpráva');
+      this.misbehave(50, 'malformed message');
       return;
     }
     if (type === MSG.HEADERS || type === MSG.BLOCKS || type === MSG.PEERS || type === MSG.TXS) {
@@ -129,7 +129,7 @@ export class Peer extends EventEmitter {
       }
       // A slow but honest peer answers after our timeout: that answer was requested, so it costs nothing.
       if (this.expired.delete(id)) return;
-      this.misbehave(10, 'nevyžádaná odpověď');
+      this.misbehave(10, 'unsolicited response');
       return;
     }
     this.emit('message', type, body);
@@ -145,7 +145,7 @@ export class Peer extends EventEmitter {
         this.pending.delete(id);
         if (this.expired.size >= MAX_EXPIRED) this.expired.delete(this.expired.values().next().value);
         this.expired.add(id);
-        reject(new Error('uzel neodpověděl včas'));
+        reject(new Error('peer did not answer in time'));
       }, timeout);
       this.pending.set(id, { resolve, reject, timer });
       this.send(type, [intToBytes(id), ...body]);

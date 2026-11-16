@@ -152,7 +152,7 @@ test('nonce including pending, replacement and rejection', async () => {
   const raw = await bob.connect(provider).signTransaction({
     to: alice.address, value: 10n ** 30n, nonce: 0, gasLimit: 21000, maxFeePerGas: 5e9, maxPriorityFeePerGas: 1e9, chainId: 52403, type: 2,
   });
-  await assert.rejects(provider.send('eth_sendRawTransaction', [raw]), /nedostatek/);
+  await assert.rejects(provider.send('eth_sendRawTransaction', [raw]), /insufficient funds/);
 });
 
 test('filters and subscriptions over WebSocket', async () => {
@@ -180,7 +180,7 @@ test('getwork: the miner chooses a payout address without an account; a wrong re
   assert.equal(await provider.send('eth_submitWork', ['0x' + '11'.repeat(8), '0x' + '22'.repeat(32), '0x' + '33'.repeat(32)]), false);
   assert.equal(await provider.send('eth_submitWork', ['0x' + '11'.repeat(8), seal0, '0x' + '33'.repeat(32)]), false);
   await assert.rejects(provider.send('aether_getWork', ['neplatna']));
-  await assert.rejects(provider.send('eth_getWork', []), /adresu výplaty/);
+  await assert.rejects(provider.send('eth_getWork', []), /payout address/);
 });
 
 test('statistics and data for the Explorer', async () => {

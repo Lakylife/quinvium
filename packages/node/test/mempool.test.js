@@ -30,7 +30,7 @@ test("a full queue evicts the sender's last transaction, never a middle one", as
   assert.deepEqual(hashes(pool), new Set([a0, a1, a2, c0].map(hex)));
 
   // Nobody at the end of a sequence is cheaper than the new one: the queue rejects it and evicts nothing.
-  await assert.rejects(pool.add(tx(d, 0n, 4n)), /fronta je plná/);
+  await assert.rejects(pool.add(tx(d, 0n, 4n)), /queue is full/);
   assert.equal(pool.size, 4);
 
   // Further transactions from the same sender do not push out its own earlier one, which would then be missing.
@@ -126,7 +126,7 @@ test('a replacement in a full queue evicts nobody and the original transaction d
   const a0 = tx(a, 0n, 5n); const b0 = tx(b, 0n, 3n);
   await pool.add(a0); await pool.add(b0);
   // A weak replacement does not pass and the original stays.
-  await assert.rejects(pool.add(tx(a, 0n, 5n, 1n)), /už je ve frontě|o 10 %/);
+  await assert.rejects(pool.add(tx(a, 0n, 5n, 1n)), /already in the queue|10%/);
   assert.deepEqual(hashes(pool), new Set([a0, b0].map(hex)));
   const a0b = tx(a, 0n, 10n, 2n);
   await pool.add(a0b);

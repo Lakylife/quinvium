@@ -50,7 +50,7 @@ const LOCAL_CALLER = Object.freeze({ ip: null, local: true });
 /** Methods that control this node: only this computer and the local network, whatever the mode. */
 const ALWAYS_LOCAL = new Set(['aether_setPublicUrl', 'quintium_setPublicUrl', 'quinvium_setPublicUrl']);
 
-const TOO_MANY = { jsonrpc: '2.0', id: null, error: { code: -32005, message: 'příliš mnoho požadavků' } };
+const TOO_MANY = { jsonrpc: '2.0', id: null, error: { code: -32005, message: 'too many requests' } };
 /**
  * Methods that run the EVM or a database query in the node's small thread pool (rpc/vm-pool.js). A foreign caller runs them
  * one at a time, so a single address cannot occupy every thread with 5-second calls and stop eth_call for everyone else.
@@ -156,11 +156,11 @@ export class RpcServer {
   async call(req, caller = LOCAL_CALLER) {
     const id = req?.id ?? null;
     if (req?.jsonrpc !== '2.0' || typeof req.method !== 'string') {
-      return { jsonrpc: '2.0', id, error: { code: -32600, message: 'neplatný požadavek' } };
+      return { jsonrpc: '2.0', id, error: { code: -32600, message: 'invalid request' } };
     }
     const fn = Object.prototype.hasOwnProperty.call(this.methods, req.method) ? this.methods[req.method] : null;
-    if (typeof fn !== 'function') return { jsonrpc: '2.0', id, error: { code: -32601, message: `metoda ${req.method} neexistuje` } };
-    if (!caller.local && (this.localOnly.has(req.method) || ALWAYS_LOCAL.has(req.method) || (caller.tunnel && MINING_METHODS.includes(req.method)))) return { jsonrpc: '2.0', id, error: { code: -32601, message: `metoda ${req.method} je dostupná jen z místní sítě` } };
+    if (typeof fn !== 'function') return { jsonrpc: '2.0', id, error: { code: -32601, message: `the method ${req.method} does not exist` } };
+    if (!caller.local && (this.localOnly.has(req.method) || ALWAYS_LOCAL.has(req.method) || (caller.tunnel && MINING_METHODS.includes(req.method)))) return { jsonrpc: '2.0', id, error: { code: -32601, message: `the method ${req.method} is available only from the local network` } };
     const params = Array.isArray(req.params) ? req.params : [];
     let slot = null;
     if (!caller.local && HEAVY_METHODS.has(req.method)) {
@@ -214,10 +214,10 @@ export class RpcServer {
     try {
       body = JSON.parse(text);
     } catch {
-      return { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'neplatný JSON' } };
+      return { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'parse error' } };
     }
     if (Array.isArray(body)) {
-      if (body.length === 0 || body.length > MAX_BATCH) return { jsonrpc: '2.0', id: null, error: { code: -32600, message: 'neplatná velikost dávky' } };
+      if (body.length === 0 || body.length > MAX_BATCH) return { jsonrpc: '2.0', id: null, error: { code: -32600, message: 'invalid batch size' } };
       if (!this._allow(caller, body.length)) return TOO_MANY;
       return Promise.all(body.map((r) => this.call(r, caller)));
     }
@@ -320,7 +320,7 @@ export class RpcServer {
         text = JSON.stringify(out);
       } catch (e) {
         this.log(`RPC: ${e.stack ?? e.message}`);
-        text = '{"jsonrpc":"2.0","id":null,"error":{"code":-32603,"message":"vnitřní chyba"}}';
+        text = '{"jsonrpc":"2.0","id":null,"error":{"code":-32603,"message":"internal error"}}';
       }
       res.writeHead(status, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(text) });
       res.end(text);
@@ -349,7 +349,7 @@ export class RpcServer {
   }
 
   _ws(ws, req) {
-    if (this.wss.clients.size > MAX_WS_CLIENTS) { ws.close(1013, 'příliš mnoho spojení'); return; }
+    if (this.wss.clients.size > MAX_WS_CLIENTS) { ws.close(1013, 'too many connections'); return; }
     const caller = this._caller(req);
     ws.subs = new Map();
     ws.on('error', () => ws.terminate());
@@ -364,12 +364,12 @@ export class RpcServer {
 
   /** The message content is entirely in the client's hands, so its shape is checked before use. */
   async _wsMessage(ws, caller, data) {
-    const invalid = (id = null) => this._wsSend(ws, JSON.stringify({ jsonrpc: '2.0', id, error: { code: -32600, message: 'neplatný požadavek' } }));
+    const invalid = (id = null) => this._wsSend(ws, JSON.stringify({ jsonrpc: '2.0', id, error: { code: -32600, message: 'invalid request' } }));
     let msg;
     try {
       msg = JSON.parse(data.toString());
     } catch {
-      this._wsSend(ws, '{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"neplatný JSON"}}');
+      this._wsSend(ws, '{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"parse error"}}');
       return;
     }
     if (typeof msg !== 'object' || msg === null) { invalid(); return; }
@@ -402,9 +402,9 @@ export class RpcServer {
   _subscribe(ws, msg) {
     const [kind, opts] = msg.params ?? [];
     if (!['newHeads', 'logs', 'newPendingTransactions'].includes(kind)) {
-      return { jsonrpc: '2.0', id: msg.id ?? null, error: { code: -32602, message: 'neznámý typ odběru' } };
+      return { jsonrpc: '2.0', id: msg.id ?? null, error: { code: -32602, message: 'unknown subscription type' } };
     }
-    if (ws.subs.size >= MAX_SUBS) return { jsonrpc: '2.0', id: msg.id ?? null, error: { code: -32005, message: 'příliš mnoho odběrů' } };
+    if (ws.subs.size >= MAX_SUBS) return { jsonrpc: '2.0', id: msg.id ?? null, error: { code: -32005, message: 'too many subscriptions' } };
     const id = `0x${(this.nextSub++).toString(16)}`;
     const sub = { ws, kind, opts: opts ?? {} };
     ws.subs.set(id, sub);

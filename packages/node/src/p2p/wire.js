@@ -49,7 +49,7 @@ export class SecureChannel extends EventEmitter {
     socket.write(this.localPub);
     socket.on('data', (d) => this._onData(d));
     socket.on('error', (e) => this.close(e.message));
-    socket.on('close', () => this.close('spojení ukončeno'));
+    socket.on('close', () => this.close('connection closed'));
   }
 
   /** Allows large frames after the handshake is complete. */
@@ -105,7 +105,7 @@ export class SecureChannel extends EventEmitter {
       for (;;) {
         if (this.have < 4) return;
         const len = this._flat(4).readUInt32BE(0);
-        if (len < TAG_LEN + 1 || len > this.maxFrame + 1 + TAG_LEN) throw new Error('neplatná délka rámce');
+        if (len < TAG_LEN + 1 || len > this.maxFrame + 1 + TAG_LEN) throw new Error('invalid frame length');
         if (this.have < 4 + len) return;
         this._take(4);
         const frame = this._take(len);
@@ -116,7 +116,7 @@ export class SecureChannel extends EventEmitter {
         if (this.closed) return;
       }
     } catch (e) {
-      this.close(`chyba protokolu: ${e.message}`);
+      this.close(`protocol error: ${e.message}`);
     }
   }
 
@@ -126,9 +126,9 @@ export class SecureChannel extends EventEmitter {
   send(type, payload) {
     if (this.closed || !this.sendKey) return false;
     const plain = Buffer.concat([Buffer.from([type]), payload]);
-    if (plain.length > MAX_FRAME) throw new Error('zpráva je příliš velká');
+    if (plain.length > MAX_FRAME) throw new Error('message is too large');
     if (this.queued + plain.length > MAX_QUEUED) {
-      this.close('uzel nečte data');
+      this.close('peer does not read data');
       return false;
     }
     const cipher = crypto.createCipheriv(CIPHER, this.sendKey, SecureChannel._nonce(this.sendCounter++), { authTagLength: TAG_LEN });

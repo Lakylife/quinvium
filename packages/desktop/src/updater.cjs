@@ -23,22 +23,22 @@ const PLATFORMS = ['win32', 'darwin'];
  * @param {string} [platform] expected platform, `win32` or `darwin`
  */
 function verifyManifest(text, signature, key = PUBLIC_KEY, platform) {
-  if (!crypto.verify(null, Buffer.from(text), key, Buffer.from(signature.trim(), 'base64'))) throw new Error('Podpis aktualizace nesouhlasí');
+  if (!crypto.verify(null, Buffer.from(text), key, Buffer.from(signature.trim(), 'base64'))) throw new Error('The update signature does not match');
   const m = JSON.parse(text);
-  if (!/^\d+\.\d+\.\d+$/.test(m.version ?? '')) throw new Error('Neplatná verze aktualizace');
-  if (!/^[A-Za-z0-9._-]+\.zip$/.test(m.file ?? '')) throw new Error('Neplatný název balíčku');
-  if (!/^[0-9a-f]{64}$/.test(m.sha256 ?? '')) throw new Error('Neplatný otisk balíčku');
-  if (!Number.isInteger(m.size) || m.size <= 0 || m.size > MAX_PACKAGE) throw new Error('Neplatná velikost balíčku');
-  if (!PLATFORMS.includes(m.platform)) throw new Error('Aktualizace neuvádí platformu');
-  if (platform && m.platform !== platform) throw new Error(`Aktualizace je pro jinou platformu (${m.platform})`);
+  if (!/^\d+\.\d+\.\d+$/.test(m.version ?? '')) throw new Error('Invalid update version');
+  if (!/^[A-Za-z0-9._-]+\.zip$/.test(m.file ?? '')) throw new Error('Invalid package name');
+  if (!/^[0-9a-f]{64}$/.test(m.sha256 ?? '')) throw new Error('Invalid package hash');
+  if (!Number.isInteger(m.size) || m.size <= 0 || m.size > MAX_PACKAGE) throw new Error('Invalid package size');
+  if (!PLATFORMS.includes(m.platform)) throw new Error('The update does not name a platform');
+  if (platform && m.platform !== platform) throw new Error(`The update is for another platform (${m.platform})`);
   return m;
 }
 
 async function fetchText(url) {
   const r = await fetch(url, { signal: AbortSignal.timeout(REQUEST_MS) });
-  if (!r.ok) throw new Error(`Server vrátil ${r.status}`);
+  if (!r.ok) throw new Error(`The server returned ${r.status}`);
   const text = await r.text();
-  if (text.length > MAX_MANIFEST) throw new Error('Popis aktualizace je příliš dlouhý');
+  if (text.length > MAX_MANIFEST) throw new Error('The update description is too long');
   return text;
 }
 
@@ -57,12 +57,12 @@ async function checkForUpdate(baseUrl, currentVersion, name = 'manifest', platfo
 async function downloadPackage(baseUrl, manifest, directory) {
   const target = path.join(directory, manifest.file);
   const r = await fetch(`${baseUrl.replace(/\/$/, '')}/${manifest.file}`, { signal: AbortSignal.timeout(600_000) });
-  if (!r.ok || !r.body) throw new Error(`Server vrátil ${r.status}`);
+  if (!r.ok || !r.body) throw new Error(`The server returned ${r.status}`);
   let received = 0;
   const limit = new Transform({
     transform(chunk, _, done) {
       received += chunk.length;
-      done(received > manifest.size ? new Error('Stažený balíček nesouhlasí s podpisem: je větší') : null, chunk);
+      done(received > manifest.size ? new Error('The downloaded package does not match the signature: it is larger') : null, chunk);
     },
   });
   try {
@@ -75,14 +75,14 @@ async function downloadPackage(baseUrl, manifest, directory) {
   await pipeline(fs.createReadStream(target), hash);
   if (hash.digest('hex') !== manifest.sha256 || fs.statSync(target).size !== manifest.size) {
     fs.rmSync(target, { force: true });
-    throw new Error('Stažený balíček nesouhlasí s podpisem');
+    throw new Error('The downloaded package does not match the signature');
   }
   return target;
 }
 
-/** Counters from the miner's line `Výkon 3.91 MH/s, nalezené bloky 2, osiřelé 1, odmítnuté 0`. */
+/** Counters from the miner's line `Hashrate 3.91 MH/s, blocks found 2, stale 1, rejected 0` (older miners wrote the same line in Czech). */
 function parseMinerLine(line) {
-  const m = /Výkon ([\d.]+) ([^\s,]+), nalezené bloky (\d+), osiřelé (\d+), odmítnuté (\d+)(?:, podíly (\d+))?/.exec(line);
+  const m = /(?:Hashrate|Výkon) ([\d.]+) ([^\s,]+), (?:blocks found|nalezené bloky) (\d+), (?:stale|osiřelé) (\d+), (?:rejected|odmítnuté) (\d+)(?:, (?:shares|podíly) (\d+))?/.exec(line);
   if (!m) return null;
   const scale = { 'H/s': 1, 'kH/s': 1e3, 'MH/s': 1e6, 'GH/s': 1e9 }[m[2]] ?? 1;
   return { rate: Math.round(Number(m[1]) * scale), found: Number(m[3]), stale: Number(m[4]), rejected: Number(m[5]), shares: Number(m[6] ?? 0) };

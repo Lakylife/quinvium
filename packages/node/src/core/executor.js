@@ -157,18 +157,18 @@ export async function txRejection(tx, stateManager, baseFee) {
   try {
     sender = tx.getSenderAddress();
   } catch {
-    return 'neplatný podpis';
+    return 'invalid signature';
   }
-  if (tx.value < 0n) return 'záporná hodnota';
-  if (tx.gasLimit < tx.getIntrinsicGas()) return 'gas je nižší než základní cena transakce';
+  if (tx.value < 0n) return 'negative value';
+  if (tx.gasLimit < tx.getIntrinsicGas()) return 'intrinsic gas too low';
   const maxFee = tx.type === 2 ? tx.maxFeePerGas : tx.gasPrice;
-  if (maxFee < baseFee) return 'poplatek je nižší než základní poplatek bloku';
-  if (tx.type === 2 && tx.maxPriorityFeePerGas > tx.maxFeePerGas) return 'dýško je vyšší než nejvyšší poplatek';
+  if (maxFee < baseFee) return 'max fee per gas is less than the block base fee';
+  if (tx.type === 2 && tx.maxPriorityFeePerGas > tx.maxFeePerGas) return 'max priority fee per gas is higher than max fee per gas';
   const account = await stateManager.getAccount(sender);
-  if (account?.isContract()) return 'odesílatel je kontrakt (EIP-3607)';
+  if (account?.isContract()) return 'sender is a contract (EIP-3607)';
   const balance = account?.balance ?? 0n;
-  if (balance < tx.getUpfrontCost(baseFee) || balance < tx.value + tx.gasLimit * maxFee) return 'nedostatek prostředků';
-  if ((account?.nonce ?? 0n) !== tx.nonce) return 'špatné nonce';
+  if (balance < tx.getUpfrontCost(baseFee) || balance < tx.value + tx.gasLimit * maxFee) return 'insufficient funds';
+  if ((account?.nonce ?? 0n) !== tx.nonce) return 'wrong nonce';
   return null;
 }
 
@@ -243,7 +243,7 @@ export async function executeBlock({ store, common, parent, ctx, txs, mode, ance
       bytes += size;
     }
     if (gasUsed + tx.gasLimit > ctx.gasLimit) {
-      if (mode === 'verify') throw new InvalidBlock('překročen limit gasu bloku');
+      if (mode === 'verify') throw new InvalidBlock('block gas limit exceeded');
       bytes -= mode === 'build' ? tx.serialize().length + TX_OVERHEAD : 0;
       continue;
     }
@@ -253,7 +253,7 @@ export async function executeBlock({ store, common, parent, ctx, txs, mode, ance
     } catch (e) {
       if (mode === 'verify') {
         const reason = await txRejection(tx, stateManager, ctx.baseFee);
-        if (reason) throw new InvalidBlock(`neplatná transakce: ${reason}`);
+        if (reason) throw new InvalidBlock(`invalid transaction: ${reason}`);
         throw e;
       }
       bytes -= tx.serialize().length + TX_OVERHEAD;

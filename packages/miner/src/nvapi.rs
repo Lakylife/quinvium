@@ -21,27 +21,27 @@ mod imp {
 
     pub fn force(state: u32) -> Result<String, String> {
         unsafe {
-            let library = Library::new("nvapi64.dll").map_err(|e| format!("ovladač NVIDIA není k dispozici: {e}"))?;
+            let library = Library::new("nvapi64.dll").map_err(|e| format!("the NVIDIA driver is not available: {e}"))?;
             let query: libloading::Symbol<Query> = library.get(b"nvapi_QueryInterface\0").map_err(|e| e.to_string())?;
             let function = |id: u32, name: &str| {
                 let f = query(id);
-                if f.is_null() { Err(format!("ovladač nezná funkci {name}")) } else { Ok(f) }
+                if f.is_null() { Err(format!("the driver does not know the function {name}")) } else { Ok(f) }
             };
             let initialize: Initialize = std::mem::transmute(function(INITIALIZE, "Initialize")?);
             let enum_gpus: EnumGpus = std::mem::transmute(function(ENUM_PHYSICAL_GPUS, "EnumPhysicalGPUs")?);
             let set: SetState = std::mem::transmute(function(SET_FORCE_PSTATE, "SetForcePstate")?);
             let code = initialize();
             if code != 0 {
-                return Err(format!("inicializace vrátila {code}"));
+                return Err(format!("initialisation returned {code}"));
             }
             let mut handles = [null_mut::<c_void>(); MAX_GPUS];
             let mut count = 0u32;
             let code = enum_gpus(handles.as_mut_ptr(), &mut count);
             if code != 0 {
-                return Err(format!("seznam karet vrátil {code}"));
+                return Err(format!("the card list returned {code}"));
             }
             let results: Vec<String> = handles[..count as usize].iter().map(|h| set(*h, state, FALLBACK_LOWER_PERFORMANCE).to_string()).collect();
-            Ok(format!("karet {count}, výsledky {}", results.join(",")))
+            Ok(format!("cards {count}, results {}", results.join(",")))
         }
     }
 }
@@ -49,7 +49,7 @@ mod imp {
 #[cfg(not(windows))]
 mod imp {
     pub fn force(_state: u32) -> Result<String, String> {
-        Err("jen ve Windows".into())
+        Err("only on Windows".into())
     }
 }
 

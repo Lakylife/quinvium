@@ -10,7 +10,7 @@ import { BitcoinBridge, bitcoinRpc } from './btc-bridge.js';
 const POLL_MS = 15_000;
 const path = process.argv[2];
 if (!path) {
-  console.error('Použití: aether-bridge <nastavení.json>');
+  console.error('Usage: aether-bridge <settings.json>');
   process.exit(1);
 }
 const config = JSON.parse(readFileSync(path, 'utf8'));
@@ -19,7 +19,7 @@ const log = (line) => console.log(`${new Date().toISOString()} ${line}`);
 
 function secret(file) {
   const full = resolve(base, file);
-  if (process.platform !== 'win32' && statSync(full).mode & 0o077) throw new Error(`Soubor ${file} smí číst jen vlastník (chmod 600)`);
+  if (process.platform !== 'win32' && statSync(full).mode & 0o077) throw new Error(`Only the owner may read the file ${file} (chmod 600)`);
   return readFileSync(full, 'utf8').trim();
 }
 
@@ -36,7 +36,7 @@ if (config.bitcoin) {
     btcKey: secret(b.keyFile), validators: b.validators, threshold: b.threshold, confirmations: b.confirmations, minDeposit: BigInt(b.minDeposit ?? 10_000),
     maxFeeRate: b.maxFeeRate, dailyLimit: BigInt(b.dailyLimit ?? 1_000_000_000), statePath: resolve(base, b.stateFile ?? 'most-bitcoin.json'), log,
   });
-  log(`Úschova Bitcoinu: ${bitcoin.mainAddress}`);
+  log(`Bitcoin custody: ${bitcoin.mainAddress}`);
 }
 
 let stopping = false;
@@ -48,5 +48,5 @@ async function loop() {
   }
 }
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => { stopping = true; process.exit(0); });
-log(`Validátor ${relayer.address} běží: ${chains.map((c) => c.name).join(', ')}`);
+log(`Validator ${relayer.address} running: ${chains.map((c) => c.name).join(', ')}`);
 loop();

@@ -118,7 +118,7 @@ test('one signature is not enough and signatures in reverse order do not pass', 
   const tx = { version: 2, locktime: 0, inputs: [{ txid, vout: 0 }], outputs: [{ value: 690_000n, script: dataOutput(Buffer.alloc(32)) }] };
   const sorted = [...pubkeys].sort(Buffer.compare).map((k) => k.toString('hex'));
   const byKey = new Map(keys.map((k) => [publicKey(k).toString('hex'), signInput(tx, 0, script, 700_000n, k)]));
-  assert.throws(() => multisigWitness(pubkeys, 2, new Map([...byKey].slice(0, 1)), script), /Nedostatek/);
+  assert.throws(() => multisigWitness(pubkeys, 2, new Map([...byKey].slice(0, 1)), script), /Not enough/);
   tx.inputs[0].witness = [Buffer.alloc(0), byKey.get(sorted[1]), byKey.get(sorted[0]), script];
   await assert.rejects(node.rpc('sendrawtransaction', [serializeTx(tx, true).toString('hex')]), /mandatory-script-verify/);
   tx.inputs[0].witness = multisigWitness(pubkeys, 2, byKey, script);

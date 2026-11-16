@@ -17,22 +17,22 @@ const REPORT_PERCENT: u64 = 5;
 
 const HELP: &str = "Quinvium Miner 2.1.0
 
-Použití:
+Usage:
   quintium-miner --address 0x... [--node http://127.0.0.1:8545] [--device N|all]
-  quintium-miner --list          vypíše grafické karty
-  quintium-miner --gpu-state <0|16>  výkon karty NVIDIA ve Windows: 0 plný, 16 podle ovladače
-  quintium-miner --benchmark     změří výkon bez připojení k uzlu
+  quintium-miner --list          lists graphics cards
+  quintium-miner --gpu-state <0|16>  NVIDIA card performance on Windows: 0 full, 16 as the driver decides
+  quintium-miner --benchmark     measures the hashrate without connecting to a node
 
-Volby:
-  --address <0x...>   adresa, na kterou jde odměna
-  --node <url>        uzel Quinvium (výchozí http://127.0.0.1:8545)
-  --device <N|all>    číslo karty ze seznamu, výchozí all
-  --backend <auto|opencl|wgpu>  způsob výpočtu, výchozí auto (OpenCL, když ho karta umí)
-  --intensity <10-100> výkon v procentech, výchozí 100
-  --pool <0x...>      těžit do poolu s touto adresou, --node je pak server poolu
-  --worker <název>    název zařízení v poolu, výchozí rig
-  --fallback <url,…>  záložní uzly pro sólo těžbu, když hlavní cíl (pool) neodpovídá; po obnovení se miner vrátí
-  --help              tato nápověda
+Options:
+  --address <0x...>   address that receives the reward
+  --node <url>        Quinvium node (default http://127.0.0.1:8545)
+  --device <N|all>    card number from the list, default all
+  --backend <auto|opencl|wgpu>  how to compute, default auto (OpenCL when the card supports it)
+  --intensity <10-100> power in percent, default 100
+  --pool <0x...>      mine into the pool with this address, --node is then the pool server
+  --worker <name>     device name in the pool, default rig
+  --fallback <url,…>  backup nodes for solo mining when the main target (pool) does not respond; the miner returns once it is back
+  --help              this help
 ";
 
 pub struct SearchResult {
@@ -75,7 +75,7 @@ impl Source {
                 Ok(engine) => Ok((Box::new(engine), fallback)),
                 Err(e) => match fallback {
                     Some(a) => {
-                        eprintln!("OpenCL nejde použít: {e}");
+                        eprintln!("OpenCL cannot be used: {e}");
                         Ok((Box::new(gpu::WgpuCard::open(&a)?), None))
                     }
                     None => Err(e),
@@ -126,7 +126,7 @@ struct Shared {
 fn parse_hex(s: &str) -> Result<Vec<u8>, String> {
     let s = s.strip_prefix("0x").unwrap_or(s);
     if s.len() % 2 != 0 {
-        return Err("neplatný hex".into());
+        return Err("invalid hex".into());
     }
     (0..s.len() / 2).map(|i| u8::from_str_radix(&s[i * 2..i * 2 + 2], 16).map_err(|e| e.to_string())).collect()
 }
@@ -140,12 +140,12 @@ fn hex(b: &[u8]) -> String {
 }
 
 fn to32(v: Vec<u8>) -> Result<[u8; 32], String> {
-    v.try_into().map_err(|_| "očekáváno 32 bajtů".to_string())
+    v.try_into().map_err(|_| "expected 32 bytes".to_string())
 }
 
 fn parse_job(v: &Value) -> Result<Job, String> {
-    let a = v.as_array().ok_or("neplatná práce")?;
-    let text = |i: usize| a.get(i).and_then(Value::as_str).ok_or("neplatná práce");
+    let a = v.as_array().ok_or("invalid work")?;
+    let text = |i: usize| a.get(i).and_then(Value::as_str).ok_or("invalid work");
     Ok(Job {
         seal: to32(parse_hex(text(0)?)?)?,
         target: to32(parse_hex(text(2)?)?)?,
@@ -190,17 +190,17 @@ fn rlp_items(data: &[u8]) -> Option<Vec<&[u8]>> {
 /// The pool server must not slip in foreign work: the header must pay to the pool contract and carry the miner's address.
 /// Thanks to this the miner sees that their hashrate does not go to someone else and does not have to trust the server.
 fn check_pool_job(v: &Value, seal: &[u8; 32], pool: &[u8], miner: &[u8]) -> Result<(), String> {
-    let fields = v.get(4).and_then(Value::as_str).ok_or("server neposlal hlavičku práce")?;
+    let fields = v.get(4).and_then(Value::as_str).ok_or("the server did not send the work header")?;
     let bytes = parse_hex(fields)?;
     if ethash::keccak256(&bytes) != *seal {
-        return Err("hlavička neodpovídá práci".into());
+        return Err("the header does not match the work".into());
     }
-    let items = rlp_items(&bytes).ok_or("neplatná hlavička")?;
+    let items = rlp_items(&bytes).ok_or("invalid header")?;
     if items.len() != 13 || items[1] != pool {
-        return Err("práce neplatí do zvoleného poolu".into());
+        return Err("the work does not pay into the chosen pool".into());
     }
     if items[11].len() < 20 || &items[11][..20] != miner {
-        return Err("práce nenese adresu tohoto těžaře".into());
+        return Err("the work does not carry the address of this miner".into());
     }
     Ok(())
 }
@@ -224,7 +224,7 @@ fn gpu_worker(index: usize, source: Source, shared: Arc<Shared>, intensity: u32)
     let (mut card, mut fallback) = match source.open() {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("[karta {index}] nelze otevřít: {e}");
+            eprintln!("[card {index}] cannot be opened: {e}");
             return;
         }
     };
@@ -240,7 +240,7 @@ fn gpu_worker(index: usize, source: Source, shared: Arc<Shared>, intensity: u32)
         let epoch = job.number / ethash::EPOCH_LENGTH;
         if ready != Some(epoch) {
             let name = card.name();
-            println!("[{name}] počítám DAG pro epochu {epoch}...");
+            println!("[{name}] computing DAG for epoch {epoch}...");
             let last = AtomicU64::new(0);
             let progress = move |p: u32| {
                 if p as u64 >= last.load(Ordering::Relaxed) + REPORT_PERCENT {
@@ -251,16 +251,16 @@ fn gpu_worker(index: usize, source: Source, shared: Arc<Shared>, intensity: u32)
             match card.prepare(epoch, &progress) {
                 Ok(()) => ready = Some(epoch),
                 Err(e) => {
-                    eprintln!("[{}] chyba DAG: {e}", card.name());
+                    eprintln!("[{}] DAG error: {e}", card.name());
                     let Some(adapter) = fallback.take() else { return };
-                    eprintln!("[{}] přecházím na výpočet přes wgpu", card.name());
+                    eprintln!("[{}] switching to wgpu", card.name());
                     match gpu::WgpuCard::open(&adapter) {
                         Ok(c) => {
                             card = Box::new(c);
                             println!("[{}] backend {}", card.name(), card.backend());
                         }
                         Err(e) => {
-                            eprintln!("[karta {index}] nelze otevřít: {e}");
+                            eprintln!("[card {index}] cannot be opened: {e}");
                             return;
                         }
                     }
@@ -290,7 +290,7 @@ fn gpu_worker(index: usize, source: Source, shared: Arc<Shared>, intensity: u32)
                 match Rpc::new(&job.node) {
                     Ok(r) => rpc = Some((job.node.clone(), r)),
                     Err(e) => {
-                        eprintln!("[{}] chyba odeslání: {e}", card.name());
+                        eprintln!("[{}] submit error: {e}", card.name());
                         continue;
                     }
                 }
@@ -302,7 +302,7 @@ fn gpu_worker(index: usize, source: Source, shared: Arc<Shared>, intensity: u32)
                         shared.shares.fetch_add(1, Ordering::Relaxed);
                         if v.get("block").is_some_and(|b| !b.is_null()) {
                             shared.found.fetch_add(1, Ordering::Relaxed);
-                            println!("[{}] NALEZEN BLOK #{} pro pool", card.name(), job.number);
+                            println!("[{}] BLOCK FOUND #{} for the pool", card.name(), job.number);
                         }
                     }
                     Ok(v) if v.get("stale").and_then(Value::as_bool) == Some(true) => {
@@ -310,26 +310,26 @@ fn gpu_worker(index: usize, source: Source, shared: Arc<Shared>, intensity: u32)
                     }
                     Ok(v) => {
                         shared.rejected.fetch_add(1, Ordering::Relaxed);
-                        println!("[{}] podíl odmítnut: {}", card.name(), v.get("reason").and_then(Value::as_str).unwrap_or("?"));
+                        println!("[{}] share rejected: {}", card.name(), v.get("reason").and_then(Value::as_str).unwrap_or("?"));
                     }
-                    Err(e) => eprintln!("[{}] chyba odeslání: {e}", card.name()),
+                    Err(e) => eprintln!("[{}] submit error: {e}", card.name()),
                 }
                 continue;
             }
             match reply {
                 Ok(v) if v.get("stale").and_then(Value::as_bool) == Some(true) => {
                     shared.stale.fetch_add(1, Ordering::Relaxed);
-                    println!("[{}] blok #{} přišel pozdě a osiřel", card.name(), job.number);
+                    println!("[{}] block #{} came too late and is stale", card.name(), job.number);
                 }
                 Ok(v) if v.get("accepted").and_then(Value::as_bool) == Some(true) => {
                     shared.found.fetch_add(1, Ordering::Relaxed);
-                    println!("[{}] NALEZEN BLOK #{}", card.name(), job.number);
+                    println!("[{}] BLOCK FOUND #{}", card.name(), job.number);
                 }
                 Ok(v) => {
                     shared.rejected.fetch_add(1, Ordering::Relaxed);
-                    println!("[{}] blok odmítnut: {}", card.name(), v.get("reason").and_then(Value::as_str).unwrap_or("?"));
+                    println!("[{}] block rejected: {}", card.name(), v.get("reason").and_then(Value::as_str).unwrap_or("?"));
                 }
-                Err(e) => eprintln!("[{}] chyba odeslání: {e}", card.name()),
+                Err(e) => eprintln!("[{}] submit error: {e}", card.name()),
             }
         }
     }
@@ -348,7 +348,7 @@ fn fallback_work(fallbacks: &[(Arc<str>, Rpc)], on: &mut Option<usize>, address:
         let (url, rpc) = &fallbacks[i];
         if let Ok(mut job) = rpc.call("aether_getWork", json!([address])).and_then(|v| parse_job(&v)) {
             if *on != Some(i) {
-                println!("Hlavní cíl neodpovídá, těžím sólo přes záložní uzel {url}.");
+                println!("The main target does not respond, mining solo through the backup node {url}.");
             }
             *on = Some(i);
             job.node = url.clone();
@@ -359,16 +359,16 @@ fn fallback_work(fallbacks: &[(Arc<str>, Rpc)], on: &mut Option<usize>, address:
 }
 
 fn benchmark(backend: &str) -> Result<(), String> {
-    let source = discover(backend).into_iter().next().ok_or("nebyla nalezena žádná grafická karta")?;
+    let source = discover(backend).into_iter().next().ok_or("no graphics card found")?;
     let (mut card, _) = source.open()?;
-    println!("Karta: {} ({})", card.name(), card.backend());
+    println!("Card: {} ({})", card.name(), card.backend());
     let started = Instant::now();
     card.prepare(0, &|p| {
         if p % 20 == 0 {
             println!("DAG {p} %");
         }
     })?;
-    println!("DAG ověřen proti procesoru za {:.1} s.", started.elapsed().as_secs_f32());
+    println!("DAG verified against the CPU in {:.1} s.", started.elapsed().as_secs_f32());
     let header = [7u8; 32];
 
     // Low difficulty: every solution from the card is recomputed on the CPU and must match.
@@ -382,12 +382,12 @@ fn benchmark(backend: &str) -> Result<(), String> {
         for n in r.nonces {
             let (_, res) = ethash::hashimoto_light(card.cache(), card.full_size(), &header, n);
             if res > full {
-                return Err(format!("karta vrátila chybné řešení pro nonce {n}"));
+                return Err(format!("the card returned a wrong solution for nonce {n}"));
             }
             checked += 1;
         }
     }
-    println!("Řešení karty ověřena na procesoru: {checked}");
+    println!("Card solutions verified on the CPU: {checked}");
 
     let started = Instant::now();
     let mut hashes = 0u64;
@@ -396,7 +396,7 @@ fn benchmark(backend: &str) -> Result<(), String> {
         hashes += r.hashes;
         nonce = nonce.wrapping_add(r.hashes);
     }
-    println!("Výkon: {}", format_rate(hashes as f64 / started.elapsed().as_secs_f64()));
+    println!("Hashrate: {}", format_rate(hashes as f64 / started.elapsed().as_secs_f64()));
     Ok(())
 }
 
@@ -410,7 +410,7 @@ fn run() -> Result<(), String> {
         return Ok(());
     }
     if let Some(state) = value("--gpu-state") {
-        let state: u32 = state.parse().map_err(|_| "--gpu-state musí být číslo")?;
+        let state: u32 = state.parse().map_err(|_| "--gpu-state must be a number")?;
         println!("{}", nvapi::force(state)?);
         for gpu in cl::list() {
             println!("OpenCL: {}", gpu.summary());
@@ -419,7 +419,7 @@ fn run() -> Result<(), String> {
     }
     let backend = value("--backend").unwrap_or_else(|| "auto".into());
     if !["auto", "opencl", "wgpu"].contains(&backend.as_str()) {
-        return Err("--backend musí být auto, opencl nebo wgpu".into());
+        return Err("--backend must be auto, opencl or wgpu".into());
     }
     if flag("--list") {
         for (i, s) in discover(&backend).iter().enumerate() {
@@ -432,10 +432,10 @@ fn run() -> Result<(), String> {
         return benchmark(&backend);
     }
 
-    let address = value("--address").ok_or("chybí --address, viz --help")?;
-    let bytes = parse_hex(&address).map_err(|_| "neplatná adresa")?;
+    let address = value("--address").ok_or("missing --address, see --help")?;
+    let bytes = parse_hex(&address).map_err(|_| "invalid address")?;
     if bytes.len() != 20 {
-        return Err("adresa musí mít 20 bajtů".into());
+        return Err("the address must have 20 bytes".into());
     }
     let node = value("--node").unwrap_or_else(|| "http://127.0.0.1:8545".into());
     let rpc = Rpc::new(&node)?;
@@ -449,9 +449,9 @@ fn run() -> Result<(), String> {
         .collect::<Result<_, _>>()?;
     let pool = match value("--pool") {
         Some(p) => {
-            let b = parse_hex(&p).map_err(|_| "neplatná adresa poolu")?;
+            let b = parse_hex(&p).map_err(|_| "invalid pool address")?;
             if b.len() != 20 {
-                return Err("adresa poolu musí mít 20 bajtů".into());
+                return Err("the pool address must have 20 bytes".into());
             }
             Some(b)
         }
@@ -461,12 +461,12 @@ fn run() -> Result<(), String> {
 
     let mut sources = discover(&backend);
     if sources.is_empty() {
-        return Err("nebyla nalezena žádná grafická karta".into());
+        return Err("no graphics card found".into());
     }
     if let Some(d) = value("--device").filter(|d| d != "all") {
-        let i: usize = d.parse().map_err(|_| "neplatné číslo karty")?;
+        let i: usize = d.parse().map_err(|_| "invalid card number")?;
         if i >= sources.len() {
-            return Err("taková karta neexistuje, viz --list".into());
+            return Err("no such card, see --list".into());
         }
         sources = vec![sources.swap_remove(i)];
     }
@@ -483,8 +483,8 @@ fn run() -> Result<(), String> {
     });
     let node_id: Arc<str> = Arc::from(node.as_str());
     match &pool {
-        Some(p) => println!("Těžím na adresu {address} do poolu {} přes server {node}", hex(p)),
-        None => println!("Těžím na adresu {address} přes uzel {node}"),
+        Some(p) => println!("Mining to {address} into the pool {} through the server {node}", hex(p)),
+        None => println!("Mining to {address} through the node {node}"),
     }
     for (i, source) in sources.into_iter().enumerate() {
         let s = shared.clone();
@@ -523,7 +523,7 @@ fn run() -> Result<(), String> {
             Some(Ok(job)) => {
                 failures = 0;
                 if let Some(i) = on_fallback.take() {
-                    println!("Hlavní cíl {node} znovu odpovídá, opouštím záložní uzel {}.", fallbacks[i].0);
+                    println!("The main target {node} responds again, leaving the backup node {}.", fallbacks[i].0);
                 }
                 Ok(job)
             }
@@ -537,14 +537,14 @@ fn run() -> Result<(), String> {
                             .ok_or_else(|| e.clone())
                     }
                 } else {
-                    fallback_work(&fallbacks, &mut on_fallback, &address).ok_or_else(|| "záložní uzel neodpovídá".to_string())
+                    fallback_work(&fallbacks, &mut on_fallback, &address).ok_or_else(|| "the backup node does not respond".to_string())
                 }
             }
         };
         match work {
             Ok(job) => {
                 if !connected {
-                    println!("Spojení s uzlem obnoveno.");
+                    println!("Connection to the node restored.");
                     connected = true;
                 }
                 if job.seal != last_seal {
@@ -554,7 +554,7 @@ fn run() -> Result<(), String> {
             }
             Err(e) => {
                 if connected {
-                    eprintln!("Uzel neodpovídá: {e}");
+                    eprintln!("The node does not respond: {e}");
                     connected = false;
                 }
                 *shared.job.lock().unwrap() = None;
@@ -564,9 +564,9 @@ fn run() -> Result<(), String> {
         if last_print.elapsed() >= Duration::from_secs(10) {
             let total = shared.hashes.load(Ordering::Relaxed);
             let rate = (total - last_hashes) as f64 / last_print.elapsed().as_secs_f64();
-            let shares = if shared.pool { format!(", podíly {}", shared.shares.load(Ordering::Relaxed)) } else { String::new() };
+            let shares = if shared.pool { format!(", shares {}", shared.shares.load(Ordering::Relaxed)) } else { String::new() };
             println!(
-                "Výkon {}, nalezené bloky {}, osiřelé {}, odmítnuté {}{}",
+                "Hashrate {}, blocks found {}, stale {}, rejected {}{}",
                 format_rate(rate),
                 shared.found.load(Ordering::Relaxed),
                 shared.stale.load(Ordering::Relaxed),
@@ -585,7 +585,7 @@ fn console_utf8() {
     extern "system" {
         fn SetConsoleOutputCP(id: u32) -> i32;
     }
-    // Otherwise the Windows console would show Czech characters incorrectly.
+    // Otherwise the Windows console would show non-ASCII characters incorrectly.
     unsafe {
         SetConsoleOutputCP(65001);
     }
@@ -597,7 +597,7 @@ fn console_utf8() {}
 fn main() {
     console_utf8();
     if let Err(e) = run() {
-        eprintln!("Chyba: {e}");
+        eprintln!("Error: {e}");
         std::process::exit(1);
     }
 }
@@ -629,25 +629,25 @@ mod tests {
     }
 
     #[test]
-    fn prace_musi_platit_do_poolu_a_nest_adresu_tezare() {
+    fn work_must_pay_into_the_pool_and_carry_the_miner_address() {
         let (pool, miner, other) = ([0xaa; 20], [0xbb; 20], [0xcc; 20]);
         let extra = [&miner[..], &[0; 12]].concat();
         let (v, seal) = work(&header(&pool, &extra));
         assert_eq!(check_pool_job(&v, &seal, &pool, &miner), Ok(()));
-        assert!(check_pool_job(&v, &seal, &other, &miner).unwrap_err().contains("poolu"));
-        assert!(check_pool_job(&v, &seal, &pool, &other).unwrap_err().contains("adresu"));
-        assert!(check_pool_job(&v, &[9; 32], &pool, &miner).unwrap_err().contains("neodpovídá"));
+        assert!(check_pool_job(&v, &seal, &other, &miner).unwrap_err().contains("pool"));
+        assert!(check_pool_job(&v, &seal, &pool, &other).unwrap_err().contains("address"));
+        assert!(check_pool_job(&v, &[9; 32], &pool, &miner).unwrap_err().contains("does not match"));
     }
 
     #[test]
-    fn hlavicka_bez_adresy_nebo_poskozena_neprojde() {
+    fn header_without_address_or_damaged_is_refused() {
         let (pool, miner) = ([0xaa; 20], [0xbb; 20]);
         let (v, seal) = work(&header(&pool, &miner[..10]));
         assert!(check_pool_job(&v, &seal, &pool, &miner).is_err());
         let mut broken = header(&pool, &miner);
         broken.pop();
         let (v, seal) = work(&broken);
-        assert_eq!(check_pool_job(&v, &seal, &pool, &miner).unwrap_err(), "neplatná hlavička");
+        assert_eq!(check_pool_job(&v, &seal, &pool, &miner).unwrap_err(), "invalid header");
         assert!(rlp_items(&[]).is_none());
         assert!(rlp_items(&[0xc1]).is_none());
     }

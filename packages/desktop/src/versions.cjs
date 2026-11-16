@@ -75,12 +75,12 @@ function confirmVersion(dir, version) {
 function readZip(zip) {
   let end = zip.length - 22;
   while (end >= 0 && zip.readUInt32LE(end) !== ZIP_END) end -= 1;
-  if (end < 0) throw new Error('Balíček není platný archiv');
+  if (end < 0) throw new Error('The package is not a valid archive');
   const count = zip.readUInt16LE(end + 10);
   let at = zip.readUInt32LE(end + 16);
   const files = [];
   for (let i = 0; i < count; i++) {
-    if (zip.readUInt32LE(at) !== ZIP_ENTRY) throw new Error('Balíček není platný archiv');
+    if (zip.readUInt32LE(at) !== ZIP_ENTRY) throw new Error('The package is not a valid archive');
     const method = zip.readUInt16LE(at + 10);
     const packed = zip.readUInt32LE(at + 20);
     const nameLength = zip.readUInt16LE(at + 28);
@@ -88,7 +88,7 @@ function readZip(zip) {
     const name = zip.toString('utf8', at + 46, at + 46 + nameLength);
     at += 46 + nameLength + zip.readUInt16LE(at + 30) + zip.readUInt16LE(at + 32);
     if (name.endsWith('/')) continue;
-    if (method !== STORED && method !== DEFLATED) throw new Error('Neznámá komprese v balíčku');
+    if (method !== STORED && method !== DEFLATED) throw new Error('Unknown compression in the package');
     const start = local + 30 + zip.readUInt16LE(local + 26) + zip.readUInt16LE(local + 28);
     const body = zip.subarray(start, start + packed);
     files.push({ name, data: method === DEFLATED ? zlib.inflateRawSync(body) : body });
@@ -108,14 +108,14 @@ function installVersion(zipFile, dir, version) {
   for (const { name, data } of readZip(fs.readFileSync(zipFile))) {
     if (name === 'Aether.exe') continue;     // the launcher changes only with installation
     // A backslash is a path separator on Windows; `resources\..\..` would otherwise lead outside the version folder.
-    if (!name.startsWith('resources/') || /[\\:\0]/.test(name) || name.split('/').some((part) => part === '..' || part === '')) throw new Error(`Neplatná cesta v balíčku: ${name}`);
+    if (!name.startsWith('resources/') || /[\\:\0]/.test(name) || name.split('/').some((part) => part === '..' || part === '')) throw new Error(`Invalid path in the package: ${name}`);
     const relative = name.slice('resources/'.length);
     const out = path.join(temp, relative);
     fs.mkdirSync(path.dirname(out), { recursive: true });
     fs.writeFileSync(out, data, { mode: relative.startsWith('bin/') ? 0o755 : 0o644 });
     if (relative === 'app.asar') complete = true;
   }
-  if (!complete) throw new Error('V balíčku chybí aplikace');
+  if (!complete) throw new Error('The package lacks the app');
   fs.rmSync(target, { recursive: true, force: true });
   fs.renameSync(temp, target);
   const state = readState(dir);

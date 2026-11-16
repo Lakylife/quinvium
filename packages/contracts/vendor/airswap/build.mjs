@@ -1,19 +1,19 @@
 #!/usr/bin/env node
-// Přeloží AirSwap SwapERC20 v4.3 (npm @airswap/swap-erc20 4.3.1, MIT) mimo build.js.
-// build.js se tu nepoužívá: přepisuje predeploys.json a upgrades.json z genesis a mohl by změnit konsensus.
-// Zdroje jsou beze změny z build-info balíčku (contracts/) a ze solady 0.0.173 (solady/), licence v LICENSE-*.
-// Použití: node packages/contracts/vendor/airswap/build.mjs <složka balíčku solc 0.8.23>
-//   (např. npm install --ignore-scripts solc@0.8.23 v dočasné složce)
-// Nastavení je stejné jako u AirSwap: solc 0.8.23, optimizer 999999 běhů, evmVersion paris.
+// Compiles AirSwap SwapERC20 v4.3 (npm @airswap/swap-erc20 4.3.1, MIT) outside build.js.
+// build.js is not used here: it rewrites predeploys.json and upgrades.json from the genesis and could change consensus.
+// The sources are unchanged from the package build-info (contracts/) and from solady 0.0.173 (solady/), licences in LICENSE-*.
+// Usage: node packages/contracts/vendor/airswap/build.mjs <folder of the solc 0.8.23 package>
+//   (for example npm install --ignore-scripts solc@0.8.23 in a temporary folder)
+// The settings are the same as AirSwap: solc 0.8.23, optimizer 999999 runs, evmVersion paris.
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const solcDir = process.argv[2];
-if (!solcDir) throw new Error('Použití: build.mjs <složka balíčku solc 0.8.23>');
+if (!solcDir) throw new Error('Usage: build.mjs <folder of the solc 0.8.23 package>');
 const solc = createRequire(join(solcDir, 'package.json'))(solcDir);
-if (!solc.version().startsWith('0.8.23+commit.f704f362')) throw new Error(`Potřeba solc 0.8.23, ne ${solc.version()}`);
+if (!solc.version().startsWith('0.8.23+commit.f704f362')) throw new Error(`solc 0.8.23 is needed, not ${solc.version()}`);
 
 const here = dirname(fileURLToPath(import.meta.url));
 const sources = {};

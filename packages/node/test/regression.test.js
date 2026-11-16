@@ -93,7 +93,7 @@ test('K7: amounts in consensus are integers; the block format does not accept te
   const b = (await mine(c)).block;
   const fields = b.header.fields();
   fields[6] = new Uint8Array([0, 1]); // non-canonical number with a leading zero
-  assert.throws(() => Block.decode(RLP.encode([fields, []]), c.common), /nekanonické/);
+  assert.throws(() => Block.decode(RLP.encode([fields, []]), c.common), /non-canonical/);
   fields[6] = [new Uint8Array(1)];
   assert.throws(() => Block.decode(RLP.encode([fields, []]), c.common));
 });
@@ -137,8 +137,8 @@ test('K8: a block rejected by an old program version is accepted by the new vers
   const open = (network) => Chain.open({ network, dataDir: dir, powDir: POW_DIR, now: () => clock });
   const old = await open({ ...forked, forks: [] });
   await old.insertBlock(source.getBlock(forkBlock.header.parentHash));
-  await assert.rejects(old.insertBlock(forkBlock), /kořen stavu/);
-  await assert.rejects(old.insertBlock(forkBlock), /dříve odmítnutý/);
+  await assert.rejects(old.insertBlock(forkBlock), /state root/);
+  await assert.rejects(old.insertBlock(forkBlock), /previously rejected/);
   await old.close();
 
   const updated = await open(forked);

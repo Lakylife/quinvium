@@ -173,11 +173,11 @@ function startNode(network) {
   const dataDir = path.join(app.getPath('userData'), 'chain', CHAIN_FOLDERS[network] ?? network);
   fs.mkdirSync(dataDir, { recursive: true });
   node.proc = spawn(process.execPath, [nodeBundle, '--network', network, '--data-dir', dataDir, '--explorer', explorerDir, ...networkArgs(network)], {
-    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true,
+    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', QUINTIUM_LANG: nodeLang() }, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true,
   });
   follow(node.proc, (l) => { push(node.log, l); send({ type: 'node-log', line: l }); });
   node.proc.on('exit', (code) => {
-    push(node.log, `Uzel skončil s kódem ${code}`);
+    push(node.log, `The node exited with code ${code}`);
     // Without the node the tunnel would lead nowhere; it starts again with the node.
     clearTimeout(share.retry);
     share.status = 'off';
@@ -206,10 +206,10 @@ function readProgress(line) {
   if (miner.progress === null) return;
   const dag = /DAG (\d+) %/.exec(line);
   if (/\] backend /.test(line)) miner.progress = Math.max(miner.progress, 3);
-  else if (/počítám DAG/.test(line)) { miner.stage = 'dag'; miner.progress = Math.max(miner.progress, 5); }
+  else if (/computing DAG|počítám DAG/.test(line)) { miner.stage = 'dag'; miner.progress = Math.max(miner.progress, 5); }
   else if (dag) { miner.stage = 'dag'; miner.progress = Math.max(miner.progress, Math.min(94, 5 + Math.round(Number(dag[1]) * 0.89))); }
-  else if (/DAG hotový/.test(line)) { miner.stage = 'check'; miner.progress = 96; }
-  else if (/Výkon [1-9]/.test(line) || /Výkon 0\.[0-9]*[1-9]/.test(line)) { miner.progress = null; miner.stage = null; }
+  else if (/DAG ready|DAG hotový/.test(line)) { miner.stage = 'check'; miner.progress = 96; }
+  else if (/(?:Hashrate|Výkon) [1-9]/.test(line) || /(?:Hashrate|Výkon) 0\.[0-9]*[1-9]/.test(line)) { miner.progress = null; miner.stage = null; }
 }
 
 /** A pool belongs to one network. After switching networks, mining is solo until the user picks another. */
@@ -235,7 +235,7 @@ function setGpuState(state) {
   if (!isWin) return;
   execFile(minerPath, ['--gpu-state', String(state)], { timeout: 15000, windowsHide: true }, (e, out, err) => {
     miner.gpuState = `${state}: ${`${out ?? ''} ${err ?? ''} ${e?.message ?? ''}`.replace(/\s+/g, ' ').trim().slice(0, 600)}`;
-    push(miner.log, `Výkon karty ${miner.gpuState}`);
+    push(miner.log, `Card performance state ${miner.gpuState}`);
   });
 }
 
@@ -270,9 +270,9 @@ function startMiner({ address, device }) {
     readProgress(l);
     const used = /\] backend (.+)$/.exec(l);
     if (used) miner.backend = used[1];
-    const m = /Výkon ([\d.]+) ([^\s,]+)/.exec(l);
+    const m = /(?:Hashrate|Výkon) ([\d.]+) ([^\s,]+)/.exec(l);
     if (m) miner.rate = `${m[1]} ${m[2]}`;
-    if (/NALEZEN BLOK/.test(l)) {
+    if (/BLOCK FOUND|NALEZEN BLOK/.test(l)) {
       miner.blocks += 1;
       minedAt = 0;
       notify('blocks', tr('Block found'), tr('Your card found a block. The reward goes to {address}.', { address: shortAddress(miner.address) }));
@@ -287,10 +287,10 @@ function startMiner({ address, device }) {
     }
     send({ type: 'miner-log', line: l, rate: miner.rate, blocks: miner.blocks, shares: miner.shares, progress: miner.progress, stage: miner.stage });
   });
-  miner.proc.on('error', (e) => push(miner.log, `Miner nelze spustit: ${e.message}`));
+  miner.proc.on('error', (e) => push(miner.log, `The miner cannot start: ${e.message}`));
   const started = miner.proc;
   miner.proc.on('exit', (code, signal) => {
-    push(miner.log, `Těžař skončil: kód ${code}, signál ${signal}`);
+    push(miner.log, `The miner exited: code ${code}, signal ${signal}`);
     if (!started.stopping && !quitting) notify('mining', tr('Mining stopped'), tr('The miner ended unexpectedly. Open Quinvium to start it again.'));
     miner.proc = null;
     keepAwake(false);
@@ -385,7 +385,7 @@ function refreshCli() {
     const fallback = packaged ? path.join(process.resourcesPath, 'bin', 'quintium-node.cjs') : nodeBundle;
     return cliLauncher.writeLauncher({ dir: cliDir(), execPath: process.execPath, bundle: nodeBundle, fallback, platform: process.platform });
   } catch (e) {
-    push(node.log, `Příkaz quintium: ${e.message}`);
+    push(node.log, `The quinvium command: ${e.message}`);
     return null;
   }
 }
@@ -420,11 +420,11 @@ let explorerOrigin = null;
 ipcMain.handle('wallet:request', (e, { method, params }) => new Promise((resolve) => {
   const origin = (() => { try { return new URL(e.senderFrame.url).origin; } catch { return null; } })();
   if (!explorerView || explorerView.isDestroyed() || e.sender !== explorerView || origin !== explorerOrigin || typeof method !== 'string') {
-    resolve({ error: { code: 4100, message: 'Tato stránka k peněžence nemá přístup' } });
+    resolve({ error: { code: 4100, message: 'This page has no access to the wallet' } });
     return;
   }
   if (!win || win.isDestroyed()) {
-    resolve({ error: { code: 4900, message: 'Hlavní okno aplikace je zavřené' } });
+    resolve({ error: { code: 4900, message: 'The main window of the app is closed' } });
     return;
   }
   const id = nextWalletCall++;
@@ -549,6 +549,8 @@ const appText = (() => {
   } catch { return null; }
 })();
 const uiLang = () => loadSettings().lang ?? ((app.getPreferredSystemLanguages?.()[0] ?? app.getLocale()).slice(0, 2));
+// The node writes its log in English, or in Czech when the window is in Czech; other languages get English.
+const nodeLang = () => (uiLang() === 'cs' ? 'cs' : 'en');
 function tr(text, vars) {
   const l = uiLang();
   const i = appText?.ORDER.indexOf(l) ?? -1;
@@ -809,7 +811,7 @@ async function followHome() {
   if (pool && poolUrl !== pool.url) change.pool = { ...pool, url: poolUrl };
   if (!Object.keys(change).length) return;
   saveSettings(change);
-  push(node.log, `Nová adresa v domácí síti: ${Object.values(change).map((v) => v.url ?? v).join(', ')}`);
+  push(node.log, `New address on the home network: ${Object.values(change).map((v) => v.url ?? v).join(', ')}`);
   if (change.pool && miner.proc) {
     const { address, device } = miner;
     await stop(miner.proc);

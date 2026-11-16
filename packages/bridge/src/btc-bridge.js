@@ -51,7 +51,7 @@ export class BitcoinBridge {
     this.validators = [...this.validators].sort((a, b) => (BigInt(a.address) < BigInt(b.address) ? -1 : 1));
     this.pubkeys = this.validators.map((v) => Buffer.from(v.btcKey.replace(/^0x/, ''), 'hex'));
     this.ownKey = publicKey(this.btcKey).toString('hex');
-    if (!this.pubkeys.some((k) => k.toString('hex') === this.ownKey)) throw new Error('Klíč úschovy není mezi validátory');
+    if (!this.pubkeys.some((k) => k.toString('hex') === this.ownKey)) throw new Error('The custody key is not among the validators');
     this.mainScript = custodyScript(this.pubkeys, this.threshold);
     this.mainOutput = scriptOutput(this.mainScript).toString('hex');
     this.state = new StateFile(this.statePath);
@@ -78,7 +78,7 @@ export class BitcoinBridge {
     await this.scanRegistered();
     for (const [id, w] of Object.entries(this.state.data.withdrawals)) {
       if (w.status !== 'open') continue;
-      try { await this.withdrawal(id, w); } catch (e) { this.log(`výběr ${id.slice(0, 10)}: ${e.shortMessage ?? e.message}`); }
+      try { await this.withdrawal(id, w); } catch (e) { this.log(`withdrawal ${id.slice(0, 10)}: ${e.shortMessage ?? e.message}`); }
     }
     this.state.save();
   }
@@ -134,7 +134,7 @@ export class BitcoinBridge {
       // The token is burned and the address cannot be paid. The user gets the token back the same way as a deposit.
       this.relayer.enqueue({ srcChain: BITCOIN, dstChain: this.chainId, nonce: nonceOf(`refund:${id}`), srcToken: ethers.ZeroHash, recipient: sender, amount });
       d.withdrawals[id] = { nonce, sender, amount, status: 'refunded' };
-      this.log(`výběr ${id.slice(0, 10)}: neplatná adresa, vracím token`);
+      this.log(`withdrawal ${id.slice(0, 10)}: invalid address, returning the token`);
       return;
     }
     d.withdrawals[id] = { nonce, sender, address, amount, status: 'open', seenAt: this.now(), block: log.blockNumber };
@@ -178,11 +178,11 @@ export class BitcoinBridge {
     d.credited[key] = true;
     d.utxos[key] = { value, recipient };
     if (value < this.minDeposit) {
-      this.log(`vklad ${key} je pod minimem, nepřipisuji`);
+      this.log(`deposit ${key} is below the minimum, not credited`);
       return;
     }
     this.relayer.enqueue({ srcChain: BITCOIN, dstChain: this.chainId, nonce: nonceOf(key), srcToken: ethers.ZeroHash, recipient, amount: value });
-    this.log(`vklad ${value} sat pro ${recipient}`);
+    this.log(`deposit ${value} sat for ${recipient}`);
   }
 
   // ---- withdrawal ----------------------------------------------------------------------------------------
@@ -205,7 +205,7 @@ export class BitcoinBridge {
         if (this.state.data.spends[txid] && tx.outputs[1]?.script.equals(dataOutput(Buffer.from(id.slice(2), 'hex')))) {
           w.status = 'paid';
           w.txid = txid;
-          this.log(`výběr ${id.slice(0, 10)}: vyplaceno v ${txid.slice(0, 12)}`);
+          this.log(`withdrawal ${id.slice(0, 10)}: paid in ${txid.slice(0, 12)}`);
           return true;
         }
       } catch { /* an invalid proposal is simply skipped here */ }
@@ -263,7 +263,7 @@ export class BitcoinBridge {
       this.check(id, w, tx);
       return { tx, txid: txidOf(tx) };
     } catch (e) {
-      this.log(`návrh pro ${id.slice(0, 10)} od ${post.validator.slice(0, 10)} odmítnut: ${e.message}`);
+      this.log(`proposal for ${id.slice(0, 10)} from ${post.validator.slice(0, 10)} refused: ${e.message}`);
       return null;
     }
   }
@@ -271,29 +271,29 @@ export class BitcoinBridge {
   check(id, w, tx) {
     const d = this.state.data;
     const refuse = (why) => { throw new Error(why); };
-    if (tx.version !== 2 || tx.locktime !== 0) refuse('neobvyklá transakce');
-    if (tx.inputs.length === 0 || tx.inputs.length > MAX_INPUTS) refuse('špatný počet vstupů');
+    if (tx.version !== 2 || tx.locktime !== 0) refuse('unusual transaction');
+    if (tx.inputs.length === 0 || tx.inputs.length > MAX_INPUTS) refuse('wrong number of inputs');
     const keys = tx.inputs.map((i) => `${i.txid}:${i.vout}`);
-    if (new Set(keys).size !== keys.length) refuse('opakovaný vstup');
+    if (new Set(keys).size !== keys.length) refuse('repeated input');
     const reserved = this.reserved(id);
     let total = 0n;
     for (const key of keys) {
-      const utxo = d.utxos[key] ?? refuse(`vstup ${key} není v úschově`);
-      if (reserved.has(key)) refuse(`vstup ${key} patří jinému výběru`);
+      const utxo = d.utxos[key] ?? refuse(`input ${key} is not in custody`);
+      if (reserved.has(key)) refuse(`input ${key} belongs to another withdrawal`);
       total += utxo.value;
     }
     const [pay, note, change, ...rest] = tx.outputs;
-    if (!pay || !note || rest.length) refuse('špatné výstupy');
-    if (!pay.script.equals(addressScript(w.address, this.network))) refuse('platba jde jinam, než si uživatel přál');
-    if (note.value !== 0n || !note.script.equals(dataOutput(Buffer.from(id.slice(2), 'hex')))) refuse('chybí značka výběru');
+    if (!pay || !note || rest.length) refuse('wrong outputs');
+    if (!pay.script.equals(addressScript(w.address, this.network))) refuse('the payment goes elsewhere than the user asked');
+    if (note.value !== 0n || !note.script.equals(dataOutput(Buffer.from(id.slice(2), 'hex')))) refuse('missing withdrawal tag');
     const left = total - w.amount;
-    if (left < 0n) refuse('vstupy nekryjí částku');
+    if (left < 0n) refuse('the inputs do not cover the amount');
     if (change) {
-      if (change.script.toString('hex') !== this.mainOutput) refuse('zbytek jde mimo úschovu');
-      if (change.value !== left) refuse('úschova by přišla o víc než spálenou částku');
-    } else if (left >= DUST) refuse('chybí vrácení zbytku do úschovy');
-    if (pay.value < DUST || pay.value >= w.amount) refuse('špatná částka platby');
-    if (w.amount - pay.value > BigInt(this.maxFeeRate) * BigInt(this.sizeWithWitness(tx))) refuse('poplatek je nad limitem');
+      if (change.script.toString('hex') !== this.mainOutput) refuse('the change leaves custody');
+      if (change.value !== left) refuse('custody would lose more than the burned amount');
+    } else if (left >= DUST) refuse('missing change back to custody');
+    if (pay.value < DUST || pay.value >= w.amount) refuse('wrong payment amount');
+    if (w.amount - pay.value > BigInt(this.maxFeeRate) * BigInt(this.sizeWithWitness(tx))) refuse('the fee is above the limit');
   }
 
   /** Coins already promised to other withdrawals, so two payments do not block each other. */
@@ -309,14 +309,14 @@ export class BitcoinBridge {
   }
 
   async rejectUnspent(tx) {
-    for (const i of tx.inputs) if (!await this.rpc('gettxout', [i.txid, i.vout, true])) throw new Error(`vstup ${i.txid}:${i.vout} je utracený`);
+    for (const i of tx.inputs) if (!await this.rpc('gettxout', [i.txid, i.vout, true])) throw new Error(`input ${i.txid}:${i.vout} is spent`);
   }
 
   spend(amount) {
     const d = this.state.data;
     const day = Math.floor(this.now() / DAY_MS);
     if (d.spent.day !== day) d.spent = { day, sats: 0n };
-    if (d.spent.sats + amount > this.dailyLimit) throw new Error('denní limit výběrů je vyčerpaný');
+    if (d.spent.sats + amount > this.dailyLimit) throw new Error('the daily withdrawal limit is used up');
     d.spent.sats += amount;
   }
 
@@ -339,17 +339,17 @@ export class BitcoinBridge {
       inputs.push({ txid, vout: Number(vout) });
       total += utxo.value;
     }
-    if (total < w.amount) throw new Error('úschova zatím nemá dost potvrzených mincí');
+    if (total < w.amount) throw new Error('custody does not have enough confirmed coins yet');
     const left = total - w.amount;
     const outputs = [{ value: 0n, script: addressScript(w.address, this.network) }, { value: 0n, script: dataOutput(Buffer.from(id.slice(2), 'hex')) }];
     if (left >= DUST) outputs.push({ value: left, script: Buffer.from(this.mainOutput, 'hex') });
     const tx = { version: 2, locktime: 0, inputs, outputs };
     const fee = BigInt(await this.feeRate()) * BigInt(this.sizeWithWitness(tx));
     outputs[0].value = w.amount - fee;
-    if (outputs[0].value < DUST) throw new Error('částka nepokryje poplatek sítě');
+    if (outputs[0].value < DUST) throw new Error('the amount does not cover the network fee');
     await this.post(id, { tx: serializeTx(tx).toString('hex') });
     this.sent.add(id);
-    this.log(`výběr ${id.slice(0, 10)}: navrhuji platbu ${outputs[0].value} sat, poplatek ${fee}`);
+    this.log(`withdrawal ${id.slice(0, 10)}: proposing a payment of ${outputs[0].value} sat, fee ${fee}`);
   }
 
   /** Only signatures that really belong to validators and to this transaction. */
@@ -380,7 +380,7 @@ export class BitcoinBridge {
     });
     try {
       await this.rpc('sendrawtransaction', [serializeTx({ ...tx, inputs }, true).toString('hex')]);
-      this.log(`výběr: transakce ${txid.slice(0, 12)} odeslána`);
+      this.log(`withdrawal: transaction ${txid.slice(0, 12)} sent`);
     } catch (e) {
       if (!/already|known/i.test(e.message)) throw e;
     }
