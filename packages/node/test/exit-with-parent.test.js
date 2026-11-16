@@ -6,8 +6,9 @@ import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const CLI = new URL('../src/cli.js', import.meta.url).pathname;
+const CLI = fileURLToPath(new URL('../src/cli.js', import.meta.url));
 
 test('a node started with --exit-with-parent stops when its standard input closes', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'exit-with-parent-'));
