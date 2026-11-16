@@ -511,7 +511,8 @@ function createWindow() {
   });
   // The camera is only for reading a QR code in the wallet window; pages inside the app (the Explorer) never get it.
   win.webContents.session.setPermissionRequestHandler((contents, permission, callback, details) => {
-    if (permission !== 'media') { callback(true); return; }
+    // Pages inside the app (the Explorer) get only copying to the clipboard; the app window itself keeps the rest.
+    if (permission !== 'media') { callback(contents === win?.webContents || permission === 'clipboard-sanitized-write'); return; }
     callback(contents === win?.webContents && (details.mediaTypes ?? []).every((t) => t === 'video'));
   });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));

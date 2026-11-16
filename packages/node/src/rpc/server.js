@@ -16,16 +16,30 @@ const MAX_WS_CLIENTS = 256;
 const MAX_WS_BUFFER = 8 * 1024 * 1024;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8' };
 
+const MAX_TRACKED = 50_000;
+
 class Limiter {
   constructor(perMinute) { this.limit = perMinute; this.hits = new Map(); }
   /** @param {number} n cost of the request: a batch counts per item */
   allow(ip, n = 1, limit = this.limit) {
     if (!limit) return true;
     const now = Date.now();
-    const b = this.hits.get(ip);
-    if (!b || now - b.start > 60_000) { this.hits.set(ip, { start: now, n }); return n <= limit; }
+    const key = limitKey(ip);
+    const b = this.hits.get(key);
+    if (!b || now - b.start > 60_000) {
+      // Clearing the whole table would reset everyone's count, so a flood of new addresses could free an exhausted one.
+      // Only finished windows are dropped; while the table is still full, a new address is let through without being counted.
+      if (!b && this.hits.size >= MAX_TRACKED) {
+        if (now - (this.sweptAt ?? 0) > 1000) {
+          this.sweptAt = now;
+          for (const [k, v] of this.hits) if (now - v.start > 60_000) this.hits.delete(k);
+        }
+        if (this.hits.size >= MAX_TRACKED) return n <= limit;
+      }
+      this.hits.set(key, { start: now, n });
+      return n <= limit;
+    }
     b.n += n;
-    if (this.hits.size > 50_000) this.hits.clear();
     return b.n <= limit;
   }
 }
@@ -37,6 +51,28 @@ const LOCAL_CALLER = Object.freeze({ ip: null, local: true });
 const ALWAYS_LOCAL = new Set(['aether_setPublicUrl', 'quintium_setPublicUrl', 'quinvium_setPublicUrl']);
 
 const TOO_MANY = { jsonrpc: '2.0', id: null, error: { code: -32005, message: 'příliš mnoho požadavků' } };
+/**
+ * Methods that run the EVM or a database query in the node's small thread pool (rpc/vm-pool.js). A foreign caller runs them
+ * one at a time, so a single address cannot occupy every thread with 5-second calls and stop eth_call for everyone else.
+ */
+export const HEAVY_METHODS = new Set([
+  'eth_call', 'eth_estimateGas', 'eth_getLogs', 'eth_getFilterLogs', 'eth_getFilterChanges', 'eth_feeHistory', 'eth_getProof',
+  ...['activity', 'blocks', 'txs', 'addressInfo', 'tokenInfo', 'addressTransfers', 'tokenTransfers', 'contractLogs', 'minerShares',
+    'poolMiners', 'pools', 'minedByDay', 'txError', 'poolsOf', 'poolPayouts', 'chartSeries', 'minerList']
+    .flatMap((m) => [`aether_${m}`, `quintium_${m}`, `quinvium_${m}`]),
+]);
+/** Heavy requests of one foreign address that may wait for their turn; more are refused. */
+const MAX_HEAVY_WAITING = 32;
+/** IPv6 addresses are counted by their /64 network: one connection usually has the whole network to itself. */
+export function limitKey(ip) {
+  const v = String(ip ?? '').replace(/^::ffff:/i, '');
+  if (!v.includes(':')) return v;
+  const [head, tail = ''] = v.split('::');
+  const left = head ? head.split(':') : [];
+  const right = tail ? tail.split(':') : [];
+  const full = v.includes('::') ? [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill('0'), ...right] : left;
+  return `${full.slice(0, 4).map((x) => (x || '0').toLowerCase().replace(/^0+(?=.)/, '')).join(':')}::/64`;
+}
 
 export class RpcServer {
   constructor(node, { host = '127.0.0.1', port = 8545, staticDir = null, rateLimit = 0, trustProxy = false, publicMode = false, publicRateLimit = PUBLIC_RATE_LIMIT, tunnelPort = null, log = () => {} }) {
@@ -50,6 +86,22 @@ export class RpcServer {
     this.collectLogs = collectLogs;
     this.subs = new Map();
     this.nextSub = 1n;
+    this.heavy = new Map();   // limit key -> { tail: Promise, waiting: number }
+  }
+
+  /** Runs `fn` after the caller's previous heavy request has finished. */
+  _serial(caller, fn) {
+    const key = caller.tunnel ? `tunnel:${limitKey(caller.ip)}` : limitKey(caller.ip);
+    const q = this.heavy.get(key) ?? { tail: Promise.resolve(), waiting: 0 };
+    if (q.waiting >= MAX_HEAVY_WAITING) return null;
+    q.waiting += 1;
+    this.heavy.set(key, q);
+    const run = q.tail.then(fn, fn);
+    q.tail = run.catch(() => {}).finally(() => {
+      q.waiting -= 1;
+      if (q.waiting === 0 && this.heavy.get(key) === q) this.heavy.delete(key);
+    });
+    return run;
   }
 
   async start() {
@@ -104,8 +156,17 @@ export class RpcServer {
     const fn = Object.prototype.hasOwnProperty.call(this.methods, req.method) ? this.methods[req.method] : null;
     if (!fn) return { jsonrpc: '2.0', id, error: { code: -32601, message: `metoda ${req.method} neexistuje` } };
     if (!caller.local && (this.localOnly.has(req.method) || ALWAYS_LOCAL.has(req.method) || (caller.tunnel && MINING_METHODS.includes(req.method)))) return { jsonrpc: '2.0', id, error: { code: -32601, message: `metoda ${req.method} je dostupná jen z místní sítě` } };
+    const params = Array.isArray(req.params) ? req.params : [];
+    const run = () => fn(params, caller);
     try {
-      const result = await fn(Array.isArray(req.params) ? req.params : [], caller);
+      let result;
+      if (!caller.local && HEAVY_METHODS.has(req.method)) {
+        const queued = this._serial(caller, run);
+        if (queued === null) return { jsonrpc: '2.0', id, error: { code: -32005, message: 'too many heavy requests at once, try again shortly' } };
+        result = await queued;
+      } else {
+        result = await run();
+      }
       return { jsonrpc: '2.0', id, result: result === undefined ? null : result };
     } catch (e) {
       if (e instanceof RpcError) return { jsonrpc: '2.0', id, error: { code: e.code, message: e.message, data: e.data } };

@@ -99,6 +99,16 @@ export class PublicNodes extends EventEmitter {
       if (known && known.expires >= a.expires) continue;
       if (!known && this.entries.size >= MAX_ENTRIES) this._prune(true);
       if (!known && this.entries.size >= MAX_ENTRIES) continue;
+      // One address per node key: a newer announcement of the same key replaces the older address.
+      const keyHex = Buffer.from(a.key).toString('hex');
+      let superseded = false;
+      for (const [url, e] of this.entries) {
+        if (url !== a.url && Buffer.from(e.key).toString('hex') === keyHex) {
+          if (e.expires >= a.expires) { superseded = true; break; }
+          this.entries.delete(url);
+        }
+      }
+      if (superseded) continue;
       const entry = { ...(known ?? { ok: false, checkedAt: 0 }), url: a.url, key: a.key, expires: a.expires, sig: a.sig, node: toHex(nodeIdOf(a.key)).slice(2, 18) };
       this.entries.set(a.url, entry);
       accepted++;
@@ -130,13 +140,17 @@ export class PublicNodes extends EventEmitter {
       const head = this.chain.head.number;
       const height = head > SETTLED ? head - SETTLED : 0n;
       const ours = toHex(this.chain.store.canonicalHash(height));
-      const [chainId, block, number] = await Promise.all([
+      const [chainId, block, number, info] = await Promise.all([
         this._rpc(entry.url, 'eth_chainId'),
         this._rpc(entry.url, 'eth_getBlockByNumber', [`0x${height.toString(16)}`, false]),
         this._rpc(entry.url, 'eth_blockNumber'),
+        this._rpc(entry.url, 'quinvium_nodeInfo'),
       ]);
       const theirs = BigInt(number);
-      entry.ok = BigInt(chainId) === BigInt(this.chainId) && block?.hash === ours && theirs + MAX_LAG >= head;
+      // The address must lead to the node that signed it. Otherwise anyone could sign other people's nodes
+      // (or one proxy under many names) and fill the list with entries that only pass the check.
+      const sameNode = typeof info?.publicKey === 'string' && info.publicKey.toLowerCase() === Buffer.from(entry.key).toString('hex');
+      entry.ok = sameNode && BigInt(chainId) === BigInt(this.chainId) && block?.hash === ours && theirs + MAX_LAG >= head;
       entry.height = Number(theirs);
       entry.latencyMs = this.now() - started;
     } catch {

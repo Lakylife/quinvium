@@ -25,6 +25,8 @@ const MAX_LOG_RANGE = 10000n;
 const FILTER_TTL = 300_000;
 const MAX_FILTERS = 1024;
 const MAX_PROOF_SLOTS = 1024;
+const MAX_FEE_PERCENTILES = 100;     // geth allows 100 as well
+const MAX_FEE_HISTORY = 1024;         // blocks in one eth_feeHistory answer
 const hexAddress = (a) => {
   if (typeof a !== 'string' || !/^0x[0-9a-fA-F]{40}$/.test(a)) throw new RpcError(-32602, 'neplatná adresa');
   return createAddressFromString(a);
@@ -207,7 +209,20 @@ export function createMethods(node) {
   const suggestedTip = () => feeEstimates().tiers.normal.tip;
 
   const feeHistory = (count, newest, percentiles = []) => {
-    const n = Math.min(Number(BigInt(count)), 1024);
+    // The answer has one row per block and one value per percentile. Without a limit one request of a few hundred
+    // kilobytes asks for billions of values, blocks the event loop and runs the node out of memory.
+    if (percentiles === null || percentiles === undefined) percentiles = [];
+    if (!Array.isArray(percentiles) || percentiles.length > MAX_FEE_PERCENTILES) throw new RpcError(-32602, `at most ${MAX_FEE_PERCENTILES} percentiles`);
+    let previous = -1;
+    for (const p of percentiles) {
+      if (typeof p !== 'number' || !Number.isFinite(p) || p < 0 || p > 100 || p < previous) throw new RpcError(-32602, 'percentiles must be ascending numbers from 0 to 100');
+      previous = p;
+    }
+    let requested;
+    try { requested = BigInt(count); } catch { throw new RpcError(-32602, 'invalid block count'); }
+    if (requested < 0n) throw new RpcError(-32602, 'invalid block count');
+    if (requested === 0n) return { oldestBlock: quantity(0n), baseFeePerGas: [], gasUsedRatio: [], reward: [] };
+    const n = Number(requested > BigInt(MAX_FEE_HISTORY) ? BigInt(MAX_FEE_HISTORY) : requested);
     const last = resolve(newest);
     const first = last.number - BigInt(n) + 1n > 0n ? last.number - BigInt(n) + 1n : 0n;
     const baseFeePerGas = [];
