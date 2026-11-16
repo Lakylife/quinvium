@@ -9,7 +9,7 @@
 | Initial difficulty | 2^27 (about 9 MH/s for a 15 s block), minimum 2^24, LWMA over 60 blocks |
 | Reward | 4 QU per block, halving every 8M blocks, cap 64M QU, no premine |
 | Genesis state | system contracts without owners and without balances; `predeploys.json` identical to testnet |
-| Seed | `2df5ea8b9b4e18c552a001434e6b7ed0fc99348a03478fd809de1f92fde2f78d@seed.quinvium.com:30524` |
+| Seeds | `2df5ea8b9b4e18c552a001434e6b7ed0fc99348a03478fd809de1f92fde2f78d@seed.quinvium.com:30524`, community relay `90ddc6a87538e33f494e0d0b9f7c481c8fb9fe94479827b4c0ce9ed1dce9c6cb@45.13.234.150:30524` (since 2.15.3) |
 | Public RPC | `https://rpc.quinvium.com`, WebSocket `wss://rpc.quinvium.com` |
 | Explorer | `https://explorer.quinvium.com` |
 | Software | 2.14.0 at launch, 2.14.1 first release after launch |

@@ -28,6 +28,9 @@ const PEX_INTERVAL = 300_000;
 const SEED_RESOLVE_INTERVAL = 1_800_000;   // seed as a domain name: addresses can change without a new version
 const SEED_RESOLVE_WAIT = 3000;
 const BAN_MS = 3_600_000;
+// A pinned seed that proved its key is only paused: it may be the node's only way into the network,
+// and banning it for an hour would leave a mining node alone on its own fork.
+const SEED_BAN_MS = 60_000;
 const MAX_HEADERS = 256;
 const MAX_BLOCKS = 64;
 const MAX_BLOCKS_BYTES = 8 * 1024 * 1024;
@@ -247,6 +250,11 @@ export class Network extends EventEmitter {
     }));
   }
 
+  /** An outbound connection to a seed from the list that signed with its pinned key. */
+  _isPinnedSeed(peer) {
+    return !peer.inbound && peer.verified && !!peer.pinnedSeed;
+  }
+
   _banned(ip) {
     const until = this.bans.get(ip);
     if (!until) return false;
@@ -306,7 +314,7 @@ export class Network extends EventEmitter {
     peer.on('ban', (reason) => {
       if (!(this.allowPrivate && isPrivate(ip))) {
         if (this.bans.size >= MAX_BANS) this.bans.delete(this.bans.keys().next().value);
-        this.bans.set(ip, Date.now() + BAN_MS);
+        this.bans.set(ip, Date.now() + (this._isPinnedSeed(peer) ? SEED_BAN_MS : BAN_MS));
       }
       peer.disconnect(`zablokován: ${reason}`);
     });
@@ -347,6 +355,7 @@ export class Network extends EventEmitter {
     if (!equal(nodeId, nodeIdOf(publicKey))) return 'identifikátor neodpovídá klíči';
     if (pinned && !equal(pinned, publicKey)) return 'seed se ohlásil jiným klíčem';
     peer.verified = true;
+    peer.pinnedSeed = !!pinned;
     peer.publicKey = publicKey;
     return null;
   }
@@ -728,16 +737,22 @@ export class Network extends EventEmitter {
     this.temporary = false;
     this.deepRefused = false;
     this.emit('sync-start', peer);
+    // One failed sync costs at most one penalty, and a peer that simply dropped the connection costs none:
+    // a disconnect is not a lie, and counting it twice banned an honest, busy seed (issue #37).
+    let failed = false;
     try {
       await this._download(peer);
     } catch (e) {
-      if (peer.ready) peer.misbehave(34, `synchronizace: ${e.message}`);
+      if (peer.ready && !peer.channel.closed) {
+        failed = true;
+        peer.misbehave(34, `synchronizace: ${e.message}`);
+      }
     } finally {
       this.syncing = false;
       this.imported = 0;
       const { chain } = this;
       if (peer.ready && peer.headTd > chain.headTd) {
-        if (!this.temporary && !this.deepRefused) peer.misbehave(34, 'nedodal slíbený řetězec');
+        if (!failed && !peer.channel.closed && !this.temporary && !this.deepRefused) peer.misbehave(34, 'nedodal slíbený řetězec');
         peer.updateHead(chain.head.hash(), chain.head.number, chain.headTd);
       }
       this.emit('sync-end', peer);

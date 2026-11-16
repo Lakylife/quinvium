@@ -55,7 +55,10 @@ export const NETWORKS = Object.freeze({
     minDifficulty: 2n ** 24n,
     genesisExtra: GENESIS_EXTRA,
     ports: { p2p: 30524, rpc: 8545, stratum: 3333 },
-    seeds: ['2df5ea8b9b4e18c552a001434e6b7ed0fc99348a03478fd809de1f92fde2f78d@seed.quinvium.com:30524'],   // public server, identity key pinned
+    seeds: [
+      '2df5ea8b9b4e18c552a001434e6b7ed0fc99348a03478fd809de1f92fde2f78d@seed.quinvium.com:30524',   // public server, identity key pinned
+      '90ddc6a87538e33f494e0d0b9f7c481c8fb9fe94479827b4c0ce9ed1dce9c6cb@45.13.234.150:30524',   // community relay node (issue #37), identity key pinned
+    ],
     forks: [{ ...POOLS, block: 1n }],
   },
   testnet: {
