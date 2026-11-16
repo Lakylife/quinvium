@@ -154,7 +154,7 @@ export class RpcServer {
       return { jsonrpc: '2.0', id, error: { code: -32600, message: 'neplatný požadavek' } };
     }
     const fn = Object.prototype.hasOwnProperty.call(this.methods, req.method) ? this.methods[req.method] : null;
-    if (!fn) return { jsonrpc: '2.0', id, error: { code: -32601, message: `metoda ${req.method} neexistuje` } };
+    if (typeof fn !== 'function') return { jsonrpc: '2.0', id, error: { code: -32601, message: `metoda ${req.method} neexistuje` } };
     if (!caller.local && (this.localOnly.has(req.method) || ALWAYS_LOCAL.has(req.method) || (caller.tunnel && MINING_METHODS.includes(req.method)))) return { jsonrpc: '2.0', id, error: { code: -32601, message: `metoda ${req.method} je dostupná jen z místní sítě` } };
     const params = Array.isArray(req.params) ? req.params : [];
     const run = () => fn(params, caller);
