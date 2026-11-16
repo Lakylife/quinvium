@@ -202,6 +202,9 @@
           <label id="n-public-row" hidden><span data-t>Public address (optional)</span><input id="n-public-host" placeholder="203.0.113.7" spellcheck="false" autocomplete="off"></label>
           <p class="hint" id="n-public-note" hidden data-t>Without a public address filled in, the node asks the service api.ipify.org for it, so that service learns the address of this computer. Mining is served only to this computer and the local network.</p>
           <div class="endpoints" id="n-endpoints"></div>
+          <label class="switch-row"><input type="checkbox" id="n-share-public"><span data-t>Share node publicly</span></label>
+          <p class="hint" data-t>Helps the network: wallets and the Explorer can use your node when the main servers are down. It goes through a Cloudflare tunnel, so your IP address stays hidden and no port on the router is opened. It uses your upload bandwidth (usually a few hundred MB a day) and runs only while this app and its node run. Cloudflare sees the requests that pass through.</p>
+          <p class="hint" id="n-share-public-state"></p>
           <p class="hint" id="n-share-url"></p>
           <div class="err" id="n-seed-error"></div>
           <div class="row"><button id="n-seed-save"><span data-t>Save</span></button></div>

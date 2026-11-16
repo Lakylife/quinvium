@@ -33,12 +33,14 @@ class Limiter {
 /** Requests per minute for callers from the internet when the node is open to the internet. */
 export const PUBLIC_RATE_LIMIT = 1200;
 const LOCAL_CALLER = Object.freeze({ ip: null, local: true });
+/** Methods that control this node: only this computer and the local network, whatever the mode. */
+const ALWAYS_LOCAL = new Set(['aether_setPublicUrl', 'quintium_setPublicUrl', 'quinvium_setPublicUrl']);
 
 const TOO_MANY = { jsonrpc: '2.0', id: null, error: { code: -32005, message: 'příliš mnoho požadavků' } };
 
 export class RpcServer {
-  constructor(node, { host = '127.0.0.1', port = 8545, staticDir = null, rateLimit = 0, trustProxy = false, publicMode = false, publicRateLimit = PUBLIC_RATE_LIMIT, log = () => {} }) {
-    Object.assign(this, { node, host, port, staticDir, trustProxy, publicMode, log });
+  constructor(node, { host = '127.0.0.1', port = 8545, staticDir = null, rateLimit = 0, trustProxy = false, publicMode = false, publicRateLimit = PUBLIC_RATE_LIMIT, tunnelPort = null, log = () => {} }) {
+    Object.assign(this, { node, host, port, staticDir, trustProxy, publicMode, tunnelPort, log });
     // A node open to the internet hands out work only to miners from this computer and the local network and gives foreign callers a lower limit.
     this.localOnly = new Set(publicMode ? MINING_METHODS : []);
     this.publicLimit = publicMode ? (rateLimit ? Math.min(rateLimit, publicRateLimit) : publicRateLimit) : 0;
@@ -61,6 +63,19 @@ export class RpcServer {
       this.http.listen(this.port, this.host, resolve);
     });
     this.port = this.http.address().port;
+    // The port for a tunnel (the app's "Share node publicly"): only this computer can reach it, every request on it
+    // counts as foreign, its sender is the address the tunnel reports (Cf-Connecting-IP) and it gets the public limit.
+    // Mining and node-control methods are not available on it.
+    if (this.tunnelPort !== null && this.tunnelPort !== undefined) {
+      this.tunnel = http.createServer((req, res) => { req.viaTunnel = true; this._http(req, res); });
+      this.tunnel.requestTimeout = 30_000;
+      this.tunnel.headersTimeout = 10_000;
+      await new Promise((resolve, reject) => {
+        this.tunnel.once('error', reject);
+        this.tunnel.listen(this.tunnelPort, '127.0.0.1', resolve);
+      });
+      this.tunnelPort = this.tunnel.address().port;
+    }
     this._onHead = (e) => this._pushHead(e);
     this._onPending = (tx) => this._pushPending(tx);
     this.node.chain.on('head', this._onHead);
@@ -74,6 +89,10 @@ export class RpcServer {
     this.wss.close();
     this.http.closeAllConnections();
     await new Promise((r) => this.http.close(() => r()));
+    if (this.tunnel) {
+      this.tunnel.closeAllConnections();
+      await new Promise((r) => this.tunnel.close(() => r()));
+    }
   }
 
   /** @param {{ip: string|null, local: boolean}} [caller] who is asking; without it, the node itself */
@@ -84,7 +103,7 @@ export class RpcServer {
     }
     const fn = Object.prototype.hasOwnProperty.call(this.methods, req.method) ? this.methods[req.method] : null;
     if (!fn) return { jsonrpc: '2.0', id, error: { code: -32601, message: `metoda ${req.method} neexistuje` } };
-    if (!caller.local && this.localOnly.has(req.method)) return { jsonrpc: '2.0', id, error: { code: -32601, message: `metoda ${req.method} je dostupná jen z místní sítě` } };
+    if (!caller.local && (this.localOnly.has(req.method) || ALWAYS_LOCAL.has(req.method) || (caller.tunnel && MINING_METHODS.includes(req.method)))) return { jsonrpc: '2.0', id, error: { code: -32601, message: `metoda ${req.method} je dostupná jen z místní sítě` } };
     try {
       const result = await fn(Array.isArray(req.params) ? req.params : [], caller);
       return { jsonrpc: '2.0', id, result: result === undefined ? null : result };
@@ -97,6 +116,10 @@ export class RpcServer {
 
   /** Behind a reverse proxy everyone has the same address; the proxy passes the real one in a header. */
   _clientIp(req) {
+    if (req.viaTunnel) {
+      const ip = String(req.headers['cf-connecting-ip'] ?? '').trim();
+      return /^[0-9a-f.:]{2,45}$/i.test(ip) ? ip : 'tunnel';
+    }
     if (this.trustProxy) {
       const forwarded = String(req.headers['x-forwarded-for'] ?? '').split(',').pop().trim();
       if (forwarded) return forwarded;
@@ -110,11 +133,13 @@ export class RpcServer {
    */
   _caller(req) {
     const ip = this._clientIp(req);
+    if (req.viaTunnel) return { ip, local: false, tunnel: true };
     const proxied = !this.trustProxy && ['x-forwarded-for', 'cf-connecting-ip', 'forwarded', 'x-real-ip'].some((h) => req.headers[h]);
     return { ip, local: !proxied && isLocalCaller(ip) };
   }
 
   _allow(caller, n = 1) {
+    if (caller.tunnel) return this.limiter.allow(`tunnel:${caller.ip}`, n, this.publicLimit || PUBLIC_RATE_LIMIT);
     return this.limiter.allow(caller.ip, n, !caller.local && this.publicLimit ? this.publicLimit : undefined);
   }
 

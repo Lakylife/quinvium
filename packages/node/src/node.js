@@ -18,6 +18,7 @@ import { fromHex, toHex } from './util/bytes.js';
 import predeploys from './genesis/predeploys.json' with { type: 'json' };
 import { L } from './lang.js';
 import { ChainWatch } from './watch/peers.js';
+import { PublicNodes } from './watch/public-nodes.js';
 import { SITES, SiteWatch, hashFolder } from './watch/site.js';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -88,7 +89,7 @@ export class AetherNode extends EventEmitter {
     this.work = new WorkManager({ chain: this.chain, mempool: this.mempool, network: this.network, extra: o.extra ?? 'Quinvium', log: this.log });
     this.miningRpc = o.miningRpc ?? true;
     this.rpc = new RpcServer(this, {
-      host: o.rpcHost ?? '127.0.0.1', port: o.rpcPort ?? network.ports.rpc, staticDir: o.staticDir ?? null, rateLimit: o.rateLimit ?? 0, trustProxy: o.trustProxy ?? false, publicMode: !!o.publicAccess, publicRateLimit: o.publicRateLimit, log: this.log,
+      host: o.rpcHost ?? '127.0.0.1', port: o.rpcPort ?? network.ports.rpc, staticDir: o.staticDir ?? null, rateLimit: o.rateLimit ?? 0, trustProxy: o.trustProxy ?? false, publicMode: !!o.publicAccess, publicRateLimit: o.publicRateLimit, tunnelPort: o.tunnelPort ?? null, log: this.log,
     });
     this.stratum = new StratumServer({ chain: this.chain, work: this.work, host: o.stratumHost ?? '127.0.0.1', port: o.stratumPort ?? network.ports.stratum, maxSessions: o.stratumSessions, maxSessionsPerIp: o.stratumSessionsPerIp, localOnlyWithoutPool: !!o.publicAccess, log: this.log });
     // Otherwise the user would not notice old software: the node just keeps losing its connection to the network.
@@ -103,6 +104,15 @@ export class AetherNode extends EventEmitter {
     this.chainWatch = new ChainWatch({ chain: this.chain, network: this.network, log: this.log });
     this.chainWatch.on('disagree', (d) => this.emit('watch', { kind: 'disagree', ...d }));
     this.chainWatch.on('incident', (d) => this.emit('watch', d));
+    // Public RPC nodes of the community: signed addresses from peers, each checked by this node before it is listed.
+    this.publicNodes = new PublicNodes({ chain: this.chain, identity: this.network.identity, chainId: network.chainId, fetchImpl: o.publicNodesFetch, log: this.log });
+    this.network.on('public-nodes', (list) => this.publicNodes.receive(list));
+    this.network.on('peer-connected', (peer) => this.network.sendPublicNodes(this.publicNodes.outgoing(), peer));
+    this.publicNodesTimer = setInterval(() => {
+      this.publicNodes.refresh().catch(() => {});
+      this.network.sendPublicNodes(this.publicNodes.outgoing());
+    }, 10 * 60_000);
+    this.publicNodesTimer.unref?.();
     const sites = o.siteCheck === false || process.env.AETHER_NO_SITE_CHECK === '1' ? null : (o.sites ?? SITES[network.name] ?? null);
     if (sites) {
       this.siteWatch = new SiteWatch({ sites, release: releaseHashes(o.staticDir), log: this.log, ...o.siteWatchOptions });
@@ -200,6 +210,7 @@ export class AetherNode extends EventEmitter {
     await this.publicAccess?.stop();
     this.siteWatch?.stop();
     this.chainWatch?.stop();
+    clearInterval(this.publicNodesTimer);
     this.timers?.forEach(clearInterval);
     this.pool?.stop();
     await this.stratum?.stop();

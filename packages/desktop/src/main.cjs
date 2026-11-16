@@ -11,6 +11,7 @@ const { followHost } = require('./home-network.cjs');
 const cliLauncher = require('./cli-launcher.cjs');
 const { poolOfferDue } = require('./pool-offer.cjs');
 const releases = require('./release-check.cjs');
+const shareNode = require('./share-node.cjs');
 const vm = require('node:vm');
 
 const NETWORKS = { mainnet: 8545, testnet: 8546 };
@@ -62,6 +63,56 @@ function follow(proc, onLine) {
 }
 
 const rpcPort = () => TEST_RPC_PORT ?? NETWORKS[node.network] ?? 8546;
+const tunnelPort = (network) => Number(process.env.AETHER_TUNNEL_PORT) || shareNode.TUNNEL_PORTS[network] || 8565;
+
+/**
+ * Share node publicly (off by default): a Cloudflare quick tunnel to the node's tunnel port. The node announces the tunnel's
+ * address to its peers; other nodes list it after their own check. The operator's IP address stays behind Cloudflare.
+ */
+const share = { tunnel: null, url: null, status: 'off', error: null, retry: null };
+async function startSharing() {
+  if (share.tunnel || share.status === 'starting' || !node.proc || !loadSettings().sharePublic) return;
+  share.status = 'starting';
+  share.error = null;
+  send({ type: 'state' });
+  try {
+    const bin = await shareNode.ensureCloudflared(path.join(app.getPath('userData'), 'bin'));
+    if (!node.proc || !loadSettings().sharePublic) { share.status = 'off'; return; }
+    share.tunnel = shareNode.startTunnel(bin, tunnelPort(node.network), {
+      onUrl: async (url) => {
+        share.url = url;
+        try {
+          await rpc('aether_setPublicUrl', [url]);
+          share.status = 'on';
+        } catch (e) { share.status = 'error'; share.error = e.message; }
+        send({ type: 'state' });
+      },
+      onExit: () => {
+        share.tunnel = null;
+        share.url = null;
+        if (share.status !== 'off') {
+          share.status = 'error';
+          share.error = 'The tunnel stopped; trying again in a minute.';
+          clearTimeout(share.retry);
+          share.retry = setTimeout(() => { share.status = 'off'; startSharing(); }, 60_000);
+        }
+        send({ type: 'state' });
+      },
+    });
+  } catch (e) {
+    share.status = 'error';
+    share.error = e.message;
+    send({ type: 'state' });
+  }
+}
+async function stopSharing() {
+  clearTimeout(share.retry);
+  share.status = 'off';
+  share.url = null;
+  share.tunnel?.stop();
+  share.tunnel = null;
+  if (node.proc) await rpc('aether_setPublicUrl', [null]).catch(() => {});
+}
 async function rpc(method, params = []) {
   const r = await fetch(`http://127.0.0.1:${rpcPort()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }), signal: AbortSignal.timeout(4000) });
   const j = await r.json();
@@ -100,6 +151,8 @@ function networkArgs(network) {
   if (access === 'internet') args.push('--public', ...(publicHost ? ['--public-host', publicHost] : []));
   // Pool server: the key only pays gas for shares; the contract holds the miners' coins.
   if (runPool?.network === network) args.push('--pool', runPool.address, '--pool-key-file', path.join(app.getPath('userData'), `pool-${network}.key`));
+  // Share node publicly: a port for the tunnel only, on this computer; every request on it counts as foreign.
+  if (settings.sharePublic) args.push('--tunnel-port', String(tunnelPort(network)));
   return args;
 }
 
@@ -125,6 +178,12 @@ function startNode(network) {
   follow(node.proc, (l) => { push(node.log, l); send({ type: 'node-log', line: l }); });
   node.proc.on('exit', (code) => {
     push(node.log, `Uzel skončil s kódem ${code}`);
+    // Without the node the tunnel would lead nowhere; it starts again with the node.
+    clearTimeout(share.retry);
+    share.status = 'off';
+    share.tunnel?.stop();
+    share.tunnel = null;
+    share.url = null;
     node.proc = null;
     node.stats = null;
     node.endpoints = null;
@@ -272,7 +331,21 @@ ipcMain.handle('state', () => ({
   release: { latest: release.latest, checked: release.checked, error: release.error, downloading: release.downloading, file: release.file },
   notify: Object.fromEntries(NOTIFY_KINDS.map((k) => [k, notifyOn(k)])),
   version: app.getVersion(),
+  share: { on: !!loadSettings().sharePublic, status: share.status, url: share.url, error: share.error },
 }));
+// Share node publicly on or off. The node restarts, because the tunnel port is opened only when sharing is on.
+ipcMain.handle('share:set', async (_, on) => {
+  saveSettings({ sharePublic: !!on });
+  await stopSharing();
+  // Mining keeps running and resumes when the node is back, as after other node settings.
+  if (node.proc) {
+    const network = node.network;
+    await stop(node.proc);
+    startNode(network);
+  }
+  send({ type: 'state' });
+  return true;
+});
 ipcMain.handle('node:start', (_, network) => startNode(network));
 ipcMain.handle('node:stop', async () => { await stop(miner.proc); await stop(node.proc); return true; });
 ipcMain.handle('node:network', async (_, options) => {
@@ -645,6 +718,7 @@ setInterval(async () => {
     refreshTray();
     if (changed) send({ type: 'state' });
     resumeMining();
+    if (loadSettings().sharePublic && !share.tunnel && share.status === 'off') startSharing();
   } catch { /* the node is still starting */ }
 }, 3000);
 
@@ -794,6 +868,8 @@ app.on('before-quit', async (e) => {
   if (quitting) return;
   e.preventDefault();
   quitting = true;
+  share.status = 'off';
+  share.tunnel?.stop();
   await stop(miner.proc);
   await stop(node.proc);
   app.quit();

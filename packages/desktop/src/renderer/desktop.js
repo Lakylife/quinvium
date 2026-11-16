@@ -516,6 +516,11 @@
       hint = tr('Phones on mobile data cannot connect. Choose the internet option for that.');
     }
     el('n-access-hint').textContent = hint;
+    // Share node publicly: switch state and what the tunnel is doing.
+    const sh = s.share ?? {};
+    if (document.activeElement !== el('n-share-public')) el('n-share-public').checked = !!sh.on;
+    el('n-share-public-state').textContent = !sh.on ? '' : sh.status === 'on' ? tr('Shared at {url}. Other nodes check it and list it.', { url: sh.url ?? '' })
+      : sh.status === 'error' ? tr('Sharing does not work: {reason}', { reason: sh.error ?? '' }) : tr('Starting the tunnel…');
     el('n-public-row').hidden = el('n-access').value !== 'internet';
     el('n-public-note').hidden = el('n-access').value !== 'internet';
   }
@@ -620,6 +625,10 @@
     refresh();
   };
   el('n-stop').onclick = async () => { await d.stopNode(); refresh(); };
+  el('n-share-public').onchange = async (e) => {
+    e.target.disabled = true;
+    try { await window.desktop.setSharePublic(e.target.checked); } finally { e.target.disabled = false; }
+  };
   el('n-access').onchange = () => { el('n-public-row').hidden = el('n-access').value !== 'internet'; el('n-public-note').hidden = el('n-access').value !== 'internet'; };
   el('n-seed-save').onclick = async () => {
     el('n-seed-error').textContent = '';

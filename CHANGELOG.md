@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Miner: `--fallback <url,…>` keeps mining solo through your own node when the pool stops answering and returns to the pool when it answers again; the app passes its own node.
+- Community nodes: the app's "Share node publicly" (off by default) opens a Cloudflare quick tunnel to a local-only tunnel port of the node (`--tunnel-port`; every request there is foreign, limited per `Cf-Connecting-IP`, no mining or control methods). The node announces the address to its peers signed by its node key (`PUBLIC_NODES`, short validity); every node checks an address itself before listing it in `quinvium_publicNodes`. The Explorer falls back to those nodes when its configured nodes do not answer. cloudflared is downloaded only from the official release, pinned by version and SHA-256. Draft Cloudflare Worker for one stable address in `ops/cloudflare/`.
 - Explorer: .qu name registration can be finished later, step 2 is its own click, the first name becomes primary; primary names in lists, on the address page and in the wallet menu.
 - Explorer and wallet: the currency can be shown as QU or as the Quinvium symbol (Profile settings in the Explorer, Settings in the wallet).
 - Profile pictures as NFTs: Quinvium Avatars (on-chain SVG, mint for the network fee) and the Profiles contract; a picture shows only while the address owns the NFT. Both contracts are deployed from the Explorer's Profile card.
