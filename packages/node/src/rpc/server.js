@@ -341,7 +341,7 @@ export class RpcServer {
     if (!existsSync(file)) { res.writeHead(404); res.end(); return; }
     res.writeHead(200, {
       'Content-Type': MIME[extname(file)] ?? 'application/octet-stream',
-      'Content-Security-Policy': "default-src 'self'; connect-src * ws: wss:; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-src https://verify.walletconnect.org https://verify.walletconnect.com; frame-ancestors 'none'",
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; worker-src 'self'; connect-src * ws: wss:; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-src https://verify.walletconnect.org https://verify.walletconnect.com; frame-ancestors 'none'",
       'Referrer-Policy': 'no-referrer',
       'X-Frame-Options': 'DENY',
     });

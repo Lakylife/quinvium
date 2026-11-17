@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Explorer: contract source verification without a server. The source is compiled in the browser by the official Solidity compiler (checked against its published SHA-256) and compared with the code on chain and with the creation transaction; a match is published on chain in the new ownerless Source registry contract (deployed by a user from the Explorer), and every visitor checks it again on the contract's Code tab.
+
 ## 2.16.0 (16 November 2026)
 
 - English is the default language everywhere: node log, errors, RPC and Stratum messages, miner output, app log and package descriptions. Czech stays a translation (`QUINTIUM_LANG=cs`, or the app window in Czech).

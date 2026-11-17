@@ -33,7 +33,7 @@
       'mine.sub': 'Těžař dostane odměnu 4 QU za blok a všechny poplatky z transakcí v bloku.', 'b.reward': 'Odměna za blok', 'b.baseFees': 'Základní poplatky', 'b.tips': 'Dýška', 'b.total': 'Těžař celkem', 'mine.own': 'Vlastní Quinvium Miner (Windows, macOS, Linux)',
       'mine.other': 'Běžné Windows minery přes Stratum', 'mine.note': 'Těžit lze na libovolný uzel. Účet ani registrace nejsou potřeba, stačí adresa peněženky.',
       'mine.yourAddr': 'VAŠE_ADRESA', 'apps.sub': 'Hotové kontrakty sítě Quinvium pro různé obory. Čtení je zdarma, zápis podepisuje vaše peněženka.',
-      'tool.read': 'Ověřit', 'tool.write': 'Zapsat do řetězce', 'tool.file': 'Nebo vyberte soubor (zůstává ve vašem počítači)', 'tool.sent': 'Transakce odeslána', 'tool.done': 'Potvrzeno v bloku', 'tool.missing': 'Vyplňte pole', 'tool.failed': 'Transakce v bloku selhala', 'tool.nameStep1': 'Krok 1 ze 2: podepište závazek', 'tool.nameStep2': 'Čekám na ochrannou lhůtu, zbývá', 'tool.nameStep3': 'Krok 2 ze 2: podepište registraci', 'tool.namePrimary': 'Poslední krok: podepište, aby se jméno ukazovalo místo vaší adresy', 'tool.nameResume': 'Pokračuji v rozdělané registraci, závazek už je v řetězci.', 'tool.namePending': 'Registrace jména {name} není dokončená: krok 1 je v řetězci, krok 2 chybí. Klikněte na Dokončit registraci a podepište ho (závazek platí 24 hodin od odeslání).', 'tool.nameFinished': 'Jméno se teď ukazuje místo vaší adresy.', 'prof.currency': 'Měna', 'prof.symbol': 'symbol Quinvia', 'prof.avatar': 'Profilový obrázek (NFT)', 'prof.deploy1': '1. Nasadit Quinvium Avatars', 'prof.deploy2': '2. Nasadit Profily', 'prof.mintHint': 'Vyberte ikonu a barvu, vyrazte z nich vlastní NFT Quinvium Avatar jen za poplatek do sítě a nastavte ho jako profilový obrázek. Ukazuje se jen, dokud NFT patří vaší adrese.', 'prof.mint': 'Vyrazit avatar (krok 1 ze 2)', 'prof.use': 'Nastavit jako profilový obrázek', 'prof.minted': 'Avatar je vyražený. Teď ho nastavte jako profilový obrázek (krok 2 ze 2).', 'prof.removed': 'Profilový obrázek je odebraný.', 'prof.other': 'Použít jiné NFT, které vlastníte', 'prof.nft': 'Adresa kontraktu NFT', 'prof.tokenId': 'Číslo tokenu', 'prof.otherNote': 'Obrázek cizího NFT se ukáže, jen když je uložený přímo v řetězci. Obrázky z cizích serverů Explorer nenačítá, aby nikdo nesledoval, kdo stránku prohlíží.', 'prof.badNft': 'Zadejte adresu kontraktu a číslo tokenu.', 'prof.tag': 'Identita · Peněženky', 'prof.title': 'Profil', 'prof.desc': 'Profilový obrázek u vaší adresy a jména .qu a zobrazení měny.', 'prof.none': 'Kontrakty Quinvium Avatars a Profily na této síti ještě nejsou. Kdokoli je může nasadit dvěma transakcemi: nemají správce ani poplatky.', 'prof.badCode': 'Kód na nastavených adresách neodpovídá zveřejněným kontraktům, profilové obrázky se proto nepoužijí.', 'prof.source': 'Kód je přesně packages/contracts/dist/artifacts.json z repozitáře na GitHubu. Otisky SHA-256 si můžete porovnat před podpisem.', 'prof.address': 'Adresa kontraktu', 'prof.deployed': 'Kontrakt je nasazený. Adresy obou kontraktů se zapíšou do Exploreru při další aktualizaci, potom si profilový obrázek může nastavit každý.', 'prof.icon': 'Ikona', 'prof.color': 'Barva', 'prof.clear': 'Odebrat ikonu', 'prof.saved': 'Profilový obrázek je nastavený.', 'net.nodes': 'Kdo poskytuje data', 'net.keepAlive': 'Tato stránka čte řetězec z uzlů, které provozují lidé. Spusťte aplikaci Quinvium a zapněte Sdílet uzel veřejně: Váš uzel pak obslouží Explorer, web i peněženky, když hlavní servery nejedou.', 'net.communityCount': 'Známé uzly komunity: {n}', 'net.ownNode': 'Vlastní uzel (adresa RPC)', 'net.ownHint': 'Explorer pak čte nejdřív z Vašeho uzlu, třeba https://uzel.example.org nebo http://127.0.0.1:8545. Uzel musí být ve stejné síti (Chain ID a genesis se ověří). Uloží se jen v tomto prohlížeči.', 'net.ownSave': 'Použít můj uzel', 'net.ownReset': 'Zpět na výchozí uzly', 'net.ownBad': 'Na této adrese neodpovídá uzel této sítě.', 'pool.overview': 'Přehled', 'pool.charts': 'Grafy', 'pool.c.blocks': 'Vytěžené bloky', 'pool.c.share': 'Podíl na síti', 'pool.c.rate': 'Výkon poolu (odhad)', 'pool.c.miners': 'Aktivní těžaři', 'pool.c.shares': 'Přijaté podíly', 'pool.c.payouts': 'Výplaty těžařům', 'pool.c.paid': 'Vyplaceno těžařům', 'pool.c.income': 'Příjem z bloků', 'pool.c.every': 'Výplata průměrně každých', 'pool.c.capped': 'Počítá se nejvýše 5 000 posledních výplat', 'pool.c.unavailable': 'Uzel, ze kterého Explorer čte, grafy poolu zatím neumí. Zobrazí se po aktualizaci uzlu.', 'miners.status': 'Stav', 'miners.mining': 'Těží', 'miners.idle': 'Netěží', 'net.community': 'Hlavní uzel neodpovídá, data teď poskytuje uzel komunity {host}, ověřený sítí.', 'coin.text': 'Měnu ukazovat jako QU', 'coin.symbol': 'Měnu ukazovat symbolem Quinvia', 'tool.nameReady': 'Krok 1 je v řetězci a ochranná lhůta uplynula. Klikněte na Dokončit registraci a potvrďte krok 2 v peněžence.', 'tool.nameFinish': 'Dokončit registraci (krok 2 ze 3)', 'addr.names': 'Jména .qu', 'addr.namesHint': 'Jméno zatím není hlavní, proto se místo adresy neukazuje.', 'addr.setPrimary': 'Nastavit jako hlavní jméno', 'net.title': 'Síť a uzly', 'net.rpcLan': 'RPC v domácí síti', 'net.rpcPublic': 'RPC z internetu', 'net.rpcPublicFwd': 'RPC z internetu (po přesměrování)', 'net.rpcOnlyHere': 'Uzel přijímá jen tento počítač. Sdílení se zapíná v aplikaci Quinvium v části Uzel, Spojení a přístup.', 'net.rpcHint': 'Do peněženky v telefonu zadejte RPC z domácí sítě, nebo z internetu, když je telefon na mobilních datech.', 'charts.time': 'Čas bloku (s)', 'charts.diff': 'Obtížnost', 'charts.rate': 'Odhad výkonu (H/s)',
+      'tool.read': 'Ověřit', 'tool.write': 'Zapsat do řetězce', 'tool.file': 'Nebo vyberte soubor (zůstává ve vašem počítači)', 'tool.sent': 'Transakce odeslána', 'tool.done': 'Potvrzeno v bloku', 'tool.missing': 'Vyplňte pole', 'tool.failed': 'Transakce v bloku selhala', 'tool.nameStep1': 'Krok 1 ze 2: podepište závazek', 'tool.nameStep2': 'Čekám na ochrannou lhůtu, zbývá', 'tool.nameStep3': 'Krok 2 ze 2: podepište registraci', 'tool.namePrimary': 'Poslední krok: podepište, aby se jméno ukazovalo místo vaší adresy', 'tool.nameResume': 'Pokračuji v rozdělané registraci, závazek už je v řetězci.', 'tool.namePending': 'Registrace jména {name} není dokončená: krok 1 je v řetězci, krok 2 chybí. Klikněte na Dokončit registraci a podepište ho (závazek platí 24 hodin od odeslání).', 'tool.nameFinished': 'Jméno se teď ukazuje místo vaší adresy.', 'prof.currency': 'Měna', 'prof.symbol': 'symbol Quinvia', 'prof.avatar': 'Profilový obrázek (NFT)', 'prof.deploy1': '1. Nasadit Quinvium Avatars', 'prof.deploy2': '2. Nasadit Profily', 'prof.mintHint': 'Vyberte ikonu a barvu, vyrazte z nich vlastní NFT Quinvium Avatar jen za poplatek do sítě a nastavte ho jako profilový obrázek. Ukazuje se jen, dokud NFT patří vaší adrese.', 'prof.mint': 'Vyrazit avatar (krok 1 ze 2)', 'prof.use': 'Nastavit jako profilový obrázek', 'prof.minted': 'Avatar je vyražený. Teď ho nastavte jako profilový obrázek (krok 2 ze 2).', 'prof.removed': 'Profilový obrázek je odebraný.', 'prof.other': 'Použít jiné NFT, které vlastníte', 'prof.nft': 'Adresa kontraktu NFT', 'prof.tokenId': 'Číslo tokenu', 'prof.otherNote': 'Obrázek cizího NFT se ukáže, jen když je uložený přímo v řetězci. Obrázky z cizích serverů Explorer nenačítá, aby nikdo nesledoval, kdo stránku prohlíží.', 'prof.badNft': 'Zadejte adresu kontraktu a číslo tokenu.', 'prof.tag': 'Identita · Peněženky', 'prof.title': 'Profil', 'prof.desc': 'Profilový obrázek u vaší adresy a jména .qu a zobrazení měny.', 'prof.none': 'Kontrakty Quinvium Avatars a Profily na této síti ještě nejsou. Kdokoli je může nasadit dvěma transakcemi: nemají správce ani poplatky.', 'prof.badCode': 'Kód na nastavených adresách neodpovídá zveřejněným kontraktům, profilové obrázky se proto nepoužijí.', 'prof.source': 'Kód je přesně packages/contracts/dist/artifacts.json z repozitáře na GitHubu. Otisky SHA-256 si můžete porovnat před podpisem.', 'prof.address': 'Adresa kontraktu', 'prof.deployed': 'Kontrakt je nasazený. Adresy obou kontraktů se zapíšou do Exploreru při další aktualizaci, potom si profilový obrázek může nastavit každý.', 'prof.icon': 'Ikona', 'prof.color': 'Barva', 'prof.clear': 'Odebrat ikonu', 'prof.saved': 'Profilový obrázek je nastavený.', 'net.nodes': 'Kdo poskytuje data', 'net.keepAlive': 'Tato stránka čte řetězec z uzlů, které provozují lidé. Spusťte aplikaci Quinvium a zapněte Sdílet uzel veřejně: Váš uzel pak obslouží Explorer, web i peněženky, když hlavní servery nejedou.', 'net.communityCount': 'Známé uzly komunity: {n}', 'net.ownNode': 'Vlastní uzel (adresa RPC)', 'net.ownHint': 'Explorer pak čte nejdřív z Vašeho uzlu, třeba https://uzel.example.org nebo http://127.0.0.1:8545. Uzel musí být ve stejné síti (Chain ID a genesis se ověří). Uloží se jen v tomto prohlížeči.', 'net.ownSave': 'Použít můj uzel', 'net.ownReset': 'Zpět na výchozí uzly', 'net.ownBad': 'Na této adrese neodpovídá uzel této sítě.', 'pool.overview': 'Přehled', 'pool.charts': 'Grafy', 'pool.c.blocks': 'Vytěžené bloky', 'pool.c.share': 'Podíl na síti', 'pool.c.rate': 'Výkon poolu (odhad)', 'pool.c.miners': 'Aktivní těžaři', 'pool.c.shares': 'Přijaté podíly', 'pool.c.payouts': 'Výplaty těžařům', 'pool.c.paid': 'Vyplaceno těžařům', 'pool.c.income': 'Příjem z bloků', 'pool.c.every': 'Výplata průměrně každých', 'pool.c.capped': 'Počítá se nejvýše 5 000 posledních výplat', 'pool.c.unavailable': 'Uzel, ze kterého Explorer čte, grafy poolu zatím neumí. Zobrazí se po aktualizaci uzlu.', 'miners.status': 'Stav', 'miners.mining': 'Těží', 'miners.idle': 'Netěží', 'src.tab': 'Kód', 'src.title': 'Ověřit zdrojový kód kontraktu', 'src.sub': 'Zdrojový kód se přeloží ve vašem prohlížeči oficiálním překladačem Solidity a porovná s kódem v řetězci. Nic se neposílá na server.', 'src.address': 'Adresa kontraktu', 'src.compiler': 'Překladač', 'src.optimizer': 'Optimalizace', 'src.runs': 'Počet běhů optimalizace', 'src.evm': 'Verze EVM', 'src.evmDefault': 'Výchozí podle překladače', 'src.source': 'Zdrojový kód Solidity (jeden soubor)', 'src.files': 'Nebo vyberte soubory .sol nebo Standard JSON input (zůstanou ve vašem počítači)', 'src.check': 'Přeložit a porovnat', 'src.loading': 'Stahuji překladač {v} a překládám…', 'src.exact': 'Zdrojový kód přesně odpovídá kódu v řetězci: {name}', 'src.partial': 'Zdrojový kód odpovídá kódu v řetězci, liší se jen metadata (komentáře nebo názvy souborů): {name}', 'src.noMatch': 'Žádný kontrakt z tohoto zdroje neodpovídá kódu v řetězci. Zkontrolujte verzi překladače, optimalizaci a verzi EVM.', 'src.errors': 'Překladač hlásí chyby', 'src.libraries': 'Kontrakty s propojenými knihovnami zatím nejsou podporované.', 'src.publish': 'Zveřejnit zdrojový kód v řetězci', 'src.published': 'Zdrojový kód je zveřejněný. Každý si ho teď může ověřit na stránce kontraktu.', 'src.noRegistry': 'Kontrakt Zdrojové kódy na této síti ještě není. Kdokoli ho může nasadit jednou transakcí: nemá správce ani poplatky.', 'src.deploy': 'Nasadit kontrakt Zdrojové kódy', 'src.deployed': 'Kontrakt je nasazený. Jeho adresa se zapíše do Exploreru při další aktualizaci, potom půjde zdrojové kódy zveřejňovat.', 'src.none': 'Zdrojový kód tohoto kontraktu zatím nikdo nezveřejnil.', 'src.verifyLink': 'Ověřit a zveřejnit zdrojový kód', 'src.available': 'Zveřejněné zdrojové kódy: {n}. Prohlížeč je ověří oficiálním překladačem (stažení asi 10 MB).', 'src.checkNow': 'Ověřit zdrojový kód', 'src.verified': 'Ověřeno ve vašem prohlížeči', 'src.notVerified': 'Žádný ze zveřejněných zdrojových kódů neodpovídá kódu v řetězci.', 'src.publisher': 'Zveřejnil', 'src.settings': 'Nastavení', 'src.abi': 'ABI', 'nav.verify': 'Ověřit kontrakt', 'net.community': 'Hlavní uzel neodpovídá, data teď poskytuje uzel komunity {host}, ověřený sítí.', 'coin.text': 'Měnu ukazovat jako QU', 'coin.symbol': 'Měnu ukazovat symbolem Quinvia', 'tool.nameReady': 'Krok 1 je v řetězci a ochranná lhůta uplynula. Klikněte na Dokončit registraci a potvrďte krok 2 v peněžence.', 'tool.nameFinish': 'Dokončit registraci (krok 2 ze 3)', 'addr.names': 'Jména .qu', 'addr.namesHint': 'Jméno zatím není hlavní, proto se místo adresy neukazuje.', 'addr.setPrimary': 'Nastavit jako hlavní jméno', 'net.title': 'Síť a uzly', 'net.rpcLan': 'RPC v domácí síti', 'net.rpcPublic': 'RPC z internetu', 'net.rpcPublicFwd': 'RPC z internetu (po přesměrování)', 'net.rpcOnlyHere': 'Uzel přijímá jen tento počítač. Sdílení se zapíná v aplikaci Quinvium v části Uzel, Spojení a přístup.', 'net.rpcHint': 'Do peněženky v telefonu zadejte RPC z domácí sítě, nebo z internetu, když je telefon na mobilních datech.', 'charts.time': 'Čas bloku (s)', 'charts.diff': 'Obtížnost', 'charts.rate': 'Odhad výkonu (H/s)',
       'rich.sub': 'Adresy podle zůstatku', 'mem.sub': 'Transakce čekající na vytěžení', 'miners.sub': 'Podle posledních 1000 bloků', 'search.none': 'Nic nenalezeno pro',
       'swap.allTrades': 'Všechny směny →', 'swap.mine': 'Moje likvidita', 'swap.searchPair': 'Hledat dvojici', 'swap.linked': 'Částky jsou svázané kurzem poolu', 'swap.linkedRate': 'Svázáno kurzem poolu: 1 {a} = {rate} {b}', 'swap.newPoolRate': 'Nový pool: poměr částek určí počáteční kurz', 'swap.addMore': 'Přidat', 'swap.withdrawPart': 'Vybrat část', 'swap.youGet': 'Dostanete zpět asi {a} a {b}.', 'swap.everything': 'vše', 'swap.pickPart': 'Vyberte, kolik chcete vybrat.', 'swap.showMore': 'Zobrazit dalších {n} (celkem {total})', 'swap.noMatch': 'Hledání neodpovídá žádná dvojice.', 'bridge.step1': 'Uzamčení', 'bridge.step2': 'Potvrzení', 'bridge.step3': 'Připsání', 'bridge.how2n': 'Nezávislí validátoři počkají, až je převod v řetězci dost hluboko, a podepíšou ho. Potřeba je {threshold} z {count} podpisů.',
       'pools.online': 'Server zveřejněný', 'pools.noServerShort': 'Bez serveru', 'pool.asic': 'ASIC a jiné', 'pool.viaApp': 'V aplikaci Quinvium otevřete Těžba → Kam těžíte, najděte tento pool v seznamu a vyberte ho. Těžba pak poběží na vaši peněženku.', 'pool.asicUrl': 'Adresa poolu', 'pool.asicWorker': 'Pracovník (worker)', 'pool.password': 'Heslo', 'pool.loginNote': 'adresa peněženky pro výplaty, za tečkou název zařízení', 'pool.passwordNote': 'libovolné, pool ho nepoužívá', 'pool.algo': 'Algoritmus', 'pool.algoNote': 'standardní Ethash přes EthereumStratum/1.0.0 i ETHPROXY', 'pool.payout': 'Výplaty', 'pool.payoutNote': 'automaticky z kontraktu, PPLNS za posledních {n} min, poplatek provozovatele {fee}', 'pool.software': 'Program', 'pool.connectNote': 'Těžit jde přes server, který provozovatel zveřejnil. Odměny drží kontrakt: provozovatel si vezme jen poplatek a výplatu může každý těžař vybrat i sám tlačítkem Vybrat.', 'pool.share24': 'Podíl na blocích za 24 h', 'pool.blocks24': '{n} bloků za 24 h', 'pool.findMiner': 'Najít těžaře podle adresy', 'pool.minersTotal': 'celkem {n} těžařů', 'pool.minerNotFound': 'Tato adresa v okně poolu neposlala žádný podíl.', 'pool.allMiners': '← Všichni těžaři', 'pool.createdTitle': 'Pool je založený. Co dál:', 'pools.otherPools': 'Ostatní pooly', 'pools.otherCount': 'dalších poolů: {n}', 'pools.all': 'Všechny pooly ({n})', 'pools.find': 'Hledat pool podle jména nebo adresy', 'pools.minersCol': 'Těžaři', 'pools.createdCol': 'Založen', 'pools.noMatch': 'Hledání „{q}“ neodpovídá žádný pool.',
@@ -77,7 +77,7 @@
       'mine.sub': 'The miner gets a 4 QU block reward plus all transaction fees in the block.', 'b.reward': 'Block reward', 'b.baseFees': 'Base fees', 'b.tips': 'Tips', 'b.total': 'Miner total', 'mine.own': 'Quinvium Miner (Windows, macOS, Linux)',
       'mine.other': 'Common Windows miners via Stratum', 'mine.note': 'Mine on any node. No account needed, just your wallet address.',
       'mine.yourAddr': 'YOUR_ADDRESS', 'apps.sub': 'Ready-made Quinvium contracts for many industries. Reading is free, writing is signed by your wallet.',
-      'tool.read': 'Verify', 'tool.write': 'Write to chain', 'tool.file': 'Or choose a file (stays on your computer)', 'tool.sent': 'Transaction sent', 'tool.done': 'Confirmed in block', 'tool.missing': 'Fill in', 'tool.failed': 'The transaction failed in the block', 'tool.nameStep1': 'Step 1 of 2: sign the commitment', 'tool.nameStep2': 'Waiting for the protection period, left', 'tool.nameStep3': 'Step 2 of 2: sign the registration', 'tool.namePrimary': 'Last step: sign so the name is shown instead of your address', 'tool.nameResume': 'Continuing an unfinished registration; the commitment is already on chain.', 'tool.namePending': 'The registration of {name} is not finished: step 1 is on chain, step 2 is missing. Click Finish registration and sign it (the commitment is valid for 24 hours after it was sent).', 'tool.nameFinished': 'The name is now shown instead of your address.', 'prof.currency': 'Currency', 'prof.symbol': 'Quinvium symbol', 'prof.avatar': 'Profile picture (NFT)', 'prof.deploy1': '1. Deploy Quinvium Avatars', 'prof.deploy2': '2. Deploy Profiles', 'prof.mintHint': 'Choose an icon and a colour, mint your own Quinvium Avatar NFT for the network fee only and set it as your profile picture. It shows only while the NFT belongs to your address.', 'prof.mint': 'Mint avatar (step 1 of 2)', 'prof.use': 'Set as profile picture', 'prof.minted': 'The avatar is minted. Now set it as your profile picture (step 2 of 2).', 'prof.removed': 'The profile picture is removed.', 'prof.other': 'Use another NFT you own', 'prof.nft': 'NFT contract address', 'prof.tokenId': 'Token number', 'prof.otherNote': 'A foreign NFT picture shows only when it is stored on chain. The Explorer loads no images from foreign servers, so nobody can track who views the page.', 'prof.badNft': 'Enter the contract address and the token number.', 'prof.tag': 'Identity · Wallets', 'prof.title': 'Profile', 'prof.desc': 'The profile picture next to your address and .qu name, and how the currency is shown.', 'prof.none': 'The Quinvium Avatars and Profiles contracts are not on this network yet. Anyone can deploy them with two transactions: they have no owner and no fees.', 'prof.badCode': 'The code at the configured addresses does not match the published contracts, so profile pictures are not used.', 'prof.source': 'The code is exactly packages/contracts/dist/artifacts.json from the GitHub repository. You can compare the SHA-256 hashes before signing.', 'prof.address': 'Contract address', 'prof.deployed': 'The contract is deployed. The addresses of both contracts go into the Explorer with the next update; then everyone can set a profile picture.', 'prof.icon': 'Icon', 'prof.color': 'Colour', 'prof.clear': 'Remove icon', 'prof.saved': 'The profile picture is set.', 'net.nodes': 'Who serves the data', 'net.keepAlive': 'This page reads the chain from nodes that people run. Run the Quinvium app and turn on Share node publicly: your node then serves the Explorer, the website and wallets when the main servers are down.', 'net.communityCount': 'Known community nodes: {n}', 'net.ownNode': 'Your own node (RPC address)', 'net.ownHint': 'The Explorer then reads from your node first, for example https://node.example.org or http://127.0.0.1:8545. The node must be on the same network (the chain ID and genesis are checked). It is saved only in this browser.', 'net.ownSave': 'Use my node', 'net.ownReset': 'Back to the default nodes', 'net.ownBad': 'No node of this network answers at this address.', 'pool.overview': 'Overview', 'pool.charts': 'Charts', 'pool.c.blocks': 'Blocks mined', 'pool.c.share': 'Share of the network', 'pool.c.rate': 'Pool hashrate (estimate)', 'pool.c.miners': 'Active miners', 'pool.c.shares': 'Accepted shares', 'pool.c.payouts': 'Payouts to miners', 'pool.c.paid': 'Paid to miners', 'pool.c.income': 'Block income', 'pool.c.every': 'Average time between payouts', 'pool.c.capped': 'Counts at most the last 5,000 payouts', 'pool.c.unavailable': 'The node this Explorer reads from cannot show pool charts yet. They appear once the node is updated.', 'miners.status': 'Status', 'miners.mining': 'Mining', 'miners.idle': 'Idle', 'net.community': 'The main node does not answer; data now comes from the community node {host}, verified by the network.', 'coin.text': 'Show the currency as QU', 'coin.symbol': 'Show the currency as the Quinvium symbol', 'tool.nameReady': 'Step 1 is on chain and the protection period is over. Click Finish registration and confirm step 2 in your wallet.', 'tool.nameFinish': 'Finish registration (step 2 of 3)', 'addr.names': '.qu names', 'addr.namesHint': 'The name is not primary yet, so it is not shown instead of the address.', 'addr.setPrimary': 'Set as primary name', 'net.title': 'Network', 'net.rpcLan': 'RPC on the home network', 'net.rpcPublic': 'RPC from the internet', 'net.rpcPublicFwd': 'RPC from the internet (after forwarding)', 'net.rpcOnlyHere': 'The node accepts only this computer. Turn on sharing in the Quinvium app under Node, Connections and access.', 'net.rpcHint': 'In a phone wallet, enter the home network RPC, or the internet RPC when the phone is on mobile data.', 'charts.time': 'Block time (s)', 'charts.diff': 'Difficulty', 'charts.rate': 'Estimated hashrate (H/s)',
+      'tool.read': 'Verify', 'tool.write': 'Write to chain', 'tool.file': 'Or choose a file (stays on your computer)', 'tool.sent': 'Transaction sent', 'tool.done': 'Confirmed in block', 'tool.missing': 'Fill in', 'tool.failed': 'The transaction failed in the block', 'tool.nameStep1': 'Step 1 of 2: sign the commitment', 'tool.nameStep2': 'Waiting for the protection period, left', 'tool.nameStep3': 'Step 2 of 2: sign the registration', 'tool.namePrimary': 'Last step: sign so the name is shown instead of your address', 'tool.nameResume': 'Continuing an unfinished registration; the commitment is already on chain.', 'tool.namePending': 'The registration of {name} is not finished: step 1 is on chain, step 2 is missing. Click Finish registration and sign it (the commitment is valid for 24 hours after it was sent).', 'tool.nameFinished': 'The name is now shown instead of your address.', 'prof.currency': 'Currency', 'prof.symbol': 'Quinvium symbol', 'prof.avatar': 'Profile picture (NFT)', 'prof.deploy1': '1. Deploy Quinvium Avatars', 'prof.deploy2': '2. Deploy Profiles', 'prof.mintHint': 'Choose an icon and a colour, mint your own Quinvium Avatar NFT for the network fee only and set it as your profile picture. It shows only while the NFT belongs to your address.', 'prof.mint': 'Mint avatar (step 1 of 2)', 'prof.use': 'Set as profile picture', 'prof.minted': 'The avatar is minted. Now set it as your profile picture (step 2 of 2).', 'prof.removed': 'The profile picture is removed.', 'prof.other': 'Use another NFT you own', 'prof.nft': 'NFT contract address', 'prof.tokenId': 'Token number', 'prof.otherNote': 'A foreign NFT picture shows only when it is stored on chain. The Explorer loads no images from foreign servers, so nobody can track who views the page.', 'prof.badNft': 'Enter the contract address and the token number.', 'prof.tag': 'Identity · Wallets', 'prof.title': 'Profile', 'prof.desc': 'The profile picture next to your address and .qu name, and how the currency is shown.', 'prof.none': 'The Quinvium Avatars and Profiles contracts are not on this network yet. Anyone can deploy them with two transactions: they have no owner and no fees.', 'prof.badCode': 'The code at the configured addresses does not match the published contracts, so profile pictures are not used.', 'prof.source': 'The code is exactly packages/contracts/dist/artifacts.json from the GitHub repository. You can compare the SHA-256 hashes before signing.', 'prof.address': 'Contract address', 'prof.deployed': 'The contract is deployed. The addresses of both contracts go into the Explorer with the next update; then everyone can set a profile picture.', 'prof.icon': 'Icon', 'prof.color': 'Colour', 'prof.clear': 'Remove icon', 'prof.saved': 'The profile picture is set.', 'net.nodes': 'Who serves the data', 'net.keepAlive': 'This page reads the chain from nodes that people run. Run the Quinvium app and turn on Share node publicly: your node then serves the Explorer, the website and wallets when the main servers are down.', 'net.communityCount': 'Known community nodes: {n}', 'net.ownNode': 'Your own node (RPC address)', 'net.ownHint': 'The Explorer then reads from your node first, for example https://node.example.org or http://127.0.0.1:8545. The node must be on the same network (the chain ID and genesis are checked). It is saved only in this browser.', 'net.ownSave': 'Use my node', 'net.ownReset': 'Back to the default nodes', 'net.ownBad': 'No node of this network answers at this address.', 'pool.overview': 'Overview', 'pool.charts': 'Charts', 'pool.c.blocks': 'Blocks mined', 'pool.c.share': 'Share of the network', 'pool.c.rate': 'Pool hashrate (estimate)', 'pool.c.miners': 'Active miners', 'pool.c.shares': 'Accepted shares', 'pool.c.payouts': 'Payouts to miners', 'pool.c.paid': 'Paid to miners', 'pool.c.income': 'Block income', 'pool.c.every': 'Average time between payouts', 'pool.c.capped': 'Counts at most the last 5,000 payouts', 'pool.c.unavailable': 'The node this Explorer reads from cannot show pool charts yet. They appear once the node is updated.', 'miners.status': 'Status', 'miners.mining': 'Mining', 'miners.idle': 'Idle', 'src.tab': 'Code', 'src.title': 'Verify contract source', 'src.sub': 'The source is compiled in your browser with the official Solidity compiler and compared with the code on chain. Nothing is uploaded to a server.', 'src.address': 'Contract address', 'src.compiler': 'Compiler', 'src.optimizer': 'Optimizer', 'src.runs': 'Optimizer runs', 'src.evm': 'EVM version', 'src.evmDefault': 'Compiler default', 'src.source': 'Solidity source (one file)', 'src.files': 'Or choose .sol files or a Standard JSON input (they stay on your computer)', 'src.check': 'Compile and compare', 'src.loading': 'Downloading the compiler {v} and compiling…', 'src.exact': 'The source matches the code on chain exactly: {name}', 'src.partial': 'The source matches the code on chain; only the metadata (comments or file names) differs: {name}', 'src.noMatch': 'No contract from this source matches the code on chain. Check the compiler version, the optimizer and the EVM version.', 'src.errors': 'The compiler reported errors', 'src.libraries': 'Contracts with linked libraries are not supported yet.', 'src.publish': 'Publish the source on chain', 'src.published': 'The source is published. Everyone can now check it on the contract page.', 'src.noRegistry': 'The Source registry contract is not on this network yet. Anyone can deploy it with one transaction: it has no owner and no fees.', 'src.deploy': 'Deploy the Source registry', 'src.deployed': 'The contract is deployed. Its address goes into the Explorer with the next update; then sources can be published.', 'src.none': 'The source of this contract has not been published.', 'src.verifyLink': 'Verify and publish the source', 'src.available': 'Published sources: {n}. Your browser checks them with the official compiler (a download of about 10 MB).', 'src.checkNow': 'Check the source', 'src.verified': 'Verified in your browser', 'src.notVerified': 'None of the published sources matches the code on chain.', 'src.publisher': 'Published by', 'src.settings': 'Settings', 'src.abi': 'ABI', 'nav.verify': 'Verify contract', 'net.community': 'The main node does not answer; data now comes from the community node {host}, verified by the network.', 'coin.text': 'Show the currency as QU', 'coin.symbol': 'Show the currency as the Quinvium symbol', 'tool.nameReady': 'Step 1 is on chain and the protection period is over. Click Finish registration and confirm step 2 in your wallet.', 'tool.nameFinish': 'Finish registration (step 2 of 3)', 'addr.names': '.qu names', 'addr.namesHint': 'The name is not primary yet, so it is not shown instead of the address.', 'addr.setPrimary': 'Set as primary name', 'net.title': 'Network', 'net.rpcLan': 'RPC on the home network', 'net.rpcPublic': 'RPC from the internet', 'net.rpcPublicFwd': 'RPC from the internet (after forwarding)', 'net.rpcOnlyHere': 'The node accepts only this computer. Turn on sharing in the Quinvium app under Node, Connections and access.', 'net.rpcHint': 'In a phone wallet, enter the home network RPC, or the internet RPC when the phone is on mobile data.', 'charts.time': 'Block time (s)', 'charts.diff': 'Difficulty', 'charts.rate': 'Estimated hashrate (H/s)',
       'rich.sub': 'Addresses by balance', 'mem.sub': 'Transactions waiting to be mined', 'miners.sub': 'From the last 1000 blocks', 'search.none': 'Nothing found for',
       'swap.allTrades': 'All swaps →', 'swap.mine': 'My liquidity', 'swap.searchPair': 'Search pair', 'swap.linked': 'The amounts are linked by the pool rate', 'swap.linkedRate': 'Linked by the pool rate: 1 {a} = {rate} {b}', 'swap.newPoolRate': 'New pool: the ratio of the amounts sets the starting rate', 'swap.addMore': 'Add more', 'swap.withdrawPart': 'Withdraw', 'swap.youGet': 'You get back about {a} and {b}.', 'swap.everything': 'all', 'swap.pickPart': 'Choose how much to withdraw.', 'swap.showMore': 'Show {n} more ({total} in total)', 'swap.noMatch': 'No pair matches the search.', 'bridge.step1': 'Lock', 'bridge.step2': 'Confirm', 'bridge.step3': 'Receive', 'bridge.how2n': 'Independent validators wait until the transfer is deep enough in the chain and sign it. {threshold} of {count} signatures are needed.',
       'pools.online': 'Server published', 'pools.noServerShort': 'No server', 'pool.asic': 'ASIC and others', 'pool.viaApp': 'In the Quinvium app open Mining → Where you mine, find this pool in the list and choose it. Mining then runs for your wallet.', 'pool.asicUrl': 'Pool URL', 'pool.asicWorker': 'Worker', 'pool.password': 'Password', 'pool.loginNote': 'your payout wallet address, then a dot and a device name', 'pool.passwordNote': 'anything, the pool ignores it', 'pool.algo': 'Algorithm', 'pool.algoNote': 'standard Ethash over EthereumStratum/1.0.0 or ETHPROXY', 'pool.payout': 'Payouts', 'pool.payoutNote': 'automatic from the contract, PPLNS over the last {n} min, operator fee {fee}', 'pool.software': 'Software', 'pool.connectNote': 'Mining goes through the server the operator published. The contract holds the rewards: the operator only takes the fee, and every miner can also withdraw on their own with the Withdraw button.', 'pool.share24': 'Block share in 24 h', 'pool.blocks24': '{n} blocks in 24 h', 'pool.findMiner': 'Find a miner by address', 'pool.minersTotal': '{n} miners in total', 'pool.minerNotFound': 'This address sent no share in the pool window.', 'pool.allMiners': '← All miners', 'pool.createdTitle': 'Your pool is created. What next:', 'pools.otherPools': 'Other pools', 'pools.otherCount': '{n} more pools', 'pools.all': 'All pools ({n})', 'pools.find': 'Search pools by name or address', 'pools.minersCol': 'Miners', 'pools.createdCol': 'Created', 'pools.noMatch': 'No pool matches “{q}”.',
@@ -1623,6 +1623,8 @@
           const amount = r.tokenId !== undefined ? `#${esc(r.tokenId)}` : tokenAmount(BigInt(r.value), r.info);
           return `<tr class="rowlink" data-href="/tx/${esc(r.hash)}"><td>${txLink(r.hash)}</td><td title="${esc(when(r.timestamp))}">${ago(r.timestamp)}</td><td><span class="tx-type">${dirBadge(dir)}</span></td><td>${who}</td><td class="num">${amount} <a href="/token/${esc(r.token)}">${esc(r.info?.symbol ?? short(r.token, 6))}</a></td></tr>`;
         }).join('')}</tbody></table></div>` : `<div class="empty">${t('addr.noTransfers')}</div>`}${pagerLinks(base, q, res.total)}</div>`;
+    } else if (tab === 'code' && info.isContract) {
+      body = `<div class="card" id="code-box">${'<div class="skel skel-row"></div>'.repeat(3)}</div>`;
     } else if (tab === 'tokens') {
       const rows = await tokenRows(a, info.tokens);
       body = `<div class="card">${rows.length ? `<div class="table-wrap"><table><thead><tr><th>${t('pools.name')}</th><th>${t('token.symbol')}</th><th>${t('t.balance')}</th><th>${t('t.address')}</th></tr></thead><tbody>${rows.map((r) => `<tr class="rowlink" data-href="/token/${esc(r.address)}"><td><a href="/token/${esc(r.address)}">${esc(r.name)}</a></td><td>${esc(r.symbol)}</td><td>${esc(r.value)}</td><td>${addrLink(r.address)}</td></tr>`).join('')}</tbody></table></div>` : `<div class="empty">${t('addr.noTokens')}</div>`}</div>`;
@@ -1655,12 +1657,267 @@
         others.length && [t('addr.names'), `${others.map((n) => `<span class="badge">${esc(n)}.qu</span>`).join(' ')} <span class="muted">${esc(t('addr.namesHint'))}</span>${account?.toLowerCase() === a.toLowerCase() ? ` <button type="button" class="text-btn" id="set-primary">${esc(t('addr.setPrimary'))}</button><span class="tool-output hidden" id="set-primary-out"></span>` : ''}`],
         info.isContract && [t('addr.code'), `${num(info.codeSize)} B`], symbol && [t('t.token'), `<a href="/token/${esc(a)}">${esc(symbol)}</a>`],
       ])}</div>
-      <div class="tabs">${tabLink('txs', t('nav.txs'), txCount)}${tabLink('transfers', t('addr.transfersTab'), info.tokenTransfers ?? 0)}${tabLink('mined', t('addr.mined'), info.mined.blocks)}${tabLink('pool', t('addr.poolTab'), info.poolPayouts)}${tabLink('tokens', t('addr.tokens'), info.tokens.length)}</div>${body}`;
+      <div class="tabs">${tabLink('txs', t('nav.txs'), txCount)}${tabLink('transfers', t('addr.transfersTab'), info.tokenTransfers ?? 0)}${tabLink('mined', t('addr.mined'), info.mined.blocks)}${tabLink('pool', t('addr.poolTab'), info.poolPayouts)}${tabLink('tokens', t('addr.tokens'), info.tokens.length)}${info.isContract ? `<a href="${base}?tab=code" class="${tab === 'code' ? 'active' : ''}">${t('src.tab')}</a>` : ''}</div>${body}`;
+    if (tab === 'code' && $('code-box')) codeTab($('code-box'), a, info).catch((e) => { $('code-box').innerHTML = errorBox(e.message); });
     $('show-qr').onclick = () => showQr(a);
     if ($('set-primary')) {
       txButton($('set-primary'), $('set-primary-out'), (s) => contract('AetherNames', s).setPrimary(others[0]), () => { nameCache.delete(a.toLowerCase()); setTimeout(() => { render(); renderWallet(); }, 1500); return t('tool.nameFinished'); });
     }
     bindFilters(base, tab === 'txs' ? {} : { tab });
+  }
+
+  // ------------------------------------------------------------- contract source verification
+  // The source of a contract is compiled in the visitor's browser by the official Solidity compiler (solc-worker.js) and
+  // compared with the code on chain. Authors publish the source on chain in the Source registry (contracts/SourceRegistry.sol),
+  // so it needs no server; every visitor checks it again and trusts nobody.
+  const SOLC_BASE = 'https://binaries.soliditylang.org/wasm/';
+  let solcList = null;
+  const verCmp = (a, b) => { const x = a.split('.').map(Number); const y = b.split('.').map(Number); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i]; return 0; };
+  /** Official compiler releases from 0.6.0 (older ones have another interface), newest first. */
+  function solcReleases() {
+    solcList ??= fetch(`${SOLC_BASE}list.json`).then((r) => r.json()).then((d) => d.builds
+      .filter((b) => !b.prerelease && /^\d+\.\d+\.\d+$/.test(b.version) && verCmp(b.version, '0.6.0') >= 0)
+      .sort((a, b) => verCmp(b.version, a.version)))
+      .catch((e) => { solcList = null; throw e; });
+    return solcList;
+  }
+  const solcWorkers = new Map();
+  /** Compiles a Standard JSON input with one compiler version; a worker per version stays for further compilations. */
+  function solcCompile(build, input) {
+    let w = solcWorkers.get(build.longVersion);
+    if (!w) {
+      w = { worker: new Worker('/solc-worker.js'), next: 1, waiting: new Map() };
+      w.worker.onmessage = ({ data }) => {
+        const p = w.waiting.get(data.id);
+        w.waiting.delete(data.id);
+        if (data.error) p?.reject(new Error(data.error)); else p?.resolve(JSON.parse(data.output));
+      };
+      w.worker.onerror = (e) => {
+        for (const p of w.waiting.values()) p.reject(new Error(e.message || 'the compiler stopped'));
+        w.waiting.clear();
+        solcWorkers.delete(build.longVersion);
+      };
+      solcWorkers.set(build.longVersion, w);
+    }
+    const id = w.next++;
+    return new Promise((resolve, reject) => {
+      w.waiting.set(id, { resolve, reject });
+      w.worker.postMessage({ id, url: `${SOLC_BASE}${build.path}`, sha256: build.sha256, input });
+    });
+  }
+  /** Runtime code with immutables blanked, and the same without the metadata at the end (CBOR, its length in the last two bytes). */
+  function codeParts(hex, immutables) {
+    const b = new Uint8Array(ethers.getBytes(hex));
+    for (const refs of Object.values(immutables ?? {})) for (const { start, length } of refs) b.fill(0, start, start + length);
+    const meta = b.length >= 2 ? (b[b.length - 2] << 8) | b[b.length - 1] : 0;
+    return { full: b, core: meta > 0 && meta + 2 <= b.length ? b.slice(0, b.length - meta - 2) : b };
+  }
+  const sameBytes = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+  /**
+   * Which compiled contract is the code on chain: exact (with metadata) or partial (metadata differs: comments, file names).
+   * With the creation transaction known, its code must match too (constructor arguments follow it), so a different
+   * constructor is not mistaken for a match.
+   */
+  function findMatch(onchain, output, creation) {
+    let linked = false;
+    for (const [file, list] of Object.entries(output.contracts ?? {})) {
+      for (const [name, c] of Object.entries(list)) {
+        const object = c.evm?.deployedBytecode?.object;
+        if (!object) continue;
+        if (/__\$[0-9a-f]{34}\$__/.test(object)) { linked = true; continue; }
+        const refs = c.evm.deployedBytecode.immutableReferences;
+        const a = codeParts(onchain, refs);
+        const b = codeParts(`0x${object}`, refs);
+        if (creation && c.evm.bytecode?.object) {
+          const init = ethers.getBytes(`0x${c.evm.bytecode.object}`);
+          const sent = ethers.getBytes(creation);
+          const meta = b.full.length - b.core.length;
+          if (sent.length < init.length || !sameBytes(sent.slice(0, init.length - meta), init.slice(0, init.length - meta))) continue;
+        }
+        if (sameBytes(a.full, b.full)) return { kind: 'exact', file, name, abi: c.abi };
+        if (sameBytes(a.core, b.core)) return { kind: 'partial', file, name, abi: c.abi };
+      }
+    }
+    return { kind: null, linked };
+  }
+  const OUTPUT = { '*': { '*': ['abi', 'evm.bytecode.object', 'evm.deployedBytecode.object', 'evm.deployedBytecode.immutableReferences'] } };
+  /** Compiles a publication or a form and compares it with the code at `address`. */
+  async function checkSource(address, record, creation) {
+    const build = (await solcReleases()).find((b) => b.longVersion === String(record.compiler).replace(/^v/, ''));
+    if (!build) throw new Error(`${t('src.compiler')}: ${record.compiler}`);
+    const input = { ...record.input, settings: { ...(record.input.settings ?? {}), outputSelection: OUTPUT } };
+    const [output, code] = await Promise.all([solcCompile(build, input), provider().getCode(address)]);
+    const errors = (output.errors ?? []).filter((e) => e.severity === 'error');
+    if (errors.length) return { kind: null, errors: errors.map((e) => e.formattedMessage ?? e.message) };
+    return findMatch(code, output, creation?.input);
+  }
+  const gzip = async (text) => new Uint8Array(await new Response(new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
+  const gunzip = async (bytes) => new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  /** What goes on chain: the compiler and the Standard JSON input without the output selection. */
+  const sourceRecord = async (compiler, input) => gzip(JSON.stringify({ v: 1, compiler, input: { language: input.language ?? 'Solidity', sources: input.sources, settings: { ...(input.settings ?? {}), outputSelection: undefined } } }));
+
+  /** The Source registry of this network, only when its code is the published one. */
+  let registryCache;
+  async function sourceRegistry() {
+    if (registryCache !== undefined) return registryCache;
+    const d = await deployment().catch(() => null);
+    let found = null;
+    if (d?.sources && contracts.SourceRegistry?.runtimeSha256) {
+      const code = await provider().getCode(d.sources).catch(() => '0x');
+      if (code !== '0x' && (await sha256Hex(ethers.getBytes(code))) === contracts.SourceRegistry.runtimeSha256) found = d.sources;
+    }
+    registryCache = found;
+    return found;
+  }
+  const registry = (at, runner) => new ethers.Contract(at, contracts.SourceRegistry.abi, runner ?? provider());
+  /** Publications of `target`: the creator's first (spam by others cannot push it out), then the most recent ones. */
+  async function publications(at, target, creator) {
+    const r = registry(at);
+    const [mine, recent] = await Promise.all([creator ? r.lastBlock(target, creator).catch(() => 0n) : 0n, r.recent(target).catch(() => [])]);
+    const blocks = [...new Set([mine, ...[...recent].sort((a, b) => (b > a ? 1 : -1))].filter((b) => b > 0n).map(Number))].slice(0, 6);
+    const topic = r.interface.getEvent('Published').topicHash;
+    const logs = (await Promise.all(blocks.map((b) => provider().getLogs({ address: at, topics: [topic, ethers.zeroPadValue(target, 32)], fromBlock: b, toBlock: b }).catch(() => [])))).flat();
+    const out = [];
+    for (const l of logs) {
+      try {
+        const ev = r.interface.parseLog(l);
+        const record = JSON.parse(await gunzip(ethers.getBytes(ev.args.data)));
+        if (record?.v === 1 && record.input?.sources) out.push({ ...record, publisher: ev.args.publisher, tx: l.transactionHash, block: l.blockNumber });
+      } catch { /* not a valid publication */ }
+    }
+    if (creator) out.sort((a, b) => (b.publisher.toLowerCase() === creator.toLowerCase()) - (a.publisher.toLowerCase() === creator.toLowerCase()));
+    return out;
+  }
+  /** The transaction that created a contract directly (not through a factory), from its first block: creator and code sent. */
+  async function creationOf(address) {
+    // The first block with code at the address, by halving the range (the node keeps the whole history).
+    let lo = 0;
+    let hi = await provider().getBlockNumber();
+    while (lo < hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      if ((await provider().getCode(address, mid)) !== '0x') hi = mid; else lo = mid + 1;
+    }
+    const b = await provider().getBlock(lo, true).catch(() => null);
+    for (const tx of b?.prefetchedTransactions ?? []) {
+      if (tx.to) continue;
+      const r = await provider().getTransactionReceipt(tx.hash).catch(() => null);
+      if (r?.contractAddress?.toLowerCase() === address.toLowerCase()) return { from: tx.from, input: tx.data };
+    }
+    return null;
+  }
+  const sourceFiles = (record, file) => Object.entries(record.input.sources).sort(([a], [b]) => (b === file) - (a === file))
+    .map(([name, s]) => `<details class="src-file"${name === file ? ' open' : ''}><summary>${esc(name)}</summary><pre class="src-code">${esc(s.content ?? '')}</pre></details>`).join('');
+  const settingsText = (record) => {
+    const s = record.input.settings ?? {};
+    return [`solc ${record.compiler}`, s.optimizer?.enabled ? `${t('src.optimizer')} ${s.optimizer.runs ?? 200}` : `${t('src.optimizer')} —`, s.evmVersion ? `EVM ${s.evmVersion}` : '', s.viaIR ? 'via IR' : ''].filter(Boolean).join(' · ');
+  };
+
+  /** The Code tab of a contract: published sources, checked in the browser on request. */
+  async function codeTab(box, address, info) {
+    const at = await sourceRegistry();
+    if (!at) { box.innerHTML = `<p>${esc(t('src.noRegistry'))}</p><p><a href="/verify?address=${esc(address)}">${esc(t('src.verifyLink'))}</a></p>`; return; }
+    const creation = await creationOf(address).catch(() => null);
+    const list = await publications(at, address, creation?.from);
+    if (!list.length) { box.innerHTML = `<p>${esc(t('src.none'))}</p><p><a class="primary-btn" href="/verify?address=${esc(address)}">${esc(t('src.verifyLink'))}</a></p>`; return; }
+    box.innerHTML = `<p>${esc(fill('src.available', { n: num(list.length) }))}</p><div class="tool-actions"><button type="button" class="primary-btn" id="src-check">${esc(t('src.checkNow'))}</button></div><div class="tool-output hidden" id="src-out"></div>`;
+    $('src-check').onclick = async () => {
+      const btn = $('src-check');
+      const out = $('src-out');
+      btn.disabled = true;
+      out.className = 'tool-output';
+      try {
+        for (const record of list) {
+          out.textContent = fill('src.loading', { v: record.compiler });
+          const m = await checkSource(address, record, creation).catch(() => ({ kind: null }));
+          if (!m.kind) continue;
+          box.innerHTML = `<p class="tool-done"><span class="badge ok">${esc(t('src.verified'))}</span> ${esc(fill(m.kind === 'exact' ? 'src.exact' : 'src.partial', { name: `${m.file}:${m.name}` }))}</p>
+            ${kv([[t('src.settings'), esc(settingsText(record))], [t('src.publisher'), `${addrLink(record.publisher)} ${txLink(record.tx)}`]])}
+            ${sourceFiles(record, m.file)}
+            <details class="src-file"><summary>${esc(t('src.abi'))}</summary><pre class="src-code">${esc(JSON.stringify(m.abi, null, 1))}</pre></details>`;
+          return;
+        }
+        out.textContent = t('src.notVerified');
+        out.className = 'tool-output bad';
+      } finally { btn.disabled = false; }
+    };
+  }
+
+  /** Verify page: compile a source in the browser, compare it with a contract and publish it on chain. */
+  async function pageVerify(q) {
+    const builds = await solcReleases().catch(() => []);
+    const EVMS = ['', 'prague', 'cancun', 'shanghai', 'paris', 'london', 'berlin', 'istanbul'];
+    app.innerHTML = `${head(t('src.title'), t('src.sub'))}
+      <div class="card"><form class="tool-form" id="verify-form">
+        <label><span>${esc(t('src.address'))}</span><input name="address" autocomplete="off" spellcheck="false" value="${esc(q.get('address') ?? '')}" required></label>
+        <label><span>${esc(t('src.compiler'))}</span><select name="compiler">${builds.map((b) => `<option value="${esc(b.longVersion)}">${esc(b.longVersion)}</option>`).join('')}</select></label>
+        <label><span>${esc(t('src.evm'))}</span><select name="evm">${EVMS.map((v) => `<option value="${v}">${esc(v || t('src.evmDefault'))}</option>`).join('')}</select></label>
+        <label class="check"><input type="checkbox" name="optimizer"> <span>${esc(t('src.optimizer'))}</span></label>
+        <label><span>${esc(t('src.runs'))}</span><input name="runs" inputmode="numeric" value="200"></label>
+        <label class="wide"><span>${esc(t('src.source'))}</span><textarea name="source" rows="12" spellcheck="false"></textarea></label>
+        <label class="wide"><span>${esc(t('src.files'))}</span><input type="file" name="files" multiple accept=".sol,.json"></label>
+        <div class="tool-actions"><button type="submit" class="primary-btn">${esc(t('src.check'))}</button></div>
+      </form><div class="tool-output hidden" id="verify-out"></div><div id="verify-next"></div></div>`;
+    const form = $('verify-form');
+    const out = $('verify-out');
+    const next = $('verify-next');
+    const show = (html, cls = '') => { out.innerHTML = html; out.className = `tool-output rich ${cls}`; };
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      next.innerHTML = '';
+      const f = new FormData(form);
+      const address = String(f.get('address')).trim();
+      if (!ethers.isAddress(address)) { show(esc(t('f.badAddress')), 'bad'); return; }
+      let input;
+      const files = [...form.elements.files.files];
+      const json = files.find((x) => x.name.endsWith('.json'));
+      if (json) input = JSON.parse(await json.text());
+      else {
+        const sources = {};
+        for (const x of files) sources[x.name] = { content: await x.text() };
+        const text = String(f.get('source') ?? '');
+        if (text.trim()) sources['Contract.sol'] = { content: text };
+        if (!Object.keys(sources).length) { show(esc(t('tool.missing')), 'bad'); return; }
+        const settings = { optimizer: { enabled: f.get('optimizer') === 'on', runs: Number(f.get('runs')) || 200 } };
+        if (f.get('evm')) settings.evmVersion = String(f.get('evm'));
+        input = { language: 'Solidity', sources, settings };
+      }
+      const compiler = String(f.get('compiler'));
+      const btn = form.querySelector('button[type=submit]');
+      btn.disabled = true;
+      show(esc(fill('src.loading', { v: compiler })));
+      try {
+        if ((await provider().getCode(address)) === '0x') { show(esc(t('src.noMatch')), 'bad'); return; }
+        const m = await checkSource(address, { compiler, input }, await creationOf(address).catch(() => null));
+        if (m.errors) { show(`<strong>${esc(t('src.errors'))}</strong><pre class="src-code">${esc(m.errors.join('\n'))}</pre>`, 'bad'); return; }
+        if (!m.kind) { show(esc(t(m.linked ? 'src.libraries' : 'src.noMatch')), 'bad'); return; }
+        show(esc(fill(m.kind === 'exact' ? 'src.exact' : 'src.partial', { name: `${m.file}:${m.name}` })), 'good');
+        const at = await sourceRegistry();
+        if (!at) {
+          const bytes = ethers.getBytes(contracts.SourceRegistry.bytecode);
+          next.innerHTML = `<p class="tool-hint">${esc(t('src.noRegistry'))}</p><dl class="tool-result"><dt>SourceRegistry</dt><dd>${num(bytes.length)} B · SHA-256 <span class="hash">${esc(await sha256Hex(bytes))}</span></dd></dl>
+            <p class="tool-note">${esc(t('prof.source'))}</p><div class="tool-actions"><button type="button" class="primary-btn" id="src-deploy">${esc(t('src.deploy'))}</button></div><div class="tool-output hidden" id="src-deploy-out"></div>`;
+          $('src-deploy').onclick = async () => {
+            const b = $('src-deploy');
+            const o = $('src-deploy-out');
+            b.disabled = true;
+            o.className = 'tool-output rich';
+            try {
+              const c = await new ethers.ContractFactory(contracts.SourceRegistry.abi, contracts.SourceRegistry.bytecode, await signer()).deploy();
+              const tx = c.deploymentTransaction();
+              o.textContent = `${t('tool.sent')}: ${tx.hash}`;
+              const r = await provider().waitForTransaction(tx.hash);
+              if (!r?.status || !r.contractAddress) throw new Error(t('tool.failed'));
+              o.innerHTML = `<p class="tool-done"><strong>${t('tool.done')} #${r.blockNumber}</strong></p><dl class="tool-result"><dt>${esc(t('prof.address'))}</dt><dd><a class="hash" href="/address/${esc(r.contractAddress)}">${esc(r.contractAddress)}</a></dd></dl><p class="tool-note">${esc(t('src.deployed'))}</p>`;
+              o.className = 'tool-output rich good';
+            } catch (err) { o.textContent = errorText(err); o.className = 'tool-output bad'; } finally { b.disabled = false; }
+          };
+          return;
+        }
+        const data = await sourceRecord(compiler, input);
+        next.innerHTML = `<div class="tool-actions"><button type="button" class="primary-btn" id="src-publish">${esc(t('src.publish'))}</button></div><div class="tool-output hidden" id="src-publish-out"></div>`;
+        txButton($('src-publish'), $('src-publish-out'), (s) => registry(at, s).publish(address, data), () => t('src.published'));
+      } catch (err) { show(esc(errorText(err)), 'bad'); } finally { btn.disabled = false; }
+    };
   }
 
   // ------------------------------------------------------------- grafy
@@ -4315,6 +4572,7 @@
         case 'token': return await pageToken(r.arg, r.query);
         case 'bridge': return await pageBridge(r.query);
         case 'api': return pageApi(r.arg);
+        case 'verify': return await pageVerify(r.query);
         default: navigate('/', { replace: true }); return undefined;
       }
     }
