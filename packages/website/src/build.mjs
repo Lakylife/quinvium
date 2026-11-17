@@ -42,7 +42,7 @@ const EXT = '<svg class="ic ext" viewBox="0 0 24 24" aria-hidden="true"><path d=
  * the download page also describes the app as SoftwareApplication. "<" is escaped so no text can close the script tag.
  */
 function ldJson(p, path, dl) {
-  const site = { '@type': 'WebSite', '@id': `${SITE}/#website`, name: 'Quinvium', url: `${SITE}/`, description: 'A programmable proof-of-work blockchain mined on graphics cards.', inLanguage: 'en', sameAs: ['https://github.com/Lakylife/quinvium', 'https://x.com/Quinvium', 'https://t.me/Quinvium'] };
+  const site = { '@type': 'WebSite', '@id': `${SITE}/#website`, name: 'Quinvium', url: `${SITE}/`, description: 'A programmable proof-of-work blockchain mined on graphics cards.', inLanguage: 'en', sameAs: ['https://github.com/Lakylife/quinvium', 'https://x.com/Quinvium', 'https://t.me/Quinvium', 'https://bitcointalk.org/index.php?topic=5600215.0'] };
   const page = { '@type': 'WebPage', '@id': `${SITE}${path}#page`, url: `${SITE}${path}`, name: p.title, description: p.desc, isPartOf: { '@id': `${SITE}/#website` }, inLanguage: 'en' };
   const graph = [site, page];
   if (p.slug === 'download' && dl) {
@@ -156,7 +156,7 @@ ${p.body}
         <div><h4>Learn</h4>${foot(['about', 'whitepaper', 'tokenomics', 'roadmap', 'faq'])}</div>
         <div><h4>Use</h4>${foot(['wallets', 'download', 'ecosystem'])}<a href="${EXPLORER}">Explorer</a></div>
         <div><h4>Mine &amp; build</h4>${foot(['mining', 'developers'])}<a href="${EXPLORER}/api">Documentation and API</a><a href="https://testnet.quinvium.com">Testnet</a></div>
-        <div><h4>Community</h4><a href="https://x.com/Quinvium" rel="me">X (Twitter)</a><a href="https://t.me/Quinvium" rel="me">Telegram</a><a href="${GITHUB}">GitHub</a><a href="${GITHUB}/releases">Releases</a><a href="${GITHUB}/issues">Report an issue</a>${foot(['security', 'contact'])}</div>
+        <div><h4>Community</h4><a href="https://x.com/Quinvium" rel="me">X (Twitter)</a><a href="https://t.me/Quinvium" rel="me">Telegram</a><a href="https://bitcointalk.org/index.php?topic=5600215.0">Bitcointalk</a><a href="${GITHUB}">GitHub</a><a href="${GITHUB}/releases">Releases</a><a href="${GITHUB}/issues">Report an issue</a>${foot(['security', 'contact'])}</div>
       </nav>
     </div>
     <div class="foot-status" data-foot-status><span class="dot" data-foot-dot></span><span data-foot-text>Mainnet</span><span class="sep">·</span><a href="https://rpc.quinvium.com/health">rpc.quinvium.com</a></div>
