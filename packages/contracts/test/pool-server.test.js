@@ -258,6 +258,13 @@ test('the server triggers the payout itself and coins go directly to miners', as
   assert.ok((await provider.getBalance(payer.address)) < payerBefore, 'server jen platí gas, mince nedostane');
   assert.equal(await pool.pendingOf(alice.address), 0n);
   assert.equal(await node.pool.payout(), null, 'bez čekajících výplat se nic neodešle');
+  // The Explorer's pool charts: blocks, shares and payouts of this pool over time.
+  const series = await rpc('aether_poolSeries', [poolAddress, { points: 10 }]);
+  const total = (k) => series.items.reduce((v, x) => v + Number(x[k]), 0);
+  assert.ok(total('blocks') >= 1, 'pool blocks in the chart');
+  assert.ok(total('shares') >= 1, 'accepted shares in the chart');
+  assert.ok(total('payouts') >= 3, 'payouts to the three miners');
+  assert.ok(series.items.reduce((v, x) => v + BigInt(x.paid), 0n) >= pending, 'the paid amount includes Alice\'s payout');
 });
 
 test('a quiet pool closes rounds itself and knows its miners after a server restart', async () => {

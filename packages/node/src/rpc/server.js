@@ -58,7 +58,7 @@ const TOO_MANY = { jsonrpc: '2.0', id: null, error: { code: -32005, message: 'to
 export const HEAVY_METHODS = new Set([
   'eth_call', 'eth_estimateGas', 'eth_getLogs', 'eth_getFilterLogs', 'eth_getFilterChanges', 'eth_feeHistory', 'eth_getProof',
   ...['activity', 'blocks', 'txs', 'addressInfo', 'tokenInfo', 'addressTransfers', 'tokenTransfers', 'contractLogs', 'minerShares',
-    'poolMiners', 'pools', 'minedByDay', 'txError', 'poolsOf', 'poolPayouts', 'chartSeries', 'minerList']
+    'poolMiners', 'pools', 'minedByDay', 'txError', 'poolsOf', 'poolPayouts', 'chartSeries', 'minerList', 'poolSeries']
     .flatMap((m) => [`aether_${m}`, `quintium_${m}`, `quinvium_${m}`]),
 ]);
 /** Heavy requests of one foreign address that may wait for their turn; more are refused. */
