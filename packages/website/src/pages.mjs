@@ -634,6 +634,7 @@ certutil -hashfile Quinvium-${dl ? dl.version : 'x'}-Windows-x64.exe SHA256    #
     ${card('globe', L('E-mail', 'E-mail'), `<span class="placeholder">${L('bude doplněn', 'to be added')}</span>`)}
     ${card('users', 'X (Twitter)', `<a href="https://x.com/Quinvium" rel="me">@Quinvium</a>, ${L('novinky a oznámení', 'news and announcements')}`)}
     ${card('users', 'Telegram', `<a href="https://t.me/Quinvium" rel="me">t.me/Quinvium</a>, ${L('diskuse komunity', 'community chat')}`)}
+    ${card('users', 'Bitcointalk', `<a href="https://bitcointalk.org/index.php?topic=5600215.0">${L('Oznámení [ANN]', 'Announcement [ANN]')}</a>, ${L('vlákno pro těžaře a pooly', 'thread for miners and pools')}`)}
     ${card('code', L('Zdrojový kód', 'Source code'), '<a href="https://github.com/Lakylife/quinvium">github.com/Lakylife/quinvium</a>, issues and pull requests welcome.')}
   </div>
   <p class="muted">${L('Kdo po vás chce obnovovací frázi nebo poslání mincí „na ověření“, je podvodník.', 'Anyone who asks for your recovery phrase or for coins “for verification” is a scammer.')}</p>
