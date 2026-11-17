@@ -4,7 +4,10 @@ name: pages
 on:
   push:
     branches: [main]
-    paths: ['packages/website/public/**', '.github/workflows/pages.yml']
+    paths: ['packages/website/public/**', '.github/workflows/pages.yml', 'ops/pages/nodes.mjs']
+  # The site files stay as committed; only nodes.json (community nodes for an outage of our servers) is refreshed.
+  schedule:
+    - cron: '17 */3 * * *'
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,6 +28,8 @@ jobs:
         run: |
           cp -r packages/website/public _site
           echo quinvium.com > _site/CNAME
+      - name: Community nodes (nodes.json)
+        run: node ops/pages/nodes.mjs --chain 52401 --genesis 0x49c889ad9d4f44869cf7f97a6e079a50dbf13974263b1afedec3b774ebeeac39 --rpc https://rpc.quinvium.com --previous https://quinvium.com/nodes.json --previous https://explorer.quinvium.com/nodes.json --out _site/nodes.json
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: _site

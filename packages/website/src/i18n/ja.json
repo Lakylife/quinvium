@@ -454,5 +454,8 @@
  "Quinvium whitepaper · Quinvium": "Quinvium ホワイトペーパー · Quinvium",
  "A programmable proof-of-work network for GPU miners: consensus, execution, monetary policy, built-in contracts, networking, security and roadmap.": "GPU マイナーのためのプログラム可能なプルーフ・オブ・ワークのネットワーク：コンセンサス、実行、金融政策、組み込みコントラクト、ネットワーク、セキュリティ、ロードマップ。",
  "Quinvium whitepaper": "Quinvium ホワイトペーパー",
- "A programmable proof-of-work network for GPU miners. Version 1.0, 14 November 2026.": "GPU マイナーのためのプログラム可能なプルーフ・オブ・ワークのネットワーク。バージョン 1.0、2026年11月14日。ホワイトペーパー本文は英語です。"
+ "A programmable proof-of-work network for GPU miners. Version 1.0, 14 November 2026.": "GPU マイナーのためのプログラム可能なプルーフ・オブ・ワークのネットワーク。バージョン 1.0、2026年11月14日。ホワイトペーパー本文は英語です。",
+ "Live from the network, refreshed every 15 s.": "ネットワークからのライブ表示、15 秒ごとに更新。",
+ "No node is answering right now.": "現在応答しているノードはありません。",
+ "<strong>Keep this page alive.</strong> These numbers come from nodes that people run. Run the Quinvium app and turn on Share node publicly: your node then serves this page, the Explorer and wallets when the main servers are down. <a href=\"/download/\">Get the app</a>": "<strong>このページを支えてください。</strong> これらの数値は人々が運用するノードから届いています。Quinvium アプリを起動して「ノードを公開して共有」をオンにすると、メインサーバーが停止したときにあなたのノードがこのページ、Explorer、ウォレットにデータを提供します。<a href=\"/download/\">アプリを入手</a>"
 }

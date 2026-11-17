@@ -150,6 +150,8 @@ async function currentNetwork() {
 // Signing stays in the wallet, so a community node can at worst show wrong data or refuse a transaction.
 const COMMUNITY_URL = /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+$/;
 const COMMUNITY_REFRESH_MS = 600_000;
+// The genesis block of each built-in network: a community node must show it, not only the chain ID.
+const GENESIS = { 52401: '0x49c889ad9d4f44869cf7f97a6e079a50dbf13974263b1afedec3b774ebeeac39', 52402: '0x4845f69c270efcf1f74a789a9ad85d31a5128a1907a7fdf5d1dd131eebaed121' };
 const communityAt = {};
 const fallbackUntil = {};
 const usesDefaultNode = (n) => !self.AETHER_LOCAL_RPC && !self.AETHER_TEST_RPC && DEFAULT_NETWORKS[n.chainId]?.rpc === n.rpc && /^https:/.test(n.rpc);
@@ -177,8 +179,9 @@ async function communityNode(n) {
   for (const url of await local.get(`community.${n.chainId}`, [])) {
     if (!COMMUNITY_URL.test(url)) continue;
     try {
-      const d = await post(url, 'eth_chainId', [], 4000);
-      if (BigInt(d?.result ?? -1) !== BigInt(n.chainId)) continue;
+      const [id, genesis] = await Promise.all([post(url, 'eth_chainId', [], 4000), post(url, 'eth_getBlockByNumber', ['0x0', false], 4000)]);
+      if (BigInt(id?.result ?? -1) !== BigInt(n.chainId)) continue;
+      if (GENESIS[n.chainId] && String(genesis?.result?.hash).toLowerCase() !== GENESIS[n.chainId]) continue;
       fallbackUntil[n.chainId] = { url, until: Date.now() + 60_000 };
       return url;
     } catch { /* the next one */ }

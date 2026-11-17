@@ -105,7 +105,9 @@ export function pages(L, u, dl = null) {
       <div><i class="st-ic" aria-hidden="true">${icon('clock')}</i><span>Avg. block time</span><strong data-m="blocktime" class="sk"></strong></div>
       <div><i class="st-ic" aria-hidden="true">${icon('coins')}</i><span>Mined supply</span><strong data-m="supply" class="sk"></strong></div>
     </div>
-    <p class="live-note" data-live-note data-before="Numbers start moving when mainnet launches on 14 November 2026 at 00:00 CET." data-off="The public node is not answering right now." data-on="Live from rpc.quinvium.com, refreshed every 15 s."></p>
+    <p class="live-note" data-live-note data-before="Numbers start moving when mainnet launches on 14 November 2026 at 00:00 CET." data-off="No node is answering right now." data-on="Live from the network, refreshed every 15 s."></p>
+    <p class="live-note"><strong>Keep this page alive.</strong> These numbers come from nodes that people run. Run the Quinvium app and turn on Share node publicly: your node then serves this page, the Explorer and wallets when the main servers are down. <a href="${u('download')}">Get the app</a></p>
+    <p class="live-note" data-community-count hidden></p>
   </div>
 </section>
 

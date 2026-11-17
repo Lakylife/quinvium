@@ -72,6 +72,42 @@ try {
     assert.notEqual(used, b.url, 'the node on the other branch is not used');
     await p2.close();
   });
+  await step('with the configured node down, the saved community nodes (nodes.json) serve the page, only those on the same chain', async () => {
+    const genesis = await fetch(a.url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getBlockByNumber', params: ['0x0', false] }) }).then((r) => r.json()).then((d) => d.result.hash);
+    const p3 = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    const asked = [];
+    // A node of another chain: answers everything, but with chain ID 1.
+    await p3.route('https://other-chain.community.test/**', async (route) => {
+      const { method } = JSON.parse(route.request().postData() ?? '{}');
+      asked.push(method);
+      await route.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, result: method === 'eth_chainId' ? '0x1' : method === 'eth_getBlockByNumber' ? { hash: '0x' + '11'.repeat(32), number: '0x0' } : '0x99' }) });
+    });
+    // A community node of this chain (node A behind an https name).
+    await p3.route('https://good.community.test/**', (route) => route.fetch({ url: a.url }).then((response) => route.fulfill({ response, headers: { ...response.headers(), 'access-control-allow-origin': '*' } })));
+    await p3.route('**/config.js', (route) => route.fulfill({ contentType: 'application/javascript', body: `window.AETHER_CONFIG = { walletConnectProjectId: '', rpc: ['${DEAD}'], expect: { chainId: 52403, genesis: '${genesis}' } };` }));
+    await p3.route('**/nodes.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ 52403: ['https://other-chain.community.test', 'https://good.community.test'] }) }));
+    await p3.goto(`${a.url}/blocks`);
+    await p3.waitForFunction(() => /#\d/.test(document.getElementById('footer-status')?.textContent ?? ''), null, { timeout: 30000 });
+    await p3.waitForFunction(() => [...document.querySelectorAll('.toast')].some((t) => t.textContent.includes('good.community.test')), null, { timeout: 30000 });
+    assert.ok(asked.every((m) => m === 'eth_chainId' || m === 'eth_getBlockByNumber'), `the node of another chain was only checked: ${asked.join(', ')}`);
+    await p3.close();
+  });
+  await step('the Network page sets the visitor\'s own node only after checking its chain', async () => {
+    const genesis = await fetch(a.url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getBlockByNumber', params: ['0x0', false] }) }).then((r) => r.json()).then((d) => d.result.hash);
+    const p4 = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await p4.route('**/config.js', (route) => route.fulfill({ contentType: 'application/javascript', body: `window.AETHER_CONFIG = { walletConnectProjectId: '', rpc: ['${a.url}'], expect: { chainId: 52403, genesis: '${genesis}' } };` }));
+    await p4.goto(`${a.url}/network`);
+    await p4.waitForSelector('#own-node', { timeout: 30000 });
+    await p4.fill('#own-node input[name=url]', DEAD);
+    await p4.click('#own-node button[type=submit]');
+    await p4.waitForSelector('.toast', { timeout: 15000 });
+    assert.equal(await p4.evaluate(() => Object.keys(localStorage).find((k) => k.startsWith('quinvium.userNode.')) ?? null), null, 'a node that does not answer is not saved');
+    await p4.fill('#own-node input[name=url]', b.url);
+    await Promise.all([p4.waitForEvent('load'), p4.click('#own-node button[type=submit]')]);
+    assert.equal(await p4.evaluate(() => localStorage.getItem(Object.keys(localStorage).find((k) => k.startsWith('quinvium.userNode.')))), b.url);
+    await p4.waitForSelector('#own-reset', { timeout: 30000 });
+    await p4.close();
+  });
   await step('after the selected node fails the Explorer switches to the second and keeps showing blocks', async () => {
     const [down, other] = chosen === a.url ? [a, b] : [b, a];
     down.proc.kill('SIGKILL');
@@ -81,7 +117,7 @@ try {
     await page.waitForFunction((url) => localStorage.getItem('aether.rpc') === url, other.url, { timeout: 20000 });
     await page.waitForFunction(() => /#\d/.test(document.getElementById('footer-status')?.textContent ?? ''), null, { timeout: 20000 });
     await page.waitForFunction(() => document.getElementById('app').innerText.trim().length > 0 && !document.querySelector('#app .skel'), null, { timeout: 20000 });
-    assert.match(await page.innerText('#app'), /\d/, 'stránka bloků ukazuje bloky');
+    assert.match(await page.innerText('#app'), /\d/, 'the blocks page shows blocks');
     assert.deepEqual(errors, []);
   });
 } finally {
@@ -89,5 +125,5 @@ try {
   a.proc.kill('SIGKILL');
   b.proc.kill('SIGKILL');
 }
-console.log(failed ? `NEPROŠLO ${failed}` : 'Vše prošlo.');
+console.log(failed ? `FAILED ${failed}` : 'All passed.');
 process.exit(failed ? 1 : 0);
