@@ -45,6 +45,7 @@ const MAX_PAGE = 100;
 const HASHRATE_QUIET_S = 180n;       // 12 target block times: with mining running such a pause practically never happens
 const MAX_OFFSET = 1_000_000;
 const MAX_CHART_POINTS = 600;
+const MAX_POOL_PAYOUTS = 5000;   // payout events read for one pool chart; the amounts come from receipts
 const TX_KINDS = { transfer: 0, call: 1, create: 2 };
 const MAX_SUMMED = 2000;
 const MAX_PAID_SUMS = 1024;
@@ -836,6 +837,46 @@ export function createMethods(node) {
         paidSums.set(key, known);
       }
       return { total, sum: known.sum, items: rows.map(amount) };
+    },
+    /**
+     * One pool over time: blocks it mined and their share of the network, its estimated hashrate, accepted shares and
+     * active miners, and payouts to miners (how many and how much). Read-only, from the index; amounts from the receipts.
+     */
+    aether_poolSeries: async ([a, f = {}] = []) => {
+      const pool = hexAddress(a);
+      const range = await index('indexRange');
+      const to = count(f.to) ?? range.last ?? 0;
+      const from = Math.max(count(f.from) ?? range.first ?? 0, range.first ?? 0);
+      const points = Math.min(MAX_CHART_POINTS, Math.max(10, count(f.points) ?? 120));
+      const bucket = Math.max(MIN_CHART_BUCKET_S, count(f.bucket) ?? Math.ceil((to - from + 1) / points));
+      const s = await index('poolSeries', pool.bytes, SHARE_TOPIC, PAID_TOPIC, from, to, bucket, MAX_POOL_PAYOUTS);
+      const own = new Map(s.own.map((r) => [r.b, r]));
+      const shares = new Map(s.shares.map((r) => [r.b, r]));
+      const paid = new Map();
+      for (const r of s.payouts) {
+        const block = chain.getBlock(chain.store.canonicalHash(r.number));
+        const log = block && fullReceipts(block)[r.tx_idx]?.logs.find((l) => l.logIndex === r.log_idx);
+        if (!log) continue;
+        const b = Math.floor((r.time - from) / bucket);
+        const p = paid.get(b) ?? { payouts: 0, paid: 0n };
+        p.payouts += 1;
+        p.paid += BigInt(log.data);
+        paid.set(b, p);
+      }
+      return {
+        from, to, bucket, capped: s.payouts.length >= MAX_POOL_PAYOUTS,
+        items: s.all.map((r) => {
+          const o = own.get(r.b);
+          const sh = shares.get(r.b);
+          const p = paid.get(r.b);
+          const seconds = Math.max(bucket / 2, Math.min(bucket, to - (from + r.b * bucket) + 1));
+          return {
+            time: r.time, networkBlocks: r.blocks, blocks: o?.blocks ?? 0, income: String(Math.round(o?.income ?? 0)),
+            hashrate: (o?.work ?? 0) / seconds, share: r.work ? (o?.work ?? 0) / r.work : 0,
+            shares: sh?.shares ?? 0, miners: sh?.miners ?? 0, payouts: p?.payouts ?? 0, paid: (p?.paid ?? 0n).toString(),
+          };
+        }),
+      };
     },
     /** Network history by interval: block time, difficulty, hashrate estimate, transactions and gas. */
     aether_chartSeries: async ([f = {}] = []) => {

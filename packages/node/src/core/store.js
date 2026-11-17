@@ -502,6 +502,24 @@ export class Store {
       FROM block_index WHERE time BETWEEN ? AND ? GROUP BY b ORDER BY b`).all(from, bucket, from, to);
   }
 
+  /**
+   * One pool over equally long intervals: its blocks and income, all blocks of the network, accepted shares and miners,
+   * and the payout events (the caller reads the amounts). Shares and payouts go through the block range of the period.
+   */
+  poolSeries(pool, shareTopic, paidTopic, from, to, bucket, payoutLimit) {
+    const span = this.db.prepare('SELECT MIN(number) AS lo, MAX(number) AS hi FROM block_index INDEXED BY block_index_time WHERE time BETWEEN ? AND ?').get(from, to);
+    const own = this.db.prepare(`SELECT CAST((time - ?) / ? AS INTEGER) AS b, COUNT(*) AS blocks, COALESCE(SUM(income),0) AS income, COALESCE(SUM(difficulty),0) AS work
+      FROM block_index INDEXED BY block_index_miner WHERE miner=? AND number BETWEEN ? AND ? GROUP BY b`).all(from, bucket, buf(pool), span.lo ?? 0, span.hi ?? -1);
+    const all = this.db.prepare(`SELECT CAST((time - ?) / ? AS INTEGER) AS b, MIN(time) AS time, COUNT(*) AS blocks, COALESCE(SUM(difficulty),0) AS work
+      FROM block_index INDEXED BY block_index_time WHERE time BETWEEN ? AND ? GROUP BY b ORDER BY b`).all(from, bucket, from, to);
+    const shares = this.db.prepare(`SELECT CAST((bi.time - ?) / ? AS INTEGER) AS b, COUNT(*) AS shares, COUNT(DISTINCT l.t1) AS miners
+      FROM logs l INDEXED BY logs_address JOIN block_index bi ON bi.number=l.number WHERE l.address=? AND l.number BETWEEN ? AND ? AND l.t0=? GROUP BY b`)
+      .all(from, bucket, buf(pool), span.lo ?? 0, span.hi ?? -1, buf(shareTopic));
+    const payouts = this.db.prepare(`SELECT l.number, l.tx_idx, l.log_idx, bi.time FROM logs l INDEXED BY logs_address JOIN block_index bi ON bi.number=l.number
+      WHERE l.address=? AND l.number BETWEEN ? AND ? AND l.t0=? ORDER BY l.number DESC LIMIT ?`).all(buf(pool), span.lo ?? 0, span.hi ?? -1, buf(paidTopic), payoutLimit);
+    return { own, all, shares, payouts };
+  }
+
   /** Oldest and newest time in the index. */
   indexRange() { return this.db.prepare('SELECT MIN(time) AS first, MAX(time) AS last FROM block_index WHERE number>0').get(); }
 }
@@ -519,7 +537,7 @@ export class StateReader {
 }
 
 // Explorer queries run in threads so a heavy filter does not delay blocks or the network.
-export const INDEX_QUERIES = ['findBlocks', 'findTxs', 'addressSummary', 'tokensOf', 'tokenEvents', 'tokenRecipients', 'minerShares', 'minerTotals', 'minerList', 'minerRank', 'activeMiners', 'logsForAddress', 'holderTransfers', 'topicSummary', 'poolMiners', 'poolMinerRank', 'poolMinerCount', 'minedSince', 'eventsBySecond', 'activity', 'chartExtra', 'chartSeries', 'indexRange'];
+export const INDEX_QUERIES = ['findBlocks', 'findTxs', 'addressSummary', 'tokensOf', 'tokenEvents', 'tokenRecipients', 'minerShares', 'minerTotals', 'minerList', 'minerRank', 'activeMiners', 'logsForAddress', 'holderTransfers', 'topicSummary', 'poolMiners', 'poolMinerRank', 'poolMinerCount', 'minedSince', 'eventsBySecond', 'activity', 'chartExtra', 'chartSeries', 'indexRange', 'poolSeries'];
 for (const name of INDEX_QUERIES) StateReader.prototype[name] = Store.prototype[name];
 
 export { buf };
