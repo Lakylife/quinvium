@@ -272,6 +272,9 @@ export class PoolServer {
    * @param {string} [worker] device name
    */
   async workFor(miner, worker = 'rig') {
+    // Shares credited to the pool itself would pay out into the pool and come back as new rewards: coins would circle
+    // (and pay the operator fee again) instead of reaching a miner. The zero address cannot receive anything either.
+    if (equal(miner, this.address) || miner.every((b) => b === 0)) throw new PoolError('the payout address must be your wallet, not the pool or the zero address');
     const base = await this.work.getWork(this.address);
     const template = this.work.templates.get(toHex(base.sealHash));
     const s = this._session(miner, worker);
