@@ -47,7 +47,15 @@ test('the network keeps working when the main server goes down', { timeout: 15 *
     if (mine) args.push('--dev-mine', '--miner-address', wallet.address);
     procs[name] = spawn(process.execPath, args, { stdio: ['pipe', 'ignore', 'ignore'], env: { ...process.env, AETHER_NO_SEEDS: '1' } });
   };
-  const stop = async (name) => { procs[name].kill('SIGINT'); await until(async () => (await height(name)) < 0, 20_000); };
+  // Waits for the process itself to end, not only for its RPC: a node that still holds its ports or data folder
+  // would make the restarted one fail.
+  const stop = async (name) => {
+    const p = procs[name];
+    if (p.exitCode !== null || p.signalCode !== null) return;
+    const ended = new Promise((r) => { p.once('exit', r); });
+    p.kill('SIGINT');
+    if (!(await Promise.race([ended.then(() => true), sleep(30_000).then(() => false)]))) { p.kill('SIGKILL'); await ended; }
+  };
   try {
     start('A', { mine: true });
     start('B', { seeds: ['A'] });
