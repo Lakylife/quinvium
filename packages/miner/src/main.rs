@@ -336,8 +336,9 @@ fn gpu_worker(index: usize, source: Source, shared: Arc<Shared>, intensity: u32)
     }
 }
 
-/// After this many failed requests to the primary target (every 0.5 s) the miner switches to a fallback.
-const FALLBACK_AFTER: u32 = 20;
+/// After this many failed requests to the primary target the miner switches to a fallback. A request to a server that is
+/// down waits for the connection timeout (5 s), so three failures are about 15 s without work, not minutes.
+const FALLBACK_AFTER: u32 = 3;
 /// How often the primary target is tried again while mining on a fallback.
 const FALLBACK_RETRY_SECS: u64 = 60;
 
@@ -585,7 +586,9 @@ fn run() -> Result<(), String> {
                 shared.rejected.load(Ordering::Relaxed),
                 shares
             );
-            let _ = rpc.call("eth_submitHashrate", json!([format!("0x{:x}", rate as u64), id]));
+            // The hashrate goes to the node the miner works through now; a primary that is down would block the loop for 5 s.
+            let target = on_fallback.map(|i| &fallbacks[i].1).unwrap_or(&rpc);
+            let _ = target.call("eth_submitHashrate", json!([format!("0x{:x}", rate as u64), id]));
             last_hashes = total;
             last_print = Instant::now();
         }
