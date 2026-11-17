@@ -340,7 +340,6 @@
  "Intentions, not promises. Dates only where something is decided.": "这是意向而非承诺。只有已确定的事项才有日期。",
  "<strong>Done</strong><span>Node, EVM, GPU mining, contract pools, Explorer in eight languages, macOS and Windows app, Chrome wallet, Wpayin, command line, public testnet.</span>": "<strong>已完成</strong><span>节点、EVM、GPU 挖矿、合约矿池、八种语言的浏览器、macOS 和 Windows 应用、Chrome 钱包、Wpayin、命令行、公共测试网。</span>",
  "<strong>14 Nov 2026</strong><span>Mainnet launch, public node rpc.quinvium.com and the Explorer.</span>": "<strong>2026 年 11 月 14 日</strong><span>主网启动，公共节点 rpc.quinvium.com 和浏览器上线。</span>",
- "<strong>Next</strong><span>An independent security audit. A second public node with another provider. An update-signing key off the development machine and remote updates switched back on. Signed Windows builds and the wallet in the Chrome Web Store.</span>": "<strong>下一步</strong><span>独立安全审计。在另一家服务商部署第二个公共节点。将更新签名密钥移出开发机器并重新开启远程更新。签名的 Windows 版本以及 Chrome 网上应用店中的钱包。</span>",
  "<strong>Later</strong><span>Swap and a verified token list on mainnet under multisig governance. A bridge with independent validators. Compact blocks and state pruning for heavy traffic.</span>": "<strong>以后</strong><span>在多签治理下于主网推出兑换和已验证代币列表。由独立验证者运行的跨链桥。面向高流量的紧凑区块和状态修剪。</span>",
  "Security · Quinvium": "安全 · Quinvium",
  "Quinvium security status, code reviews and vulnerability reports.": "Quinvium 的安全状况、代码审查和漏洞报告。",
@@ -459,5 +458,9 @@
  "No node is answering right now.": "目前没有节点响应。",
  "<strong>Keep this page alive.</strong> These numbers come from nodes that people run. Run the Quinvium app and turn on Share node publicly: your node then serves this page, the Explorer and wallets when the main servers are down. <a href=\"/download/\">Get the app</a>": "<strong>帮助本页面保持在线。</strong> 这些数字来自人们运行的节点。运行 Quinvium 应用并开启“公开共享节点”：当主服务器宕机时，您的节点将为本页面、Explorer 和钱包提供数据。<a href=\"/download/\">获取应用</a>",
  "<a href=\"https://bitcointalk.org/index.php?topic=5600215.0\">Announcement [ANN]</a>, thread for miners and pools": "<a href=\"https://bitcointalk.org/index.php?topic=5600215.0\">公告 [ANN]</a>，面向矿工和矿池的讨论帖",
- "Bitcointalk": "Bitcointalk"
+ "Bitcointalk": "Bitcointalk",
+ "Loading the latest blocks…": "正在加载最新区块…",
+ "The network is carried by our public server, a seed run by the community, nodes shared from the app and the miners' own nodes. When the server is down, the website, the Explorer and wallets read from community nodes.": "网络由我们的公共服务器、社区运营的种子节点、从应用共享的节点以及矿工自己的节点共同支撑。服务器宕机时，网站、Explorer 和钱包会从社区节点读取数据。",
+ "<strong>Next</strong><span>An independent security audit. Contract source verification in the Explorer. A Docker image of the node. An update-signing key off the development machine and remote updates switched back on. Signed Windows builds and the wallet in the Chrome Web Store.</span>": "<strong>下一步</strong><span>独立安全审计。在 Explorer 中验证合约源代码。节点的 Docker 镜像。将更新签名密钥移出开发电脑并重新启用远程更新。已签名的 Windows 程序以及上架 Chrome 网上应用店的钱包。</span>",
+ "<strong>November 2026</strong><span>The official pool pool.quinvium.com, a second seed run by the community, sharing a node from the app, and the website, Explorer and wallets switching to community nodes when the server is down.</span>": "<strong>2026年11月</strong><span>官方矿池 pool.quinvium.com、社区运营的第二个种子节点、从应用共享节点，以及服务器宕机时网站、Explorer 和钱包切换到社区节点。</span>"
 }
