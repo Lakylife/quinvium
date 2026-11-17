@@ -686,6 +686,8 @@ details.tool-card .tool-output { margin-top: 12px; }
 .share-bar { display: flex; height: 10px; gap: 2px; margin: 8px 0 14px; overflow: hidden; border-radius: 5px; }
 .share-bar i { display: block; min-width: 2px; height: 100%; }
 .series-dot.live { background: var(--success); }
+.series-dot.idle { background: var(--text-3); opacity: .5; }
+.miner-state { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 .series-0 { background: var(--series-0); } .series-1 { background: var(--series-1); } .series-2 { background: var(--series-2); }
 .series-3 { background: var(--series-3); } .series-4 { background: var(--series-4); } .series-5 { background: var(--series-5); }
 .series-6 { background: var(--series-6); } .series-7 { background: var(--series-7); } .series-8 { background: var(--series-8); }
