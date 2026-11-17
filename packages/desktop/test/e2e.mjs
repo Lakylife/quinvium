@@ -117,6 +117,10 @@ try {
   });
   await step('GPU mining finds a block', async () => {
     await win.click('#m-start');
+    // The first mining start asks once whether to share the node publicly; the test declines, and it does not ask again.
+    await win.waitForSelector('#share-box', { state: 'visible', timeout: 15000 });
+    await win.click('#share-no');
+    await win.waitForSelector('#share-box', { state: 'hidden' });
     await win.waitForFunction(() => Number(document.getElementById('m-blocks').textContent) >= 2, null, { timeout: 120000 });
     await win.waitForFunction(() => /[KMG]?H\/s/i.test(document.getElementById('m-rate').textContent), null, { timeout: 30000 });
     assert.match(await win.textContent('#m-state'), /Mining is running/);
@@ -358,7 +362,8 @@ try {
     await win.selectOption('#s-lang', 'en');
     await win.waitForFunction(() => /Overview/.test(document.querySelector('nav button[data-tab=wallet]').textContent));
     await win.click('#s-check');
-    await win.waitForFunction(() => /managed by the publisher/.test(document.getElementById('s-update').textContent));
+    // The check asks GitHub: the answer is the latest version, a newer one, or why the check failed (offline CI).
+    await win.waitForFunction(() => /latest version|is available|Update failed/.test(`${document.getElementById('s-update').textContent} ${document.getElementById('s-release-title')?.textContent ?? ''}`), null, { timeout: 45000 });
     // The quintium command: the launcher in the permanent data folder runs this version's command line; the button adds the path once.
     await win.waitForSelector('#s-cli:not([hidden])');
     assert.ok((await win.textContent('#s-cli-line')).includes(join(userData, 'bin')), 'ruční řádek ukazuje na spouštěč v datech aplikace');

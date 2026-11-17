@@ -85,6 +85,9 @@ try {
       await win.click('nav button[data-tab=mining]');
       await win.waitForFunction((a) => document.getElementById('m-address').textContent === a, outside.address);
       await win.click('#m-start');
+      // The first mining start asks once whether to share the node publicly; the test declines.
+      await win.waitForSelector('#share-box', { state: 'visible', timeout: 15000 });
+      await win.click('#share-no');
       await until(async () => (await provider.getBalance(outside.address)) > 0n, 120000);
       await win.click('#m-stop');
       await win.waitForSelector('#m-start', { state: 'visible' });
