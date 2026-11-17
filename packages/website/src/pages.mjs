@@ -178,7 +178,7 @@ await provider.getBlockNumber();</code></pre>
 <section class="sec tint">
   <div class="wrap">
     <div class="sec-head row"><div><h2>Latest blocks</h2><p>Straight from mainnet.</p></div><a class="btn link" href="${EXPLORER}">All in the Explorer${icon('ext')}</a></div>
-    <div class="blocklist" data-blocks data-txs="tx" data-ago="ago" data-miner="miner" data-explorer="${EXPLORER}"><p class="empty">The first blocks appear after the mainnet launch.</p></div>
+    <div class="blocklist" data-blocks data-txs="tx" data-ago="ago" data-miner="miner" data-explorer="${EXPLORER}"><p class="empty">Loading the latest blocks…</p></div>
   </div>
 </section>
 
@@ -504,7 +504,8 @@ console.log(await provider.getBlockNumber());</code></pre>
   <ol class="timeline">
     <li class="done"><strong>${L('Hotovo', 'Done')}</strong><span>${L('Uzel, EVM, těžba na kartách, pooly v kontraktu, Explorer v osmi jazycích, aplikace pro macOS a Windows, peněženka pro Chrome, Wpayin, příkazová řádka, veřejný testnet.', 'Node, EVM, GPU mining, contract pools, Explorer in eight languages, macOS and Windows app, Chrome wallet, Wpayin, command line, public testnet.')}</span></li>
     <li class="done"><strong>${L('14. 11. 2026', '14 Nov 2026')}</strong><span>${L('Start mainnetu, veřejný uzel rpc.quinvium.com a Explorer.', 'Mainnet launch, public node rpc.quinvium.com and the Explorer.')}</span></li>
-    <li><strong>${L('Další kroky', 'Next')}</strong><span>${L('Nezávislý bezpečnostní audit. Druhý veřejný uzel u jiného poskytovatele. Podpisový klíč aktualizací mimo vývojový počítač a znovu zapnuté aktualizace. Podepsané programy pro Windows a peněženka v Chrome Web Store.', 'An independent security audit. A second public node with another provider. An update-signing key off the development machine and remote updates switched back on. Signed Windows builds and the wallet in the Chrome Web Store.')}</span></li>
+    <li class="done"><strong>${L('Listopad 2026', 'November 2026')}</strong><span>${L('Oficiální pool pool.quinvium.com, druhý seed provozovaný komunitou, sdílení uzlu z aplikace a přechod webu, Exploreru i peněženek na uzly komunity při výpadku serveru.', 'The official pool pool.quinvium.com, a second seed run by the community, sharing a node from the app, and the website, Explorer and wallets switching to community nodes when the server is down.')}</span></li>
+    <li><strong>${L('Další kroky', 'Next')}</strong><span>${L('Nezávislý bezpečnostní audit. Ověření zdrojového kódu kontraktů v Exploreru. Obraz uzlu pro Docker. Podpisový klíč aktualizací mimo vývojový počítač a znovu zapnuté aktualizace. Podepsané programy pro Windows a peněženka v Chrome Web Store.', 'An independent security audit. Contract source verification in the Explorer. A Docker image of the node. An update-signing key off the development machine and remote updates switched back on. Signed Windows builds and the wallet in the Chrome Web Store.')}</span></li>
     <li><strong>${L('Potom', 'Later')}</strong><span>${L('Swap a seznam ověřených tokenů na mainnetu se správou přes multisig. Most s nezávislými validátory. Kompaktní bloky a prořezávání stavu pro velký provoz.', 'Swap and a verified token list on mainnet under multisig governance. A bridge with independent validators. Compact blocks and state pruning for heavy traffic.')}</span></li>
   </ol>
 </div></section>`,
@@ -526,7 +527,7 @@ console.log(await provider.getBlockNumber());</code></pre>
   <ul class="ticks no">
     <li>${L('Nezávislý bezpečnostní audit zatím neproběhl.', 'No independent security audit has been done yet.')}</li>
     <li>${L('Aktualizace aplikace na dálku jsou na mainnetu vypnuté, dokud podpisový klíč neleží mimo vývojový počítač.', 'Remote app updates are off on mainnet until the signing key is moved off the development machine.')}</li>
-    <li>${L('Síť zatím nese jeden veřejný server a uzly těžařů.', 'The network is carried by one public server and the miners\' nodes so far.')}</li>
+    <li>${L('Síť nese náš veřejný server, seed provozovaný komunitou, uzly sdílené z aplikace a uzly těžařů. Když server nejede, web, Explorer i peněženky čtou z uzlů komunity.', 'The network is carried by our public server, a seed run by the community, nodes shared from the app and the miners\' own nodes. When the server is down, the website, the Explorer and wallets read from community nodes.')}</li>
   </ul>
   <h2>${L('Nahlášení zranitelnosti', 'Reporting a vulnerability')}</h2>
   <p>${L('Zranitelnosti hlaste soukromě na GitHubu: <a href="https://github.com/Lakylife/quinvium/security/advisories/new">Report a vulnerability</a>. Před opravou je prosím nezveřejňujte.', 'Report vulnerabilities privately on GitHub: <a href="https://github.com/Lakylife/quinvium/security/advisories/new">Report a vulnerability</a>. Please do not disclose them publicly before a fix.')}</p>
@@ -631,7 +632,6 @@ certutil -hashfile Quinvium-${dl ? dl.version : 'x'}-Windows-x64.exe SHA256    #
       body: `
 <section class="sec"><div class="wrap">
   <div class="cards c2">
-    ${card('globe', L('E-mail', 'E-mail'), `<span class="placeholder">${L('bude doplněn', 'to be added')}</span>`)}
     ${card('users', 'X (Twitter)', `<a href="https://x.com/Quinvium" rel="me">@Quinvium</a>, ${L('novinky a oznámení', 'news and announcements')}`)}
     ${card('users', 'Telegram', `<a href="https://t.me/Quinvium" rel="me">t.me/Quinvium</a>, ${L('diskuse komunity', 'community chat')}`)}
     ${card('users', 'Bitcointalk', `<a href="https://bitcointalk.org/index.php?topic=5600215.0">${L('Oznámení [ANN]', 'Announcement [ANN]')}</a>, ${L('vlákno pro těžaře a pooly', 'thread for miners and pools')}`)}

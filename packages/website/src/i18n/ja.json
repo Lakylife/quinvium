@@ -340,7 +340,6 @@
  "Intentions, not promises. Dates only where something is decided.": "約束ではなく意図です。日付は決まっているものだけです。",
  "<strong>Done</strong><span>Node, EVM, GPU mining, contract pools, Explorer in eight languages, macOS and Windows app, Chrome wallet, Wpayin, command line, public testnet.</span>": "<strong>完了</strong><span>ノード、EVM、GPU マイニング、コントラクトプール、8 言語のエクスプローラー、macOS と Windows のアプリ、Chrome ウォレット、Wpayin、コマンドライン、公開テストネット。</span>",
  "<strong>14 Nov 2026</strong><span>Mainnet launch, public node rpc.quinvium.com and the Explorer.</span>": "<strong>2026年11月14日</strong><span>メインネット開始、公開ノード rpc.quinvium.com とエクスプローラー。</span>",
- "<strong>Next</strong><span>An independent security audit. A second public node with another provider. An update-signing key off the development machine and remote updates switched back on. Signed Windows builds and the wallet in the Chrome Web Store.</span>": "<strong>次に</strong><span>独立したセキュリティ監査。別のプロバイダーでの 2 台目の公開ノード。アップデート署名鍵を開発用マシンの外へ移し、リモート更新を再開。署名済みの Windows ビルドと Chrome ウェブストアのウォレット。</span>",
  "<strong>Later</strong><span>Swap and a verified token list on mainnet under multisig governance. A bridge with independent validators. Compact blocks and state pruning for heavy traffic.</span>": "<strong>その後</strong><span>マルチシグ管理によるメインネットでのスワップと検証済みトークンリスト。独立したバリデーターによるブリッジ。大量のトラフィックに向けたコンパクトブロックとステートの剪定。</span>",
  "Security · Quinvium": "セキュリティ · Quinvium",
  "Quinvium security status, code reviews and vulnerability reports.": "Quinvium のセキュリティ状況、コードレビュー、脆弱性の報告。",
@@ -459,5 +458,9 @@
  "No node is answering right now.": "現在応答しているノードはありません。",
  "<strong>Keep this page alive.</strong> These numbers come from nodes that people run. Run the Quinvium app and turn on Share node publicly: your node then serves this page, the Explorer and wallets when the main servers are down. <a href=\"/download/\">Get the app</a>": "<strong>このページを支えてください。</strong> これらの数値は人々が運用するノードから届いています。Quinvium アプリを起動して「ノードを公開して共有」をオンにすると、メインサーバーが停止したときにあなたのノードがこのページ、Explorer、ウォレットにデータを提供します。<a href=\"/download/\">アプリを入手</a>",
  "<a href=\"https://bitcointalk.org/index.php?topic=5600215.0\">Announcement [ANN]</a>, thread for miners and pools": "<a href=\"https://bitcointalk.org/index.php?topic=5600215.0\">告知 [ANN]</a>、マイナーとプール向けのスレッド",
- "Bitcointalk": "Bitcointalk"
+ "Bitcointalk": "Bitcointalk",
+ "Loading the latest blocks…": "最新のブロックを読み込んでいます…",
+ "The network is carried by our public server, a seed run by the community, nodes shared from the app and the miners' own nodes. When the server is down, the website, the Explorer and wallets read from community nodes.": "ネットワークは公式の公開サーバー、コミュニティが運営するシード、アプリから共有されたノード、マイナー自身のノードで支えられています。サーバーが停止しても、ウェブサイト、Explorer、ウォレットはコミュニティのノードから読み込みます。",
+ "<strong>Next</strong><span>An independent security audit. Contract source verification in the Explorer. A Docker image of the node. An update-signing key off the development machine and remote updates switched back on. Signed Windows builds and the wallet in the Chrome Web Store.</span>": "<strong>次に</strong><span>独立したセキュリティ監査。Explorer でのコントラクトのソースコード検証。ノードの Docker イメージ。更新署名鍵を開発用コンピューターの外へ移し、リモート更新を再開。署名済みの Windows 版と Chrome ウェブストアでのウォレット公開。</span>",
+ "<strong>November 2026</strong><span>The official pool pool.quinvium.com, a second seed run by the community, sharing a node from the app, and the website, Explorer and wallets switching to community nodes when the server is down.</span>": "<strong>2026年11月</strong><span>公式プール pool.quinvium.com、コミュニティが運営する2つ目のシード、アプリからのノード共有、そしてサーバー停止時にウェブサイト、Explorer、ウォレットがコミュニティのノードへ切り替わる仕組み。</span>"
 }
