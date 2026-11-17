@@ -61,7 +61,7 @@ try {
     // Two addresses lead to node A (the same chain), node B mines its own branch. B must not be chosen, even when it is higher.
     const p2 = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     for (const mirror of ['http://mirror-one.test', 'http://mirror-two.test']) {
-      await p2.route(`${mirror}/**`, (route) => route.fetch({ url: a.url }).then((response) => route.fulfill({ response })));
+      await p2.route(`${mirror}/**`, (route) => route.fetch({ url: a.url }).then((response) => route.fulfill({ response })).catch(() => {}));
     }
     await p2.route('**/config.js', (route) => route.fulfill({ contentType: 'application/javascript', body: `window.AETHER_CONFIG = { walletConnectProjectId: '', rpc: ['${b.url}', 'http://mirror-one.test', 'http://mirror-two.test'] };` }));
     await waitFor(async () => (await height(a.url)) >= 8 && (await height(b.url)) >= 8, 60000);
@@ -83,7 +83,7 @@ try {
       await route.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, result: method === 'eth_chainId' ? '0x1' : method === 'eth_getBlockByNumber' ? { hash: '0x' + '11'.repeat(32), number: '0x0' } : '0x99' }) });
     });
     // A community node of this chain (node A behind an https name).
-    await p3.route('https://good.community.test/**', (route) => route.fetch({ url: a.url }).then((response) => route.fulfill({ response, headers: { ...response.headers(), 'access-control-allow-origin': '*' } })));
+    await p3.route('https://good.community.test/**', (route) => route.fetch({ url: a.url }).then((response) => route.fulfill({ response, headers: { ...response.headers(), 'access-control-allow-origin': '*' } })).catch(() => {}));
     await p3.route('**/config.js', (route) => route.fulfill({ contentType: 'application/javascript', body: `window.AETHER_CONFIG = { walletConnectProjectId: '', rpc: ['${DEAD}'], expect: { chainId: 52403, genesis: '${genesis}' } };` }));
     await p3.route('**/nodes.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ 52403: ['https://other-chain.community.test', 'https://good.community.test'] }) }));
     await p3.goto(`${a.url}/blocks`);
@@ -107,6 +107,32 @@ try {
     assert.equal(await p4.evaluate(() => localStorage.getItem(Object.keys(localStorage).find((k) => k.startsWith('quinvium.userNode.')))), b.url);
     await p4.waitForSelector('#own-reset', { timeout: 30000 });
     await p4.close();
+  });
+  await step('the node on the visitor\'s computer is asked only when the network\'s nodes are down, then serves the page', async () => {
+    const genesis = await fetch(a.url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getBlockByNumber', params: ['0x0', false] }) }).then((r) => r.json()).then((d) => d.result.hash);
+    // The Explorer on a domain; the visitor's own node on the default dev port is node A.
+    const open = async (rpc) => {
+      const p = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+      const asked = [];
+      await p.route('https://explorer.test/**', (route) => route.fetch({ url: a.url + new URL(route.request().url()).pathname }).then((response) => route.fulfill({ response })).catch(() => {}));
+      // The network's nodes behind https names: a page on the internet reaches 127.0.0.1 only through the local network permission.
+      await p.route('https://own.test/**', (route) => route.fetch({ url: b.url }).then((response) => route.fulfill({ response })).catch(() => {}));
+      await p.route('https://down.test/**', (route) => route.abort());
+      await p.route('http://127.0.0.1:8547/**', (route) => { asked.push(route.request().url()); return route.fetch({ url: a.url }).then((response) => route.fulfill({ response })); });
+      await p.route('**/nodes.json', (route) => route.fulfill({ status: 404, body: '' }));
+      await p.route('**/config.js', (route) => route.fulfill({ contentType: 'application/javascript', body: `window.AETHER_CONFIG = { walletConnectProjectId: '', rpc: ['${rpc}'], expect: { chainId: 52403, genesis: '${genesis}' } };` }));
+      await p.goto('https://explorer.test/blocks');
+      await p.waitForFunction(() => /#\d/.test(document.getElementById('footer-status')?.textContent ?? ''), null, { timeout: 30000 });
+      return { p, asked };
+    };
+    const up = await open('https://own.test');
+    await new Promise((r) => { setTimeout(r, 3000); });
+    assert.deepEqual(up.asked, [], 'with the network\'s node up, the visitor\'s computer is not asked');
+    await up.p.close();
+    const down = await open('https://down.test');
+    await down.p.waitForFunction(() => [...document.querySelectorAll('.toast')].some((t) => /your computer/.test(t.textContent)), null, { timeout: 30000 });
+    assert.ok(down.asked.length > 0);
+    await down.p.close();
   });
   await step('after the selected node fails the Explorer switches to the second and keeps showing blocks', async () => {
     const [down, other] = chosen === a.url ? [a, b] : [b, a];
