@@ -230,7 +230,12 @@ export class RpcServer {
     res.setHeader('Access-Control-Allow-Headers', 'content-type');
     res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+    if (req.method === 'OPTIONS') {
+      // Chrome asks before a page on the internet reads a server on this computer or network (Private Network Access).
+      // The Explorer on a domain falls back to the visitor's own node when the network's nodes are down.
+      if (req.headers['access-control-request-private-network'] === 'true') res.setHeader('Access-Control-Allow-Private-Network', 'true');
+      res.writeHead(204); res.end(); return;
+    }
     if (req.method === 'POST') { this._post(req, res); return; }
     if (req.method === 'GET') {
       // Anyone sends the path, even an ordinary link on someone else's page. An error in it must not crash the node.
