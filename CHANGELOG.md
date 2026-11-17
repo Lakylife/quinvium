@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Explorer on a domain falls back to the node on the visitor's own computer (127.0.0.1, default port of the network, chain ID and genesis checked) when none of the network's nodes answers; it is never asked while they do. The node answers the browser's private network preflight.
+
 ## 2.16.0 (16 November 2026)
 
 - English is the default language everywhere: node log, errors, RPC and Stratum messages, miner output, app log and package descriptions. Czech stays a translation (`QUINTIUM_LANG=cs`, or the app window in Czech).
