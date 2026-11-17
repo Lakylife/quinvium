@@ -1,0 +1,9 @@
+# Only what the node image needs (ops/docker/Dockerfile); everything else stays out of the build context.
+*
+!package.json
+!package-lock.json
+!packages/node/package.json
+!packages/node/src
+!packages/contracts/package.json
+!packages/desktop/package.json
+!packages/explorer/public

@@ -580,6 +580,7 @@ window.AetherExplorerText = {
     "miners.status": ["Status","Estado","Statut"],
     "miners.mining": ["Mint","Minando","Mine"],
     "miners.idle": ["Inaktiv","Inactivo","Inactif"],
+    "net.local": ["Der Hauptknoten antwortet nicht; die Daten kommen jetzt vom Knoten auf Ihrem Computer.", "El nodo principal no responde; los datos vienen ahora del nodo de su ordenador.", "Le nœud principal ne répond pas ; les données viennent maintenant du nœud de votre ordinateur."],
     "net.community": ["Der Hauptknoten antwortet nicht; die Daten kommen jetzt vom Community-Knoten {host}, vom Netzwerk geprüft.", "El nodo principal no responde; los datos vienen ahora del nodo de la comunidad {host}, verificado por la red.", "Le nœud principal ne répond pas ; les données viennent maintenant du nœud communautaire {host}, vérifié par le réseau."],
     "prof.tag": ["Identität · Wallets", "Identidad · Billeteras", "Identité · Portefeuilles"],
     "prof.title": ["Profil", "Perfil", "Profil"],
