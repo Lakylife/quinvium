@@ -1003,3 +1003,7 @@ body:not(.compact-nav) .header-search { flex: 1 1 200px; max-width: 240px; }
 .avatar.profile img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .avatar .nft-mark { display: grid; place-items: center; width: 100%; height: 100%; background: var(--surface-2); color: var(--text-2); font-size: 8px; font-weight: 700; }
 .profile-other summary { cursor: pointer; color: var(--accent); margin-block: 6px; }
+.card-actions { display: flex; align-items: center; gap: 14px; }
+button.text-link { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
+.nav-soon { color: var(--text-3); font-size: 12px; }
+.not-found p { margin: 6px 0; }

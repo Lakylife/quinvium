@@ -40,6 +40,14 @@ try {
   // The gas price says whether it is at the minimum because of empty blocks, so it does not look fixed.
   const gas = await page.$$eval('.home-stats .home-stat:nth-child(2) small', (x) => x.length);
   if (gas !== 2) { failed += 1; console.log(`[FAIL] u ceny gasu chybí stav sítě (${gas} řádků)`); }
+  // Swap and Bridge do not run on the dev network: they sit under More, marked soon, not in the main menu.
+  await page.waitForSelector('.nav-group .nav-soon', { timeout: 15000 }).catch(() => {});
+  const soon = await page.evaluate(() => [...document.querySelectorAll('.nav-group[data-group*="apps"] a[data-nav]')].filter((a) => a.querySelector('.nav-soon')).map((a) => a.dataset.nav).sort().join(','));
+  const top = await page.$$eval('.main-nav > a[data-nav="swap"], .main-nav > a[data-nav="bridge"]', (x) => x.length);
+  if (soon !== 'bridge,swap' || top) { failed += 1; console.log(`[FAIL] Swap a Most mimo hlavní menu: ${soon}, v hlavním menu ${top}`); }
+  // An unknown address shows Page not found instead of the home page.
+  await page.goto(`${RPC}/no-such-page`);
+  await page.waitForFunction(() => document.querySelector('#app h1')?.textContent === 'Page not found', null, { timeout: 15000 }).catch(() => { failed += 1; console.log('[FAIL] neznámá adresa neukazuje Page not found'); });
   // Router: every branch and every menu item.
   const links = await page.$$eval('a[data-nav]', (list) => list.map((a) => a.getAttribute('href')));
   assert.ok(links.length >= 14, `položek menu ${links.length}`);
