@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Explorer: the home page hides pool share transactions (a switch shows them), the Miners subtitle matches the whole-history numbers, an unknown address shows Page not found, and Swap and Bridge move under More, marked soon, on networks where they do not run.
+
 ## 2.16.0 (16 November 2026)
 
 - English is the default language everywhere: node log, errors, RPC and Stratum messages, miner output, app log and package descriptions. Czech stays a translation (`QUINTIUM_LANG=cs`, or the app window in Czech).

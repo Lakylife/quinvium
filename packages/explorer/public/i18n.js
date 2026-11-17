@@ -2,6 +2,13 @@
 // Řádek: "klíč nebo anglický text": [němčina, španělština, francouzština]. Dokumentace pro vývojáře zůstává anglicky.
 window.AetherExplorerText = {
   keys: {
+    'home.hideShares': ['Pool-Anteile ausblenden', 'Ocultar participaciones del pool', 'Masquer les parts du pool'],
+    'home.showShares': ['Pool-Anteile anzeigen', 'Mostrar participaciones del pool', 'Afficher les parts du pool'],
+    'home.noOtherTxs': ['Die letzten 100 Transaktionen sind alle Pool-Anteile.', 'Las últimas 100 transacciones son todas participaciones del pool.', 'Les 100 dernières transactions sont toutes des parts du pool.'],
+    'nf.title': ['Seite nicht gefunden', 'Página no encontrada', 'Page introuvable'],
+    'nf.body': ['Diese Adresse gibt es im Explorer nicht. Versuchen Sie die Suche oder kehren Sie zur Startseite zurück.', 'Esta dirección no existe en el Explorer. Pruebe la búsqueda o vuelva a la página de inicio.', 'Cette adresse n’existe pas dans l’Explorer. Essayez la recherche ou revenez à l’accueil.'],
+    'nf.home': ['Zur Startseite', 'Volver al inicio', 'Retour à l’accueil'],
+    'nav.soon': ['bald', 'pronto', 'bientôt'],
     "nav.apiTop": ["API", "API", "API"],
     "pools.noFee": ["keine Gebühr", "sin comisión", "sans frais"],
     "pools.noFeeHint": ["Ein Solo-Miner behält den ganzen Block und zahlt keine Gebühr.", "Un minero en solitario se queda con todo el bloque y no paga comisión.", "Un mineur solo garde tout le bloc et ne paie aucuns frais."],
@@ -619,7 +626,6 @@ window.AetherExplorerText = {
     'charts.rate': ['Geschätzte Hashrate (H/s)', 'Hashrate estimado (H/s)', 'Hashrate estimé (H/s)'],
     'rich.sub': ['Adressen nach Guthaben', 'Direcciones por saldo', 'Adresses par solde'],
     'mem.sub': ['Transaktionen, die auf das Mining warten', 'Transacciones a la espera de ser minadas', 'Transactions en attente de minage'],
-    'miners.sub': ['Aus den letzten 1000 Blöcken', 'De los últimos 1000 bloques', 'Sur les 1000 derniers blocs'],
     'search.none': ['Nichts gefunden für', 'No se encontró nada para', 'Rien trouvé pour'],
     'time.now': ['gerade eben', 'ahora mismo', "à l'instant"],
     'time.ago': ['vor {t}', 'hace {t}', 'il y a {t}'],
