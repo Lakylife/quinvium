@@ -324,7 +324,7 @@
     let data = await res.json();
     // The node's per-address limit was reached (other tabs, a wallet on the same connection): wait a little and try again
     // instead of showing an error.
-    for (let wait = 700; data.error?.code === BUSY && wait <= 6000; wait *= 2) {
+    for (let wait = 700; busy(data) && wait <= 6000; wait *= 2) {
       await sleep(wait + Math.random() * 300);
       data = await (await call()).json();
     }
@@ -332,12 +332,22 @@
     return data.result;
   }
   const BUSY = -32005;
+  // -32005 also means a query over too many blocks; waiting does not help that one, so it is not retried.
+  const busy = (r) => r.error?.code === BUSY && !/range|rozsah/i.test(r.error?.message ?? '');
+  /** The node answers eth_getLogs over at most 10 000 blocks: a query from block 0 is split into windows. */
+  const LOG_WINDOW = 10000;
+  async function logsFromStart(filter) {
+    const tip = await provider().getBlockNumber();
+    const windows = [];
+    for (let from = 0; from <= tip; from += LOG_WINDOW) windows.push(provider().getLogs({ ...filter, fromBlock: from, toBlock: Math.min(tip, from + LOG_WINDOW - 1) }));
+    return (await Promise.all(windows)).flat();
+  }
   const sleep = (ms) => new Promise((r) => { setTimeout(r, ms); });
   /** One provider per node for contract reads; it batches calls made together and waits out the node's limit like rpc(). */
   class PatientProvider extends ethers.JsonRpcProvider {
     async _send(payload) {
       let out = await super._send(payload);
-      for (let wait = 700; out.some((r) => r.error?.code === BUSY) && wait <= 6000; wait *= 2) {
+      for (let wait = 700; out.some(busy) && wait <= 6000; wait *= 2) {
         await sleep(wait + Math.random() * 300);
         out = await super._send(payload);
       }
@@ -1558,11 +1568,11 @@
     const topic = ethers.zeroPadValue(a, 32);
     const ev = (n) => c.interface.getEvent(n).topicHash;
     const [own, moved] = await Promise.all([
-      provider().getLogs({ address: at, fromBlock: 0, toBlock: 'latest', topics: [ev('Registered'), null, topic] }),
-      provider().getLogs({ address: at, fromBlock: 0, toBlock: 'latest', topics: [ev('TargetChanged'), null, topic] }),
+      logsFromStart({ address: at, topics: [ev('Registered'), null, topic] }),
+      logsFromStart({ address: at, topics: [ev('TargetChanged'), null, topic] }),
     ]);
     const nodes = [...new Set(moved.map((l) => l.topics[1]))].slice(0, 20);
-    const named = nodes.length ? await provider().getLogs({ address: at, fromBlock: 0, toBlock: 'latest', topics: [ev('Registered'), nodes] }) : [];
+    const named = nodes.length ? await logsFromStart({ address: at, topics: [ev('Registered'), nodes] }) : [];
     const candidates = [...new Set([...own, ...named].map((l) => c.interface.parseLog(l).args.name))].slice(0, 20);
     const now = Math.floor(Date.now() / 1000);
     const rows = await Promise.all(candidates.map(async (n) => { const [, target, expires] = await c.info(n); return target.toLowerCase() === a.toLowerCase() && Number(expires) > now ? n : null; }));
