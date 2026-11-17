@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Node: coin supply as a plain number for coin trackers (`/api/supply/total`, `/circulating`, `/max`); mainnet checkpoint at block 20 000.
+
 ## 2.16.0 (16 November 2026)
 
 - English is the default language everywhere: node log, errors, RPC and Stratum messages, miner output, app log and package descriptions. Czech stays a translation (`QUINTIUM_LANG=cs`, or the app window in Czech).

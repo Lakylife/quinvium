@@ -62,6 +62,8 @@ export const NETWORKS = Object.freeze({
       '2df5ea8b9b4e18c552a001434e6b7ed0fc99348a03478fd809de1f92fde2f78d@72.61.21.209:30524',
     ],
     forks: [{ ...POOLS, block: 1n }],
+    // Block 20 000 (17 Nov 2026), the same hash on rpc.quinvium.com and on an independent node.
+    checkpoints: [{ number: 20_000n, hash: '0x1f0c96fe9836be541f558180afa45c15ba132d35416e6eb5b6954faaf33617eb' }],
   },
   testnet: {
     name: 'testnet', chainId: 52402n, currency: 'tQU', folder: 'testnet-5',   // network restart: a new genesis needs an empty database; the old one stays next to it
