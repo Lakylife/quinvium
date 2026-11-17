@@ -76,6 +76,8 @@ test('the preflight of a page on the internet may read this node (Private Networ
   assert.equal(asked.status, 204);
   assert.equal(asked['access-control-allow-private-network'], 'true');
   assert.equal(answer({})['access-control-allow-private-network'], undefined);
+});
+
 test('coin supply as a plain number for trackers: total, circulating and maximum', async () => {
   const server = new RpcServer(node, {});
   server.methods.aether_stats = () => ({ supply: '90704500000000000000000', maxSupply: '64000000000000000000000000' });
