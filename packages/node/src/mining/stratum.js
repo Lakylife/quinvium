@@ -60,6 +60,9 @@ class Session {
     if (++this.logins > MAX_LOGINS) { this.socket.destroy(); return false; }
     const [address, ...rest] = String(raw ?? '').split('.');
     if (!/^0x[0-9a-fA-F]{40}$/.test(address)) return false;
+    // A pool does not take its own address (or the zero address) as a payout address; see PoolServer.workFor.
+    const pool = this.server.pool?.address;
+    if ((pool && address.toLowerCase() === toHex(pool).toLowerCase()) || /^0x0{40}$/.test(address)) return false;
     this.miner = fromHex(address);
     if (rest.length) this.worker = rest.join('.').slice(0, 32);
     return true;
