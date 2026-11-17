@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Container image of the full node for amd64 and arm64, published with every release as `ghcr.io/lakylife/quinvium-node` (`ops/docker/Dockerfile`, workflow `docker`; guide in Running a public node).
 - Explorer on a domain falls back to the node on the visitor's own computer (127.0.0.1, default port of the network, chain ID and genesis checked) when none of the network's nodes answers; it is never asked while they do. The node answers the browser's private network preflight.
 
 ## 2.16.0 (16 November 2026)

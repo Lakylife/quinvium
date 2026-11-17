@@ -40,14 +40,22 @@ test('the network keeps working when the main server goes down', { timeout: 15 *
   const base = mkdtempSync(join(tmpdir(), 'qu-outage-'));
   const procs = {};
   const wallet = ethers.Wallet.createRandom();
-  const start = (name, { seeds = [], mine = false } = {}) => {
-    const args = ['--no-warnings', CLI, '--network', 'dev', '--data-dir', join(base, name), '--p2p-port', String(P2P(name)), '--rpc-port', String(18620 + SLOT[name]),
+  const start = (name, { seeds = [], mine = false, dir = name } = {}) => {
+    const args = ['--no-warnings', CLI, '--network', 'dev', '--data-dir', join(base, dir), '--p2p-port', String(P2P(name)), '--rpc-port', String(18620 + SLOT[name]),
       '--stratum-port', String(33620 + SLOT[name]), '--allow-private', '--no-site-check', '--exit-with-parent'];
     if (seeds.length) args.push('--seeds', seeds.map((s) => `127.0.0.1:${P2P(s)}`).join(','));
     if (mine) args.push('--dev-mine', '--miner-address', wallet.address);
     procs[name] = spawn(process.execPath, args, { stdio: ['pipe', 'ignore', 'ignore'], env: { ...process.env, AETHER_NO_SEEDS: '1' } });
   };
-  const stop = async (name) => { procs[name].kill('SIGINT'); await until(async () => (await height(name)) < 0, 20_000); };
+  // Waits for the process itself to end, not only for its RPC: a node that still holds its ports or data folder
+  // would make the restarted one fail.
+  const stop = async (name) => {
+    const p = procs[name];
+    if (p.exitCode !== null || p.signalCode !== null) return;
+    const ended = new Promise((r) => { p.once('exit', r); });
+    p.kill('SIGINT');
+    if (!(await Promise.race([ended.then(() => true), sleep(30_000).then(() => false)]))) { p.kill('SIGKILL'); await ended; }
+  };
   try {
     start('A', { mine: true });
     start('B', { seeds: ['A'] });
@@ -76,12 +84,12 @@ test('the network keeps working when the main server goes down', { timeout: 15 *
     start('D', { seeds: ['A'] });
     assert.ok(!(await until(async () => (await peers('D')) >= 1, 20_000, 2000)), 'with only the dead seed there is nobody to find');
     await stop('D');
-    rmSync(join(base, 'D'), { recursive: true, force: true });
-    start('D', { seeds: ['A', 'C'] });
+    // A fresh folder instead of deleting the old one: Windows keeps the stopped node's files locked for a while (EPERM).
+    start('D', { seeds: ['A', 'C'], dir: 'D2' });
     assert.ok(await until(async () => (await peers('D')) >= 1 && (await height('D')) >= (await height('B')) - 1, 180_000, 2000), 'with a second independent seed the new node joins and syncs');
   } finally {
     for (const p of Object.values(procs)) p.kill('SIGKILL');
     await sleep(500);
-    rmSync(base, { recursive: true, force: true });
+    rmSync(base, { recursive: true, force: true, maxRetries: 10, retryDelay: 500 });
   }
 });

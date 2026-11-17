@@ -39,6 +39,28 @@ Rules for a public node:
 - Keep `--rate-limit` (600 requests per minute per IP in the templates).
 - Open the P2P port (30524 mainnet, 30525 testnet) so other nodes can connect.
 
+## Docker
+
+Each release is also published as a container image for `linux/amd64` and `linux/arm64`: `ghcr.io/lakylife/quinvium-node:<version>` and `:latest`. It is built from [`ops/docker/Dockerfile`](../ops/docker/Dockerfile) by the `docker` workflow; the image runs as a non-root user and keeps all data, including `node.key`, in the volume `/data`.
+
+```bash
+# Mainnet node: P2P open to the world, JSON-RPC and the Explorer only on this server
+docker run -d --name quinvium --restart unless-stopped \
+  -p 30524:30524 -p 127.0.0.1:8545:8545 \
+  -v quinvium-mainnet:/data \
+  ghcr.io/lakylife/quinvium-node:latest
+
+docker logs -f quinvium            # log
+docker stop quinvium               # clean shutdown (SIGTERM)
+```
+
+Testnet: `-p 30525:30525 -p 127.0.0.1:8546:8546 -e RPC_PORT=8546 -v quinvium-testnet:/data ghcr.io/lakylife/quinvium-node:latest --network testnet`. Options after the image name replace the default `--network mainnet`, so repeat the network there, for example `... quinvium-node:latest --network mainnet --no-mining-rpc --trust-proxy`.
+
+- Inside the container JSON-RPC listens on all interfaces, so publish it only on `127.0.0.1` as above. Docker forwards connections from a private address, so the node treats every caller as local (mining methods allowed, no rate limit per IP).
+- For a public endpoint put your HTTPS proxy in front (see Setup) and add `--no-mining-rpc --trust-proxy`; the proxy then passes the real client address and the rate limit works per client.
+- Stratum for your own miners: add `-p 3333:3333` and `--stratum-host 0.0.0.0`.
+- Update: `docker pull ghcr.io/lakylife/quinvium-node:latest`, then remove and start the container again with the same volume.
+
 ## Operations
 
 - **Update the node:** `ops/deploy-node.sh root@SERVER mainnet`.

@@ -98,6 +98,9 @@ test('without a pool, pool mining does not work and a foreign contract does not 
 
 test('each miner hashes its own header and shares go to the contract', async () => {
   await node.startPool(ethers.getBytes(poolAddress), payerKey, { minShareDifficulty: 4n });
+  // Work for the pool's own address would send payouts back into the pool (coins circling, the fee charged twice).
+  await assert.rejects(rpc('aether_poolWork', [poolAddress]), /payout address must be your wallet/);
+  await assert.rejects(rpc('aether_poolWork', [ethers.ZeroAddress]), /payout address must be your wallet/);
   const [sealA, seed, target, number, fieldsA, address] = await rpc('aether_poolWork', [alice.address, 'rig1']);
   const [sealB] = await rpc('aether_poolWork', [bob.address]);
   assert.notEqual(sealA, sealB);
