@@ -83,7 +83,7 @@ const provider = new ethers.JsonRpcProvider('https://rpc.quinvium.com', 52401);
 | [Specification](docs/SPECIFICATION.md) | Exact consensus rules for auditors and other implementations |
 | [Guide](docs/GUIDE.md) | Using the app, the Explorer, wallets and mining |
 | [Command line](docs/CLI.md) | The `quinvium` command |
-| [Running a public node](docs/RUNNING-A-PUBLIC-NODE.md) | Servers, seeds, outages and network upgrades |
+| [Running a public node](docs/RUNNING-A-PUBLIC-NODE.md) | Servers, Docker image, seeds, outages and network upgrades |
 | [Chain integrity](docs/CHAIN-INTEGRITY.md) | Why balances cannot be changed, `quinvium audit`, readiness |
 | [Security model](docs/SECURITY-MODEL.md) | What is tested, fixed vulnerabilities, known risks |
 | [Internal review](docs/REVIEW.md) | Findings of internal code reviews (not an independent audit) |
