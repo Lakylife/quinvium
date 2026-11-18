@@ -63,3 +63,32 @@ test('the rate limit counts IPv6 callers by /64 and never resets everyone at onc
   for (let i = 0; i < 50_010; i++) server._allow({ ip: `10.${(i >> 16) & 255}.${(i >> 8) & 255}.${i & 255}`, local: false });
   assert.equal(server._allow(victim), false, 'many new addresses do not clear an exhausted limit');
 });
+
+test('the preflight of a page on the internet may read this node (Private Network Access), only when the browser asks', () => {
+  const server = new RpcServer(node, {});
+  const answer = (headers) => {
+    const out = {};
+    const res = { setHeader: (k, v) => { out[k.toLowerCase()] = v; }, writeHead: (code) => { out.status = code; }, end: () => {} };
+    server._http({ method: 'OPTIONS', url: '/', headers }, res);
+    return out;
+  };
+  const asked = answer({ 'access-control-request-private-network': 'true' });
+  assert.equal(asked.status, 204);
+  assert.equal(asked['access-control-allow-private-network'], 'true');
+  assert.equal(answer({})['access-control-allow-private-network'], undefined);
+});
+
+test('coin supply as a plain number for trackers: total, circulating and maximum', async () => {
+  const server = new RpcServer(node, {});
+  server.methods.aether_stats = () => ({ supply: '90704500000000000000000', maxSupply: '64000000000000000000000000' });
+  const get = (url) => new Promise((resolve) => {
+    const out = { headers: {} };
+    const res = { headersSent: false, setHeader: (k, v) => { out.headers[k.toLowerCase()] = v; }, writeHead: (code, h = {}) => { out.status = code; Object.assign(out.headers, h); }, end: (body) => { out.body = body; resolve(out); } };
+    server._http({ method: 'GET', url, headers: {}, socket: { remoteAddress: '198.51.100.9' } }, res);
+  });
+  assert.equal((await get('/api/supply/total')).body, '90704.5');
+  assert.equal((await get('/api/supply/circulating')).body, '90704.5');
+  const max = await get('/api/supply/max');
+  assert.equal(max.body, '64000000');
+  assert.match(max.headers['Content-Type'], /text\/plain/);
+});

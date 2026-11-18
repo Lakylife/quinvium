@@ -406,6 +406,7 @@ console.log('block', receipt.blockNumber, 'fee', ethers.formatEther(receipt.fee)
         ['`block`', '`getblockcountdown`', '`blockno`', L('Kolik bloků a sekund zbývá', 'Blocks and seconds remaining')],
         ['`logs`', '`getLogs`', '`fromBlock`, `toBlock`, `address`, `topic0`…`topic3`, `page`, `offset`', L('Události kontraktů', 'Contract events')],
         ['`stats`', '`ethsupply`, `coinsupply`, `nodecount`', '—', L('Vytěžené mince a počet uzlů', 'Coins mined and node count')],
+        ['`/api/supply/total`, `/circulating`, `/max`', 'GET', '—', L('Zásoba v celých mincích jako prosté číslo (`90360`) pro sledovače mincí; v oběhu = vytěženo, bez premine', 'Supply in whole coins as a plain number (`90360`) for coin trackers; circulating = mined, no premine')],
         ['`gastracker`', '`gasoracle`', '—', L('Poplatky pomalu, běžně, rychle v gwei', 'Slow, normal and fast fees in gwei')],
         ['`proxy`', '`eth_blockNumber`, `eth_getBlockByNumber`, `eth_getTransactionByHash`, `eth_getTransactionReceipt`, `eth_call`, `eth_getCode`, `eth_getStorageAt`, `eth_getTransactionCount`, `eth_gasPrice`, `eth_estimateGas`', L('Parametry `tag`, `txhash`, `to`, `data` …', 'Parameters `tag`, `txhash`, `to`, `data` …'), L('Odpověď JSON-RPC', 'A JSON-RPC answer')],
       ] } },
@@ -416,7 +417,7 @@ console.log('block', receipt.blockNumber, 'fee', ethers.formatEther(receipt.fee)
       { table: { head: [L('Síť', 'Network'), 'Chain ID', 'RPC', 'P2P', 'Stratum', L('Mince', 'Coin')], rows: [
         ['mainnet', '52401', '8545', '30524', '3333', 'QU'], ['testnet', '52402', '8546', '30525', '3334', 'tQU'], ['dev', '52403', '8547', '30526', '3335', 'dQU'],
       ] } },
-      { p: L('Mainnet zatím neběží. Testovací mince `tQU` a `dQU` nemají žádnou hodnotu.', 'Mainnet is not live yet. The test coins `tQU` and `dQU` have no value.') },
+      { p: L('Mainnet běží od 14. 11. 2026. Testovací mince `tQU` a `dQU` nemají žádnou hodnotu.', 'Mainnet is live since 14 November 2026. The test coins `tQU` and `dQU` have no value.') },
       { h: L('Parametry', 'Parameters') },
       { table: { head: [L('Parametr', 'Parameter'), L('Hodnota', 'Value')], rows: [
         [L('Konsensus', 'Consensus'), L('Proof of Work, Ethash, obtížnost LWMA po každém bloku', 'Proof of Work, Ethash, LWMA difficulty each block')],

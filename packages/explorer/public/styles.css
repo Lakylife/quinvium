@@ -1009,3 +1009,7 @@ body:not(.compact-nav) .header-search { flex: 1 1 200px; max-width: 240px; }
 #verify-form textarea { font-family: var(--mono); font-size: 12.5px; }
 #verify-form .check { flex-direction: row; align-items: center; gap: 8px; }
 #verify-next { margin-top: 12px; }
+.card-actions { display: flex; align-items: center; gap: 14px; }
+button.text-link { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
+.nav-soon { color: var(--text-3); font-size: 12px; }
+.not-found p { margin: 6px 0; }
