@@ -25,7 +25,7 @@ import { SITES, SiteWatch, hashFolder } from './watch/site.js';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-export const VERSION = 'quintium-node/2.16.1';
+export const VERSION = 'quintium-node/2.16.2';
 const POOL_RETRY_MS = 60_000;
 const JOURNAL_MS = 30_000;       // queue on disk; after a crash at most the last half minute is missing
 const REBROADCAST_MS = 60_000;   // own pending transactions to peers again

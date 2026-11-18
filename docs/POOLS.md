@@ -90,7 +90,8 @@ Without a pool, a miner mines for its own address and receives the whole block r
 
 | | |
 | --- | --- |
-| Contract | `0x7ec85f6dfd7baa9f4d0ff93713a7297150a23e5a` |
+| Contract | `0xd7B63BCE0E77E0e53D7309e7E64cA4346e0dF5c8` (version 2: the pool pays its server gas from mined rewards, since 18 November 2026) |
+| Earlier contract | `0x7ec85f6dfd7baa9f4d0ff93713a7297150a23e5a` (until 18 November 2026; miners withdraw what is left with Claim on its pool page) |
 | Server | `https://pool.quinvium.com` |
 | Stratum | `stratum+tcp://pool.quinvium.com:4444` |
 | Fee | 1 % |
