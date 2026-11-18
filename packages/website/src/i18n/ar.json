@@ -462,5 +462,17 @@
  "Loading the latest blocks…": "جارٍ تحميل أحدث الكتل…",
  "The network is carried by our public server, a seed run by the community, nodes shared from the app and the miners' own nodes. When the server is down, the website, the Explorer and wallets read from community nodes.": "تعتمد الشبكة على خادمنا العام وعقدة بذرية يشغّلها المجتمع وعُقد مشتركة من التطبيق وعُقد المعدّنين أنفسهم. إذا توقف الخادم، يقرأ الموقع والمستكشف والمحافظ من عُقد المجتمع.",
  "<strong>Next</strong><span>An independent security audit. Contract source verification in the Explorer. A Docker image of the node. An update-signing key off the development machine and remote updates switched back on. Signed Windows builds and the wallet in the Chrome Web Store.</span>": "<strong>التالي</strong><span>تدقيق أمني مستقل. التحقق من الشيفرة المصدرية للعقود في المستكشف. صورة Docker للعقدة. نقل مفتاح توقيع التحديثات خارج جهاز التطوير وإعادة تشغيل التحديثات. برامج Windows موقّعة والمحفظة في متجر Chrome الإلكتروني.</span>",
- "<strong>November 2026</strong><span>The official pool pool.quinvium.com, a second seed run by the community, sharing a node from the app, and the website, Explorer and wallets switching to community nodes when the server is down.</span>": "<strong>نوفمبر 2026</strong><span>التجمّع الرسمي pool.quinvium.com، وعقدة بذرية ثانية يشغّلها المجتمع، ومشاركة عقدة من التطبيق، وانتقال الموقع والمستكشف والمحافظ إلى عُقد المجتمع عند توقف الخادم.</span>"
+ "<strong>November 2026</strong><span>The official pool pool.quinvium.com, a second seed run by the community, sharing a node from the app, and the website, Explorer and wallets switching to community nodes when the server is down.</span>": "<strong>نوفمبر 2026</strong><span>التجمّع الرسمي pool.quinvium.com، وعقدة بذرية ثانية يشغّلها المجتمع، ومشاركة عقدة من التطبيق، وانتقال الموقع والمستكشف والمحافظ إلى عُقد المجتمع عند توقف الخادم.</span>",
+ "Keep Quinvium online": "حافظ على Quinvium متصلًا",
+ "Share your node from the Quinvium app. When the main servers are down, it serves this site, the Explorer and wallets.": "شارك عقدتك من تطبيق Quinvium. عندما تتوقف الخوادم الرئيسية، تخدم هذا الموقع والمستكشف والمحافظ.",
+ "Get the app": "احصل على التطبيق",
+ "The node in Docker": "العقدة في Docker",
+ "On a server or a computer with Docker, the node runs with one command. The image is for amd64 and arm64; the data stays in a volume.": "على خادم أو حاسوب فيه Docker تعمل العقدة بأمر واحد. الصورة متاحة لـ amd64 و arm64، وتبقى البيانات في وحدة تخزين.",
+ "Then point your miner at <code>stratum+tcp://COMPUTER_ADDRESS:3333</code>. Without <code>--miner-address</code> and port 3333 it is a node that helps the network. More options are in <a href=\"https://github.com/Lakylife/quinvium/blob/main/docs/RUNNING-A-PUBLIC-NODE.md#docker\">Running a public node</a>.": "ثم وجّه المعدّن إلى <code>stratum+tcp://COMPUTER_ADDRESS:3333</code>. من دون <code>--miner-address</code> والمنفذ 3333 تكون عقدة تساعد الشبكة. خيارات أخرى في <a href=\"https://github.com/Lakylife/quinvium/blob/main/docs/RUNNING-A-PUBLIC-NODE.md#docker\">Running a public node</a>.",
+ "The app at a glance": "التطبيق في لمحة",
+ "Wallet in the Quinvium app": "المحفظة في تطبيق Quinvium",
+ "Wallet and network overview": "المحفظة ونظرة عامة على الشبكة",
+ "GPU mining with one button": "التعدين بالمعالج الرسومي بزر واحد",
+ "Explorer in the Quinvium app": "المستكشف في تطبيق Quinvium",
+ "The Explorer from your own node": "المستكشف من عقدتك الخاصة"
 }

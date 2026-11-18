@@ -76,6 +76,11 @@
 quintium-miner --address YOUR_ADDRESS --node http://127.0.0.1:8545</code></pre>
   <p>Der Knoten bietet auch Stratum (Port 3333), daher funktionieren auch andere Ethash-Miner. Für Miner im lokalen Netz starten Sie den Knoten mit <code>--stratum-host 0.0.0.0</code>.</p>
 
+  <h3>Der Knoten in Docker</h3>
+  <p>Auf einem Server oder Computer mit Docker läuft der Knoten mit einem Befehl. Das Image gibt es für amd64 und arm64; die Daten bleiben in einem Volume.</p>
+  <pre><code>docker run -d --name quinvium --restart unless-stopped   -p 30524:30524 -p 3333:3333 -p 127.0.0.1:8545:8545   -v quinvium-mainnet:/data ghcr.io/lakylife/quinvium-node:latest   --network mainnet --miner-address YOUR_ADDRESS --stratum-host 0.0.0.0</code></pre>
+  <p>Richten Sie Ihren Miner dann auf <code>stratum+tcp://COMPUTER_ADDRESS:3333</code>. Ohne <code>--miner-address</code> und Port 3333 ist es ein Knoten, der dem Netzwerk hilft. Weitere Optionen stehen in <a href="https://github.com/Lakylife/quinvium/blob/main/docs/RUNNING-A-PUBLIC-NODE.md#docker">Running a public node</a>.</p>
+
   <h2>Solo oder Pool</h2>
   <div class="cards c2">
     <article class="card"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5zM3 7l9 5 9-5M12 12v10"/></svg><h3>Solo</h3><p>Sie erhalten den ganzen Block und seine Gebühren, mit einer Karte kann es aber lange bis zum nächsten Block dauern.</p></article>

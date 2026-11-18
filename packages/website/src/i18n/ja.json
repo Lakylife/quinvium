@@ -215,7 +215,7 @@
  "Any 0x… address from your wallet. Rewards are paid straight to it.": "ウォレットの任意の 0x… アドレス。報酬は直接そこに支払われます。",
  "A connection": "接続",
  "The node joins the network on its own through seed.quinvium.com.": "ノードは seed.quinvium.com を通じて自動でネットワークに参加します。",
- "Mining in the Quinvium app": "Quinvium アプリでマイニング",
+ "Mining in the Quinvium app": "Quinvium アプリでのマイニング",
  "Install the app for macOS or Windows. <a href=\"/download/\">Download</a>": "macOS または Windows 用のアプリをインストールします。<a href=\"/download/\">ダウンロード</a>",
  "Choose the Mainnet network. The app starts its own node and downloads the chain.": "Mainnet を選びます。アプリが独自のノードを起動してチェーンをダウンロードします。",
  "In Mining, enter your payout address and switch mining on.": "「マイニング」で受け取りアドレスを入力し、マイニングをオンにします。",
@@ -462,5 +462,17 @@
  "Loading the latest blocks…": "最新のブロックを読み込んでいます…",
  "The network is carried by our public server, a seed run by the community, nodes shared from the app and the miners' own nodes. When the server is down, the website, the Explorer and wallets read from community nodes.": "ネットワークは公式の公開サーバー、コミュニティが運営するシード、アプリから共有されたノード、マイナー自身のノードで支えられています。サーバーが停止しても、ウェブサイト、Explorer、ウォレットはコミュニティのノードから読み込みます。",
  "<strong>Next</strong><span>An independent security audit. Contract source verification in the Explorer. A Docker image of the node. An update-signing key off the development machine and remote updates switched back on. Signed Windows builds and the wallet in the Chrome Web Store.</span>": "<strong>次に</strong><span>独立したセキュリティ監査。Explorer でのコントラクトのソースコード検証。ノードの Docker イメージ。更新署名鍵を開発用コンピューターの外へ移し、リモート更新を再開。署名済みの Windows 版と Chrome ウェブストアでのウォレット公開。</span>",
- "<strong>November 2026</strong><span>The official pool pool.quinvium.com, a second seed run by the community, sharing a node from the app, and the website, Explorer and wallets switching to community nodes when the server is down.</span>": "<strong>2026年11月</strong><span>公式プール pool.quinvium.com、コミュニティが運営する2つ目のシード、アプリからのノード共有、そしてサーバー停止時にウェブサイト、Explorer、ウォレットがコミュニティのノードへ切り替わる仕組み。</span>"
+ "<strong>November 2026</strong><span>The official pool pool.quinvium.com, a second seed run by the community, sharing a node from the app, and the website, Explorer and wallets switching to community nodes when the server is down.</span>": "<strong>2026年11月</strong><span>公式プール pool.quinvium.com、コミュニティが運営する2つ目のシード、アプリからのノード共有、そしてサーバー停止時にウェブサイト、Explorer、ウォレットがコミュニティのノードへ切り替わる仕組み。</span>",
+ "Keep Quinvium online": "Quinvium をオンラインに保つ",
+ "Share your node from the Quinvium app. When the main servers are down, it serves this site, the Explorer and wallets.": "Quinvium アプリからノードを共有してください。メインサーバーが停止しても、このサイト、Explorer、ウォレットにデータを提供します。",
+ "Get the app": "アプリを入手",
+ "The node in Docker": "Docker でノードを動かす",
+ "On a server or a computer with Docker, the node runs with one command. The image is for amd64 and arm64; the data stays in a volume.": "Docker のあるサーバーやコンピューターなら、コマンド 1 つでノードが動きます。イメージは amd64 と arm64 に対応し、データはボリュームに保存されます。",
+ "Then point your miner at <code>stratum+tcp://COMPUTER_ADDRESS:3333</code>. Without <code>--miner-address</code> and port 3333 it is a node that helps the network. More options are in <a href=\"https://github.com/Lakylife/quinvium/blob/main/docs/RUNNING-A-PUBLIC-NODE.md#docker\">Running a public node</a>.": "その後、マイナーを <code>stratum+tcp://COMPUTER_ADDRESS:3333</code> に接続します。<code>--miner-address</code> とポート 3333 がなければ、ネットワークを支えるノードとして動きます。その他のオプションは <a href=\"https://github.com/Lakylife/quinvium/blob/main/docs/RUNNING-A-PUBLIC-NODE.md#docker\">Running a public node</a> にあります。",
+ "The app at a glance": "アプリの概要",
+ "Wallet in the Quinvium app": "Quinvium アプリのウォレット",
+ "Wallet and network overview": "ウォレットとネットワークの概要",
+ "GPU mining with one button": "ボタン 1 つで GPU マイニング",
+ "Explorer in the Quinvium app": "Quinvium アプリの Explorer",
+ "The Explorer from your own node": "自分のノードから動く Explorer"
 }

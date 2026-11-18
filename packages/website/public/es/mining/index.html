@@ -63,7 +63,7 @@
     <article class="card"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg><h3>Una conexión</h3><p>El nodo se une a la red por sí solo a través de seed.quinvium.com.</p></article>
   </div>
 
-  <h2>Minar en la app Quinvium</h2>
+  <h2>Minería en la app Quinvium</h2>
   <ol class="numbered">
     <li>Instale la app para macOS o Windows. <a href="/es/download/">Descargar</a></li>
     <li>Elija la red Mainnet. La app inicia su propio nodo y descarga la cadena.</li>
@@ -75,6 +75,11 @@
   <pre><code>quintium-node --network mainnet --miner-address YOUR_ADDRESS
 quintium-miner --address YOUR_ADDRESS --node http://127.0.0.1:8545</code></pre>
   <p>El nodo también ofrece Stratum (puerto 3333), así que funcionan otros mineros Ethash. Para mineros de su red local, inicie el nodo con <code>--stratum-host 0.0.0.0</code>.</p>
+
+  <h3>El nodo en Docker</h3>
+  <p>En un servidor o un ordenador con Docker, el nodo se ejecuta con un solo comando. La imagen es para amd64 y arm64; los datos se guardan en un volumen.</p>
+  <pre><code>docker run -d --name quinvium --restart unless-stopped   -p 30524:30524 -p 3333:3333 -p 127.0.0.1:8545:8545   -v quinvium-mainnet:/data ghcr.io/lakylife/quinvium-node:latest   --network mainnet --miner-address YOUR_ADDRESS --stratum-host 0.0.0.0</code></pre>
+  <p>Luego apunte su minero a <code>stratum+tcp://COMPUTER_ADDRESS:3333</code>. Sin <code>--miner-address</code> y el puerto 3333 es un nodo que ayuda a la red. Más opciones en <a href="https://github.com/Lakylife/quinvium/blob/main/docs/RUNNING-A-PUBLIC-NODE.md#docker">Running a public node</a>.</p>
 
   <h2>En solitario o en pool</h2>
   <div class="cards c2">

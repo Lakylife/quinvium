@@ -230,5 +230,6 @@ for (const f of ['site.css', 'site.js', 'theme.js', 'logo.svg', 'Quinvium-Symbol
 copyFileSync(join(here, 'logo.svg'), join(out, 'favicon.svg'));
 // Checksum lists of each release (downloads/<version>/SHA256SUMS.txt): the app compares them with GitHub before opening a download.
 if (existsSync(join(here, 'downloads'))) cpSync(join(here, 'downloads'), join(out, 'downloads'), { recursive: true });
+cpSync(join(here, 'screens'), join(out, 'screens'), { recursive: true });   // screenshots of the app (packages/desktop/test/download-screens.mjs)
 for (const f of ['og.png', 'apple-touch-icon.png', 'quinvium-whitepaper.pdf']) { try { copyFileSync(join(here, f), join(out, f)); } catch { console.warn(`chybí ${f}, spusťte node src/og.mjs`); } }
 console.log(`Hotovo: ${urls.length} stránek v ${out}`);

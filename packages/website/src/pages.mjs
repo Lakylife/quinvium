@@ -106,8 +106,17 @@ export function pages(L, u, dl = null) {
       <div><i class="st-ic" aria-hidden="true">${icon('coins')}</i><span>Mined supply</span><strong data-m="supply" class="sk"></strong></div>
     </div>
     <p class="live-note" data-live-note data-before="Numbers start moving when mainnet launches on 14 November 2026 at 00:00 CET." data-off="No node is answering right now." data-on="Live from the network, refreshed every 15 s."></p>
-    <p class="live-note"><strong>Keep this page alive.</strong> These numbers come from nodes that people run. Run the Quinvium app and turn on Share node publicly: your node then serves this page, the Explorer and wallets when the main servers are down. <a href="${u('download')}">Get the app</a></p>
-    <p class="live-note" data-community-count hidden></p>
+    <div class="keep">
+      <span class="keep-ic" aria-hidden="true">${icon('globe')}</span>
+      <div class="keep-copy">
+        <h3>Keep Quinvium online</h3>
+        <p>Share your node from the Quinvium app. When the main servers are down, it serves this site, the Explorer and wallets.</p>
+      </div>
+      <div class="keep-side">
+        <span class="keep-count" data-community-count hidden></span>
+        <a class="btn primary" href="${u('download')}">Get the app${icon('arrow')}</a>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -356,6 +365,14 @@ await provider.getBlockNumber();</code></pre>
 quintium-miner --address YOUR_ADDRESS --node http://127.0.0.1:8545</code></pre>
   <p>${L('Uzel nabízí i Stratum (port 3333), takže jde použít i jiný miner pro Ethash. Pro přístup z místní sítě spusťte uzel se <code>--stratum-host 0.0.0.0</code>.', 'The node also offers Stratum (port 3333), so other Ethash miners work too. For miners on your local network start the node with <code>--stratum-host 0.0.0.0</code>.')}</p>
 
+  <h3>${L('Uzel v Dockeru', 'The node in Docker')}</h3>
+  <p>${L('Na serveru nebo v počítači s Dockerem běží uzel jedním příkazem. Obraz je pro amd64 i arm64, data zůstávají ve svazku.', 'On a server or a computer with Docker, the node runs with one command. The image is for amd64 and arm64; the data stays in a volume.')}</p>
+  <pre><code>docker run -d --name quinvium --restart unless-stopped \
+  -p 30524:30524 -p 3333:3333 -p 127.0.0.1:8545:8545 \
+  -v quinvium-mainnet:/data ghcr.io/lakylife/quinvium-node:latest \
+  --network mainnet --miner-address YOUR_ADDRESS --stratum-host 0.0.0.0</code></pre>
+  <p>${L('Miner pak připojte na <code>stratum+tcp://ADRESA_POČÍTAČE:3333</code>. Bez <code>--miner-address</code> a portu 3333 je to jen uzel, který pomáhá síti. Další volby jsou v návodu <a href="https://github.com/Lakylife/quinvium/blob/main/docs/RUNNING-A-PUBLIC-NODE.md#docker">Running a public node</a>.', 'Then point your miner at <code>stratum+tcp://COMPUTER_ADDRESS:3333</code>. Without <code>--miner-address</code> and port 3333 it is a node that helps the network. More options are in <a href="https://github.com/Lakylife/quinvium/blob/main/docs/RUNNING-A-PUBLIC-NODE.md#docker">Running a public node</a>.')}</p>
+
   <h2>${L('Sólo, nebo pool', 'Solo or pool')}</h2>
   <div class="cards c2">
     ${card('cube', L('Sólo', 'Solo'), L('Celý blok i poplatky dostanete vy, ale s jednou kartou mezi bloky může uplynout dlouhá doba.', 'You get the whole block and its fees, but with one card there can be a long wait between blocks.'))}
@@ -554,6 +571,13 @@ console.log(await provider.getBlockNumber());</code></pre>
       ${f.note ? `<p class="small muted">${f.note}</p>` : ''}
     </article>`).join('')}</div>
   <p class="row-btns"><a class="btn link" href="/downloads/${dl.version}/SHA256SUMS.txt">SHA256SUMS.txt${icon('arrow')}</a><a class="btn link" href="https://github.com/Lakylife/quinvium/releases">Also on GitHub Releases${icon('ext')}</a></p>` : ''}
+
+  <h2>${L('Aplikace na první pohled', 'The app at a glance')}</h2>
+  <div class="shots">
+    <figure><img src="/screens/app-wallet.jpg" width="1600" height="1032" loading="lazy" alt="${L('Peněženka v aplikaci Quinvium', 'Wallet in the Quinvium app')}"><figcaption>${L('Peněženka a přehled sítě', 'Wallet and network overview')}</figcaption></figure>
+    <figure><img src="/screens/app-mining.jpg" width="1600" height="1032" loading="lazy" alt="${L('Těžba v aplikaci Quinvium', 'Mining in the Quinvium app')}"><figcaption>${L('Těžba na grafické kartě jedním tlačítkem', 'GPU mining with one button')}</figcaption></figure>
+    <figure><img src="/screens/app-explorer.jpg" width="1600" height="1032" loading="lazy" alt="${L('Explorer v aplikaci Quinvium', 'Explorer in the Quinvium app')}"><figcaption>${L('Explorer z vlastního uzlu', 'The Explorer from your own node')}</figcaption></figure>
+  </div>
 
   <h2>Wpayin (iOS, Android)</h2>
   <div class="cards c2">

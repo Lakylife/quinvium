@@ -76,6 +76,11 @@
 quintium-miner --address YOUR_ADDRESS --node http://127.0.0.1:8545</code></pre>
   <p>توفّر العقدة أيضًا Stratum (المنفذ 3333)، لذا تعمل معدّنات Ethash الأخرى أيضًا. لمعدّنات شبكتك المحلية شغّل العقدة مع <code>--stratum-host 0.0.0.0</code>.</p>
 
+  <h3>العقدة في Docker</h3>
+  <p>على خادم أو حاسوب فيه Docker تعمل العقدة بأمر واحد. الصورة متاحة لـ amd64 و arm64، وتبقى البيانات في وحدة تخزين.</p>
+  <pre><code>docker run -d --name quinvium --restart unless-stopped   -p 30524:30524 -p 3333:3333 -p 127.0.0.1:8545:8545   -v quinvium-mainnet:/data ghcr.io/lakylife/quinvium-node:latest   --network mainnet --miner-address YOUR_ADDRESS --stratum-host 0.0.0.0</code></pre>
+  <p>ثم وجّه المعدّن إلى <code>stratum+tcp://COMPUTER_ADDRESS:3333</code>. من دون <code>--miner-address</code> والمنفذ 3333 تكون عقدة تساعد الشبكة. خيارات أخرى في <a href="https://github.com/Lakylife/quinvium/blob/main/docs/RUNNING-A-PUBLIC-NODE.md#docker">Running a public node</a>.</p>
+
   <h2>منفرد أم مجمّع</h2>
   <div class="cards c2">
     <article class="card"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5zM3 7l9 5 9-5M12 12v10"/></svg><h3>منفرد</h3><p>تحصل على الكتلة كاملة ورسومها، لكن مع بطاقة واحدة قد يطول الانتظار بين الكتل.</p></article>

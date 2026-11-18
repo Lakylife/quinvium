@@ -462,5 +462,17 @@
  "Loading the latest blocks…": "Načítám poslední bloky…",
  "The network is carried by our public server, a seed run by the community, nodes shared from the app and the miners' own nodes. When the server is down, the website, the Explorer and wallets read from community nodes.": "Síť nese náš veřejný server, seed provozovaný komunitou, uzly sdílené z aplikace a uzly těžařů. Když server nejede, web, Explorer i peněženky čtou z uzlů komunity.",
  "<strong>Next</strong><span>An independent security audit. Contract source verification in the Explorer. A Docker image of the node. An update-signing key off the development machine and remote updates switched back on. Signed Windows builds and the wallet in the Chrome Web Store.</span>": "<strong>Dál</strong><span>Nezávislý bezpečnostní audit. Ověření zdrojového kódu kontraktů v Exploreru. Obraz uzlu pro Docker. Podpisový klíč aktualizací mimo vývojový počítač a znovu zapnuté aktualizace. Podepsané programy pro Windows a peněženka v Chrome Web Store.</span>",
- "<strong>November 2026</strong><span>The official pool pool.quinvium.com, a second seed run by the community, sharing a node from the app, and the website, Explorer and wallets switching to community nodes when the server is down.</span>": "<strong>Listopad 2026</strong><span>Oficiální pool pool.quinvium.com, druhý seed provozovaný komunitou, sdílení uzlu z aplikace a přechod webu, Exploreru i peněženek na uzly komunity při výpadku serveru.</span>"
+ "<strong>November 2026</strong><span>The official pool pool.quinvium.com, a second seed run by the community, sharing a node from the app, and the website, Explorer and wallets switching to community nodes when the server is down.</span>": "<strong>Listopad 2026</strong><span>Oficiální pool pool.quinvium.com, druhý seed provozovaný komunitou, sdílení uzlu z aplikace a přechod webu, Exploreru i peněženek na uzly komunity při výpadku serveru.</span>",
+ "Keep Quinvium online": "Udržte Quinvium online",
+ "Share your node from the Quinvium app. When the main servers are down, it serves this site, the Explorer and wallets.": "Sdílejte svůj uzel z aplikace Quinvium. Když hlavní servery nejedou, obslouží tento web, Explorer i peněženky.",
+ "Get the app": "Stáhnout aplikaci",
+ "The node in Docker": "Uzel v Dockeru",
+ "On a server or a computer with Docker, the node runs with one command. The image is for amd64 and arm64; the data stays in a volume.": "Na serveru nebo v počítači s Dockerem běží uzel jedním příkazem. Obraz je pro amd64 i arm64, data zůstávají ve svazku.",
+ "Then point your miner at <code>stratum+tcp://COMPUTER_ADDRESS:3333</code>. Without <code>--miner-address</code> and port 3333 it is a node that helps the network. More options are in <a href=\"https://github.com/Lakylife/quinvium/blob/main/docs/RUNNING-A-PUBLIC-NODE.md#docker\">Running a public node</a>.": "Miner pak připojte na <code>stratum+tcp://ADRESA_POČÍTAČE:3333</code>. Bez <code>--miner-address</code> a portu 3333 je to jen uzel, který pomáhá síti. Další volby jsou v návodu <a href=\"https://github.com/Lakylife/quinvium/blob/main/docs/RUNNING-A-PUBLIC-NODE.md#docker\">Running a public node</a>.",
+ "The app at a glance": "Aplikace na první pohled",
+ "Wallet in the Quinvium app": "Peněženka v aplikaci Quinvium",
+ "Wallet and network overview": "Peněženka a přehled sítě",
+ "GPU mining with one button": "Těžba na grafické kartě jedním tlačítkem",
+ "Explorer in the Quinvium app": "Explorer v aplikaci Quinvium",
+ "The Explorer from your own node": "Explorer z vlastního uzlu"
 }

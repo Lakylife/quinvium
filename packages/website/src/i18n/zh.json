@@ -215,7 +215,7 @@
  "Any 0x… address from your wallet. Rewards are paid straight to it.": "你钱包里的任意 0x… 地址。奖励直接支付到该地址。",
  "A connection": "网络连接",
  "The node joins the network on its own through seed.quinvium.com.": "节点会通过 seed.quinvium.com 自动加入网络。",
- "Mining in the Quinvium app": "在 Quinvium 应用中挖矿",
+ "Mining in the Quinvium app": "Quinvium 应用中的挖矿",
  "Install the app for macOS or Windows. <a href=\"/download/\">Download</a>": "安装适用于 macOS 或 Windows 的应用。<a href=\"/download/\">下载</a>",
  "Choose the Mainnet network. The app starts its own node and downloads the chain.": "选择主网。应用会启动自己的节点并下载区块链。",
  "In Mining, enter your payout address and switch mining on.": "在“挖矿”中输入收款地址并开启挖矿。",
@@ -462,5 +462,17 @@
  "Loading the latest blocks…": "正在加载最新区块…",
  "The network is carried by our public server, a seed run by the community, nodes shared from the app and the miners' own nodes. When the server is down, the website, the Explorer and wallets read from community nodes.": "网络由我们的公共服务器、社区运营的种子节点、从应用共享的节点以及矿工自己的节点共同支撑。服务器宕机时，网站、Explorer 和钱包会从社区节点读取数据。",
  "<strong>Next</strong><span>An independent security audit. Contract source verification in the Explorer. A Docker image of the node. An update-signing key off the development machine and remote updates switched back on. Signed Windows builds and the wallet in the Chrome Web Store.</span>": "<strong>下一步</strong><span>独立安全审计。在 Explorer 中验证合约源代码。节点的 Docker 镜像。将更新签名密钥移出开发电脑并重新启用远程更新。已签名的 Windows 程序以及上架 Chrome 网上应用店的钱包。</span>",
- "<strong>November 2026</strong><span>The official pool pool.quinvium.com, a second seed run by the community, sharing a node from the app, and the website, Explorer and wallets switching to community nodes when the server is down.</span>": "<strong>2026年11月</strong><span>官方矿池 pool.quinvium.com、社区运营的第二个种子节点、从应用共享节点，以及服务器宕机时网站、Explorer 和钱包切换到社区节点。</span>"
+ "<strong>November 2026</strong><span>The official pool pool.quinvium.com, a second seed run by the community, sharing a node from the app, and the website, Explorer and wallets switching to community nodes when the server is down.</span>": "<strong>2026年11月</strong><span>官方矿池 pool.quinvium.com、社区运营的第二个种子节点、从应用共享节点，以及服务器宕机时网站、Explorer 和钱包切换到社区节点。</span>",
+ "Keep Quinvium online": "让 Quinvium 保持在线",
+ "Share your node from the Quinvium app. When the main servers are down, it serves this site, the Explorer and wallets.": "在 Quinvium 应用中共享您的节点。主服务器宕机时，它会为本网站、Explorer 和钱包提供数据。",
+ "Get the app": "获取应用",
+ "The node in Docker": "在 Docker 中运行节点",
+ "On a server or a computer with Docker, the node runs with one command. The image is for amd64 and arm64; the data stays in a volume.": "在装有 Docker 的服务器或电脑上，一条命令即可运行节点。镜像支持 amd64 和 arm64，数据保存在卷中。",
+ "Then point your miner at <code>stratum+tcp://COMPUTER_ADDRESS:3333</code>. Without <code>--miner-address</code> and port 3333 it is a node that helps the network. More options are in <a href=\"https://github.com/Lakylife/quinvium/blob/main/docs/RUNNING-A-PUBLIC-NODE.md#docker\">Running a public node</a>.": "然后将矿机指向 <code>stratum+tcp://COMPUTER_ADDRESS:3333</code>。不带 <code>--miner-address</code> 和 3333 端口时，它只是帮助网络的节点。更多选项见 <a href=\"https://github.com/Lakylife/quinvium/blob/main/docs/RUNNING-A-PUBLIC-NODE.md#docker\">Running a public node</a>。",
+ "The app at a glance": "应用一览",
+ "Wallet in the Quinvium app": "Quinvium 应用中的钱包",
+ "Wallet and network overview": "钱包和网络概览",
+ "GPU mining with one button": "一键 GPU 挖矿",
+ "Explorer in the Quinvium app": "Quinvium 应用中的 Explorer",
+ "The Explorer from your own node": "来自您自己节点的 Explorer"
 }

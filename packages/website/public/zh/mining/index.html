@@ -63,7 +63,7 @@
     <article class="card"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg><h3>网络连接</h3><p>节点会通过 seed.quinvium.com 自动加入网络。</p></article>
   </div>
 
-  <h2>在 Quinvium 应用中挖矿</h2>
+  <h2>Quinvium 应用中的挖矿</h2>
   <ol class="numbered">
     <li>安装适用于 macOS 或 Windows 的应用。<a href="/zh/download/">下载</a></li>
     <li>选择主网。应用会启动自己的节点并下载区块链。</li>
@@ -75,6 +75,11 @@
   <pre><code>quintium-node --network mainnet --miner-address YOUR_ADDRESS
 quintium-miner --address YOUR_ADDRESS --node http://127.0.0.1:8545</code></pre>
   <p>节点还提供 Stratum（端口 3333），因此其他 Ethash 矿机程序也能使用。若要让局域网中的矿机连接，请用 <code>--stratum-host 0.0.0.0</code> 启动节点。</p>
+
+  <h3>在 Docker 中运行节点</h3>
+  <p>在装有 Docker 的服务器或电脑上，一条命令即可运行节点。镜像支持 amd64 和 arm64，数据保存在卷中。</p>
+  <pre><code>docker run -d --name quinvium --restart unless-stopped   -p 30524:30524 -p 3333:3333 -p 127.0.0.1:8545:8545   -v quinvium-mainnet:/data ghcr.io/lakylife/quinvium-node:latest   --network mainnet --miner-address YOUR_ADDRESS --stratum-host 0.0.0.0</code></pre>
+  <p>然后将矿机指向 <code>stratum+tcp://COMPUTER_ADDRESS:3333</code>。不带 <code>--miner-address</code> 和 3333 端口时，它只是帮助网络的节点。更多选项见 <a href="https://github.com/Lakylife/quinvium/blob/main/docs/RUNNING-A-PUBLIC-NODE.md#docker">Running a public node</a>。</p>
 
   <h2>单独挖还是矿池</h2>
   <div class="cards c2">
