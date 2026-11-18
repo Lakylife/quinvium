@@ -368,6 +368,12 @@ const listDevices = () => new Promise((resolve) => {
  * the current epoch needs (the miner's own limit: DAG + 1/8). A card that does not report its memory is given a try.
  */
 function cannotMine(device) {
+  // The node and the chain first: too little memory or disk makes the whole computer stall, mining or not.
+  if (os.totalmem() < 3.5 * 2 ** 30) return "This computer has too little memory (RAM) for the node and mining. At least 4 GB is needed.";
+  try {
+    const disk = fs.statfsSync(app.getPath('userData'));
+    if (Number(disk.bavail) * Number(disk.bsize) < 2 * 2 ** 30) return "There is not enough free disk space for mining. The node needs at least 2 GB free for the chain; free up some space and try again.";
+  } catch { /* the free space is unknown here; mining is given a try */ }
   if (!knownDevices) return null;
   if (!knownDevices.length) return "No graphics card that can mine was found. Quinvium needs an AMD or NVIDIA card with at least 2 GB of its own memory and a current driver.";
   const list = device !== undefined && device !== 'all' ? knownDevices.filter((d) => String(d.id) === String(device)) : knownDevices;
