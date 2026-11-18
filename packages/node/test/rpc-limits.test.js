@@ -77,3 +77,18 @@ test('the preflight of a page on the internet may read this node (Private Networ
   assert.equal(asked['access-control-allow-private-network'], 'true');
   assert.equal(answer({})['access-control-allow-private-network'], undefined);
 });
+
+test('coin supply as a plain number for trackers: total, circulating and maximum', async () => {
+  const server = new RpcServer(node, {});
+  server.methods.aether_stats = () => ({ supply: '90704500000000000000000', maxSupply: '64000000000000000000000000' });
+  const get = (url) => new Promise((resolve) => {
+    const out = { headers: {} };
+    const res = { headersSent: false, setHeader: (k, v) => { out.headers[k.toLowerCase()] = v; }, writeHead: (code, h = {}) => { out.status = code; Object.assign(out.headers, h); }, end: (body) => { out.body = body; resolve(out); } };
+    server._http({ method: 'GET', url, headers: {}, socket: { remoteAddress: '198.51.100.9' } }, res);
+  });
+  assert.equal((await get('/api/supply/total')).body, '90704.5');
+  assert.equal((await get('/api/supply/circulating')).body, '90704.5');
+  const max = await get('/api/supply/max');
+  assert.equal(max.body, '64000000');
+  assert.match(max.headers['Content-Type'], /text\/plain/);
+});

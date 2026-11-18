@@ -241,6 +241,7 @@ export class RpcServer {
       // Anyone sends the path, even an ordinary link on someone else's page. An error in it must not crash the node.
       try {
         if (req.url.split('?')[0] === '/health') { this._health(req, res); return; }
+        if (/^\/api\/supply\/(total|circulating|max)$/.test(req.url.split('?')[0])) { this._supply(req, res); return; }
         if (req.url.split('?')[0] === '/api' && /[?&]module=/.test(req.url)) { this._restApi(req, res); return; }
         this._static(req, res);
       } catch {
@@ -274,6 +275,25 @@ export class RpcServer {
       this.log(`API: ${e.stack ?? e.message}`);
       reply(200, { status: '0', message: 'NOTOK', result: 'Error! Internal error' });
     });
+  }
+
+  /**
+   * Coin supply as a plain number of whole coins (`90360`, `64000000`), the format coin trackers and listing sites read.
+   * There is no premine and nothing is locked, so the circulating supply equals the mined supply.
+   */
+  _supply(req, res) {
+    const caller = this._caller(req);
+    if (!this._allow(caller)) { res.writeHead(429); res.end(); return; }
+    const kind = req.url.split('?')[0].split('/').pop();
+    this.call({ jsonrpc: '2.0', id: 1, method: 'aether_stats', params: [] }, caller).then((r) => {
+      if (r.error) throw new Error(r.error.message);
+      const wei = BigInt(kind === 'max' ? r.result.maxSupply : r.result.supply);
+      const whole = wei / 10n ** 18n;
+      const frac = (wei % 10n ** 18n).toString().padStart(18, '0').replace(/0+$/, '');
+      const text = frac ? `${whole}.${frac}` : String(whole);
+      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Content-Length': Buffer.byteLength(text), 'Cache-Control': 'max-age=60' });
+      res.end(text);
+    }).catch(() => { if (!res.headersSent) res.writeHead(503); res.end(); });
   }
 
   /**
