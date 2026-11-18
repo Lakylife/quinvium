@@ -986,7 +986,10 @@
   const SHARES_KEY = 'quinvium.showShares';
   const showShares = () => store.get(SHARES_KEY) === '1';
   const latestTxs = (all) => {
-    const list = showShares() ? all.slice(0, HOME_ROWS) : all.filter((x) => txType(x).kind !== 'poolShare').slice(0, HOME_ROWS);
+    // Without pool shares the latest 100 can hold only a few others; the latest plain transfers from the index fill the list.
+    const others = [...new Map(all.filter((x) => txType(x).kind !== 'poolShare').map((x) => [x.hash, x])).values()]
+      .sort((a, b) => Number(BigInt(b.blockNumber ?? 0) - BigInt(a.blockNumber ?? 0)) || Number(b.transactionIndex ?? 0) - Number(a.transactionIndex ?? 0));
+    const list = showShares() ? all.slice(0, HOME_ROWS) : others.slice(0, HOME_ROWS);
     for (const x of list) previews.set(x.hash.toLowerCase(), x);
     if (!list.length && all.length) return `<div class="empty">${t('home.noOtherTxs')}</div>`;
     return list.length ? `<div class="latest-list">${list.map((x) => `<div class="latest-row rowlink" data-href="/tx/${esc(x.hash)}">
@@ -1015,7 +1018,7 @@
     if (!silent) app.innerHTML = skeleton();
     try {
       const now = Math.floor(Date.now() / 1000);
-      const [s, blocks, txs, a, history] = await Promise.all([rpc('aether_stats'), rpc('aether_recentBlocks', [HOME_ROWS + 1, 0]), rpc('aether_recentTxs', [100]),
+      const [s, blocks, txs, a, history] = await Promise.all([rpc('aether_stats'), rpc('aether_recentBlocks', [HOME_ROWS + 1, 0]), rpc('aether_recentTxs', [100]).then(async (recent) => (showShares() ? recent : [...recent, ...((await rpc('aether_txs', [{ kind: 'transfer', limit: HOME_ROWS }]).catch(() => null))?.items ?? [])])),
         rpc('aether_activity').catch(() => null), rpc('aether_chartSeries', [{ from: now - 14 * 86400, to: now, bucket: 86400 }]).catch(() => null), typeContext()]);
       stats = s;
       if (route().name !== 'home') return;
