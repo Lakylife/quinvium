@@ -279,6 +279,7 @@ function startMiner({ address, device }) {
   miner.progress = 0;
   miner.startedAt = Date.now();
   miner.offered = false;
+  miner.blocked = null;
   const { power, tag } = loadSettings();
   const pool = activePool();
   miner.pool = pool?.address ?? null;
@@ -292,9 +293,17 @@ function startMiner({ address, device }) {
   lowPriority(miner.proc);
   saveSettings({ lastMining: { address, device: device ?? 'all' } });   // the tray can start mining again without the window
   keepAwake(true);
+  const started = miner.proc;
   follow(miner.proc, (l) => {
     push(miner.log, l);
     readProgress(l);
+    // A card that cannot mine at all: the reason is said in plain words and mining stops instead of waiting forever.
+    const blocked = /does not fit into the card memory/i.test(l) ? "This graphics card has too little memory for mining Quinvium. The mining data (DAG) is over 1 GB now and grows; a card with at least 2 GB of its own memory is needed. You can still help the network by sharing your node." : /no graphics card found/i.test(l) ? "No graphics card that can mine was found. Quinvium needs an AMD or NVIDIA card with at least 2 GB of its own memory and a current driver." : null;
+    if (blocked && miner.proc === started) {
+      miner.blocked = tr(blocked);
+      notify('mining', tr('Mining stopped'), miner.blocked);
+      stop(started).then(() => send({ type: 'state' }));
+    }
     const used = /\] backend (.+)$/.exec(l);
     if (used) miner.backend = used[1];
     const m = /(?:Hashrate|Výkon) ([\d.]+) ([^\s,]+)/.exec(l);
@@ -315,7 +324,6 @@ function startMiner({ address, device }) {
     send({ type: 'miner-log', line: l, rate: miner.rate, blocks: miner.blocks, shares: miner.shares, progress: miner.progress, stage: miner.stage });
   });
   miner.proc.on('error', (e) => push(miner.log, `The miner cannot start: ${e.message}`));
-  const started = miner.proc;
   miner.proc.on('exit', (code, signal) => {
     push(miner.log, `The miner exited: code ${code}, signal ${signal}`);
     if (!started.stopping && !quitting) notify('mining', tr('Mining stopped'), tr('The miner ended unexpectedly. Open Quinvium to start it again.'));
@@ -355,7 +363,7 @@ const walletFile = () => path.join(app.getPath('userData'), 'wallet.json');
 
 ipcMain.handle('state', () => ({
   node: { running: !!node.proc, network: node.network, preferred: defaultNetwork(), rpc: rpcPort(), runPool: loadSettings().runPool ?? null, stats: node.stats, log: node.log.slice(-60), seed: loadSettings().seed ?? '', share: accessMode() !== 'off', access: accessMode(), publicHost: loadSettings().publicHost ?? '', upnp: loadSettings().upnp !== false, endpoints: node.proc ? node.endpoints ?? null : null, lan: lanAddress() },
-  miner: { running: !!miner.proc, rate: miner.rate, progress: miner.progress ?? null, stage: miner.stage ?? null, blocks: miner.blocks, shares: miner.shares ?? 0, gpu: miner.gpu ?? null, pool: activePool(), address: miner.address, power: loadSettings().power ?? 100, history: miner.history, log: miner.log.slice(-60), warning: miner.warning ?? null },
+  miner: { running: !!miner.proc, rate: miner.rate, progress: miner.progress ?? null, stage: miner.stage ?? null, blocks: miner.blocks, shares: miner.shares ?? 0, gpu: miner.gpu ?? null, pool: activePool(), address: miner.address, power: loadSettings().power ?? 100, history: miner.history, log: miner.log.slice(-60), warning: miner.warning ?? null, blocked: miner.blocked ?? null },
   update: { ...update, configured: !!loadSettings().updateUrl, packaged: app.isPackaged },
   release: { latest: release.latest, checked: release.checked, error: release.error, downloading: release.downloading, file: release.file },
   notify: Object.fromEntries(NOTIFY_KINDS.map((k) => [k, notifyOn(k)])),

@@ -561,8 +561,8 @@
     networkShown = true;
     followNode(s);
     el('m-start').hidden = s.miner.running;
-    el('m-warning').hidden = !s.miner.warning;
-    el('m-warning').textContent = s.miner.warning ?? '';
+    el('m-warning').hidden = !s.miner.warning && !(s.miner.blocked && !s.miner.running);
+    el('m-warning').textContent = s.miner.warning ?? (!s.miner.running ? s.miner.blocked : '') ?? '';
     el('m-stop').hidden = !s.miner.running;
     setState('m-state', s.miner.running, tr(s.miner.running ? 'Mining is running' : 'Mining is off'));
     setState('n-state', s.node.running, tr(s.node.running ? 'Node is running' : 'Node is not running'));
