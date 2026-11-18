@@ -179,6 +179,7 @@ function startNode(network) {
     // stdin stays an open pipe: when the app ends without stopping the node (crash, force quit), the node notices and stops.
     env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', QUINTIUM_LANG: nodeLang() }, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
   });
+  lowPriority(node.proc);
   follow(node.proc, (l) => { push(node.log, l); send({ type: 'node-log', line: l }); });
   node.proc.on('exit', (code) => {
     push(node.log, `The node exited with code ${code}`);
@@ -256,6 +257,14 @@ function setGpuState(state) {
   });
 }
 
+/**
+ * The node (downloading and checking the chain) and the miner run below normal priority, so a weaker computer stays
+ * usable: the windows, the browser and other programs come first, the node takes the rest of the processor.
+ */
+function lowPriority(proc) {
+  try { if (proc?.pid) os.setPriority(proc.pid, os.constants.priority.PRIORITY_BELOW_NORMAL); } catch { /* not allowed here; it runs at normal priority */ }
+}
+
 function startMiner({ address, device }) {
   if (miner.proc) return { ok: true };
   if (!/^0x[0-9a-fA-F]{40}$/.test(address ?? '')) throw new Error('Invalid payout address');
@@ -280,6 +289,7 @@ function startMiner({ address, device }) {
   args.push('--intensity', String(power ?? 100), '--exit-with-parent');
   if ((power ?? 100) >= 100) setGpuState(GPU_FULL_POWER);
   miner.proc = spawn(minerPath, args, { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+  lowPriority(miner.proc);
   saveSettings({ lastMining: { address, device: device ?? 'all' } });   // the tray can start mining again without the window
   keepAwake(true);
   follow(miner.proc, (l) => {
