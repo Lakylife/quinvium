@@ -75,6 +75,17 @@ try {
     await popup.click('#imp');
     await popup.fill('textarea[name=phrase]', PHRASE);
     await popup.click('button[type=submit]');
+    // A generated password: 20 characters, the same in both fields, shown; the eye hides it again.
+    await popup.click('#pw-generate');
+    const generated = await popup.inputValue('input[name=p1]');
+    assert.equal(generated.length, 20);
+    assert.equal(await popup.inputValue('input[name=p2]'), generated);
+    assert.equal(await popup.getAttribute('input[name=p1]', 'type'), 'text');
+    assert.ok(await popup.isVisible('#pw-copy'));
+    await popup.click('.pw-eye');
+    assert.equal(await popup.getAttribute('input[name=p1]', 'type'), 'password');
+    await popup.click('#pw-generate');
+    assert.notEqual(await popup.inputValue('input[name=p1]'), generated, 'a new password each time');
     await popup.fill('input[name=p1]', 'kratke');
     await popup.fill('input[name=p2]', 'kratke');
     await popup.click('button[type=submit]');

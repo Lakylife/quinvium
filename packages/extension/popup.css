@@ -207,3 +207,11 @@ button.icon:hover { background: var(--card-2); color: var(--text); }
 [dir="rtl"] .mono, [dir="rtl"] code, [dir="rtl"] pre, [dir="rtl"] input[name="to"], [dir="rtl"] .to-row input, [dir="rtl"] .balance, [dir="rtl"] .asset-bal { direction: ltr; unicode-bidi: isolate; }
 [dir="rtl"] .balance, [dir="rtl"] .asset-bal { text-align: end; }
 #max { white-space: nowrap; }
+
+/* New wallet password: eye, generator and copy */
+.pw-field { position: relative; display: flex; }
+.pw-field input { flex: 1; padding-inline-end: 40px; }
+.pw-eye { position: absolute; inset-inline-end: 4px; top: 50%; transform: translateY(-50%); padding: 6px; background: none; color: var(--dim); }
+.pw-eye:hover { background: none; color: var(--text); }
+.pw-tools { display: flex; gap: 12px; flex-wrap: wrap; margin: -2px 0 2px; font-size: 12.5px; }
+.pw-note { color: var(--dim); font-size: 12px; margin: 0; }
