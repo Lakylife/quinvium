@@ -76,6 +76,11 @@
 quintium-miner --address YOUR_ADDRESS --node http://127.0.0.1:8545</code></pre>
   <p>Uzel nabízí i Stratum (port 3333), takže fungují i jiné minery pro Ethash. Pro minery v místní síti spusťte uzel s <code>--stratum-host 0.0.0.0</code>.</p>
 
+  <h3>Uzel v Dockeru</h3>
+  <p>Na serveru nebo v počítači s Dockerem běží uzel jedním příkazem. Obraz je pro amd64 i arm64, data zůstávají ve svazku.</p>
+  <pre><code>docker run -d --name quinvium --restart unless-stopped   -p 30524:30524 -p 3333:3333 -p 127.0.0.1:8545:8545   -v quinvium-mainnet:/data ghcr.io/lakylife/quinvium-node:latest   --network mainnet --miner-address YOUR_ADDRESS --stratum-host 0.0.0.0</code></pre>
+  <p>Miner pak připojte na <code>stratum+tcp://ADRESA_POČÍTAČE:3333</code>. Bez <code>--miner-address</code> a portu 3333 je to jen uzel, který pomáhá síti. Další volby jsou v návodu <a href="https://github.com/Lakylife/quinvium/blob/main/docs/RUNNING-A-PUBLIC-NODE.md#docker">Running a public node</a>.</p>
+
   <h2>Sólo, nebo pool</h2>
   <div class="cards c2">
     <article class="card"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5zM3 7l9 5 9-5M12 12v10"/></svg><h3>Sólo</h3><p>Dostanete celý blok i jeho poplatky, ale s jednou kartou můžete na blok dlouho čekat.</p></article>

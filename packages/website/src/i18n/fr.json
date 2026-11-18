@@ -215,7 +215,7 @@
  "Any 0x… address from your wallet. Rewards are paid straight to it.": "N’importe quelle adresse 0x… de votre portefeuille. Les récompenses y sont versées directement.",
  "A connection": "Une connexion",
  "The node joins the network on its own through seed.quinvium.com.": "Le nœud rejoint le réseau tout seul via seed.quinvium.com.",
- "Mining in the Quinvium app": "Miner dans l’app Quinvium",
+ "Mining in the Quinvium app": "Minage dans l’app Quinvium",
  "Install the app for macOS or Windows. <a href=\"/download/\">Download</a>": "Installez l’app pour macOS ou Windows. <a href=\"/download/\">Télécharger</a>",
  "Choose the Mainnet network. The app starts its own node and downloads the chain.": "Choisissez le réseau Mainnet. L’app démarre son propre nœud et télécharge la chaîne.",
  "In Mining, enter your payout address and switch mining on.": "Dans Minage, saisissez votre adresse de paiement et activez le minage.",
@@ -462,5 +462,17 @@
  "Loading the latest blocks…": "Chargement des derniers blocs…",
  "The network is carried by our public server, a seed run by the community, nodes shared from the app and the miners' own nodes. When the server is down, the website, the Explorer and wallets read from community nodes.": "Le réseau repose sur notre serveur public, un seed géré par la communauté, des nœuds partagés depuis l'application et les nœuds des mineurs. Si le serveur tombe, le site, l'Explorer et les portefeuilles lisent depuis des nœuds de la communauté.",
  "<strong>Next</strong><span>An independent security audit. Contract source verification in the Explorer. A Docker image of the node. An update-signing key off the development machine and remote updates switched back on. Signed Windows builds and the wallet in the Chrome Web Store.</span>": "<strong>Ensuite</strong><span>Un audit de sécurité indépendant. La vérification du code source des contrats dans l'Explorer. Une image Docker du nœud. Une clé de signature des mises à jour hors de la machine de développement et les mises à jour réactivées. Des programmes Windows signés et le portefeuille dans le Chrome Web Store.</span>",
- "<strong>November 2026</strong><span>The official pool pool.quinvium.com, a second seed run by the community, sharing a node from the app, and the website, Explorer and wallets switching to community nodes when the server is down.</span>": "<strong>Novembre 2026</strong><span>Le pool officiel pool.quinvium.com, un second seed géré par la communauté, le partage d'un nœud depuis l'application, et le passage du site, de l'Explorer et des portefeuilles aux nœuds de la communauté quand le serveur tombe.</span>"
+ "<strong>November 2026</strong><span>The official pool pool.quinvium.com, a second seed run by the community, sharing a node from the app, and the website, Explorer and wallets switching to community nodes when the server is down.</span>": "<strong>Novembre 2026</strong><span>Le pool officiel pool.quinvium.com, un second seed géré par la communauté, le partage d'un nœud depuis l'application, et le passage du site, de l'Explorer et des portefeuilles aux nœuds de la communauté quand le serveur tombe.</span>",
+ "Keep Quinvium online": "Gardez Quinvium en ligne",
+ "Share your node from the Quinvium app. When the main servers are down, it serves this site, the Explorer and wallets.": "Partagez votre nœud depuis l’app Quinvium. Quand les serveurs principaux sont hors service, il sert ce site, l’Explorer et les portefeuilles.",
+ "Get the app": "Obtenir l’app",
+ "The node in Docker": "Le nœud dans Docker",
+ "On a server or a computer with Docker, the node runs with one command. The image is for amd64 and arm64; the data stays in a volume.": "Sur un serveur ou un ordinateur avec Docker, le nœud démarre en une commande. L’image existe pour amd64 et arm64 ; les données restent dans un volume.",
+ "Then point your miner at <code>stratum+tcp://COMPUTER_ADDRESS:3333</code>. Without <code>--miner-address</code> and port 3333 it is a node that helps the network. More options are in <a href=\"https://github.com/Lakylife/quinvium/blob/main/docs/RUNNING-A-PUBLIC-NODE.md#docker\">Running a public node</a>.": "Pointez ensuite votre mineur vers <code>stratum+tcp://COMPUTER_ADDRESS:3333</code>. Sans <code>--miner-address</code> ni le port 3333, c’est un nœud qui aide le réseau. D’autres options dans <a href=\"https://github.com/Lakylife/quinvium/blob/main/docs/RUNNING-A-PUBLIC-NODE.md#docker\">Running a public node</a>.",
+ "The app at a glance": "L’app en un coup d’œil",
+ "Wallet in the Quinvium app": "Portefeuille dans l’app Quinvium",
+ "Wallet and network overview": "Portefeuille et aperçu du réseau",
+ "GPU mining with one button": "Minage GPU en un clic",
+ "Explorer in the Quinvium app": "Explorer dans l’app Quinvium",
+ "The Explorer from your own node": "L’Explorer depuis votre propre nœud"
 }

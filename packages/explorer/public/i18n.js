@@ -2,6 +2,10 @@
 // Řádek: "klíč nebo anglický text": [němčina, španělština, francouzština]. Dokumentace pro vývojáře zůstává anglicky.
 window.AetherExplorerText = {
   keys: {
+    'miners.inPool': ['Mint in einem Pool', 'Mina en un pool', 'Mine dans un pool'],
+    'miners.poolOn': ['Hat in der letzten Stunde Anteile an {pool} gesendet', 'Envió participaciones a {pool} en la última hora', 'A envoyé des parts à {pool} au cours de la dernière heure'],
+    'miners.soloOn': ['Der letzte Block liegt im üblichen Abstand dieses Miners', 'El último bloque está dentro del intervalo habitual de este minero', 'Le dernier bloc est dans l’intervalle habituel de ce mineur'],
+    'miners.soloOff': ['Seit dem letzten Block viel länger als bei diesem Miner üblich', 'Mucho más tiempo del habitual desde su último bloque', 'Beaucoup plus longtemps que d’habitude depuis son dernier bloc'],
     'net.communityLive': ['Community-Knoten, die jetzt antworten: {n} von {total}', 'Nodos de la comunidad que responden ahora: {n} de {total}', 'Nœuds de la communauté qui répondent maintenant : {n} sur {total}'],
     'src.tab': ['Code', 'Código', 'Code'],
     'src.title': ['Quellcode eines Vertrags prüfen', 'Verificar el código fuente de un contrato', 'Vérifier le code source d’un contrat'],

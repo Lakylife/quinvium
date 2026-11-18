@@ -215,7 +215,7 @@
  "Any 0x… address from your wallet. Rewards are paid straight to it.": "Cualquier dirección 0x… de su cartera. Las recompensas se pagan directamente en ella.",
  "A connection": "Una conexión",
  "The node joins the network on its own through seed.quinvium.com.": "El nodo se une a la red por sí solo a través de seed.quinvium.com.",
- "Mining in the Quinvium app": "Minar en la app Quinvium",
+ "Mining in the Quinvium app": "Minería en la app Quinvium",
  "Install the app for macOS or Windows. <a href=\"/download/\">Download</a>": "Instale la app para macOS o Windows. <a href=\"/download/\">Descargar</a>",
  "Choose the Mainnet network. The app starts its own node and downloads the chain.": "Elija la red Mainnet. La app inicia su propio nodo y descarga la cadena.",
  "In Mining, enter your payout address and switch mining on.": "En Minería, introduzca su dirección de cobro y active la minería.",
@@ -462,5 +462,17 @@
  "Loading the latest blocks…": "Cargando los últimos bloques…",
  "The network is carried by our public server, a seed run by the community, nodes shared from the app and the miners' own nodes. When the server is down, the website, the Explorer and wallets read from community nodes.": "La red la sostienen nuestro servidor público, un seed gestionado por la comunidad, nodos compartidos desde la aplicación y los nodos propios de los mineros. Si el servidor cae, la web, el Explorer y las carteras leen de nodos de la comunidad.",
  "<strong>Next</strong><span>An independent security audit. Contract source verification in the Explorer. A Docker image of the node. An update-signing key off the development machine and remote updates switched back on. Signed Windows builds and the wallet in the Chrome Web Store.</span>": "<strong>Próximo</strong><span>Una auditoría de seguridad independiente. Verificación del código fuente de contratos en el Explorer. Una imagen Docker del nodo. Una clave de firma de actualizaciones fuera del ordenador de desarrollo y las actualizaciones de nuevo activadas. Programas firmados para Windows y la cartera en Chrome Web Store.</span>",
- "<strong>November 2026</strong><span>The official pool pool.quinvium.com, a second seed run by the community, sharing a node from the app, and the website, Explorer and wallets switching to community nodes when the server is down.</span>": "<strong>Noviembre de 2026</strong><span>El pool oficial pool.quinvium.com, un segundo seed gestionado por la comunidad, compartir un nodo desde la aplicación, y que la web, el Explorer y las carteras pasen a nodos de la comunidad cuando el servidor cae.</span>"
+ "<strong>November 2026</strong><span>The official pool pool.quinvium.com, a second seed run by the community, sharing a node from the app, and the website, Explorer and wallets switching to community nodes when the server is down.</span>": "<strong>Noviembre de 2026</strong><span>El pool oficial pool.quinvium.com, un segundo seed gestionado por la comunidad, compartir un nodo desde la aplicación, y que la web, el Explorer y las carteras pasen a nodos de la comunidad cuando el servidor cae.</span>",
+ "Keep Quinvium online": "Mantenga Quinvium en línea",
+ "Share your node from the Quinvium app. When the main servers are down, it serves this site, the Explorer and wallets.": "Comparta su nodo desde la app Quinvium. Cuando los servidores principales caen, sirve este sitio, el Explorer y las carteras.",
+ "Get the app": "Obtener la app",
+ "The node in Docker": "El nodo en Docker",
+ "On a server or a computer with Docker, the node runs with one command. The image is for amd64 and arm64; the data stays in a volume.": "En un servidor o un ordenador con Docker, el nodo se ejecuta con un solo comando. La imagen es para amd64 y arm64; los datos se guardan en un volumen.",
+ "Then point your miner at <code>stratum+tcp://COMPUTER_ADDRESS:3333</code>. Without <code>--miner-address</code> and port 3333 it is a node that helps the network. More options are in <a href=\"https://github.com/Lakylife/quinvium/blob/main/docs/RUNNING-A-PUBLIC-NODE.md#docker\">Running a public node</a>.": "Luego apunte su minero a <code>stratum+tcp://COMPUTER_ADDRESS:3333</code>. Sin <code>--miner-address</code> y el puerto 3333 es un nodo que ayuda a la red. Más opciones en <a href=\"https://github.com/Lakylife/quinvium/blob/main/docs/RUNNING-A-PUBLIC-NODE.md#docker\">Running a public node</a>.",
+ "The app at a glance": "La app de un vistazo",
+ "Wallet in the Quinvium app": "Cartera en la app Quinvium",
+ "Wallet and network overview": "Cartera y resumen de la red",
+ "GPU mining with one button": "Minería con GPU con un solo botón",
+ "Explorer in the Quinvium app": "Explorer en la app Quinvium",
+ "The Explorer from your own node": "El Explorer desde su propio nodo"
 }
