@@ -269,6 +269,8 @@ function startMiner({ address, device }) {
   if (miner.proc) return { ok: true };
   if (!/^0x[0-9a-fA-F]{40}$/.test(address ?? '')) throw new Error('Invalid payout address');
   if (!node.proc) throw new Error('Start the node first');
+  const unfit = cannotMine(device);
+  if (unfit) { miner.blocked = tr(unfit); throw new Error(unfit); }
   miner.log = [];
   miner.rate = null;
   miner.blocks = 0;
@@ -352,12 +354,27 @@ async function offerPool() {
   send({ type: 'pool-offer', pool: { ...due.pool, name: found.name || due.pool.name, fee: found.feeBps / 100 }, share: due.share, rate: due.rate });
 }
 
+let knownDevices = null;   // the last successful list of cards with their memory, for the check before mining
 const listDevices = () => new Promise((resolve) => {
   execFile(minerPath, ['--list'], { windowsHide: true, timeout: 20000 }, (err, out) => {
     if (err) { resolve([]); return; }
-    resolve(out.split(/\r?\n/).map((l) => /^(\d+): (.+?) \(/.exec(l)).filter(Boolean).map((m) => ({ id: Number(m[1]), name: m[2] })));
+    knownDevices = out.split(/\r?\n/).map((l) => /^(\d+): (.+?) \(([^,)]+)(?:, (\d+) MB)?\)/.exec(l)).filter(Boolean)
+      .map((m) => ({ id: Number(m[1]), name: m[2], memory: m[4] ? Number(m[4]) * 1024 * 1024 : null }));
+    resolve(knownDevices.map(({ id, name }) => ({ id, name })));
   });
 });
+/**
+ * Mining is not started on a computer that cannot mine: no card at all, or every card with less memory than the DAG of
+ * the current epoch needs (the miner's own limit: DAG + 1/8). A card that does not report its memory is given a try.
+ */
+function cannotMine(device) {
+  if (!knownDevices) return null;
+  if (!knownDevices.length) return "No graphics card that can mine was found. Quinvium needs an AMD or NVIDIA card with at least 2 GB of its own memory and a current driver.";
+  const list = device !== undefined && device !== 'all' ? knownDevices.filter((d) => String(d.id) === String(device)) : knownDevices;
+  const epoch = Math.floor(Number(node.stats?.height ?? 0) / 30000);
+  const need = (2 ** 30 + 2 ** 23 * epoch) * 1.125;
+  return list.length && list.every((d) => d.memory !== null && d.memory < need) ? "This graphics card has too little memory for mining Quinvium. The mining data (DAG) is over 1 GB now and grows; a card with at least 2 GB of its own memory is needed. You can still help the network by sharing your node." : null;
+}
 
 const walletFile = () => path.join(app.getPath('userData'), 'wallet.json');
 

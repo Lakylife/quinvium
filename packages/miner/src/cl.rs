@@ -166,6 +166,11 @@ impl Gpu {
         format!("{}: {}", self.title(), info_text(&self.api, self.device, DEVICE_EXTENSIONS))
     }
 
+    /// Memory of the card in bytes, as the driver reports it.
+    pub fn memory(&self) -> u64 {
+        self.memory
+    }
+
     pub fn title(&self) -> String {
         let v = self.vendor.to_lowercase();
         let brand = if v.contains("nvidia") {

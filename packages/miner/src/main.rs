@@ -62,7 +62,8 @@ enum Source {
 impl Source {
     fn label(&self) -> (String, String) {
         match self {
-            Source::OpenCl(g, _) => (g.title(), "OpenCL".into()),
+            // The memory lets the app tell before mining whether the DAG fits (Vulkan and others do not report it).
+            Source::OpenCl(g, _) => (g.title(), format!("OpenCL, {} MB", g.memory() / (1024 * 1024))),
             Source::Wgpu(a) => {
                 let i = a.get_info();
                 (i.name, format!("{:?}", i.backend))
