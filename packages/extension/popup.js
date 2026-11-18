@@ -88,6 +88,43 @@ function bindForm(sel, fn) {
 
 /** A secret must not stay in the clipboard. The clipboard is cleared after a minute. */
 const CLIPBOARD_MS = 60_000;
+// A new wallet password: typed, or generated here (20 characters from the crypto random source), shown with the eye
+// and copied with the clipboard cleared after a while, like the phrase.
+const PASSWORD_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*-_=+?';
+function strongPassword(length = 20) {
+  // Rejection sampling keeps every character equally likely.
+  const out = [];
+  const limit = 256 - (256 % PASSWORD_CHARS.length);
+  while (out.length < length) {
+    for (const b of crypto.getRandomValues(new Uint8Array(length * 2))) {
+      if (b < limit && out.length < length) out.push(PASSWORD_CHARS[b % PASSWORD_CHARS.length]);
+    }
+  }
+  return out.join('');
+}
+const EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const passwordFields = () => `<label>${_('Password (at least 10 characters)')}<span class="pw-field"><input type="password" name="p1" minlength="10" required autocomplete="new-password"><button type="button" class="pw-eye" title="${_('Show or hide the password')}" aria-label="${_('Show or hide the password')}">${EYE}</button></span></label>
+    <div class="pw-tools"><button type="button" class="link" id="pw-generate">${_('Generate a strong password')}</button><button type="button" class="link" id="pw-copy" hidden>${_('Copy password')}</button></div>
+    <label>${_('Repeat password')}<input type="password" name="p2" required autocomplete="new-password"></label>
+    <p class="pw-note" hidden>${_('Save the password in your password manager or write it down. Without it you can restore the wallet only from the phrase.')}</p>`;
+function bindPasswordFields() {
+  const form = $('#f');
+  const p1 = form.elements.p1;
+  const p2 = form.elements.p2;
+  const show = (visible) => { p1.type = visible ? 'text' : 'password'; p2.type = p1.type; };
+  form.querySelector('.pw-eye').addEventListener('click', () => show(p1.type === 'password'));
+  on('#pw-generate', () => {
+    const pw = strongPassword();
+    p1.value = pw;
+    p2.value = pw;
+    show(true);
+    $('#pw-copy').hidden = false;
+    $('#pw-copy').textContent = _('Copy password');
+    form.querySelector('.pw-note').hidden = false;
+  });
+  on('#pw-copy', () => copySecret($('#pw-copy'), p1.value));
+}
+
 async function copySecret(button, text) {
   await navigator.clipboard.writeText(text);
   button.textContent = _('Copied, the clipboard clears in 60 s');
@@ -176,9 +213,9 @@ function welcome() {
 function importKeyFirst() {
   render(`${screenHead(_('Use a private key'))}<p>${_('Paste the private key of the account. It stays encrypted on this device.')}</p>
     <form id="f"><label>${_('Private key')}<input type="password" name="key" required autocomplete="off" spellcheck="false"></label>
-    <label>${_('Password (at least 10 characters)')}<input type="password" name="p1" minlength="10" required autocomplete="new-password"></label>
-    <label>${_('Repeat password')}<input type="password" name="p2" required autocomplete="new-password"></label>
+    ${passwordFields()}
     <div class="err"></div><button class="primary" type="submit">${_('Finish')}</button></form>`);
+  bindPasswordFields();
   bindForm('#f', async (v) => {
     if (v.p1 !== v.p2) throw new Error(_('The passwords do not match'));
     await call('createFromKey', { key: v.key, password: v.p1 });
@@ -221,9 +258,9 @@ function confirmSeed(phrase) {
 
 function setPassword(phrase) {
   render(`<h1>${_('Password')}</h1><p>${_('The password encrypts the wallet on this device. Without the phrase nobody can recover it.')}</p>
-    <form id="f"><label>${_('Password (at least 10 characters)')}<input type="password" name="p1" minlength="10" required autocomplete="new-password"></label>
-    <label>${_('Repeat password')}<input type="password" name="p2" required autocomplete="new-password"></label>
+    <form id="f">${passwordFields()}
     <div class="err"></div><button class="primary" type="submit">${_('Finish')}</button></form>`);
+  bindPasswordFields();
   bindForm('#f', async (v) => {
     if (v.p1 !== v.p2) throw new Error(_('The passwords do not match'));
     await call('create', { phrase, password: v.p1 });
