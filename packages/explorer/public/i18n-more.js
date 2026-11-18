@@ -2,6 +2,8 @@
 // Row: "key or English text": [Japanese, Chinese, Arabic]. Developer documentation stays in English.
 window.AetherExplorerText2 = {
   keys: {
+    "tx.waitPrev": ["前のトランザクションを待っています…","正在等待上一笔交易…","بانتظار المعاملة السابقة…"],
+    "tx.waitPrevNote": ["同じトランザクションがマイニング待ちです: {hash}。ブロックに入るとボタンが使えるようになります。","相同的交易已在等待打包：{hash}。进入区块后按钮将解锁。","المعاملة نفسها تنتظر التعدين بالفعل: {hash}. يُفتح الزر بعد دخولها في كتلة."],
     "net.peersTitle": ["接続中のノード","已连接节点","العُقد المتصلة"],
     "net.behind": ["{n} ブロック遅れ","落后 {n} 个区块","متأخرة {n} كتل"],
     "net.readsFrom": ["このページの読み込み元","本页数据来自","تقرأ هذه الصفحة من"],

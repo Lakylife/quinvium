@@ -2,6 +2,8 @@
 // Řádek: "klíč nebo anglický text": [němčina, španělština, francouzština]. Dokumentace pro vývojáře zůstává anglicky.
 window.AetherExplorerText = {
   keys: {
+    'tx.waitPrev': ['Warten auf die vorherige Transaktion…', 'Esperando la transacción anterior…', 'En attente de la transaction précédente…'],
+    'tx.waitPrevNote': ['Dieselbe Transaktion wartet bereits auf das Mining: {hash}. Die Schaltfläche wird entsperrt, sobald sie in einem Block ist.', 'La misma transacción ya espera ser minada: {hash}. El botón se desbloquea cuando esté en un bloque.', 'La même transaction attend déjà d’être minée : {hash}. Le bouton se débloque dès qu’elle est dans un bloc.'],
     'net.peersTitle': ['Verbundene Knoten', 'Nodos conectados', 'Nœuds connectés'],
     'net.behind': ['{n} Blöcke zurück', '{n} bloques por detrás', '{n} blocs de retard'],
     'net.readsFrom': ['Diese Seite liest von', 'Esta página lee de', 'Cette page lit depuis'],
