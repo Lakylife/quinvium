@@ -2,6 +2,7 @@
 // Row: "key or English text": [Japanese, Chinese, Arabic]. Developer documentation stays in English.
 window.AetherExplorerText2 = {
   keys: {
+    "net.communityLive": ["現在応答しているコミュニティノード: {total} 件中 {n} 件","当前响应的社区节点：{n} / {total}","عُقد المجتمع التي تستجيب الآن: {n} من {total}"],
     "src.tab": ["コード", "代码", "الشيفرة"],
     "src.title": ["コントラクトのソースコードを検証", "验证合约源代码", "التحقق من الشيفرة المصدرية للعقد"],
     "src.sub": ["ソースはブラウザ内で公式の Solidity コンパイラーによってコンパイルされ、チェーン上のコードと比較されます。サーバーには何も送信されません。", "源代码在您的浏览器中由官方 Solidity 编译器编译，并与链上代码进行比较。不会上传到任何服务器。", "تُترجَم الشيفرة في متصفحك بمترجم Solidity الرسمي وتُقارن بالشيفرة على السلسلة. لا يُرفع أي شيء إلى خادم."],

@@ -7,7 +7,7 @@ on:
     paths: ['packages/website/public/**', '.github/workflows/pages.yml', 'ops/pages/nodes.mjs']
   # The site files stay as committed; only nodes.json (community nodes for an outage of our servers) is refreshed.
   schedule:
-    - cron: '17 */3 * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 permissions:
   contents: read
