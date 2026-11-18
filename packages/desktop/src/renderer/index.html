@@ -40,12 +40,18 @@
     <div class="row"><button type="button" id="offer-never"><span data-t>Do not ask again</span></button></div>
   </div>
 </div>
-<div class="app-lock" id="share-box" hidden>
-  <div class="lock-card">
-    <h1 data-t>Help the network?</h1>
-    <p data-t>When the main servers are down, the Explorer, the website and wallets can read the chain from your node. Share it publicly while this app runs?</p>
-    <p class="dim" data-t>It goes through a Cloudflare tunnel: your IP address stays hidden and no port on the router is opened. It uses some upload bandwidth (usually a few hundred MB a day). You can turn it off any time under Node, Connections and access.</p>
-    <div class="row"><button class="primary" type="button" id="share-yes"><span data-t>Share my node</span></button><button type="button" id="share-no"><span data-t>Not now</span></button></div>
+<div class="app-lock share-modal" id="share-box" hidden role="dialog" aria-modal="true" aria-labelledby="share-title">
+  <div class="share-card">
+    <div class="share-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg></div>
+    <h1 id="share-title" data-t>Help the network?</h1>
+    <p data-t>Your node can keep the Explorer, the website and wallets online when the main servers are down.</p>
+    <ul class="share-points">
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/></svg><div><strong data-t>Your IP address stays hidden</strong><span data-t>Through a Cloudflare tunnel</span></div></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><div><strong data-t>No router changes</strong><span data-t>No port is opened</span></div></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg><div><strong data-t>A little upload</strong><span data-t>Usually a few hundred MB a day</span></div></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div><strong data-t>Only while the app runs</strong><span data-t>Turn it off any time under Node</span></div></li>
+    </ul>
+    <div class="share-actions"><button type="button" id="share-no"><span data-t>Not now</span></button><button class="primary" type="button" id="share-yes"><span data-t>Share my node</span></button></div>
   </div>
 </div>
 <div class="shell">
