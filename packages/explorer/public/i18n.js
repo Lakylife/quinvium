@@ -2,6 +2,7 @@
 // Řádek: "klíč nebo anglický text": [němčina, španělština, francouzština]. Dokumentace pro vývojáře zůstává anglicky.
 window.AetherExplorerText = {
   keys: {
+    'net.communityLive': ['Community-Knoten, die jetzt antworten: {n} von {total}', 'Nodos de la comunidad que responden ahora: {n} de {total}', 'Nœuds de la communauté qui répondent maintenant : {n} sur {total}'],
     'src.tab': ['Code', 'Código', 'Code'],
     'src.title': ['Quellcode eines Vertrags prüfen', 'Verificar el código fuente de un contrato', 'Vérifier le code source d’un contrat'],
     'src.sub': ['Der Quellcode wird in Ihrem Browser mit dem offiziellen Solidity-Compiler übersetzt und mit dem Code in der Chain verglichen. Nichts wird auf einen Server hochgeladen.', 'El código se compila en su navegador con el compilador oficial de Solidity y se compara con el código en la cadena. No se sube nada a ningún servidor.', 'Le code source est compilé dans votre navigateur avec le compilateur officiel de Solidity et comparé au code sur la chaîne. Rien n’est envoyé à un serveur.'],
