@@ -47,6 +47,7 @@ test("a miner's share passes through the pool server into the contract; the pool
     const receipt = await provider.getTransactionReceipt(sent.hash);
     assert.equal(receipt.status, 1);
     const pool = (await factory.list(0, 10))[0];
+    assert.equal(await call('aether_poolVersion', [pool]), 1);
 
     await node.startPool(ethers.getBytes(pool), ethers.getBytes(payer.privateKey), { minShareDifficulty: 1n });
     const [sealHash, , target, number] = await call('aether_poolWork', [miner, 'rig1']);
@@ -127,4 +128,100 @@ test('pool shares give way when blocks fill up', async () => {
   assert.equal(rate(0.5), 24);
   assert.equal(rate(0.75), 15);
   assert.equal(rate(1), 6, 'plné bloky: čtvrtina');
+});
+
+test('version 2: a pool from a user-deployed factory with matching code runs, and the pool pays back the server gas', async () => {
+  const owner = ethers.Wallet.createRandom();
+  const payer = ethers.Wallet.createRandom();
+  const miner = ethers.Wallet.createRandom().address;
+  const factoryAddress = ethers.getCreateAddress({ from: owner.address, nonce: 0 });
+  const fake = ethers.getCreateAddress({ from: owner.address, nonce: 1 });
+  let clock = Number(NETWORKS.dev.genesisTimestamp);
+  const node = new AetherNode({
+    network: NETWORKS.dev, dataDir: tmpData(), powDir: POW_DIR, p2pPort: 0, rpcPort: 0, stratumPort: 0, p2pHost: '127.0.0.1', allowPrivate: true,
+    alloc: { ...loadAlloc(), [owner.address]: { balance: 100n * WEI }, [payer.address]: { balance: 100n * WEI } }, now: () => clock, log: () => {},
+    poolFactories: [factoryAddress, fake],
+  });
+  await node.start();
+  const provider = new ethers.JsonRpcProvider(`http://127.0.0.1:${node.rpc.port}`, undefined, { staticNetwork: true, cacheTimeout: -1, pollingInterval: 50 });
+  const call = async (method, params = []) => {
+    const r = await (await fetch(`http://127.0.0.1:${node.rpc.port}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) })).json();
+    if (r.error) throw new Error(r.error.message);
+    return r.result;
+  };
+  const mine = async (to = `0x${'bb'.repeat(20)}`) => {
+    clock += 15;
+    const w = await node.work.getWork(ethers.getBytes(to));
+    const tpl = node.work.templates.get(ethers.hexlify(w.sealHash));
+    const sealed = await seal(node.chain, tpl);
+    const r = await node.work.submit(sealed.header.nonce, w.sealHash, sealed.header.mixHash);
+    assert.ok(r.accepted, r.reason);
+    await node.mempool.settled();
+  };
+  try {
+    await mine();
+    const signer = owner.connect(provider);
+    const factory = await new ethers.ContractFactory(artifacts.PoolFactory2.abi, artifacts.PoolFactory2.bytecode, signer).deploy({ nonce: 0 });
+    await sleep(30);
+    await mine();
+    assert.equal(await factory.getAddress(), factoryAddress);
+    // The second listed address holds the old factory's code: it must not count as a version 2 factory.
+    await new ethers.ContractFactory(artifacts.PoolFactory.abi, artifacts.PoolFactory.bytecode, signer).deploy({ nonce: 1 });
+    await sleep(30);
+    await mine();
+    const fakeFactory = new ethers.Contract(fake, artifacts.PoolFactory.abi, signer);
+    await fakeFactory.createPool('Podvrh', '', 100, 16, 4, { nonce: 2 });
+    await factory.createPool('Pool 2', '', 100, 16, 4, payer.address, { nonce: 3 });
+    await sleep(30);
+    await mine();
+    const pool = (await factory.list(0, 10))[0];
+    const fakePool = (await fakeFactory.list(0, 10))[0];
+
+    const listed = (await call('aether_pools', [{}])).items.map((p) => [p.address.toLowerCase(), p.version]);
+    assert.deepEqual(listed, [[pool.toLowerCase(), 2]], 'only the factory with matching code is trusted');
+    assert.deepEqual((await call('aether_poolsOf', [owner.address])).map((p) => p.pool.toLowerCase()), [pool.toLowerCase()]);
+    assert.equal(await call('aether_poolVersion', [pool]), 2);
+    assert.equal(await call('quinvium_poolVersion', [fakePool]), 0, 'a pool from a factory with other code');
+    assert.equal(await call('aether_poolVersion', [payer.address]), 0);
+    await assert.rejects(node.startPool(ethers.getBytes(fakePool), ethers.getBytes(payer.privateKey)), /not a pool from the factory/);
+
+    await node.startPool(ethers.getBytes(pool), ethers.getBytes(payer.privateKey), { minShareDifficulty: 1n });
+    assert.equal(node.pool.version, 2);
+    assert.equal(node.pool.refunded, true);
+    for (let i = 0; i < 3; i++) await mine(pool);
+    const [sealHash, , target, number] = await call('aether_poolWork', [miner, 'rig1']);
+    let found = null;
+    for (let i = 0; i < 64 && !found; i++) {
+      const nonce = new Uint8Array(randomBytes(8));
+      const { mixDigest, result } = await node.chain.pow.compute(ethers.getBytes(sealHash), nonce, BigInt(number));
+      if (bytesToBigInt(result) <= BigInt(target)) found = { nonce, mixDigest };
+    }
+    assert.ok(found);
+    const before = await provider.getBalance(payer.address);
+    assert.equal((await call('aether_poolSubmit', [ethers.hexlify(found.nonce), sealHash, ethers.hexlify(found.mixDigest)])).accepted, true);
+    // With the dev difficulty the share is often a whole block too; the server then sends it at once.
+    await node.pool.flush();
+    await sleep(30);
+    await mine();
+    const block = await provider.getBlock('latest', true);
+    const sent = block.prefetchedTransactions.find((t) => t.from.toLowerCase() === payer.address.toLowerCase());
+    assert.ok(sent, 'the server sent the share');
+    const receipt = await provider.getTransactionReceipt(sent.hash);
+    assert.equal(receipt.status, 1);
+    const iface = new ethers.Interface(artifacts.AetherPool2.abi);
+    const refund = receipt.logs.map((l) => { try { return iface.parseLog(l); } catch { return null; } }).find((e) => e?.name === 'GasRefunded')?.args.amount ?? 0n;
+    const cost = receipt.gasUsed * receipt.gasPrice;
+    assert.ok(refund > 0n, 'the pool paid the gas back');
+    assert.equal(await provider.getBalance(payer.address), before - cost + refund);
+    assert.ok(refund * 10n > cost * 9n && refund * 10n < cost * 11n, `refund ${refund} covers cost ${cost}`);
+  } finally {
+    node.pool?.stop();
+    provider.destroy();
+    await node.stop();
+  }
+});
+
+test('the node knows the code of the version 2 factory exactly as built', async () => {
+  const { POOL_FACTORY2_SHA256 } = await import('../src/mining/pool-factories.js');
+  assert.equal(POOL_FACTORY2_SHA256, artifacts.PoolFactory2.runtimeSha256, 'after a change of PoolFactory2.sol copy the new hash into pool-factories.js');
 });

@@ -1,5 +1,6 @@
 // Full node: ties together the chain, the transaction queue, the network, RPC and work for miners.
 import { EventEmitter } from 'node:events';
+import { Address } from '@ethereumjs/util';
 import { homedir, networkInterfaces } from 'node:os';
 import { dirname, join } from 'node:path';
 import { NETWORKS } from './params.js';
@@ -10,6 +11,7 @@ import { NodeIdentity } from './p2p/identity.js';
 import { PublicAccess, isPublicIPv4 } from './p2p/upnp.js';
 import { WorkManager } from './mining/work.js';
 import { PoolServer } from './mining/pool.js';
+import { trustedFactories } from './mining/pool-factories.js';
 import { StratumServer } from './mining/stratum.js';
 import { RpcServer } from './rpc/server.js';
 import { VmPool } from './rpc/vm-pool.js';
@@ -183,8 +185,10 @@ export class AetherNode extends EventEmitter {
     const head = () => this.chain.head;
     const call = async (params) => (this.vm ? this.vm.run('call', head(), params) : toHex(await ethCall(this.chain, head(), params)));
     const estimate = async (params) => (this.vm ? this.vm.run('estimate', head(), params) : estimateGas(this.chain, head(), params));
+    const getCode = async (a) => (await this.chain.stateAt(head().stateRoot)).stateManager.getCode(new Address(a));
+    const factories = await trustedFactories(getCode, this.chain.network.chainId, this.opts.poolFactories ?? []);
     const pool = new PoolServer({
-      chain: this.chain, work: this.work, mempool: this.mempool, address, key, call, estimate, send: (tx) => this.sendTx(tx), log: this.log,
+      chain: this.chain, work: this.work, mempool: this.mempool, address, key, call, estimate, send: (tx) => this.sendTx(tx), log: this.log, factories,
       stateFile: this.dataDir === ':memory:' ? undefined : join(this.dataDir, `pool-${toHex(address)}.json`), ...options,
     });
     await pool.start();
