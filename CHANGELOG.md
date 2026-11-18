@@ -6,6 +6,7 @@
 - Explorer on a domain falls back to the node on the visitor's own computer (127.0.0.1, default port of the network, chain ID and genesis checked) when none of the network's nodes answers; it is never asked while they do. The node answers the browser's private network preflight.
 - Explorer: the home page hides pool share transactions (a switch shows them), the Miners subtitle matches the whole-history numbers, an unknown address shows Page not found, and Swap and Bridge move under More, marked soon, on networks where they do not run.
 - Node: coin supply as a plain number for coin trackers (`/api/supply/total`, `/circulating`, `/max`); mainnet checkpoint at block 20 000.
+- Explorer: contract source verification without a server. The source is compiled in the browser by the official Solidity compiler (checked against its published SHA-256) and compared with the code on chain and with the creation transaction; a match is published on chain in the new ownerless Source registry contract (deployed by a user from the Explorer), and every visitor checks it again on the contract's Code tab.
 
 ## 2.16.0 (16 November 2026)
 

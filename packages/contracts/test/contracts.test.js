@@ -509,3 +509,32 @@ test('Quinvium Avatars and profile pictures: on-chain SVG, ownership is checked 
   const [, , v2] = await pr(alice).avatarsOf([dave.address, carol.address]);
   assert.deepEqual([...v2], [false, true], 'the broken contract only loses its own picture');
 });
+
+test('Source registry: publications of a contract are found by block, per publisher and among the recent ones; spam cannot push out the creator', async () => {
+  const f = new ethers.ContractFactory(artifacts.SourceRegistry.abi, artifacts.SourceRegistry.bytecode, alice.connect(provider));
+  const c = await f.deploy();
+  const r0 = await ok(Promise.resolve(c.deploymentTransaction()));
+  console.log(`SourceRegistry: deploy ${r0.gasUsed} gas`);
+  const at = await c.getAddress();
+  const { createHash } = await import('node:crypto');
+  assert.equal(createHash('sha256').update(ethers.getBytes(await provider.getCode(at))).digest('hex'), artifacts.SourceRegistry.runtimeSha256);
+  const reg = (w) => new ethers.Contract(at, artifacts.SourceRegistry.abi, w.connect(provider));
+  const target = artifacts.Notary.address;
+  await fails(reg(bob).publish(bob.address, '0x01'), 'NotAContract');
+  await fails(reg(bob).publish(target, '0x'), 'EmptyData');
+  const data = ethers.hexlify(ethers.randomBytes(20_000));
+  const r1 = await ok(reg(alice).publish(target, data));
+  console.log(`SourceRegistry: publish 20 kB ${r1.gasUsed} gas`);
+  const ev = reg(alice).interface.parseLog(r1.logs[0]);
+  assert.equal(ev.name, 'Published');
+  assert.equal(ev.args.target, target);
+  assert.equal(ev.args.publisher, alice.address);
+  assert.equal(ev.args.data, data);
+  assert.equal(await reg(dave).lastBlock(target, alice.address), BigInt(r1.blockNumber));
+  for (let i = 0; i < 18; i++) await ok(reg(bob).publish(target, '0x02'));
+  const recent = await reg(dave).recent(target);
+  assert.equal(recent.length, 16, 'at most 16 recent ones');
+  assert.ok(!recent.includes(BigInt(r1.blockNumber)), 'the first one left the recent list');
+  assert.equal(await reg(dave).lastBlock(target, alice.address), BigInt(r1.blockNumber), 'but stays under its publisher');
+  assert.equal(await reg(dave).published(target), 19n);
+});
