@@ -303,6 +303,33 @@ try {
     assert.equal(recovered, ADDRESS);
   });
 
+  await step('typed data: the dialog shows the type the schema signs; a page naming another type is refused without a dialog', async () => {
+    const typed = (primaryType) => ({
+      types: { EIP712Domain: [{ name: 'name', type: 'string' }, { name: 'chainId', type: 'uint256' }], Example: [{ name: 'value', type: 'uint256' }] },
+      domain: { name: 'Test', chainId: 52403 }, primaryType, message: { value: 7 },
+    });
+    const chainId = Number(await rpc('eth_chainId'));
+    const data = typed('Example'); data.domain.chainId = chainId;
+    const lie = typed('Permit'); lie.domain.chainId = chainId;
+    const pages = [];
+    const listen = (p) => { if (p.url().includes('approval=')) pages.push(p); };
+    context.on('page', listen);
+    const refused = await explorer.evaluate((d) => window.aether.request({ method: 'eth_signTypedData_v4', params: ['0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', JSON.stringify(d)] }).then(() => 'signed', (e) => e.message), lie);
+    await explorer.waitForTimeout(500);
+    context.off('page', listen);
+    assert.match(refused, /schema signs Example/);
+    assert.equal(pages.length, 0, 'no dialog for a mismatched type');
+    const sign = explorer.evaluate((d) => window.aether.request({ method: 'eth_signTypedData_v4', params: ['0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', JSON.stringify(d)] }), data);
+    const win = await context.waitForEvent('page', { predicate: (p) => p.url().includes('approval=') });
+    await win.waitForSelector('#yes');
+    assert.match(await win.textContent('body'), /Example/);
+    await win.click('#yes');
+    const sig = await sign;
+    const { EIP712Domain, ...types } = data.types;
+    const recovered = await explorer.evaluate(([d, t, m, s]) => ethers.verifyTypedData(d, t, m, s), [data.domain, types, data.message, sig]);
+    assert.equal(recovered, ADDRESS);
+  });
+
   await step('locking: the account disappears, a wrong password fails, the right one passes', async () => {
     await open();
     await popup.waitForSelector('#lock');

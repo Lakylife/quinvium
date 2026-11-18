@@ -167,7 +167,13 @@ export class Relayer {
 
   async handle(id, message) {
     const dst = this.chains.get(message.dstChain);
-    if (await dst.gateway.delivered(id)) { this.finish(id); return; }
+    if (await dst.gateway.delivered(id)) {
+      // Closed only once the delivery is deep enough in the target chain. A short reorganisation could otherwise remove it
+      // after every validator had forgotten the transfer, and nobody would deliver it again.
+      const safe = await dst.provider.getBlockNumber() - dst.confirmations;
+      if (safe >= 0 && await dst.gateway.delivered(id, { blockTag: safe })) this.finish(id);
+      return;
+    }
     const queue = await dst.gateway.queued(id);
     if (queue.readyAt !== 0n) {
       if (queue.done) { await this.refund(id, message, dst); return; }

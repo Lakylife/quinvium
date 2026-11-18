@@ -151,3 +151,25 @@ test('an address is listed only when it leads to the node that signed it, and ea
   assert.deepEqual([...pn.entries.keys()], [proxy]);
   assert.equal(pn.receive([sign(attacker, theirs, now + 90_000)]), 0, 'an older announcement of the same key is ignored');
 });
+
+test('proxy headers count only from the proxy on this computer, and a foreign web page never controls the node', () => {
+  const node = { chain: { network: { name: 'mainnet', chainId: 52401n }, head: { number: 1n } }, network: { peers: new Set(), sendPublicNodes() {} }, mempool: {}, work: null, version: 'test', publicNodes: { share: () => ({ url: 'x', expires: 1 }), outgoing: () => [], list: () => [] } };
+  const req = (remoteAddress, headers = {}) => ({ headers: { host: '127.0.0.1:8545', ...headers }, socket: { remoteAddress } });
+  const proxied = new RpcServer(node, { trustProxy: true });
+  // Through the proxy on this computer: the real client address, foreign.
+  assert.deepEqual(proxied._caller(req('127.0.0.1', { 'x-forwarded-for': '198.51.100.7' })), { ip: '198.51.100.7', local: false });
+  // A client that reaches the backend port directly cannot claim to be this computer.
+  for (const spoof of ['127.0.0.1', '::1', '10.0.0.5']) {
+    const c = proxied._caller(req('198.51.100.7', { 'x-forwarded-for': spoof }));
+    assert.deepEqual(c, { ip: '198.51.100.7', local: false }, spoof);
+  }
+  const plain = new RpcServer(node, {});
+  // A program on this computer (the app, the miner) sends no Origin: local.
+  assert.equal(plain._caller(req('127.0.0.1')).local, true);
+  // The node's own Explorer: same origin, local.
+  assert.equal(plain._caller(req('127.0.0.1', { origin: 'http://127.0.0.1:8545' })).local, true);
+  // Any other web page or extension in the browser on this computer: foreign.
+  for (const origin of ['https://evil.example', 'http://localhost:8545', 'null', 'chrome-extension://abc', 'file://']) {
+    assert.equal(plain._caller(req('127.0.0.1', { origin })).local, false, origin);
+  }
+});

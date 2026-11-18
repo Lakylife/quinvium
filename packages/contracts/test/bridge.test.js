@@ -189,6 +189,23 @@ test('a large transfer waits and the guardian can stop it', async () => {
   assert.equal(await usdcA.balanceOf(mallory.address), 0n);
 });
 
+test('a queued transfer is not paid in another token when the route is remapped while it waits', async () => {
+  const srcToken = pad(await usdc.getAddress());
+  const key = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(['uint64', 'bytes32'], [Number(B.id), srcToken]));
+  const route = await gateA.routes(key);
+  const big = msg({ nonce: 110, srcToken, recipient: alice.address, amount: 600_000_000n });
+  await A.ok(gateA.deliver(big, sign(await gateA.messageId(big), validators.slice(0, 2))));
+  await A.mine(DAY + 60);
+  // The admin points the route at a different token in the meantime.
+  await A.ok(gateA.connect(A.connect(admin)).setRoute(Number(B.id), srcToken, bob.address, false, true, route.dailyLimit, route.largeAmount));
+  await fails(gateA.executeQueued.staticCall(big), 'RouteChangedWhileQueued');
+  // Back to the original token, the transfer goes through as queued.
+  await A.ok(gateA.connect(A.connect(admin)).setRoute(Number(B.id), srcToken, route.local, route.wrapped, true, route.dailyLimit, route.largeAmount));
+  const before = await usdcA.balanceOf(alice.address);
+  await A.ok(gateA.executeQueued(big));
+  assert.equal(await usdcA.balanceOf(alice.address), before + 600_000_000n);
+});
+
 test('a cancelled transfer never goes through and only the guardian, the administrator or the recipient may cancel it', async () => {
   const srcToken = pad(await usdc.getAddress());
   const m = msg({ nonce: 120, srcToken, recipient: alice.address, amount: 5_000_000n });

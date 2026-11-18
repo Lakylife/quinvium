@@ -42,6 +42,28 @@ test("a full queue evicts the sender's last transaction, never a middle one", as
   assert.deepEqual(order, [0n, 1n, 2n, 3n], 'celá řada jde do bloku');
 });
 
+test('a transaction rejected for a full queue removes nobody, even when it needed the space of several', async () => {
+  const a = wallet(); const b = wallet(); const c = wallet();
+  const chain = await newChain({ alloc: fund(a, b, c) });
+  const to = new Address(wallet().address);
+  const tx = (w, nonce, fee, data) => transfer(chain, w, to, 1n, nonce, { fee: fee * GWEI, tip: GWEI, data, gas: 200000n });
+  const cheap = tx(a, 0n, 3n); const dear = tx(b, 0n, 8n);
+  const size = (t) => t.serialize().length;
+  // Room for the two small ones only; the big one needs the space of both.
+  const big = tx(c, 0n, 5n, new Uint8Array(size(cheap) + 10).fill(1));
+  const pool = new Mempool(chain, { maxBytes: size(cheap) + size(dear) + 5 });
+  await pool.add(cheap); await pool.add(dear);
+  const before = { hashes: hashes(pool), bytes: pool.bytes, senders: pool.bySender.size };
+  // It would push out the cheap one (3 gwei) but not the dear one (8 gwei): rejected, and the cheap one stays.
+  await assert.rejects(pool.add(big), /queue is full/);
+  assert.deepEqual(hashes(pool), before.hashes);
+  assert.equal(pool.bytes, before.bytes);
+  assert.equal(pool.bySender.size, before.senders);
+  const order = [];
+  for await (const t of pool.pending()) order.push(hex(t));
+  assert.equal(order.length, 2, 'both still go into a block');
+});
+
 test('the queue is saved and loaded after a restart; mined and old transactions are dropped', async () => {
   const a = wallet(); const b = wallet(); const c = wallet();
   const chain = await newChain({ alloc: fund(a, b, c) });

@@ -14,6 +14,8 @@ const DEFAULT_NETWORKS = {
 if (self.AETHER_TEST_RPC) Object.assign(DEFAULT_NETWORKS[52402], { rpc: self.AETHER_TEST_RPC, explorer: self.AETHER_TEST_RPC });
 // Inside the desktop app the wallet talks to the app's own node; the app does not allow connections to other hosts.
 if (self.AETHER_LOCAL_RPC) for (const [id, url] of Object.entries(self.AETHER_LOCAL_RPC)) if (DEFAULT_NETWORKS[id] && !(self.AETHER_TEST_RPC && id === '52402')) DEFAULT_NETWORKS[id].rpc = url;
+// Methods that control a node or mine never go from a web page to the node, even when the node is on this computer.
+const RPC_CONTROL = /^(aether|quintium|quinvium)_(set[A-Z]\w*|getWork|submitWork|submitHashrate|poolWork|poolSubmit)$|^eth_(getWork|submitWork|submitHashrate)$/;
 const RPC_PASSTHROUGH = /^(eth_(blockNumber|call|estimateGas|feeHistory|gasPrice|getBalance|getBlockBy|getBlockTransactionCountBy|getCode|getFilter|getLogs|getProof|getStorageAt|getTransactionBy|getTransactionCount|getTransactionReceipt|maxPriorityFeePerGas|newBlockFilter|newFilter|newPendingTransactionFilter|protocolVersion|syncing|uninstallFilter)|net_|web3_clientVersion|aether_)/;
 
 const local = {
@@ -620,14 +622,19 @@ async function dappRequest(port, method, params) {
       const typed = typeof params[1] === 'string' ? JSON.parse(params[1]) : params[1];
       const chain = BigInt((await currentNetwork()).chainId);
       if (typed.domain?.chainId !== undefined && BigInt(typed.domain.chainId) !== chain) throw rpcError(-32602, 'The signature is for a different network');
+      const { EIP712Domain, ...types } = typed.types ?? {};
+      // The signed type follows from the schema, not from what the page calls it. A page naming another type would show
+      // the user a different meaning than the contract checks, so a mismatch is refused before any dialog opens.
+      let primary;
+      try { primary = ethers.TypedDataEncoder.getPrimaryType(types); } catch (e) { throw rpcError(-32602, `Invalid typed data: ${e.message}`); }
+      if (typed.primaryType !== undefined && typed.primaryType !== primary) throw rpcError(-32602, `The typed data says ${typed.primaryType}, but its schema signs ${primary}`);
       // Whom a signature is valid for matters as much as its content; that is where token allowance scams go through.
       const shown = { kontrakt: typed.domain?.verifyingContract ?? '—', aplikace: typed.domain?.name ?? '—', zprava: typed.message };
-      await askUser('sign', origin, { message: JSON.stringify(shown, null, 2), address: params[0], typed: typed.primaryType });
-      const { EIP712Domain, ...types } = typed.types;
+      await askUser('sign', origin, { message: JSON.stringify(shown, null, 2), address: params[0], typed: primary });
       return (await requireSigner(params[0])).signTypedData(typed.domain, types, typed.message);
     }
     default:
-      if (RPC_PASSTHROUGH.test(method)) return rpc(method, params);
+      if (RPC_PASSTHROUGH.test(method) && !RPC_CONTROL.test(method)) return rpc(method, params);
       throw rpcError(4200, `Method ${method} is not supported`);
   }
 }

@@ -6,8 +6,8 @@ import { Address } from '@ethereumjs/util';
 import { Network } from '../src/p2p/network.js';
 import { SecureChannel, MSG } from '../src/p2p/wire.js';
 import { Peer } from '../src/p2p/peer.js';
-import { CONSENSUS as C, WEI } from '../src/params.js';
-import { equal as equalHash } from '../src/util/bytes.js';
+import { CONSENSUS as C, NETWORKS, WEI } from '../src/params.js';
+import { equal as equalHash, toHex } from '../src/util/bytes.js';
 import { newChain, wallet, mine, mineMany, transfer, seal, tmpData } from './helpers/chain.js';
 import { Block, Header } from '../src/core/types.js';
 
@@ -20,8 +20,8 @@ const until = async (cond, ms = 15000) => {
   return false;
 };
 
-async function node(alloc, seeds = []) {
-  const chain = await newChain({ alloc });
+async function node(alloc, seeds = [], network) {
+  const chain = await newChain({ alloc, network });
   const netw = new Network({ chain, mempool: chain.mempool, port: 0, host: '127.0.0.1', seeds, allowPrivate: true });
   await netw.start();
   return { chain, net: netw, addr: () => `127.0.0.1:${netw.port}` };
@@ -107,6 +107,62 @@ test('a network split longer than the finality boundary converges on the branch 
   assert.ok(await until(() => equalHash(a.chain.head.hash(), b.chain.head.hash()), 60000), `výška ${a.chain.head.number}`);
   assert.equal(deep[0]?.accepted, true);
   assert.equal(b.net.bans.size + a.net.bans.size, 0, 'nikdo není zablokovaný');
+  await stopAll(a, b);
+});
+
+/** Two nodes sharing the first `common` blocks; both know a checkpoint at `at`. */
+async function splitAt(common, at, { bWithoutCheckpoint = false } = {}) {
+  const prefix = await newChain();
+  await mineMany(prefix, Math.max(common, at));
+  const network = { ...NETWORKS.dev, checkpoints: [{ number: BigInt(at), hash: toHex(prefix.getHeaderByNumber(BigInt(at)).hash()) }] };
+  const a = await node(undefined, [], network);
+  const b = await node(undefined, [], bWithoutCheckpoint ? NETWORKS.dev : network);
+  for (const n of [a, b]) {
+    n.chain.setClock(prefix.now());
+    for (let i = 1n; i <= BigInt(common); i++) await n.chain.insertBlock(prefix.getBlockByNumber(i));
+  }
+  for (let i = BigInt(common) + 1n; i <= BigInt(at); i++) await a.chain.insertBlock(prefix.getBlockByNumber(i));
+  return { a, b };
+}
+
+for (const [label, common] of [['directly on the checkpoint', 3], ['above the checkpoint', 4]]) {
+  test(`a long split whose common ancestor is ${label} converges on the branch with twice the work`, async () => {
+    const { a, b } = await splitAt(common, 3);
+    try {
+    const base = a.chain.getTd(a.chain.getHeaderByNumber(BigInt(common)).hash());
+    await mineMany(a.chain, C.maxReorgDepth + 4);
+    const ours = a.chain.headTd - base;
+    while (b.chain.headTd - base < 2n * ours + 50n) await mine(b.chain, { step: 1, miner: new Uint8Array(20).fill(5) });
+    const now = Math.max(a.chain.now(), b.chain.now());
+    a.chain.setClock(now); b.chain.setClock(now);
+    const deep = [];
+    a.net.on('deep-fork', (e) => deep.push(e));
+    a.net.connect('127.0.0.1', b.net.port);
+    assert.ok(await until(() => equalHash(a.chain.head.hash(), b.chain.head.hash()), 60000), `height ${a.chain.head.number} vs ${b.chain.head.number}, ${deep.map((e) => `${e.ancestor}:${e.accepted}:${e.reason ?? ""}`).join(" ")}`);
+    assert.equal(deep[0]?.accepted, true);
+    assert.equal(a.chain.passedCheckpoint(), 3n);
+    } finally {
+      await stopAll(a, b);
+    }
+  });
+}
+
+test('a long split whose common ancestor is below the checkpoint is refused even with twice the work', async () => {
+  const { a, b } = await splitAt(2, 3, { bWithoutCheckpoint: true });
+  await mineMany(a.chain, C.maxReorgDepth + 4);
+  const base = a.chain.getTd(a.chain.getHeaderByNumber(2n).hash());
+  const ours = a.chain.headTd - base;
+  while (b.chain.headTd - base < 2n * ours + 50n) await mine(b.chain, { step: 1, miner: new Uint8Array(20).fill(5) });
+  const now = Math.max(a.chain.now(), b.chain.now());
+  a.chain.setClock(now); b.chain.setClock(now);
+  const head = a.chain.head.hash();
+  const deep = [];
+  a.net.on('deep-fork', (e) => deep.push(e));
+  a.net.connect('127.0.0.1', b.net.port);
+  assert.ok(await until(() => deep.length > 0, 60000), 'the node looked at the branch');
+  assert.equal(deep[0].accepted, false);
+  await sleep(300);
+  assert.deepEqual(a.chain.head.hash(), head);
   await stopAll(a, b);
 });
 

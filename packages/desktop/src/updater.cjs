@@ -34,12 +34,25 @@ function verifyManifest(text, signature, key = PUBLIC_KEY, platform) {
   return m;
 }
 
+/** Reads at most MAX_MANIFEST bytes and stops the transfer beyond that, with or without Content-Length. */
 async function fetchText(url) {
-  const r = await fetch(url, { signal: AbortSignal.timeout(REQUEST_MS) });
-  if (!r.ok) throw new Error(`The server returned ${r.status}`);
-  const text = await r.text();
-  if (text.length > MAX_MANIFEST) throw new Error('The update description is too long');
-  return text;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_MS);
+  try {
+    const r = await fetch(url, { signal: controller.signal });
+    if (!r.ok) throw new Error(`The server returned ${r.status}`);
+    if (Number(r.headers.get('content-length') ?? 0) > MAX_MANIFEST) throw new Error('The update description is too long');
+    const chunks = [];
+    let received = 0;
+    for await (const chunk of r.body ?? []) {
+      received += chunk.length;
+      if (received > MAX_MANIFEST) { controller.abort(); throw new Error('The update description is too long'); }
+      chunks.push(chunk);
+    }
+    return Buffer.concat(chunks).toString('utf8');
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /** @returns {Promise<object|null>} verified description of a newer version, otherwise null */
