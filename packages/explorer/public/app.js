@@ -2177,6 +2177,8 @@
       order === 'blocks' && page === 1 ? null : rpc('aether_minerList', [{ limit: 1 }]),
       poolNames(),
     ]);
+    // A page number past the end (an old link) goes to the last page instead of an empty table.
+    if (!res.items.length && page > 1 && res.total) { navigate(withParam('/miners', q, 'page', String(Math.ceil(Math.min(res.total, TOP) / PAGE)), '1'), { replace: true }); return; }
     const height = stats?.height ?? Number(await rpc('eth_blockNumber'));
     const stateCtx = { pools, height, inPool: await poolActivity(pools, height) };
     const leader = (top ?? res).items[0];
