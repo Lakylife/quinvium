@@ -113,6 +113,12 @@
       "address": "0x70538F7040B2ce1eDC2FB91144e9fD67452EeA19",
       "block": 10881,
       "note": "profile picture of an address (an NFT it owns); no owner, no fees"
+    },
+    {
+      "name": "PoolFactory2",
+      "address": "0x0c381536835836Fb1AFFEc95BA9121d388E5D90c",
+      "block": 28123,
+      "note": "pools that pay their server gas from mined rewards; no owner, no fees; deployed from the Explorer, code = packages/contracts/dist/artifacts.json"
     }
   ]
 }
