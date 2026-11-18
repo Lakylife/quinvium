@@ -425,7 +425,6 @@
       stats = await rpc('aether_stats');
       refreshCommunity();
       nodeDown = false;
-      $('brand-net').textContent = stats.network;
       $('footer-net').textContent = stats.network;
       $('footer-status').innerHTML = `<b>#${num(stats.height)}</b> · ${num(stats.peers)} ${t('foot.peers')} · ${num(stats.mempool)} tx`;
       $('footer-chain').textContent = `Chain ID ${stats.chainId}`;

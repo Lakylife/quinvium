@@ -4,7 +4,7 @@
 
 /** Pools the app may offer, per network. The address is checked against the network's pool factory before the offer. */
 const OFFICIAL_POOLS = {
-  mainnet: { address: '0x7ec85f6DFD7bAa9f4D0Ff93713a7297150a23E5a', url: 'https://pool.quinvium.com', name: 'Quinvium Pool' },
+  mainnet: { address: '0xd7B63BCE0E77E0e53D7309e7E64cA4346e0dF5c8', url: 'https://pool.quinvium.com', name: 'Quinvium Pool' },
 };
 const WARMUP_MS = 3 * 60_000;     // the DAG is ready and the hashrate has settled
 const MIN_SAMPLES = 3;

@@ -1,6 +1,6 @@
 {
   "name": "@quintium/cli",
-  "version": "2.16.1",
+  "version": "2.16.2",
   "private": true,
   "type": "module",
   "description": "Quinvium command line: wallet, transfers, swap, bridge, pools, mining and the node",

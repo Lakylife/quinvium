@@ -225,3 +225,11 @@ test('the node knows the code of the version 2 factory exactly as built', async 
   const { POOL_FACTORY2_SHA256 } = await import('../src/mining/pool-factories.js');
   assert.equal(POOL_FACTORY2_SHA256, artifacts.PoolFactory2.runtimeSha256, 'after a change of PoolFactory2.sol copy the new hash into pool-factories.js');
 });
+
+test('a hidden pool is left out of pool lists and found only by its exact address', async () => {
+  const { isHiddenPool, HIDDEN_POOLS } = await import('../src/mining/pool-factories.js');
+  const hidden = HIDDEN_POOLS[52401][0];
+  assert.equal(isHiddenPool(52401n, hidden.toUpperCase().replace('0X', '0x')), true);
+  assert.equal(isHiddenPool(52402n, hidden), false, 'only on its own network');
+  assert.equal(isHiddenPool(52401n, '0xd7b63bce0e77e0e53d7309e7e64ca4346e0df5c8'), false, 'the official pool is listed');
+});
