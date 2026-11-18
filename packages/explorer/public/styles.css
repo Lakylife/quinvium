@@ -423,7 +423,7 @@ td.empty { padding: 14px var(--bleed); }
 details.tool-card .tool-output { margin-top: 12px; }
 .tool-form input[type=file] { padding: 7px 10px; color: var(--text-3); font-size: 13px; }
 .tool-form input[type=file]::file-selector-button { margin-inline-end: 10px; padding: 6px 12px; border: 0; border-radius: var(--radius-s); background: var(--surface-3); color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
-.tool-output.rich { font-family: inherit; font-size: 13.5px; line-height: 1.5; white-space: normal; word-break: normal; }
+.tool-output.rich { font-family: inherit; font-size: 13.5px; line-height: 1.5; white-space: normal; word-break: normal; overflow-wrap: anywhere; }
 .tool-output.rich.good { color: var(--text-2); }
 .tool-card .tool-done { margin: 0 0 10px; color: var(--success); font-size: 13.5px; }
 .tool-card .tool-done a { color: var(--accent); font-weight: 400; }
