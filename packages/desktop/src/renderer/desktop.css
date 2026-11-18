@@ -241,3 +241,19 @@ pre { background: var(--card); border-radius: var(--radius-s); padding: 12px 14p
 [dir="rtl"] .mono, [dir="rtl"] code, [dir="rtl"] pre, [dir="rtl"] input[name="to"], [dir="rtl"] .to-row input, [dir="rtl"] .balance, [dir="rtl"] .asset-bal { direction: ltr; unicode-bidi: isolate; }
 [dir="rtl"] .balance, [dir="rtl"] .asset-bal { text-align: end; }
 .switch-row { flex-direction: row; }
+
+/* Offer to share the node: a dialog over the app, not a full screen */
+.app-lock.share-modal { background: rgba(8, 12, 18, .55); }
+.share-card { display: flex; width: 100%; max-width: 440px; flex-direction: column; gap: 14px; padding: 28px; border-radius: var(--radius-l); background: var(--float); box-shadow: 0 18px 48px rgba(0, 0, 0, .35); }
+.share-card h1 { font-size: 21px; letter-spacing: -.01em; }
+.share-card > p { margin: 0; line-height: 1.5; color: var(--dim); }
+.share-icon { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 14px; background: var(--accent-soft); color: var(--accent); }
+.share-icon svg { width: 26px; height: 26px; }
+.share-points { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 4px 0 0; padding: 0; list-style: none; }
+.share-points li { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border-radius: var(--radius); background: var(--card); }
+.share-points svg { flex: none; width: 18px; height: 18px; margin-top: 1px; color: var(--accent); }
+.share-points strong { display: block; font-size: 13px; }
+.share-points span { display: block; margin-top: 2px; color: var(--dim); font-size: 12px; line-height: 1.4; }
+.share-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; }
+.share-actions button { min-width: 120px; }
+@media (max-width: 520px) { .share-points { grid-template-columns: 1fr; } }
