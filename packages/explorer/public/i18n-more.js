@@ -2,10 +2,6 @@
 // Row: "key or English text": [Japanese, Chinese, Arabic]. Developer documentation stays in English.
 window.AetherExplorerText2 = {
   keys: {
-    "tx.paidOut": ["マイナーへの支払い","支付给矿工","المدفوع للمعدّنين"],
-    "tx.paidOutValue": ["{n} 人のマイナーに {amount} {coin}","向 {n} 名矿工支付 {amount} {coin}","{amount} {coin} إلى {n} من المعدّنين"],
-    "tx.paidOutNote": ["トランザクション自体は何も送金しません（金額 0）。プールのコントラクトが自身の残高から支払い、各支払いはイベントにあります。","交易本身不发送任何金额（数额 0）。矿池合约从自身余额支付，每笔支付见“事件”。","المعاملة نفسها لا ترسل شيئًا (القيمة 0). يدفع عقد التجمّع من رصيده، وكل دفعة مذكورة في الأحداث."],
-    "tx.poolFee": ["プール手数料","矿池费用","رسوم التجمّع"],
     "net.peersTitle": ["接続中のノード","已连接节点","العُقد المتصلة"],
     "net.behind": ["{n} ブロック遅れ","落后 {n} 个区块","متأخرة {n} كتل"],
     "net.readsFrom": ["このページの読み込み元","本页数据来自","تقرأ هذه الصفحة من"],
