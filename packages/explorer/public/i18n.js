@@ -2,6 +2,10 @@
 // Řádek: "klíč nebo anglický text": [němčina, španělština, francouzština]. Dokumentace pro vývojáře zůstává anglicky.
 window.AetherExplorerText = {
   keys: {
+    'tx.paidOut': ['An Miner ausgezahlt', 'Pagado a los mineros', 'Versé aux mineurs'],
+    'tx.paidOutValue': ['{amount} {coin} an {n} Miner', '{amount} {coin} a {n} mineros', '{amount} {coin} à {n} mineurs'],
+    'tx.paidOutNote': ['Die Transaktion selbst sendet nichts (Wert 0). Der Pool-Vertrag zahlt aus seinem eigenen Guthaben; jede Auszahlung steht unter Ereignisse.', 'La transacción en sí no envía nada (Valor 0). El contrato del pool paga de su propio saldo; cada pago está en Eventos.', 'La transaction elle-même n’envoie rien (Valeur 0). Le contrat du pool paie depuis son propre solde ; chaque versement figure dans Événements.'],
+    'tx.poolFee': ['Pool-Gebühr', 'Comisión del pool', 'Frais du pool'],
     'net.peersTitle': ['Verbundene Knoten', 'Nodos conectados', 'Nœuds connectés'],
     'net.behind': ['{n} Blöcke zurück', '{n} bloques por detrás', '{n} blocs de retard'],
     'net.readsFrom': ['Diese Seite liest von', 'Esta página lee de', 'Cette page lit depuis'],
