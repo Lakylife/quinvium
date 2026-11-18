@@ -13,6 +13,9 @@ const MAX_FEE_PCT = 5;
 export async function factoryPool(ctx, text) {
   await ctx.connect();
   if (!ethers.isAddress(text ?? '')) throw new CliError(L('Zadejte adresu poolu.', 'Give the pool address.'));
+  // The node checks the built-in factory and version 2 factories with verified code; an older node knows only the first.
+  const version = await ctx.rpc('aether_poolVersion', [text]).catch(() => null);
+  if (version === 2) return ctx.at('AetherPool2', ethers.getAddress(text));
   const count = Number(await ctx.at('PoolFactory').poolCount());
   const known = await ctx.at('PoolFactory').list(0, count);
   const address = known.find((a) => a.toLowerCase() === text.toLowerCase());
@@ -24,8 +27,11 @@ const minutes = (round, window) => Math.round((Number(round) * Number(window) * 
 
 async function list(ctx) {
   await ctx.connect();
-  const found = await ctx.at('PoolFactory').list(0, LIST_LIMIT);
-  const rows = await Promise.all([...found].map(async (address) => {
+  const found = [...await ctx.at('PoolFactory').list(0, LIST_LIMIT)];
+  // Version 2 pools come from factories the node verified.
+  const listed = await ctx.rpc('aether_pools', [{ limit: LIST_LIMIT }]).catch(() => null);
+  for (const p of listed?.items ?? []) if (p.version === 2) found.push(ethers.getAddress(p.address));
+  const rows = await Promise.all(found.map(async (address) => {
     const c = ctx.at('AetherPool', address);
     const [name, url, fee, paid] = await Promise.all([c.name(), c.url(), c.feeBps(), c.totalPaid()]);
     return { address, name, url, feePercent: Number(fee) / 100, paid };

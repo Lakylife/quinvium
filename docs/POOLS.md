@@ -63,6 +63,25 @@ node packages/node/src/cli.js --network mainnet --pool 0xPOOL --data-dir /var/li
 - The pool page in the Explorer shows connected devices, miners in the current window, blocks found and payouts.
 - If the share account runs out of QU, shares stop being recorded until it is topped up; miners' coins already in the contract are safe.
 
+### Pools that pay their gas from the rewards (version 2)
+
+A pool from the original factory never pays gas: the server account above pays every share and payout itself and has to be
+topped up by hand. Version 2 (`AetherPool2`, created by `PoolFactory2`) pays that gas back out of the mined rewards:
+
+- The operator names the **server account** (the relayer) when creating the pool and can change it later on the pool page.
+  Use the account whose key is on the pool server; the server log says whether the pool refunds it.
+- After each share batch, payout or round close sent by that account, the pool sends it the measured gas. The price counts
+  at most the block's base fee plus 2 gwei, whatever the transaction paid.
+- The refund comes only from coins not yet distributed, never from coins that already belong to miners or to the operator's fee.
+  All refunds together are at most 1 % of everything the pool has received; the Explorer shows the total as *Gas paid by the pool*.
+- Anyone else who submits shares or triggers payouts still pays their own gas, as before.
+- The fee stays the operator's income; it no longer has to cover the server's gas.
+
+`PoolFactory2` is an ordinary contract without an owner. Anyone can deploy it from the Explorer (**Pools → Create a pool**,
+when the network does not have it yet). Apps trust it only after its address is added to `packages/node/src/mining/pool-factories.js`
+and `packages/explorer/public/deployments.json` (`poolFactory2`), and only when the code at that address matches the build
+(SHA-256 of the runtime code). The original factory stays part of the network rules and keeps working.
+
 ## Solo mining
 
 Without a pool, a miner mines for its own address and receives the whole block reward and all fees whenever it finds a block. The Explorer lists solo miners on [Miners](https://explorer.quinvium.com/miners); on the Pools page the largest solo miners are shown one by one and the rest are summed up in one row.

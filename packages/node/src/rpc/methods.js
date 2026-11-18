@@ -12,6 +12,7 @@ import { fromHex, keccak, quantity, toHex } from '../util/bytes.js';
 import { blockReceipts, blockToRpc, effectivePrice, logToRpc, receiptToRpc, txToRpc } from './format.js';
 import { RpcCallError, estimateGas, ethCall } from './call.js';
 import { VmBusyError } from './vm-pool.js';
+import { trustedFactories } from '../mining/pool-factories.js';
 
 export class RpcError extends Error {
   constructor(code, message, data) {
@@ -60,7 +61,6 @@ const PAID_TOPIC = keccak(new TextEncoder().encode('Paid(address,uint256)'));
 const TRANSFER_TOPIC = keccak(new TextEncoder().encode('Transfer(address,address,uint256)'));
 const SHARE_TOPIC = keccak(new TextEncoder().encode('ShareAccepted(address,uint256,uint256,uint256)'));
 const POOL_CREATED_TOPIC = keccak(new TextEncoder().encode('PoolCreated(address,address,string,uint256,uint256,uint256)'));
-const POOL_FACTORY = fromHex('0xae0000000000000000000000000000000000000c');
 const POOL_WINDOW_BLOCKS = 5760;   // a day back by default
 const MAX_POOLS = 10_000;           // list of pools from the factory; the ranking reads no more
 const MAX_MINED_ROWS = 20_000;      // blocks for the daily reward summary
@@ -764,7 +764,7 @@ export function createMethods(node) {
           evm('call', { to: p.pool, data: URL_CALL }, 'latest').then((hex) => abiText(hex), () => ''),
         ]);
         return {
-          address: p.pool, order: p.order, operator: p.operator, name: p.name, feeBps: p.feeBps, roundBlocks: p.roundBlocks, windowRounds: p.windowRounds, created: p.number,
+          address: p.pool, version: p.version ?? 1, order: p.order, operator: p.operator, name: p.name, feeBps: p.feeBps, roundBlocks: p.roundBlocks, windowRounds: p.windowRounds, created: p.number,
           blocks: s?.blocks ?? 0, work: s?.work ?? 0, share: allWork ? (s?.work ?? 0) / allWork : 0, hashrate: (s?.work ?? 0) / span, last: s?.last ?? null, miners, url,
         };
       }));
@@ -813,11 +813,23 @@ export function createMethods(node) {
       txErrors.set(key, result);
       return result;
     },
+    /** Whether the address is a pool from a trusted factory: 0 no, 1 the built-in factory, 2 a version 2 factory (it pays its server gas from rewards). */
+    aether_poolVersion: async ([a]) => {
+      const address = hexAddress(a);
+      const data = `0x5b16ebb7${toHex(address.bytes).slice(2).padStart(64, '0')}`;
+      for (const f of await factories()) {
+        const result = await evm('call', { to: toHex(f.address), data }, 'latest').catch(() => '0x');
+        if (result !== '0x' && BigInt(result) === 1n) return f.version;
+      }
+      return 0;
+    },
     /** Pools the address created and operates. Only from the pool factory's event; no other contract can impersonate it. */
     aether_poolsOf: async ([a]) => {
       const operator = hexAddress(a);
-      const rows = await index('eventsBySecond', POOL_FACTORY, POOL_CREATED_TOPIC, operator.bytes, 100);
-      return rows.map((r) => ({ pool: new Address(Uint8Array.from(r.first).slice(12)).toString(), number: r.number, timestamp: Number(chain.getHeaderByNumber(BigInt(r.number)).timestamp) }));
+      const rows = [];
+      for (const f of await factories()) rows.push(...await index('eventsBySecond', f.address, POOL_CREATED_TOPIC, operator.bytes, 100));
+      rows.sort((x, y) => y.number - x.number);
+      return rows.slice(0, 100).map((r) => ({ pool: new Address(Uint8Array.from(r.first).slice(12)).toString(), number: r.number, timestamp: Number(chain.getHeaderByNumber(BigInt(r.number)).timestamp) }));
     },
     aether_poolPayouts: async ([a, limit = 25, offset = 0]) => {
       const address = hexAddress(a);
@@ -1042,9 +1054,15 @@ export function createMethods(node) {
   // and reads only newly created ones. The key also watches block changes: the count or the newest creation changes.
   let poolDirectory = { key: null, items: [] };
   const txErrors = new Map();
+  /** The built-in pool factory and version 2 factories with matching code (mining/pool-factories.js). */
+  const factories = async () => trustedFactories(async (address) => (await state(chain.head)).stateManager.getCode(new Address(address)), chain.network.chainId, node.opts?.poolFactories ?? []);
+
   async function poolList() {
-    const { total, rows } = await index('tokenEvents', POOL_FACTORY, POOL_CREATED_TOPIC, MAX_POOLS, 0);
-    const key = `${total}:${rows[0]?.number}:${rows[0]?.log_idx}`;
+    const parts = [];
+    for (const f of await factories()) parts.push({ f, ...(await index('tokenEvents', f.address, POOL_CREATED_TOPIC, MAX_POOLS, 0)) });
+    const rows = parts.flatMap((p) => p.rows.map((r) => ({ ...r, version: p.f.version })))
+      .sort((x, y) => y.number - x.number || y.tx_idx - x.tx_idx || y.log_idx - x.log_idx).slice(0, MAX_POOLS);
+    const key = parts.map((p) => `${p.total}:${p.rows[0]?.number}:${p.rows[0]?.log_idx}`).join('|');
     if (poolDirectory.key === key) return poolDirectory.items;
     const known = new Map(poolDirectory.items.map((p) => [`${p.number}:${p.txIdx}:${p.logIdx}:${p.pool}`, p]));
     const items = rows.map((r) => {
@@ -1056,7 +1074,7 @@ export function createMethods(node) {
       return {
         pool, operator: new Address(Uint8Array.from(r.t2).slice(12)).toString(), name: abiText(log.data, 0).slice(0, 64),
         feeBps: Number(abiWord(log.data, 1)), roundBlocks: Number(abiWord(log.data, 2)), windowRounds: Number(abiWord(log.data, 3)),
-        number: r.number, txIdx: r.tx_idx, logIdx: r.log_idx,
+        number: r.number, txIdx: r.tx_idx, logIdx: r.log_idx, version: r.version,
       };
     });
     // The creation order keeps a pool's colour in charts: a new pool or a change of period recolours nobody.

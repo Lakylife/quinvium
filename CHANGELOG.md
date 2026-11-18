@@ -9,6 +9,7 @@
   - Bridge: a delivered transfer is closed only once the delivery is confirmed; a queued transfer is not paid in another token after its route was remapped (new error `RouteChangedWhileQueued`); Bitcoin validator settings left out of the configuration keep their defaults and nonsense stops the validator at start.
   - Wallet: the EIP-712 type shown is the one the schema signs; a page naming another type is refused before the dialog.
   - App: update descriptions are cut off at 16 KiB while they arrive.
+- Pools that pay their server's gas from the mined rewards (version 2: `AetherPool2` and `PoolFactory2`). The operator names the server account; its gas for shares, payouts and closing rounds comes back after each call, priced at most at the base fee plus 2 gwei, only from coins not yet distributed and at most 1 % of the pool's income. The factory is an ordinary contract deployed from the Explorer and trusted only when its code matches the build. Node (`aether_poolVersion`, pool lists), pool server, Explorer, app and CLI recognise these pools. No consensus change.
 
 ## 2.16.1 (18 November 2026)
 

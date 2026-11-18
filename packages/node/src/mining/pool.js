@@ -10,6 +10,7 @@ import { bytesToBigInt, quickResult, targetForDifficulty } from '../crypto/ethas
 import { GWEI } from '../params.js';
 import { equal, fromHex, keccak, toHex } from '../util/bytes.js';
 import { L } from '../lang.js';
+import { POOL_FACTORY } from './pool-factories.js';
 
 const SHARE_SECONDS = 20;            // how often one device should send a share
 const SHARES_PER_BLOCK = 24;         // no more fits into the chain cheaply; for a large pool shares get more expensive
@@ -53,7 +54,6 @@ const PAYOUT = selector('payout(address[])');
 const PENDING = selector('pendingOf(address)');
 const READY = selector('readyToSettle()');
 const SETTLE = selector('settle(uint256)');
-const FACTORY = fromHex('0xae0000000000000000000000000000000000000c');
 
 function word(value) {
   const out = new Uint8Array(32);
@@ -111,9 +111,12 @@ export class PoolServer {
    * @param {(params: object) => Promise<string>} o.estimate odhad gasu
    * @param {bigint} [o.minShareDifficulty] lowest share difficulty
    * @param {string} [o.stateFile] list of miners for payouts after a restart
+   * @param {{ address: Uint8Array, version: number }[]} [o.factories] trusted pool factories (mining/pool-factories.js)
    */
-  constructor({ chain, work, mempool, address, key, send, call, estimate, minShareDifficulty = MIN_SHARE_DIFFICULTY, stateFile, log = () => {} }) {
+  constructor({ chain, work, mempool, address, key, send, call, estimate, minShareDifficulty = MIN_SHARE_DIFFICULTY, stateFile, factories, log = () => {} }) {
     Object.assign(this, { chain, work, mempool, address, key, send, call, estimate, minShareDifficulty, stateFile, log });
+    this.factories = factories ?? [{ address: fromHex(POOL_FACTORY), version: 1 }];
+    this.version = 1;
     this.sender = privateToAddress(key);
     this.sessions = new Map();   // address.device -> state
     this.fresh = new Set();      // ids of sessions without an accepted share, oldest first
@@ -133,15 +136,28 @@ export class PoolServer {
   /** Verifies that the contract comes from the factory; otherwise miners' coins would go to unknown code. */
   async start() {
     const data = Buffer.concat([selector('isPool(address)'), addressWord(this.address)]);
-    const result = await this.call({ to: toHex(FACTORY), data: toHex(data) });
-    if (BigInt(result === '0x' ? 0 : result) !== 1n) throw new PoolError(`${toHex(this.address)} is not a pool from the factory, mining into it will not start`);
+    let factory = null;
+    for (const f of this.factories) {
+      const result = await this.call({ to: toHex(f.address), data: toHex(data) }).catch(() => '0x');
+      if (BigInt(result === '0x' ? 0 : result) === 1n) { factory = f; break; }
+    }
+    if (!factory) throw new PoolError(`${toHex(this.address)} is not a pool from the factory, mining into it will not start`);
+    this.version = factory.version;
+    if (this.version >= 2) {
+      // Version 2 pays back the gas only to its relayer. Another account still works, it just pays its own gas.
+      const relayer = await this.call({ to: toHex(this.address), data: toHex(selector('relayer()')) }).catch(() => '0x');
+      this.refunded = relayer.length >= 42 && equal(fromHex(`0x${relayer.slice(-40)}`), this.sender);
+      if (!this.refunded) this.log(L(`Pool vrací gas jinému účtu než ${toHex(this.sender)}; poplatky za podíly platí tento účet sám`, `The pool refunds gas to an account other than ${toHex(this.sender)}; this account pays the share fees itself`));
+    }
     this._loadMiners();
     this.timers = [
       setInterval(() => this.flush().catch((e) => this._fail(e)), FLUSH_MS),
       setInterval(() => this.payout().catch((e) => this._fail(e)), PAYOUT_MS),
     ];
     for (const t of this.timers) t.unref();
-    this.log(L(`Pool ${toHex(this.address)}, poplatky za podíly platí ${toHex(this.sender)}`, `Pool ${toHex(this.address)}, share fees are paid by ${toHex(this.sender)}`));
+    this.log(this.refunded
+      ? L(`Pool ${toHex(this.address)}, gas za podíly vrací pool z vytěžených odměn účtu ${toHex(this.sender)}`, `Pool ${toHex(this.address)}, the pool pays back the share gas of ${toHex(this.sender)} from mined rewards`)
+      : L(`Pool ${toHex(this.address)}, poplatky za podíly platí ${toHex(this.sender)}`, `Pool ${toHex(this.address)}, share fees are paid by ${toHex(this.sender)}`));
   }
 
   stop() {
