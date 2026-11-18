@@ -24,7 +24,7 @@ async function post(url, body, ms) {
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.text();
 }
-const clean = (items) => (Array.isArray(items) ? items : []).map((n) => String(n?.url ?? n ?? '').toLowerCase()).filter((u) => NODE_URL.test(u) && !u.startsWith('https://rpc.quinvium.com'));
+const clean = (items) => (Array.isArray(items) ? items : []).map((n) => String(n?.url ?? n ?? '').toLowerCase()).filter((u) => NODE_URL.test(u) && new URL(u).hostname !== 'rpc.quinvium.com');
 
 /** Community nodes from the website's list and, while it answers, from the server; the last good list stays in memory. */
 async function communityNodes(origin) {
