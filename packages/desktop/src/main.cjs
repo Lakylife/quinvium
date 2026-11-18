@@ -735,7 +735,7 @@ setInterval(async () => {
  * Mining that runs but earns nothing: the node lost every connection, the chain stopped moving, the node does not answer
  * or the card computes nothing. The user is told once per problem (notification, tray, Mining page), not left in the dark.
  */
-const HEALTH = { noPeersMs: 180_000, stalledMs: 600_000, noAnswerMs: 60_000, noHashMs: 300_000 };
+const HEALTH = { noPeersMs: 180_000, stalledMs: 600_000, noAnswerMs: 60_000, noHashMs: 300_000, noStartMs: 240_000 };
 const health = { since: {}, warned: null };
 function checkMining(answered) {
   if (!miner.proc) { health.since = {}; health.warned = null; miner.warning = null; return; }
@@ -749,6 +749,8 @@ function checkMining(answered) {
     ['noAnswer', flag('noAnswer', !answered) >= HEALTH.noAnswerMs, () => tr('The node of this app does not answer, so the card has no work.')],
     ['noPeers', flag('noPeers', solo && answered && s?.peers === 0) >= HEALTH.noPeersMs, () => tr('The node has no connection to other nodes. Blocks found now would not reach the network.')],
     ['stalled', solo && answered && health.heightAt && now - health.heightAt >= HEALTH.stalledMs, () => tr('No new block for {min} minutes. The node may be cut off from the network.', { min: Math.round((now - health.heightAt) / 60_000) })],
+    // Stuck before the DAG: no card the miner can use (an old or built-in GPU, too little memory, no OpenCL or Vulkan driver).
+    ['noStart', flag('noStart', miner.stage === 'start') >= HEALTH.noStartMs, () => tr("The graphics card did not start mining. Quinvium needs an AMD or NVIDIA card with at least 2 GB of its own memory and a current driver; older or built-in graphics usually cannot mine.")],
     ['noHash', flag('noHash', !preparing && (miner.counters?.rate ?? 0) === 0) >= HEALTH.noHashMs, () => tr('The card has not computed anything for several minutes.')],
   ].find(([, bad]) => bad);
   if (!problems) {
