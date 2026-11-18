@@ -242,10 +242,14 @@ function keepAwake(on) {
  * Performance of an NVIDIA card on Windows. Otherwise the driver may leave it in the P5 state with memory at a quarter of its clock.
  * Runs in a separate process: if the non-public driver function fails, mining is not affected.
  */
+let noNvidia = false;   // learned on the first try: a computer without an NVIDIA driver is not asked again
 function setGpuState(state) {
-  if (!isWin) return;
+  if (!isWin || noNvidia) return;
   execFile(minerPath, ['--gpu-state', String(state)], { timeout: 15000, windowsHide: true }, (e, out, err) => {
-    miner.gpuState = `${state}: ${`${out ?? ''} ${err ?? ''} ${e?.message ?? ''}`.replace(/\s+/g, ' ').trim().slice(0, 600)}`;
+    const text = `${out ?? ''} ${err ?? ''} ${e?.message ?? ''}`.replace(/\s+/g, ' ').trim();
+    // Without an NVIDIA card there is nothing to set; that is not an error worth showing in the mining log.
+    if (/NVIDIA driver is not available/i.test(text)) { noNvidia = true; return; }
+    miner.gpuState = `${state}: ${text.slice(0, 600)}`;
     push(miner.log, `Card performance state ${miner.gpuState}`);
   });
 }
