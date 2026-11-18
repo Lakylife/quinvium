@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Pools that pay their server's gas from the mined rewards (version 2: `AetherPool2` and `PoolFactory2`). The operator names the server account; its gas for shares, payouts and closing rounds comes back after each call, priced at most at the base fee plus 2 gwei, only from coins not yet distributed and at most 1 % of the pool's income. The factory is an ordinary contract deployed from the Explorer and trusted only when its code matches the build. Node (`aether_poolVersion`, pool lists), pool server, Explorer, app and CLI recognise these pools. No consensus change.
+
 ## 2.16.1 (18 November 2026)
 
 - Miner: switches to the backup node after 3 failed requests (about 20 s instead of minutes) and reports its hashrate to the node in use (#44).

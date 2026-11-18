@@ -357,7 +357,8 @@
     return new ethers.JsonRpcProvider(nodeUrl(), undefined, { staticNetwork: true });
   }
   const factory = (provider) => new ethers.Contract(abi.PoolFactory.address, abi.PoolFactory.abi, provider);
-  const poolAt = (address, provider) => new ethers.Contract(address, abi.AetherPool.abi, provider);
+  // Version 2 pools have every function of the first version too.
+  const poolAt = (address, provider) => new ethers.Contract(address, (abi.AetherPool2 ?? abi.AetherPool).abi, provider);
 
   const TOP_POOLS = 10;
   let poolQuery = '';
@@ -458,7 +459,9 @@
     el('s-pool-error').textContent = '';
     const address = el('s-pool').value.trim();
     try {
-      if (address && !(await factory(await chain()).isPool(address).catch(() => false))) throw new Error('This address is not a pool from the network factory.');
+      // The node knows the built-in factory and version 2 factories with verified code; an older node knows only the first.
+      const trusted = !address || (await rpc('aether_poolVersion', [address]).catch(() => null)) > 0 || (await factory(await chain()).isPool(address).catch(() => false));
+      if (!trusted) throw new Error('This address is not a pool from the network factory.');
       await d.runPool(address);
       await refresh();
       showRunPool();

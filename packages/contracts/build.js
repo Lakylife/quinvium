@@ -26,7 +26,7 @@ export const PREDEPLOYS = {
 
 // Contracts added by a fork. They do not belong in genesis; a running network would change its first block.
 /** Ordinary contracts the Explorer can deploy (with their bytecode) and then uses only when the code matches. */
-export const DEPLOYED_BY_USERS = ['Profiles', 'QuinviumAvatars', 'SourceRegistry'];
+export const DEPLOYED_BY_USERS = ['Profiles', 'QuinviumAvatars', 'SourceRegistry', 'PoolFactory2'];
 
 export const UPGRADES = {
   PoolFactory: '0xae0000000000000000000000000000000000000c',
@@ -99,7 +99,7 @@ writeFileSync(join(genesisDir, 'upgrades.json'), JSON.stringify(upgrades));
 const pub = {};
 for (const [name, c] of Object.entries(artifacts)) {
   if (DEPLOYED_BY_USERS.includes(name)) { pub[name] = { abi: c.abi, bytecode: c.bytecode, runtimeSha256: c.runtimeSha256 }; continue; }
-  if (c.address || ['SwapFactory', 'SwapPair', 'SwapRouter', 'AetherToken', 'AetherCollection', 'Multisig', 'AetherPool', 'StableToken', 'WrappedAsset', 'BridgeGateway', 'TokenRegistry'].includes(name)) pub[name] = { address: c.address, abi: c.abi };
+  if (c.address || ['SwapFactory', 'SwapPair', 'SwapRouter', 'AetherToken', 'AetherCollection', 'Multisig', 'AetherPool', 'AetherPool2', 'StableToken', 'WrappedAsset', 'BridgeGateway', 'TokenRegistry'].includes(name)) pub[name] = { address: c.address, abi: c.abi };
 }
 writeFileSync(join(root, 'packages', 'explorer', 'public', 'contracts.json'), JSON.stringify(pub));
 console.log('Hotovo.');
