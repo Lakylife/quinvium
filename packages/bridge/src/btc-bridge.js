@@ -44,7 +44,12 @@ export class BitcoinBridge {
    * @param {number} [o.proposeTimeoutMs] after this time the proposer role moves to the next validator
    */
   constructor(o) {
-    Object.assign(this, { confirmations: 6, minDeposit: 10_000n, maxFeeRate: 200, fallbackFeeRate: 5, dailyLimit: 1_000_000_000n, proposeTimeoutMs: 600_000, log: () => {}, now: Date.now }, o);
+    // A setting left out of the configuration file arrives as undefined; it must not overwrite the default.
+    const given = Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined));
+    Object.assign(this, { confirmations: 6, minDeposit: 10_000n, maxFeeRate: 200, fallbackFeeRate: 5, dailyLimit: 1_000_000_000n, proposeTimeoutMs: 600_000, log: () => {}, now: Date.now }, given);
+    for (const name of ['confirmations', 'maxFeeRate', 'fallbackFeeRate', 'threshold']) {
+      if (!Number.isInteger(this[name]) || this[name] < 1) throw new Error(`Bitcoin: ${name} must be a positive whole number, it is ${this[name]}`);
+    }
     this.chain = this.relayer.chains.get(this.chainId);
     this.gateway = this.chain.gateway;
     this.me = this.relayer.address;

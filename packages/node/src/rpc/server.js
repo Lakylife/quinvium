@@ -7,6 +7,9 @@ import { toHex } from '../util/bytes.js';
 import { blockReceipts, logToRpc } from './format.js';
 import { MINING_METHODS, RpcError, createMethods } from './methods.js';
 import { isLocalCaller } from '../p2p/upnp.js';
+
+const PROXY_HEADERS = ['x-forwarded-for', 'cf-connecting-ip', 'forwarded', 'x-real-ip'];
+const isLoopback = (ip) => { const a = String(ip ?? '').replace(/^::ffff:/i, ''); return a === '::1' || /^127\./.test(a); };
 import { COST, restApi } from './rest-api.js';
 
 const MAX_BODY = 5 * 1024 * 1024;
@@ -186,7 +189,9 @@ export class RpcServer {
       const ip = String(req.headers['cf-connecting-ip'] ?? '').trim();
       return /^[0-9a-f.:]{2,45}$/i.test(ip) ? ip : 'tunnel';
     }
-    if (this.trustProxy) {
+    // The header counts only when the request really came from the proxy on this computer. A client that reaches the
+    // backend port directly could otherwise write any address into it, 127.0.0.1 included.
+    if (this.trustProxy && isLoopback(req.socket.remoteAddress)) {
       const forwarded = String(req.headers['x-forwarded-for'] ?? '').split(',').pop().trim();
       if (forwarded) return forwarded;
     }
@@ -200,8 +205,22 @@ export class RpcServer {
   _caller(req) {
     const ip = this._clientIp(req);
     if (req.viaTunnel) return { ip, local: false, tunnel: true };
-    const proxied = !this.trustProxy && ['x-forwarded-for', 'cf-connecting-ip', 'forwarded', 'x-real-ip'].some((h) => req.headers[h]);
-    return { ip, local: !proxied && isLocalCaller(ip) };
+    // Without --trust-proxy, and with it from anywhere but this computer, a request with a proxy header is foreign.
+    const proxied = (!this.trustProxy || !isLoopback(req.socket.remoteAddress)) && PROXY_HEADERS.some((h) => req.headers[h]);
+    // A web page in the browser on this computer also connects from 127.0.0.1. The browser sends its origin, so a request
+    // from a page other than the node's own Explorer is a foreign caller: it reads the chain but does not control the node.
+    return { ip, local: !proxied && !this._foreignOrigin(req) && isLocalCaller(ip) };
+  }
+
+  _foreignOrigin(req) {
+    const origin = req.headers.origin;
+    if (origin === undefined) return false;
+    try {
+      const u = new URL(origin);
+      return !(['http:', 'https:', 'ws:', 'wss:'].includes(u.protocol) && u.host === String(req.headers.host ?? ''));
+    } catch {
+      return true;
+    }
   }
 
   _allow(caller, n = 1) {

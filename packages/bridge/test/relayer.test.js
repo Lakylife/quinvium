@@ -77,7 +77,26 @@ test('there and back without manual work and the backing matches', async () => {
   assert.equal(await usdcA.totalSupply(), 50_000_000n);
   assert.equal(await usdc.balanceOf(gateB.target), 50_000_000n);
   assert.equal(await usdc.balanceOf(alice.address), 4_950_000_000n);
+  // A delivery is closed once it is confirmed.
+  await run(relayers, 3);
   assert.deepEqual(relayers.map((r) => Object.keys(r.state.data.pending).length), [0, 0, 0], 'nic nezůstalo viset');
+});
+
+test('a delivered transfer is closed only once the delivery is confirmed, so a short reorganisation cannot lose it', async () => {
+  const before = await usdcA.balanceOf(alice.address);
+  await sendUsdc(1_000_000n);
+  for (let i = 0; i < 12 && (await usdcA.balanceOf(alice.address)) === before; i++) {
+    for (const r of relayers) await r.tick();
+    await A.mine();
+    await B.mine();
+  }
+  assert.equal(await usdcA.balanceOf(alice.address), before + 1_000_000n, 'delivered');
+  // Right after the delivery block the transfer is still remembered.
+  for (const r of relayers) await r.tick();
+  assert.ok(relayers.every((r) => Object.keys(r.state.data.pending).length === 1), 'not closed before confirmation');
+  for (let i = 0; i < 3; i++) await A.mine();
+  for (const r of relayers) await r.tick();
+  assert.deepEqual(relayers.map((r) => Object.keys(r.state.data.pending).length), [0, 0, 0]);
 });
 
 test('the validator signs nothing before sufficient confirmation', async () => {

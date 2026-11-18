@@ -87,6 +87,27 @@ test('an unavailable server is not an app error; it is only reported', async () 
   await assert.rejects(checkForUpdate('http://127.0.0.1:9', '2.0.0'));
 });
 
+test('an oversized update description is cut off while it arrives, with or without Content-Length', async () => {
+  let sentBytes = 0;
+  const server = http.createServer((req, res) => {
+    // Without Content-Length: the body is streamed in pieces and never ends by itself.
+    res.writeHead(200, req.url.endsWith('.json') && req.url.includes('declared') ? { 'content-length': String(10 * 1024 * 1024) } : {});
+    const piece = Buffer.alloc(64 * 1024, 0x61);
+    const pump = () => { if (res.destroyed || sentBytes > 50 * 1024 * 1024) { res.end(); return; } sentBytes += piece.length; res.write(piece, pump); };
+    pump();
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    await assert.rejects(checkForUpdate(base, '2.0.0', 'streamed'), /too long/);
+    assert.ok(sentBytes < 5 * 1024 * 1024, `stopped early (${sentBytes} bytes sent)`);
+    await assert.rejects(checkForUpdate(base, '2.0.0', 'declared'), /too long/);
+  } finally {
+    server.closeAllConnections?.();
+    server.close();
+  }
+});
+
 // ---- versions in their own folders --------------------------------------------------------------------
 const { execFileSync } = require('node:child_process');
 const versions = require('../src/versions.cjs');

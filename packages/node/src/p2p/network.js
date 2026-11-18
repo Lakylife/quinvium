@@ -827,12 +827,20 @@ export class Network extends EventEmitter {
    * This is how a split network converges and a node escapes a cheap fake branch. A deeper rewrite with less work stays forbidden.
    * @returns {Promise<boolean>} whether downloading blocks may continue
    */
-  async _deepForkAllowed(peer, first) {
+  async _deepForkAllowed(peer, all) {
     const { chain } = this;
+    // The locator thins out with depth, so the peer may start below the real fork point with blocks both chains share.
+    // The fork point is where its headers leave our chain; judging by the first header would see a fork that is not there.
+    let skip = 0;
+    while (skip < all.length && chain.isCanonical(all[skip].hash(), all[skip].number)) skip += 1;
+    if (skip === all.length) return true;
+    const first = all.slice(skip);
     const ancestor = chain.getHeader(first[0].parentHash);
     if (!ancestor || !chain.isCanonical(ancestor.hash(), ancestor.number)) return true;
     if (chain.head.number - ancestor.number <= BigInt(C.maxReorgDepth)) return true;
-    if (ancestor.number <= chain.passedCheckpoint()) return this._refuseDeep(peer, ancestor, 'the branch is below a checkpoint');
+    // A branch that forks right after a checkpoint still contains it (the ancestor is canonical, so it is the checkpoint
+    // block itself). Only a fork below the checkpoint rewrites fixed history.
+    if (ancestor.number < chain.passedCheckpoint()) return this._refuseDeep(peer, ancestor, 'the branch is below a checkpoint');
     if (chain.deepPermit && equal(chain.deepPermit.hash, ancestor.hash()) && chain.deepPermit.until > Date.now()) return true;
     // Height and difficulty are checked before computing Ethash. Otherwise the other side chooses the height and the cache of its epoch would be
     // computed forever: a single header with height 10^30 would block the whole node.

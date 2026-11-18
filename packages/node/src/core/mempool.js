@@ -35,10 +35,11 @@ const effectiveTip = (tx, baseFee) => {
 };
 
 export class Mempool {
-  /** @param {object} [o] @param {number} [o.maxPool] maximum number of transactions in the queue */
-  constructor(chain, { maxPool = MAX_POOL } = {}) {
+  /** @param {object} [o] @param {number} [o.maxPool] maximum number of transactions in the queue @param {number} [o.maxBytes] maximum size of the queue */
+  constructor(chain, { maxPool = MAX_POOL, maxBytes = MAX_POOL_BYTES } = {}) {
     this.chain = chain;
     this.maxPool = maxPool;
+    this.maxBytes = maxBytes;
     this.byHash = new Map();
     this.bySender = new Map();
     this.bytes = 0;
@@ -145,9 +146,16 @@ export class Mempool {
     // counted as free but removed only afterwards: if the replacement did not fit, the original transaction must stay in the queue.
     const freedCount = existing ? 1 : 0;
     const freedBytes = existing ? existing.size : 0;
-    while (this.byHash.size - freedCount >= this.maxPool || this.bytes - freedBytes + size > MAX_POOL_BYTES) {
+    // Several cheaper transactions may have to go. The decision is all or nothing: when the newcomer does not pay more
+    // than the next one too, every transaction pushed out so far comes back, so a rejected transaction removes nobody.
+    const evicted = [];
+    while (this.byHash.size - freedCount >= this.maxPool || this.bytes - freedBytes + size > this.maxBytes) {
       const lowest = this._lowest(key);
-      if (!lowest || maxFee(lowest.tx) >= maxFee(tx)) throw new MempoolError('the queue is full, raise the fee');
+      if (!lowest || maxFee(lowest.tx) >= maxFee(tx)) {
+        for (const e of evicted.reverse()) this._restore(e);
+        throw new MempoolError('the queue is full, raise the fee');
+      }
+      evicted.push(lowest);
       this._remove(lowest.tx);
     }
     if (existing) {
@@ -179,6 +187,15 @@ export class Mempool {
       if (tail && (!low || maxFee(tail.tx) < maxFee(low.tx))) low = tail;
     }
     return low;
+  }
+
+  /** Puts back an entry removed by _remove, as it was. */
+  _restore(e) {
+    let list = this.bySender.get(e.sender);
+    if (!list) this.bySender.set(e.sender, (list = new Map()));
+    list.set(e.tx.nonce, e);
+    this.byHash.set(toHex(e.tx.hash()), e);
+    this.bytes += e.size;
   }
 
   _remove(tx) {

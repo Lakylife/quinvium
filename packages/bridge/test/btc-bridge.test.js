@@ -72,6 +72,17 @@ test.before(async () => {
 
 test.after(async () => { await A.stop(); });
 
+test('settings left out of the configuration keep their defaults; nonsense stops the validator at start', () => {
+  // The CLI passes every setting from the JSON file, a missing one as undefined.
+  const plain = member(validators[0], { confirmations: undefined, maxFeeRate: undefined, fallbackFeeRate: undefined }).bridge;
+  assert.equal(plain.confirmations, 6);
+  assert.equal(plain.maxFeeRate, 200);
+  assert.equal(plain.fallbackFeeRate, 5);
+  for (const bad of [{ confirmations: 0 }, { confirmations: 2.5 }, { maxFeeRate: '50' }, { maxFeeRate: -1 }]) {
+    assert.throws(() => member(validators[0], bad), /must be a positive whole number/, JSON.stringify(bad));
+  }
+});
+
 test('all validators compute the same deposit address', () => {
   const addresses = team.map((m) => m.bridge.depositAddress(alice.address));
   assert.equal(new Set(addresses).size, 1);

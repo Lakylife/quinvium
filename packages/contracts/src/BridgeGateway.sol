@@ -47,6 +47,9 @@ contract BridgeGateway is ReentrancyGuard {
     struct Queued {
         uint64 readyAt;
         bool done;
+        /// @dev The route's token when the transfer was queued. A route remapped meanwhile must not pay in another token.
+        address local;
+        bool wrapped;
     }
 
     uint64 public constant BITCOIN = 0xB17C01;
@@ -89,6 +92,7 @@ contract BridgeGateway is ReentrancyGuard {
     event ValidatorsChanged(uint256 threshold, uint256 count);
 
     error NotAdmin();
+    error RouteChangedWhileQueued();
     error NotGuardian();
     error IsPaused();
     error BadSettings();
@@ -193,7 +197,7 @@ contract BridgeGateway is ReentrancyGuard {
         }
         if (m.amount > route.largeAmount || route.usedToday + m.amount > route.dailyLimit) {
             uint64 readyAt = uint64(block.timestamp + QUEUE_DELAY);
-            queued[id] = Queued(readyAt, false);
+            queued[id] = Queued(readyAt, false, route.local, route.wrapped);
             emit DeliveryQueued(id, readyAt);
             return;
         }
@@ -210,6 +214,9 @@ contract BridgeGateway is ReentrancyGuard {
         if (block.timestamp < q.readyAt) revert NotReady();
         Route storage route = routes[keccak256(abi.encode(m.srcChain, m.srcToken))];
         if (!route.enabled) revert RouteClosed();
+        // The admin remapped the route while the transfer waited: it is not paid in a different token. The guardian
+        // cancels it and it is refunded to the sender instead.
+        if (route.local != q.local || route.wrapped != q.wrapped) revert RouteChangedWhileQueued();
         q.done = true;
         delivered[id] = true;
         _pay(id, route, m);
@@ -272,7 +279,7 @@ contract BridgeGateway is ReentrancyGuard {
         bytes32 id = messageId(m);
         if (delivered[id] || queued[id].done) revert AlreadyDelivered();
         // A non-zero readyAt blocks delivery, done blocks completion from the queue.
-        queued[id] = Queued(uint64(block.timestamp), true);
+        queued[id] = Queued(uint64(block.timestamp), true, address(0), false);
         emit QueueCancelled(id);
     }
 
