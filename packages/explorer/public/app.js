@@ -4601,7 +4601,7 @@
 
   /** Swap and Bridge stay in the main menu only on a network where they run; elsewhere they move under More, marked soon. */
   function placeNav(d) {
-    const more = document.querySelector('.nav-group[data-group="apps,api"]');
+    const more = document.querySelector('.nav-group[data-group^="apps"]');
     const menu = more?.querySelector('.nav-menu');
     for (const [id, ready] of [['swap', !!d?.swap?.router], ['bridge', !!d?.gateway]]) {
       const link = document.querySelector(`.main-nav > a[data-nav="${id}"]`);
