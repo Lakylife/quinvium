@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 2.16.1 (18 November 2026)
+
+- Miner: switches to the backup node after 3 failed requests (about 20 s instead of minutes) and reports its hashrate to the node in use (#44).
+- Pool server: refuses the pool's own address and the zero address as a payout address (#47).
+- Explorer: pool charts (#46), who is mining now on the Miners page (#48), address pages load in under a second again (#45).
 - Container image of the full node for amd64 and arm64, published with every release as `ghcr.io/lakylife/quinvium-node` (`ops/docker/Dockerfile`, workflow `docker`; guide in Running a public node).
 - Explorer on a domain falls back to the node on the visitor's own computer (127.0.0.1, default port of the network, chain ID and genesis checked) when none of the network's nodes answers; it is never asked while they do. The node answers the browser's private network preflight.
 - Explorer: the home page hides pool share transactions (a switch shows them), the Miners subtitle matches the whole-history numbers, an unknown address shows Page not found, and Swap and Bridge move under More, marked soon, on networks where they do not run.

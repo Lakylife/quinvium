@@ -1,7 +1,7 @@
 {
   "name": "aether-desktop",
   "productName": "Quinvium",
-  "version": "2.16.0",
+  "version": "2.16.1",
   "description": "Quinvium: wallet, full node and GPU mining",
   "author": "Quinvium",
   "main": "src/bootstrap.cjs",
