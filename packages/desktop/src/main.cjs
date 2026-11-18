@@ -179,6 +179,7 @@ function startNode(network) {
     // stdin stays an open pipe: when the app ends without stopping the node (crash, force quit), the node notices and stops.
     env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', QUINTIUM_LANG: nodeLang() }, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
   });
+  lowPriority(node.proc);
   follow(node.proc, (l) => { push(node.log, l); send({ type: 'node-log', line: l }); });
   node.proc.on('exit', (code) => {
     push(node.log, `The node exited with code ${code}`);
@@ -200,7 +201,14 @@ function startNode(network) {
 const stop = (proc) => new Promise((resolve) => {
   if (!proc) { resolve(); return; }
   proc.stopping = true;   // an ending the user asked for: no "mining stopped" notification
-  const t = setTimeout(() => { proc.kill('SIGKILL'); resolve(); }, 6000);
+  const t = setTimeout(() => {
+    proc.kill('SIGKILL');
+    // A miner stuck inside a graphics driver call may not end at once; on Windows the whole process tree is ended by force.
+    if (isWin && proc.pid) execFile('taskkill', ['/F', '/T', '/PID', String(proc.pid)], { windowsHide: true }, () => {});
+    // Stop means stopped for the user even before the process is gone: the app no longer shows it as mining.
+    if (miner.proc === proc) { miner.proc = null; keepAwake(false); setGpuState(GPU_DRIVER_DEFAULT); send({ type: 'state' }); }
+    resolve();
+  }, 6000);
   proc.once('exit', () => { clearTimeout(t); resolve(); });
   proc.kill(isWin ? undefined : 'SIGINT');
 });
@@ -210,6 +218,8 @@ function readProgress(line) {
   if (miner.progress === null) return;
   const dag = /DAG (\d+) %/.exec(line);
   if (/\] backend /.test(line)) miner.progress = Math.max(miner.progress, 3);
+  // The card is open but the node is still downloading the chain: the wait is the node's, not the card's.
+  else if (/node is syncing|uzel se synchronizuje/i.test(line) && miner.stage === 'start') miner.stage = 'sync';
   else if (/computing DAG|počítám DAG/.test(line)) { miner.stage = 'dag'; miner.progress = Math.max(miner.progress, 5); }
   else if (dag) { miner.stage = 'dag'; miner.progress = Math.max(miner.progress, Math.min(94, 5 + Math.round(Number(dag[1]) * 0.89))); }
   else if (/DAG ready|DAG hotový/.test(line)) { miner.stage = 'check'; miner.progress = 96; }
@@ -235,18 +245,32 @@ function keepAwake(on) {
  * Performance of an NVIDIA card on Windows. Otherwise the driver may leave it in the P5 state with memory at a quarter of its clock.
  * Runs in a separate process: if the non-public driver function fails, mining is not affected.
  */
+let noNvidia = false;   // learned on the first try: a computer without an NVIDIA driver is not asked again
 function setGpuState(state) {
-  if (!isWin) return;
+  if (!isWin || noNvidia) return;
   execFile(minerPath, ['--gpu-state', String(state)], { timeout: 15000, windowsHide: true }, (e, out, err) => {
-    miner.gpuState = `${state}: ${`${out ?? ''} ${err ?? ''} ${e?.message ?? ''}`.replace(/\s+/g, ' ').trim().slice(0, 600)}`;
+    const text = `${out ?? ''} ${err ?? ''} ${e?.message ?? ''}`.replace(/\s+/g, ' ').trim();
+    // Without an NVIDIA card there is nothing to set; that is not an error worth showing in the mining log.
+    if (/NVIDIA driver is not available/i.test(text)) { noNvidia = true; return; }
+    miner.gpuState = `${state}: ${text.slice(0, 600)}`;
     push(miner.log, `Card performance state ${miner.gpuState}`);
   });
+}
+
+/**
+ * The node (downloading and checking the chain) and the miner run below normal priority, so a weaker computer stays
+ * usable: the windows, the browser and other programs come first, the node takes the rest of the processor.
+ */
+function lowPriority(proc) {
+  try { if (proc?.pid) os.setPriority(proc.pid, os.constants.priority.PRIORITY_BELOW_NORMAL); } catch { /* not allowed here; it runs at normal priority */ }
 }
 
 function startMiner({ address, device }) {
   if (miner.proc) return { ok: true };
   if (!/^0x[0-9a-fA-F]{40}$/.test(address ?? '')) throw new Error('Invalid payout address');
   if (!node.proc) throw new Error('Start the node first');
+  const unfit = cannotMine(device);
+  if (unfit) { miner.blocked = tr(unfit); throw new Error(unfit); }
   miner.log = [];
   miner.rate = null;
   miner.blocks = 0;
@@ -257,6 +281,7 @@ function startMiner({ address, device }) {
   miner.progress = 0;
   miner.startedAt = Date.now();
   miner.offered = false;
+  miner.blocked = null;
   const { power, tag } = loadSettings();
   const pool = activePool();
   miner.pool = pool?.address ?? null;
@@ -267,11 +292,20 @@ function startMiner({ address, device }) {
   args.push('--intensity', String(power ?? 100), '--exit-with-parent');
   if ((power ?? 100) >= 100) setGpuState(GPU_FULL_POWER);
   miner.proc = spawn(minerPath, args, { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+  lowPriority(miner.proc);
   saveSettings({ lastMining: { address, device: device ?? 'all' } });   // the tray can start mining again without the window
   keepAwake(true);
+  const started = miner.proc;
   follow(miner.proc, (l) => {
     push(miner.log, l);
     readProgress(l);
+    // A card that cannot mine at all: the reason is said in plain words and mining stops instead of waiting forever.
+    const blocked = /does not fit into the card memory/i.test(l) ? "This graphics card has too little memory for mining Quinvium. The mining data (DAG) is over 1 GB now and grows; a card with at least 2 GB of its own memory is needed. You can still help the network by sharing your node." : /no graphics card found/i.test(l) ? "No graphics card that can mine was found. Quinvium needs an AMD or NVIDIA card with at least 2 GB of its own memory and a current driver." : null;
+    if (blocked && miner.proc === started) {
+      miner.blocked = tr(blocked);
+      notify('mining', tr('Mining stopped'), miner.blocked);
+      stop(started).then(() => send({ type: 'state' }));
+    }
     const used = /\] backend (.+)$/.exec(l);
     if (used) miner.backend = used[1];
     const m = /(?:Hashrate|Výkon) ([\d.]+) ([^\s,]+)/.exec(l);
@@ -292,10 +326,11 @@ function startMiner({ address, device }) {
     send({ type: 'miner-log', line: l, rate: miner.rate, blocks: miner.blocks, shares: miner.shares, progress: miner.progress, stage: miner.stage });
   });
   miner.proc.on('error', (e) => push(miner.log, `The miner cannot start: ${e.message}`));
-  const started = miner.proc;
   miner.proc.on('exit', (code, signal) => {
     push(miner.log, `The miner exited: code ${code}, signal ${signal}`);
     if (!started.stopping && !quitting) notify('mining', tr('Mining stopped'), tr('The miner ended unexpectedly. Open Quinvium to start it again.'));
+    // A miner that ends late (after Stop gave up waiting) must not clear one started since.
+    if (miner.proc !== started) return;
     miner.proc = null;
     keepAwake(false);
     setGpuState(GPU_DRIVER_DEFAULT);
@@ -319,18 +354,39 @@ async function offerPool() {
   send({ type: 'pool-offer', pool: { ...due.pool, name: found.name || due.pool.name, fee: found.feeBps / 100 }, share: due.share, rate: due.rate });
 }
 
+let knownDevices = null;   // the last successful list of cards with their memory, for the check before mining
 const listDevices = () => new Promise((resolve) => {
   execFile(minerPath, ['--list'], { windowsHide: true, timeout: 20000 }, (err, out) => {
     if (err) { resolve([]); return; }
-    resolve(out.split(/\r?\n/).map((l) => /^(\d+): (.+?) \(/.exec(l)).filter(Boolean).map((m) => ({ id: Number(m[1]), name: m[2] })));
+    knownDevices = out.split(/\r?\n/).map((l) => /^(\d+): (.+?) \(([^,)]+)(?:, (\d+) MB)?\)/.exec(l)).filter(Boolean)
+      .map((m) => ({ id: Number(m[1]), name: m[2], memory: m[4] ? Number(m[4]) * 1024 * 1024 : null }));
+    resolve(knownDevices.map(({ id, name }) => ({ id, name })));
   });
 });
+/**
+ * Mining is not started on a computer that cannot mine: no card at all, or every card with less memory than the DAG of
+ * the current epoch needs (the miner's own limit: DAG + 1/8). A card that does not report its memory is given a try.
+ */
+function cannotMine(device) {
+  // The node and the chain first: too little memory or disk makes the whole computer stall, mining or not.
+  if (os.totalmem() < 3.5 * 2 ** 30) return "This computer has too little memory (RAM) for the node and mining. At least 4 GB is needed.";
+  try {
+    const disk = fs.statfsSync(app.getPath('userData'));
+    if (Number(disk.bavail) * Number(disk.bsize) < 2 * 2 ** 30) return "There is not enough free disk space for mining. The node needs at least 2 GB free for the chain; free up some space and try again.";
+  } catch { /* the free space is unknown here; mining is given a try */ }
+  if (!knownDevices) return null;
+  if (!knownDevices.length) return "No graphics card that can mine was found. Quinvium needs an AMD or NVIDIA card with at least 2 GB of its own memory and a current driver.";
+  const list = device !== undefined && device !== 'all' ? knownDevices.filter((d) => String(d.id) === String(device)) : knownDevices;
+  const epoch = Math.floor(Number(node.stats?.height ?? 0) / 30000);
+  const need = (2 ** 30 + 2 ** 23 * epoch) * 1.125;
+  return list.length && list.every((d) => d.memory !== null && d.memory < need) ? "This graphics card has too little memory for mining Quinvium. The mining data (DAG) is over 1 GB now and grows; a card with at least 2 GB of its own memory is needed. You can still help the network by sharing your node." : null;
+}
 
 const walletFile = () => path.join(app.getPath('userData'), 'wallet.json');
 
 ipcMain.handle('state', () => ({
   node: { running: !!node.proc, network: node.network, preferred: defaultNetwork(), rpc: rpcPort(), runPool: loadSettings().runPool ?? null, stats: node.stats, log: node.log.slice(-60), seed: loadSettings().seed ?? '', share: accessMode() !== 'off', access: accessMode(), publicHost: loadSettings().publicHost ?? '', upnp: loadSettings().upnp !== false, endpoints: node.proc ? node.endpoints ?? null : null, lan: lanAddress() },
-  miner: { running: !!miner.proc, rate: miner.rate, progress: miner.progress ?? null, stage: miner.stage ?? null, blocks: miner.blocks, shares: miner.shares ?? 0, gpu: miner.gpu ?? null, pool: activePool(), address: miner.address, power: loadSettings().power ?? 100, history: miner.history, log: miner.log.slice(-60), warning: miner.warning ?? null },
+  miner: { running: !!miner.proc, rate: miner.rate, progress: miner.progress ?? null, stage: miner.stage ?? null, blocks: miner.blocks, shares: miner.shares ?? 0, gpu: miner.gpu ?? null, pool: activePool(), address: miner.address, power: loadSettings().power ?? 100, history: miner.history, log: miner.log.slice(-60), warning: miner.warning ?? null, blocked: miner.blocked ?? null },
   update: { ...update, configured: !!loadSettings().updateUrl, packaged: app.isPackaged },
   release: { latest: release.latest, checked: release.checked, error: release.error, downloading: release.downloading, file: release.file },
   notify: Object.fromEntries(NOTIFY_KINDS.map((k) => [k, notifyOn(k)])),
@@ -735,7 +791,7 @@ setInterval(async () => {
  * Mining that runs but earns nothing: the node lost every connection, the chain stopped moving, the node does not answer
  * or the card computes nothing. The user is told once per problem (notification, tray, Mining page), not left in the dark.
  */
-const HEALTH = { noPeersMs: 180_000, stalledMs: 600_000, noAnswerMs: 60_000, noHashMs: 300_000 };
+const HEALTH = { noPeersMs: 180_000, stalledMs: 600_000, noAnswerMs: 60_000, noHashMs: 300_000, noStartMs: 240_000 };
 const health = { since: {}, warned: null };
 function checkMining(answered) {
   if (!miner.proc) { health.since = {}; health.warned = null; miner.warning = null; return; }
@@ -749,6 +805,8 @@ function checkMining(answered) {
     ['noAnswer', flag('noAnswer', !answered) >= HEALTH.noAnswerMs, () => tr('The node of this app does not answer, so the card has no work.')],
     ['noPeers', flag('noPeers', solo && answered && s?.peers === 0) >= HEALTH.noPeersMs, () => tr('The node has no connection to other nodes. Blocks found now would not reach the network.')],
     ['stalled', solo && answered && health.heightAt && now - health.heightAt >= HEALTH.stalledMs, () => tr('No new block for {min} minutes. The node may be cut off from the network.', { min: Math.round((now - health.heightAt) / 60_000) })],
+    // Stuck before the DAG: no card the miner can use (an old or built-in GPU, too little memory, no OpenCL or Vulkan driver).
+    ['noStart', flag('noStart', miner.stage === 'start') >= HEALTH.noStartMs, () => tr("The graphics card did not start mining. Quinvium needs an AMD or NVIDIA card with at least 2 GB of its own memory and a current driver; older or built-in graphics usually cannot mine.")],
     ['noHash', flag('noHash', !preparing && (miner.counters?.rate ?? 0) === 0) >= HEALTH.noHashMs, () => tr('The card has not computed anything for several minutes.')],
   ].find(([, bad]) => bad);
   if (!problems) {
