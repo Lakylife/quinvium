@@ -1303,11 +1303,14 @@
     }
     return null;
   }
+  // Event arguments that are amounts of the network's coin (in wei), shown in coins instead of a raw number.
+  const COIN_ARGS = { Paid: ['amount'], PaymentFailed: ['amount'], FeePaid: ['amount'], StepSettled: ['pot', 'fee'], Deposit: ['wad'], Withdrawal: ['wad'] };
+  const coinArg = (ev, name) => COIN_ARGS[ev.name]?.includes(name);
   const argText = (v) => (typeof v === 'string' && ethers.isAddress(v) ? addrLink(v) : Array.isArray(v) ? v.map(argText).join(', ') : esc(short(String(v), 34)));
   const logList = (logs) => `<ol class="log-list">${logs.map((l) => {
     const ev = parseEvent(l);
     const body = ev
-      ? ev.fragment.inputs.map((input, k) => `<div class="log-arg"><span>${esc(input.name || String(k))}</span><div>${argText(ev.args[k])}</div></div>`).join('')
+      ? ev.fragment.inputs.map((input, k) => `<div class="log-arg"><span>${esc(input.name || String(k))}</span><div>${coinArg(ev, input.name) ? `${aet(ev.args[k], 8)} ${esc(coin())}<span class="muted"> · ${esc(String(ev.args[k]))} wei</span>` : argText(ev.args[k])}</div></div>`).join('')
       : `<div class="log-arg"><span>topics</span><div class="hash">${l.topics.map(esc).join('<br>')}</div></div>${l.data && l.data !== '0x' ? `<div class="log-arg"><span>data</span><div class="hash">${esc(short(l.data, 66))}</div></div>` : ''}`;
     return `<li><div class="log-head"><span class="log-index">${num(Number(l.logIndex))}</span>${addrLink(l.address)}${ev ? `<b>${esc(ev.name)}</b>` : ''}</div>${body}</li>`;
   }).join('')}</ol>`;
