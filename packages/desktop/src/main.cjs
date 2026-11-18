@@ -200,7 +200,14 @@ function startNode(network) {
 const stop = (proc) => new Promise((resolve) => {
   if (!proc) { resolve(); return; }
   proc.stopping = true;   // an ending the user asked for: no "mining stopped" notification
-  const t = setTimeout(() => { proc.kill('SIGKILL'); resolve(); }, 6000);
+  const t = setTimeout(() => {
+    proc.kill('SIGKILL');
+    // A miner stuck inside a graphics driver call may not end at once; on Windows the whole process tree is ended by force.
+    if (isWin && proc.pid) execFile('taskkill', ['/F', '/T', '/PID', String(proc.pid)], { windowsHide: true }, () => {});
+    // Stop means stopped for the user even before the process is gone: the app no longer shows it as mining.
+    if (miner.proc === proc) { miner.proc = null; keepAwake(false); setGpuState(GPU_DRIVER_DEFAULT); send({ type: 'state' }); }
+    resolve();
+  }, 6000);
   proc.once('exit', () => { clearTimeout(t); resolve(); });
   proc.kill(isWin ? undefined : 'SIGINT');
 });
@@ -296,6 +303,8 @@ function startMiner({ address, device }) {
   miner.proc.on('exit', (code, signal) => {
     push(miner.log, `The miner exited: code ${code}, signal ${signal}`);
     if (!started.stopping && !quitting) notify('mining', tr('Mining stopped'), tr('The miner ended unexpectedly. Open Quinvium to start it again.'));
+    // A miner that ends late (after Stop gave up waiting) must not clear one started since.
+    if (miner.proc !== started) return;
     miner.proc = null;
     keepAwake(false);
     setGpuState(GPU_DRIVER_DEFAULT);
