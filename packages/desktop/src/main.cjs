@@ -217,6 +217,8 @@ function readProgress(line) {
   if (miner.progress === null) return;
   const dag = /DAG (\d+) %/.exec(line);
   if (/\] backend /.test(line)) miner.progress = Math.max(miner.progress, 3);
+  // The card is open but the node is still downloading the chain: the wait is the node's, not the card's.
+  else if (/node is syncing|uzel se synchronizuje/i.test(line) && miner.stage === 'start') miner.stage = 'sync';
   else if (/computing DAG|počítám DAG/.test(line)) { miner.stage = 'dag'; miner.progress = Math.max(miner.progress, 5); }
   else if (dag) { miner.stage = 'dag'; miner.progress = Math.max(miner.progress, Math.min(94, 5 + Math.round(Number(dag[1]) * 0.89))); }
   else if (/DAG ready|DAG hotový/.test(line)) { miner.stage = 'check'; miner.progress = 96; }

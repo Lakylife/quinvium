@@ -268,7 +268,7 @@
 
   const errorText = (e) => tr(e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''));
   /** Until the miner has the DAG, progress is shown in percent, then the real hashrate. */
-  const LOAD_TEXT = { start: 'Starting the graphics card', dag: 'Loading mining data', check: 'Checking the card' };
+  const LOAD_TEXT = { start: 'Starting the graphics card', sync: 'Waiting for the node to download the chain', dag: 'Loading mining data', check: 'Checking the card' };
   function showLoading(m) {
     const running = m.running ?? true;
     const loading = running && m.progress !== null && m.progress !== undefined && m.progress < 100;
