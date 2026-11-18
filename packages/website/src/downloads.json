@@ -9,7 +9,7 @@
    "desc": "Wallet, full node, GPU mining, Explorer and Swap in one app.",
    "note": null,
    "size": "125.4 MB",
-   "sha256": "0feaa009e75d6ba47cc84ed3fac9cfe18b24e00fdefdfb63561e1ab8958df823"
+   "sha256": "14b29bac071edb433cabe4a1303364bad4da797e4e956f18338f6bd634a17b8a"
   },
   {
    "file": "Quinvium-2.16.2-Windows-x64.exe",
@@ -19,7 +19,7 @@
    "desc": "Wallet, full node, GPU mining, Explorer and Swap in one app.",
    "note": null,
    "size": "121.8 MB",
-   "sha256": "aaeb71232e92c14f0373ed44a6346de6d5bfc723de3439fe617ce53994d2297f"
+   "sha256": "85b463e726d1fc40bc711f3ba9f0bafc482f7122435add530889230e01156f17"
   },
   {
    "file": "Quinvium-2.16.2-Windows-x64.zip",
@@ -29,7 +29,7 @@
    "desc": "The same app as a zip, runs without installing.",
    "note": null,
    "size": "153.2 MB",
-   "sha256": "575c11289349353bede0c37308a9f06e5a24832d1a969070f1a0a8aa6d8c5fac"
+   "sha256": "f0abf96c8c3c017bdd6b87518a9605040ad44c51069d00880408573fd09a2428"
   },
   {
    "file": "Quinvium-Node-Miner-2.16.2-Windows-x64.zip",
@@ -39,7 +39,7 @@
    "desc": "The node as a single program and quintium-miner for the GPU, without the app.",
    "note": null,
    "size": "40.4 MB",
-   "sha256": "10fc591c343ba1b6d55efd8ee7f8a68e21801428bab35834b3ab571fb097f3b0"
+   "sha256": "4585e0a9f41b5cae0cf7258501d1fb1ecbb4e38771f5d53a2b1085aae56f1194"
   },
   {
    "file": "Quinvium-Node-2.16.2.tar.gz",
@@ -48,8 +48,8 @@
    "icon": "code",
    "desc": "The full node from source with the Explorer. See README.txt inside.",
    "note": null,
-   "size": "790 kB",
-   "sha256": "8cd046c2e83e0a67f56cc82f4817f0ae47dd05e2a0a5a5ddb8f4e87a1cd5e21b"
+   "size": "791 kB",
+   "sha256": "eb3f8eac2a6ad4960ca818f49773350d8beed5a9ea7efe80813aab9f3d24424f"
   },
   {
    "file": "Quinvium-Wallet-Chrome-2.16.2.zip",
@@ -59,7 +59,7 @@
    "desc": "A browser wallet for Quinvium apps. Install with Load unpacked, steps below.",
    "note": null,
    "size": "345 kB",
-   "sha256": "3b5c573d3e16ab22a89fe9493f5ef8e3774c74daebe7fa671ca1939b357a5798"
+   "sha256": "2bf2e97fad831230cdadeb1601650505eb74d31419d50bb519da16af3149e0a6"
   }
  ]
 }
