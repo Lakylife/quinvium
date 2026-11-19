@@ -2220,16 +2220,36 @@
   }
 
   // Commands show placeholder text, not the connected wallet's address: the guide is the same for everyone and reveals nothing personal.
-  function pageMining() {
+  /**
+   * Where Stratum miners connect. A node that runs a pool reports its own port; a node on this computer has Stratum on the
+   * network default. A public node (like explorer.quinvium.com) has no Stratum, so the guide points to the largest pool
+   * with a server and asks that server for its port.
+   */
+  async function miningStratum() {
+    const own = await rpc('aether_poolInfo', [{ limit: 1 }]).catch(() => null);
+    const fallback = STRATUM_PORTS[stats?.network] ?? 3333;
+    if (Number.isInteger(own?.stratumPort)) return { host: location.hostname, port: own.stratumPort, pool: null };
+    if (/^(127\.0\.0\.1|localhost)$/.test(location.hostname)) return { host: location.hostname, port: fallback, pool: null };
+    const pools = await rpc('aether_pools', [{ limit: 10 }]).catch(() => null);
+    for (const p of pools?.items ?? []) {
+      if (!/^https?:\/\//.test(p.url ?? '')) continue;
+      let host = null;
+      try { host = new URL(p.url).hostname; } catch { continue; }
+      return { host, port: (await poolStratumPort(p.url)) ?? fallback, pool: p };
+    }
+    return { host: location.hostname, port: fallback, pool: null };
+  }
+
+  async function pageMining() {
+    await refreshStats();
     const addr = t('mine.yourAddr');
-    const host = location.hostname;
-    const port = STRATUM_PORTS[stats?.network] ?? 3333;
+    const { host, port, pool } = await miningStratum();
     const stratum = `stratum+tcp://${host}:${port}`;
     const cmd = (c) => `<div class="cmd-block">${esc(c)}${copyBtn(c)}</div>`;
     app.innerHTML = `${head(t('nav.mining'), t('mine.sub').replace(/\bQU\b/g, esc(coin())))}
       <div class="card prose"><p>${t('mine.note')} <a class="text-link" href="/pools">${t('nav.pools')} →</a></p>
         <h3>${t('mine.own')}</h3>${cmd(`quinvium mine --address ${addr} --rpc ${rpcBase}`)}${cmd(`quintium-miner --address ${addr} --node ${rpcBase}`)}
-        <h3>${t('mine.other')}</h3>
+        <h3>${t('mine.other')}</h3>${pool ? `<p><a class="text-link" href="/pool/${esc(pool.address)}">${esc(pool.name)} →</a></p>` : ''}
         <p>lolMiner</p>${cmd(`lolMiner --algo ETHASH --pool ${host}:${port} --user ${addr}.rig1`)}
         <p>T-Rex</p>${cmd(`t-rex -a ethash -o ${stratum} -u ${addr} -w rig1 -p x`)}
         <p>TeamRedMiner</p>${cmd(`teamredminer -a ethash -o ${stratum} -u ${addr}.rig1 -p x`)}
