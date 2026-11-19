@@ -3,7 +3,7 @@
 // Usage: node packages/announcer/src/main.js [--once] [--dry-run]
 // Keys come only from environment variables (see packages/announcer/README.md); without them the channel only prints.
 import { readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { MERGEABLE, PRIORITY, TELEGRAM_PER_HOUR, allowed, count, detect, initialState } from './events.js';
+import { MERGEABLE, PRIORITY, TELEGRAM_PER_HOUR, allowed, batchSmall, count, detect, initialState } from './events.js';
 import { telegramMessage, xMessage } from './format.js';
 import { telegram, x } from './channels.js';
 
@@ -17,7 +17,8 @@ const DRY = args.has('--dry-run');
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 
 /** How long an event may wait for a channel that fails. A late outage warning helps nobody. */
-const MAX_WAIT = { stall: 1800, resume: 1800, summary: 6 * 3600 };
+// Small events wait for the digest (every 6 hours), so they must not expire before it.
+const MAX_WAIT = { stall: 1800, resume: 1800, summary: 6 * 3600, miner: 8 * 3600, node: 8 * 3600, 'hashrate-jump': 8 * 3600 };
 
 async function rpc(method, params = []) {
   const r = await fetch(RPC, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }), signal: AbortSignal.timeout(15000) });
@@ -88,24 +89,18 @@ export async function tick() {
   state = found.state;
   state.queue ??= [];
   for (const e of found.events) if (!state.queue.some((q) => q.key === e.key)) state.queue.push({ ...e, at: now, done: [] });
-  // Telegram at most TELEGRAM_PER_HOUR messages an hour. When small events (new miners, nodes, hashrate jumps)
-  // would not fit, they become one digest message instead of a burst.
+  // Telegram at most TELEGRAM_PER_HOUR messages an hour, and small events only as a digest every few hours.
   const hour = Math.floor(now / 3600);
   if (state.tgHour?.hour !== hour) state.tgHour = { hour, n: 0 };
   const left = () => TELEGRAM_PER_HOUR - state.tgHour.n;
-  const small = state.queue.filter((q) => MERGEABLE.has(q.kind) && !q.done.includes('telegram'));
-  const important = state.queue.filter((q) => !MERGEABLE.has(q.kind) && q.channels.includes('telegram') && !q.done.includes('telegram')).length;
-  if (small.length > 1 && small.length > left() - important) {
-    for (const q of small) state.sent[q.key] = now;
-    state.queue = state.queue.filter((q) => !small.includes(q));
-    state.queue.push({ key: `digest:${hour}:${small.length}`, kind: 'digest', data: { items: small.map((q) => ({ kind: q.kind, data: q.data })) }, channels: ['telegram'], at: now, done: [] });
-  }
+  batchSmall(state, now);
   state.queue.sort((a, b) => (PRIORITY[a.kind] ?? 9) - (PRIORITY[b.kind] ?? 9));
 
   for (const q of state.queue) {
     for (const ch of channels) {
       if (!q.channels.includes(ch.name) || q.done.includes(ch.name)) continue;
       if (ch.name === 'telegram' && left() <= 0) continue;   // waits for the next hour
+      if (ch.name === 'telegram' && MERGEABLE.has(q.kind) && !q.due) continue;   // waits for the next digest
       if (!allowed(state, ch.name, now)) { log(`${ch.name}: limit reached, ${q.key} skipped`); q.done.push(ch.name); continue; }
       try {
         await ch.send(ch.name === 'telegram' ? telegramMessage(q) : xMessage(q));

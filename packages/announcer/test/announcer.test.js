@@ -219,3 +219,20 @@ test('the node watch: a changed website file and a peer on another branch go to 
   const d = detect(c.state, snap({ headTime: T0 + 290, watch: { ...clean, incidents: ['deep-reorg:5'] } }), T0 + 300);
   assert.deepEqual(kinds(d), ['watch-reorg']);
 });
+
+test('small events never go out one by one: one digest at most every 6 hours, important news keeps its limit', async () => {
+  const { batchSmall, DIGEST_EVERY } = await import('../src/events.js');
+  const small = (key, kind = 'node') => ({ key, kind, data: {}, channels: ['telegram'], at: 0, done: [] });
+  const state = { queue: [small('node:a'), small('node:b'), small('miner:c', 'miner'), { key: 'pool:x', kind: 'pool', data: {}, channels: ['telegram', 'x'], at: 0, done: [] }], sent: {}, lastDigest: 1000 };
+  batchSmall(state, 1000 + 60);
+  assert.equal(state.queue.filter((q) => q.due).length, 0, 'too soon after the last digest: everything small waits');
+  batchSmall(state, 1000 + DIGEST_EVERY);
+  const digest = state.queue.find((q) => q.kind === 'digest');
+  assert.equal(digest.due, true);
+  assert.equal(digest.data.items.length, 3);
+  assert.deepEqual(state.queue.map((q) => q.kind).sort(), ['digest', 'pool'], 'the important event stays on its own');
+  // A single small event after the next window goes out as itself.
+  state.queue = [small('node:d')];
+  batchSmall(state, 1000 + 2 * DIGEST_EVERY);
+  assert.equal(state.queue[0].due, true);
+});

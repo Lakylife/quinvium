@@ -206,3 +206,21 @@ export const PRIORITY = { 'watch-site': 0, 'watch-chain': 0, 'watch-reorg': 0, '
 /** Telegram at most this many messages an hour; small events above it are merged into one digest. */
 export const TELEGRAM_PER_HOUR = 5;
 export const MERGEABLE = new Set(['miner', 'node', 'hashrate-jump']);
+/** Small events wait and go out together at most this often, so they never use up the daily limit of important news. */
+export const DIGEST_EVERY = 6 * 3600;
+
+/**
+ * Small events (new miners, nodes, hashrate jumps) are never sent one by one as they come: every DIGEST_EVERY they go
+ * out as one digest (or as themselves when there is only one). Marks what may go out now with `due`.
+ */
+export function batchSmall(state, now) {
+  state.queue ??= [];
+  state.sent ??= {};
+  const small = state.queue.filter((q) => MERGEABLE.has(q.kind) && q.channels.includes('telegram') && !q.done.includes('telegram'));
+  if (!small.length || now - (state.lastDigest ?? 0) < DIGEST_EVERY) return;
+  state.lastDigest = now;
+  if (small.length === 1) { small[0].due = true; return; }
+  for (const q of small) state.sent[q.key] = now;
+  state.queue = state.queue.filter((q) => !small.includes(q));
+  state.queue.push({ key: `digest:${now}:${small.length}`, kind: 'digest', data: { items: small.map((q) => ({ kind: q.kind, data: q.data })) }, channels: ['telegram'], at: now, done: [], due: true });
+}
