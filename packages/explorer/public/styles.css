@@ -43,9 +43,10 @@
   --gap: 16px;
   --pad: 24px;
   --bleed: 12px;
-  --gutter: 24px;
+  --gutter: clamp(16px, 2.5vw, 40px);
   --header-height: 72px;
-  --page: 1168px;
+  /* Wider pages on big screens; below this the layout simply follows the window. */
+  --page: 1480px;
   --mono: QuinviumSymbol, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --sans: QuinviumSymbol, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
