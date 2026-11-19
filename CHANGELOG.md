@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 2.16.2 (18 November 2026)
+
+- The official pool moves to `0xd7B63BCE0E77E0e53D7309e7E64cA4346e0dF5c8` (version 2); the version 2 pool factory is `0x0c381536835836Fb1AFFEc95BA9121d388E5D90c`. Miners keep connecting to `pool.quinvium.com`.
+- App on weaker computers: mining does not start without a usable graphics card, enough card memory for the current epoch, RAM or disk, each with its own message; Stop always stops the miner; node and miner run at lower priority; the node's sync stage is shown (#66).
+- Windows installer: the program folder is Quinvium; an earlier Aether or Quintium folder is replaced (#63).
+- Wallet: a strong password generator with show and hide and copy when creating an account (#64).
+- App: a clearer offer to share the node publicly (#65).
 - Fixes from the independent review of 18 November 2026:
   - Node: a long network split that forked right at a checkpoint (or above it, when the peer's headers started with shared blocks) was refused as "below a checkpoint"; the fork point is now where the peer's headers leave our chain, and only a fork below the checkpoint is refused.
   - RPC: with `--trust-proxy`, proxy headers count only from the proxy on this computer; a request from a web page other than the node's own Explorer is a foreign caller and cannot control the node. The wallet never passes node-control or mining methods from a page.

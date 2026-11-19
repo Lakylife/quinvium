@@ -12,7 +12,7 @@ import { fromHex, keccak, quantity, toHex } from '../util/bytes.js';
 import { blockReceipts, blockToRpc, effectivePrice, logToRpc, receiptToRpc, txToRpc } from './format.js';
 import { RpcCallError, estimateGas, ethCall } from './call.js';
 import { VmBusyError } from './vm-pool.js';
-import { trustedFactories } from '../mining/pool-factories.js';
+import { isHiddenPool, trustedFactories } from '../mining/pool-factories.js';
 
 export class RpcError extends Error {
   constructor(code, message, data) {
@@ -753,7 +753,8 @@ export function createMethods(node) {
       const byMiner = new Map(period.rows.map((r) => [new Address(r.miner).toString(), r]));
       const allWork = period.rows.reduce((sum, r) => sum + r.work, 0);
       const words = String(f.query ?? '').trim().toLowerCase().slice(0, 64);
-      const rows = pools.map((p) => ({ p, s: byMiner.get(p.pool) }))
+      // A hidden pool shows only when its address is searched for exactly.
+      const rows = pools.filter((p) => !isHiddenPool(chain.network.chainId, p.pool) || p.pool === words).map((p) => ({ p, s: byMiner.get(p.pool) }))
         .filter(({ p }) => !words || p.name.toLowerCase().includes(words) || p.pool.includes(words) || p.operator.includes(words))
         .sort((x, y) => (y.s?.work ?? 0) - (x.s?.work ?? 0) || y.p.number - x.p.number);
       const head = Number(chain.head.number);

@@ -947,8 +947,8 @@ body.compact-nav.home .header-search { display: none; }
 .watch-list { margin: 0; padding-inline-start: 18px; color: var(--text-2); font-size: 13.5px; line-height: 1.8; }
 
 /* Network switch in the header (explorer. ↔ testnet.) */
-body:not(.embedded) #hnet-wrap { margin-inline-start: auto; }
-body:not(.embedded) #hnet-wrap + .header-search { margin-inline-start: 4px; }
+/* It sits right before the account button; the search in front of it takes the free space. */
+body:not(.embedded) #hnet-wrap { margin-inline-start: -12px; }
 body.compact-nav #hnet-wrap { order: 2; margin-inline-start: auto; }
 body.compact-nav #hnet-wrap ~ #account-wrap { margin-inline-start: 0; }
 

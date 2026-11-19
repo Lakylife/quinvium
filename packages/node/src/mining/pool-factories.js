@@ -10,6 +10,13 @@ export const POOL_FACTORY2_SHA256 = '59caab4a02b84b91b525820de93b8ea940bb2417b59
 /** Deployed version 2 factories by chain ID. An address is added after it is deployed. */
 export const POOL_FACTORIES_V2 = Object.freeze({ 52401: Object.freeze(['0x0c381536835836Fb1AFFEc95BA9121d388E5D90c']), 52402: Object.freeze([]), 52403: Object.freeze([]) });
 
+/**
+ * Pools left out of pool lists (the Explorer's Pools page, the app). They still open by address and are found by searching
+ * for the address. Mainnet: an empty pool of the first version created by mistake on 18 November 2026.
+ */
+export const HIDDEN_POOLS = Object.freeze({ 52401: Object.freeze(['0x98bef700e27b09c4a6c1b59cc6a421695733ff98']) });
+export const isHiddenPool = (chainId, address) => (HIDDEN_POOLS[Number(chainId)] ?? []).includes(String(address).toLowerCase());
+
 const verified = new Map();
 
 /**

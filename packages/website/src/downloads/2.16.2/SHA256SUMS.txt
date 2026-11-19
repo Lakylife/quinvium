@@ -1,0 +1,6 @@
+85b463e726d1fc40bc711f3ba9f0bafc482f7122435add530889230e01156f17  Quinvium-2.16.2-Windows-x64.exe
+f0abf96c8c3c017bdd6b87518a9605040ad44c51069d00880408573fd09a2428  Quinvium-2.16.2-Windows-x64.zip
+14b29bac071edb433cabe4a1303364bad4da797e4e956f18338f6bd634a17b8a  Quinvium-2.16.2-macOS-x64.zip
+eb3f8eac2a6ad4960ca818f49773350d8beed5a9ea7efe80813aab9f3d24424f  Quinvium-Node-2.16.2.tar.gz
+4585e0a9f41b5cae0cf7258501d1fb1ecbb4e38771f5d53a2b1085aae56f1194  Quinvium-Node-Miner-2.16.2-Windows-x64.zip
+2bf2e97fad831230cdadeb1601650505eb74d31419d50bb519da16af3149e0a6  Quinvium-Wallet-Chrome-2.16.2.zip
