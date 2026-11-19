@@ -3239,11 +3239,20 @@
    * Connection instructions like large pools: server address, login name, password and ready-made commands for
    * common programs. The node's Stratum supports EthereumStratum/1.0.0 and ETHPROXY and the algorithm is standard Ethash.
    */
-  function connectCard(address, url, p) {
+  /** The Stratum port the pool's own server reports; a pool server often runs next to a normal node, on another port. */
+  async function poolStratumPort(url) {
+    try {
+      const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'aether_poolInfo', params: [{ limit: 1 }] }), signal: AbortSignal.timeout(4000) });
+      const port = (await r.json())?.result?.stratumPort;
+      return Number.isInteger(port) && port > 0 && port < 65536 ? port : null;
+    } catch { return null; }
+  }
+
+  function connectCard(address, url, p, reported = null) {
     let host = null;
     try { host = new URL(url).hostname; } catch { /* the server address is optional */ }
     if (!host) return `<div class="card connect-card" id="connect"><div class="card-header"><h2>${t('pool.connect')}</h2><span class="badge pending">${t('pools.noServerShort')}</span></div><p class="muted">${t('pool.noServer')}</p></div>`;
-    const port = STRATUM_PORTS[stats?.network] ?? 3333;
+    const port = reported ?? STRATUM_PORTS[stats?.network] ?? 3333;
     const stratum = `stratum+tcp://${host}:${port}`;
     const who = t('mine.yourAddr');
     const user = `${who}.rig1`;
@@ -3349,6 +3358,7 @@
       rpc('aether_pools', [{ query: address.toLowerCase(), limit: 1 }]).catch(() => null),
     ]);
     const [relayer, gasRefunded] = version >= 2 ? await Promise.all([c.relayer(), c.gasRefunded()]) : [null, 0n];
+    const stratumPort = /^https?:\/\//.test(url) ? await poolStratumPort(url) : null;
     // Miners in the pool window by page: share counts from the chain, work and payouts directly from the contract only for the displayed ones.
     const height = stats?.height ?? Number(await rpc('eth_blockNumber'));
     const windowBlocks = Number(p.roundBlocks) * Number(p.windowRounds);
@@ -3385,7 +3395,7 @@
       </div>
       <div class="pool-columns">
         <div class="pool-main">
-          ${connectCard(address, url, p)}
+          ${connectCard(address, url, p, stratumPort)}
           <div class="card" id="pool-miners"><div class="card-header"><h2>${t('pool.miners')}</h2>
               <form class="table-tools" id="miner-find" role="search"><input class="table-search" name="miner" value="${esc(search)}" placeholder="${t('pool.findMiner')}" aria-label="${t('pool.findMiner')}" spellcheck="false" autocomplete="off"></form></div>
             <p class="muted card-note">${esc(fill('pool.minersSub', { n: num(windowMinutes(p.roundBlocks, p.windowRounds)) }))}${minerList.total ? ` · ${esc(fill('pool.minersTotal', { n: num(minerList.total) }))}` : ''}</p>

@@ -461,7 +461,8 @@ export function createMethods(node) {
     eth_submitHashrate: ([rate, id]) => { work.reportHashrate(id, BigInt(rate)); return true; },
 
     // ---- pool --------------------------------------------------------------------------
-    aether_poolInfo: async ([f = {}] = []) => (node.pool ? node.pool.info({ miner: f.miner ? hexAddress(f.miner).toString() : null, limit: count(f.limit), offset: count(f.offset) }) : null),
+    // The Stratum port is part of the answer: a pool page tells miners where to connect, and it is not always the network default.
+    aether_poolInfo: async ([f = {}] = []) => (node.pool ? { ...(await node.pool.info({ miner: f.miner ? hexAddress(f.miner).toString() : null, limit: count(f.limit), offset: count(f.offset) })), stratumPort: node.stratum?.port ?? null } : null),
     aether_poolWork: async ([a, worker]) => {
       const pool = requirePool();
       try {
