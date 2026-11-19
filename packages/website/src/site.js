@@ -260,5 +260,7 @@
     }
   }
   refresh();
-  setInterval(refresh, 15000);
+  // A tab in the background does not ask the RPC anything (every request counts against its daily limit); it catches up when shown.
+  setInterval(() => { if (document.visibilityState !== 'hidden') refresh(); }, 15000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'hidden') refresh(); });
 })();
