@@ -459,12 +459,25 @@
     ws.onmessage = async (ev) => {
       const m = JSON.parse(ev.data);
       if (m.method !== 'eth_subscription') return;
-      await refreshStats();
-      if (route().name === 'home') pageHome(true);
-      // The refresh belongs to a page that may already be gone. Its error has nothing to show.
-      try { await pageTick?.(); fillNames().catch(() => {}); } catch { /* the page has left in the meantime */ }
+      // A tab in the background shows nobody anything: new blocks are only noted and the page catches up when it is shown.
+      if (hiddenTab()) { missedBlocks = true; return; }
+      await liveTick();
     };
   }
+
+  /** Every request costs the public RPC (and its daily limit), so a tab in the background does not ask the node anything. */
+  const hiddenTab = () => document.visibilityState === 'hidden';
+  let missedBlocks = false;
+  async function liveTick() {
+    await refreshStats();
+    if (route().name === 'home') pageHome(true);
+    // The refresh belongs to a page that may already be gone. Its error has nothing to show.
+    try { await pageTick?.(); fillNames().catch(() => {}); } catch { /* the page has left in the meantime */ }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (hiddenTab() || !stats) return;
+    if (missedBlocks) { missedBlocks = false; liveTick(); } else refreshStats();
+  });
 
   function toast(html, href) {
     const box = $('toasts');
@@ -2248,7 +2261,10 @@
     const cmd = (c) => `<div class="cmd-block">${esc(c)}${copyBtn(c)}</div>`;
     app.innerHTML = `${head(t('nav.mining'), t('mine.sub').replace(/\bQU\b/g, esc(coin())))}
       <div class="card prose"><p>${t('mine.note')} <a class="text-link" href="/pools">${t('nav.pools')} →</a></p>
-        <h3>${t('mine.own')}</h3>${cmd(`quinvium mine --address ${addr} --rpc ${rpcBase}`)}${cmd(`quintium-miner --address ${addr} --node ${rpcBase}`)}
+        <h3>${t('mine.own')}</h3>${pool
+    // A public node hands out no work (--no-mining-rpc), so the own miner goes to the same pool as the Stratum miners.
+    ? `${cmd(`quinvium mine --address ${addr} --pool ${pool.address}`)}${cmd(`quintium-miner --address ${addr} --pool ${pool.address} --node ${pool.url} --worker rig1`)}`
+    : `${cmd(`quinvium mine --address ${addr} --rpc ${rpcBase}`)}${cmd(`quintium-miner --address ${addr} --node ${rpcBase}`)}`}
         <h3>${t('mine.other')}</h3>${pool ? `<p><a class="text-link" href="/pool/${esc(pool.address)}">${esc(pool.name)} →</a></p>` : ''}
         <p>lolMiner</p>${cmd(`lolMiner --algo ETHASH --pool ${host}:${port} --user ${addr}.rig1`)}
         <p>T-Rex</p>${cmd(`t-rex -a ethash -o ${stratum} -u ${addr} -w rig1 -p x`)}
@@ -5091,13 +5107,13 @@
     if (!stats && !NODES.length && rpcBase !== location.origin) { rpcBase = location.origin; store.set('aether.rpc', rpcBase); await refreshStats(); }
     live();
     render();
-    setInterval(refreshStats, 15000);
+    setInterval(() => { if (!hiddenTab()) refreshStats(); }, 15000);
     // A node that answers but lags would not raise an error by itself. Once a minute it is compared with the others.
     // With community nodes known, a single configured node is compared too: the page can leave it when it is down and return later.
     if (candidates().length > 1 || LOCAL.length) {
       // Right away too: a node on another branch than the majority must not stay selected for the first minute.
       if (stats) pickNode().then((moved) => { if (moved) refreshStats(); });
-      setInterval(() => { pickNode().then((moved) => { if (moved) refreshStats(); }); }, 60000);
+      setInterval(() => { if (!hiddenTab()) pickNode().then((moved) => { if (moved) refreshStats(); }); }, 60000);
     }
   }
   init();
