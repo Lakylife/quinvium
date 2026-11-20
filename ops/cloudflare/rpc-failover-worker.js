@@ -1,9 +1,12 @@
-// Cloudflare Worker on the route rpc.quinvium.com/* (the DNS record proxied). Free plan: 100,000 requests a day; set the
-// route's failure mode to "fail open", so above the limit requests go straight to the server as before.
-// While the server answers, every request goes to it unchanged (a subrequest to the same host name reaches the origin,
-// not this Worker again). When it does not answer, a JSON-RPC request goes to community nodes: the list the network's
-// nodes verified (quinvium_publicNodes) and the list saved with the website (https://quinvium.com/nodes.json); each one
-// must show the mainnet chain ID and genesis before it is used. No keys and no state except a short in-memory cache.
+// Cloudflare Worker on its own host name, rpc-backup.quinvium.com (a Custom Domain of the Worker). rpc.quinvium.com
+// itself stays a plain proxied DNS record with no Worker route, so everyday traffic (the Explorer, the website, wallets,
+// bots) never counts against the free plan's 100,000 Worker requests a day. Clients reach this Worker only as their second
+// RPC address: wallets that support several RPC URLs (networks/mainnet.json lists it after rpc.quinvium.com), and
+// anyone who sets it by hand. The Explorer, the website and the browser extension fall back to community nodes themselves.
+// Each request goes to PRIMARY (default https://rpc.quinvium.com) first. When it does not answer, a JSON-RPC request goes
+// to community nodes: the list the network's nodes verified (quinvium_publicNodes) and the list saved with the website
+// (https://quinvium.com/nodes.json); each one must show the mainnet chain ID and genesis before it is used. No keys and no
+// state except a short in-memory cache.
 
 const CHAIN_ID = 52401n;
 const GENESIS = '0x49c889ad9d4f44869cf7f97a6e079a50dbf13974263b1afedec3b774ebeeac39';
@@ -12,6 +15,7 @@ const ORIGIN_TIMEOUT_MS = 6_000;
 const NODE_TIMEOUT_MS = 8_000;
 const LIST_TTL_MS = 5 * 60_000;
 const MAX_BODY = 1_000_000;
+const DEFAULT_PRIMARY = 'https://rpc.quinvium.com/';
 const NODE_URL = /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+$/;
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'content-type', 'Access-Control-Allow-Methods': 'POST, GET, OPTIONS' };
 
@@ -24,7 +28,7 @@ async function post(url, body, ms) {
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.text();
 }
-const clean = (items) => (Array.isArray(items) ? items : []).map((n) => String(n?.url ?? n ?? '').toLowerCase()).filter((u) => NODE_URL.test(u) && new URL(u).hostname !== 'rpc.quinvium.com');
+const clean = (items) => (Array.isArray(items) ? items : []).map((n) => String(n?.url ?? n ?? '').toLowerCase()).filter((u) => NODE_URL.test(u) && !/^rpc(-backup)?\.quinvium\.com$/.test(new URL(u).hostname));
 
 /** Community nodes from the website's list and, while it answers, from the server; the last good list stays in memory. */
 async function communityNodes(origin) {
@@ -60,19 +64,23 @@ async function fromCommunity(origin, body) {
 }
 
 export default {
-  async fetch(request) {
-    const url = new URL(request.url);
-    const origin = `${url.origin}/`;
+  async fetch(request, env = {}) {
+    const origin = String(env.PRIMARY || DEFAULT_PRIMARY);
+    const path = new URL(request.url).pathname;
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     if (request.method !== 'POST') {
-      // Explorer pages, /health, /api and preflights: the server, and only a plain error when it is down.
-      try { return await fetch(request, { signal: AbortSignal.timeout(ORIGIN_TIMEOUT_MS) }); } catch { return new Response('the server is down', { status: 503, headers: cors }); }
+      // /health and other plain pages: the primary server, and only a plain error when it is down.
+      try {
+        const r = await fetch(new URL(path, origin).href, { signal: AbortSignal.timeout(ORIGIN_TIMEOUT_MS) });
+        return new Response(r.body, { status: r.status, headers: { 'Content-Type': r.headers.get('content-type') ?? 'text/plain', ...cors } });
+      } catch { return new Response('the server is down', { status: 503, headers: cors }); }
     }
     const body = await request.text();
     if (body.length > MAX_BODY) return new Response('request too large', { status: 413, headers: cors });
     try {
-      const r = await fetch(request.url, { method: 'POST', headers: request.headers, body, signal: AbortSignal.timeout(ORIGIN_TIMEOUT_MS) });
-      // The server's own answers, including its rate limit (429), pass unchanged; only a dead or broken server is skipped.
-      if (r.status < 500) return r;
+      const r = await fetch(origin, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, signal: AbortSignal.timeout(ORIGIN_TIMEOUT_MS) });
+      // The server's own answers, including its rate limit (429), pass on; only a dead or broken server is skipped.
+      if (r.status < 500) return new Response(r.body, { status: r.status, headers: { 'Content-Type': 'application/json', 'X-Quinvium-Node': new URL(origin).host, ...cors } });
     } catch { /* the server does not answer */ }
     return fromCommunity(origin, body);
   },

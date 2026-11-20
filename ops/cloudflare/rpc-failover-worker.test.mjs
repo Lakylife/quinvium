@@ -14,10 +14,15 @@ globalThis.fetch = async (input, init = {}) => {
 };
 // The failover Worker: the server while it answers, verified community nodes (mainnet chain ID and genesis) when it does not.
 const { default: w } = await import('./rpc-failover-worker.js');
-const req = () => new Request('https://rpc.quinvium.com/', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }) });
+const req = () => new Request('https://rpc-backup.quinvium.com/', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }) });
 let r = await w.fetch(req()); assert.equal((await r.json()).result, '0x100');
 originUp = false;
 r = await w.fetch(req()); const j = await r.json(); assert.equal(j.result, '0x200'); assert.equal(r.headers.get('x-quinvium-node'), 'good.example.org');
-assert.ok(!calls.some((u) => new URL(u).hostname === 'wrong.example.org' && false));
-r = await w.fetch(new Request('https://rpc.quinvium.com/health')); assert.equal(r.status, 503);
+// The Worker never calls itself: requests go to the primary server and the verified community node only.
+assert.ok(!calls.some((u) => new URL(u).hostname === 'rpc-backup.quinvium.com'));
+const nodesUsed = calls.filter((u) => new URL(u).hostname === 'good.example.org').length; assert.ok(nodesUsed >= 1);
+r = await w.fetch(new Request('https://rpc-backup.quinvium.com/health')); assert.equal(r.status, 503);
+originUp = true; r = await w.fetch(new Request('https://rpc-backup.quinvium.com/health')); assert.equal(r.status, 200);
+// A custom PRIMARY from the Worker's variables is used.
+r = await w.fetch(req(), { PRIMARY: 'https://rpc.quinvium.com/' }); assert.equal((await r.json()).result, '0x100'); assert.equal(r.headers.get('x-quinvium-node'), 'rpc.quinvium.com');
 console.log('worker ok');

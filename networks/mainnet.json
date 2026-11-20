@@ -38,7 +38,8 @@
     "2df5ea8b9b4e18c552a001434e6b7ed0fc99348a03478fd809de1f92fde2f78d@72.61.21.209:30524"
   ],
   "publicRpc": [
-    "https://rpc.quinvium.com"
+    "https://rpc.quinvium.com",
+    "https://rpc-backup.quinvium.com"
   ],
   "publicWs": [
     "wss://rpc.quinvium.com"
