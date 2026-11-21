@@ -2,6 +2,17 @@
 // Řádek: "klíč nebo anglický text": [němčina, španělština, francouzština]. Dokumentace pro vývojáře zůstává anglicky.
 window.AetherExplorerText = {
   keys: {
+    "pool.contractName": ["Name im Vertrag: {name}", "Nombre en el contrato: {name}", "Nom dans le contrat : {name}"],
+    "pool.website": ["Website", "Sitio web", "Site web"],
+    "pool.displayName": ["Anzeigename", "Nombre visible", "Nom affiché"],
+    "pool.setName": ["Anzeigenamen speichern ({fee})", "Guardar nombre visible ({fee})", "Enregistrer le nom affiché ({fee})"],
+    "pool.nameNote": ["Die Gebühr bleibt für immer im Register gesperrt; niemand erhält sie. Der Name kann alle 30 Tage einmal geändert werden und muss eindeutig sein.", "La comisión queda bloqueada para siempre en el registro; nadie la recibe. El nombre puede cambiar una vez cada 30 días y debe ser único.", "Les frais restent bloqués à jamais dans le registre ; personne ne les reçoit. Le nom peut changer une fois tous les 30 jours et doit être unique."],
+    "pool.nameNext": ["Die nächste Änderung ist ab {date} möglich.", "El próximo cambio es posible desde el {date}.", "La prochaine modification est possible à partir du {date}."],
+    "pool.nameRule": ["Der Name braucht 3 bis 32 Zeichen: Buchstaben ohne Akzente, Ziffern, Leerzeichen, Punkt, Bindestrich und Unterstrich, kein Leerzeichen am Anfang oder Ende und keine zwei Leerzeichen hintereinander.", "El nombre necesita de 3 a 32 caracteres: letras sin acentos, dígitos, espacio, punto, guion y guion bajo, sin espacio al principio ni al final y sin dos espacios seguidos.", "Le nom doit compter 3 à 32 caractères : lettres sans accents, chiffres, espace, point, tiret et tiret bas, sans espace au début ni à la fin et sans deux espaces de suite."],
+    "pools.namesTitle": ["Anzeigenamen von Pools", "Nombres visibles de pools", "Noms affichés des pools"],
+    "pools.namesMissing": ["Das Register der Pool-Anzeigenamen ist noch nicht in diesem Netzwerk. Jeder kann es mit einer Transaktion bereitstellen: Es hat keinen Eigentümer, und seine Gebühren bleiben darin gesperrt.", "El registro de nombres visibles de pools aún no está en esta red. Cualquiera puede desplegarlo con una transacción: no tiene propietario y sus comisiones quedan bloqueadas en él.", "Le registre des noms affichés des pools n’est pas encore sur ce réseau. N’importe qui peut le déployer en une transaction : il n’a pas de propriétaire et ses frais y restent bloqués."],
+    "pools.namesDeploy": ["Register der Pool-Namen bereitstellen", "Desplegar el registro de nombres de pools", "Déployer le registre des noms de pools"],
+    "pools.namesDeployed": ["Das Register ist bereitgestellt. Seine Adresse kommt mit dem nächsten Update in den Explorer; dann können Pool-Betreiber Anzeigenamen festlegen.", "El registro está desplegado. Su dirección entra en el Explorer con la próxima actualización; entonces los operadores de pools podrán fijar nombres visibles.", "Le registre est déployé. Son adresse entre dans l’Explorer à la prochaine mise à jour ; les opérateurs de pools pourront alors définir des noms affichés."],
     "pool.verified": ["Server bestätigt", "Servidor verificado", "Serveur vérifié"],
     "pool.verifiedNote": ["Der Server unter dieser Adresse hat bestätigt, dass er für diesen Pool schürft.", "El servidor en esta dirección confirmó que mina para este pool.", "Le serveur à cette adresse a confirmé qu’il mine pour ce pool."],
     "pool.unverified": ["Server nicht bestätigt", "Servidor no verificado", "Serveur non vérifié"],
@@ -889,6 +900,10 @@ window.AetherExplorerText = {
     'foot.node': ['Knoten {v}', 'nodo {v}', 'nœud {v}'],
   },
   texts: {
+    "Another pool already uses this name.": ["Ein anderer Pool verwendet diesen Namen bereits.", "Otro pool ya usa este nombre.", "Un autre pool utilise déjà ce nom."],
+    "The pool name can change only once every 30 days.": ["Der Pool-Name kann nur alle 30 Tage einmal geändert werden.", "El nombre del pool solo puede cambiar una vez cada 30 días.", "Le nom du pool ne peut changer qu’une fois tous les 30 jours."],
+    "The website must start with https:// and contain no spaces, at most 96 characters.": ["Die Website muss mit https:// beginnen und darf keine Leerzeichen enthalten, höchstens 96 Zeichen.", "El sitio web debe empezar por https:// y no contener espacios, como máximo 96 caracteres.", "Le site web doit commencer par https:// et ne contenir aucun espace, 96 caractères au plus."],
+    "The fee does not match the registry.": ["Die Gebühr passt nicht zum Register.", "La comisión no coincide con el registro.", "Les frais ne correspondent pas au registre."],
     'The rate moved more than the slippage tolerance allows between the estimate and the block, so the swap did not happen.': ['Der Kurs hat sich zwischen Schätzung und Block stärker bewegt, als die Toleranz erlaubt, deshalb fand der Tausch nicht statt.', 'El precio cambió entre la estimación y el bloque más de lo que permite la tolerancia, por eso el intercambio no se realizó.', 'Le cours a bougé entre l’estimation et le bloc plus que la tolérance ne le permet, l’échange n’a donc pas eu lieu.'],
     'The pool does not have enough liquidity.': ['Der Pool hat nicht genug Liquidität.', 'El pool no tiene suficiente liquidez.', 'Le pool n’a pas assez de liquidité.'],
     'The amount is too small.': ['Der Betrag ist zu klein.', 'El importe es demasiado pequeño.', 'Le montant est trop petit.'],
