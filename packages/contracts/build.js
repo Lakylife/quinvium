@@ -26,7 +26,7 @@ export const PREDEPLOYS = {
 
 // Contracts added by a fork. They do not belong in genesis; a running network would change its first block.
 /** Ordinary contracts the Explorer can deploy (with their bytecode) and then uses only when the code matches. */
-export const DEPLOYED_BY_USERS = ['Profiles', 'QuinviumAvatars', 'SourceRegistry', 'PoolFactory2'];
+export const DEPLOYED_BY_USERS = ['Profiles', 'QuinviumAvatars', 'SourceRegistry', 'PoolFactory2', 'PoolNames'];
 
 export const UPGRADES = {
   PoolFactory: '0xae0000000000000000000000000000000000000c',
