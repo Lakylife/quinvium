@@ -28,6 +28,23 @@ test('a flood of new devices and jobs does not evict a miner that delivers share
   assert.equal(p.jobs.size, p.freshJobs.size + p.provenJobs.size);
 });
 
+test('jobs older than the share age limit are dropped, so templates do not pile up in memory', () => {
+  const chain = { head: { number: 100n } };
+  const p = new PoolServer({ chain, work: {}, mempool: {}, address: new Uint8Array(20), key: new Uint8Array(32).fill(7) });
+  const s = p._session(addr(1), 'rig');
+  s.proven = true;
+  const job = (n) => ({ session: s, block: { header: { number: n } } });
+  for (let i = 0; i < 500; i++) {
+    chain.head.number = 100n + BigInt(i);
+    p._addJob(`0xjob${i}`, job(chain.head.number));
+  }
+  // Only jobs whose share could still reach the contract stay (32 blocks minus the 4-block margin).
+  assert.ok(p.jobs.size <= 28, `kept ${p.jobs.size} jobs`);
+  assert.ok(p.jobs.has('0xjob499'), 'the current job stays');
+  assert.ok(!p.jobs.has('0xjob0'), 'an old job is gone');
+  assert.equal(p.jobs.size, p.freshJobs.size + p.provenJobs.size);
+});
+
 test('Stratum: a connection that keeps logging in or asking for work is closed', async () => {
   const work = Object.assign(new (await import('node:events')).EventEmitter(), { getWork: async () => { throw new Error('no work'); } });
   const server = new StratumServer({ chain: {}, work, port: 0 });

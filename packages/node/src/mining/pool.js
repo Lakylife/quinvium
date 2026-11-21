@@ -219,6 +219,25 @@ export class PoolServer {
       list.delete(old);
       this.jobs.delete(old);
     }
+    this._dropExpiredJobs();
+  }
+
+  /**
+   * Every job holds its whole block template (header and transactions). A share for a job older than MAX_SHARE_AGE
+   * blocks never reaches the contract (see _fresh), so keeping such jobs only fills the memory: with a few busy devices
+   * the count limit alone kept hours of templates and the process ran out of heap.
+   */
+  _dropExpiredJobs() {
+    const head = this.chain.head?.number;
+    if (head === undefined) return;
+    for (const list of [this.provenJobs, this.freshJobs]) {
+      for (const key of list) {
+        const number = this.jobs.get(key)?.block?.header?.number;
+        if (number !== undefined && number + MAX_SHARE_AGE > head + AGE_MARGIN) break;
+        list.delete(key);
+        this.jobs.delete(key);
+      }
+    }
   }
 
   /**
