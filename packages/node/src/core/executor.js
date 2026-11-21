@@ -108,7 +108,10 @@ export async function newVm(common, stateManager, blockchain, { pow, number } = 
   const { params, rules } = common[INTERNAL];
   const evmOpts = { params };
   if (rules.powPrecompile) evmOpts.customPrecompiles = [powVerifyPrecompile(pow, number)];
-  const vm = await createVM({ common, stateManager, blockchain, evmOpts });
+  // Every EVM subscribes to hardforkChanged on its Common and never unsubscribes. The chain keeps one Common per fork,
+  // so each block, template and eth_call left its whole EVM with the state overlay of that block behind: the pool node
+  // ran out of heap every 12 hours. A copy has its own event emitter and goes away with the EVM; the rules stay shared.
+  const vm = await createVM({ common: common.copy(), stateManager, blockchain, evmOpts });
   // createEVM ignores the bn254 option and always sets the slower variant, so it is changed only here.
   vm.evm._bn254 = await bn254();
   return vm;
