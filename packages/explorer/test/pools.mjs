@@ -120,7 +120,7 @@ try {
 
   await step('connection like large pools: server, name, password and commands for programs', async () => {
     await page.goto(`${RPC}/#/pool/${pool}`);
-    await page.locator('#connect .badge', { hasText: 'Server zveřejněný' }).waitFor();
+    await page.locator('#connect .badge', { hasText: 'Server neověřen' }).waitFor();
     const card = await page.locator('#connect').innerText();
     assert.match(card, /stratum\+tcp:\/\/192\.168\.1\.51:3335/);
     assert.ok(card.includes('VAŠE_ADRESA.rig1'), 'jméno je adresa peněženky a název zařízení, místo adresy zástupný text');
