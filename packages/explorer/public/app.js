@@ -258,6 +258,18 @@
     ? [`http://127.0.0.1:${LOCAL_PORTS[EXPECT.chainId]}`].filter((u) => !NODES.includes(u)) : [];
   let localWanted = false;
   const isLocal = (url) => LOCAL.includes(url);
+  // A configured node that did not answer is left out for a few minutes, also after a reload of the tab: a server that is off
+  // behind a proxy does not refuse the request, it lets it hang, and every page would wait for it again.
+  // Only the fact that a node is down is remembered. The node that replaces it is checked again each time.
+  const DEAD_MS = 180_000;
+  const DEAD_KEY = `quinvium.deadNodes.${location.hostname}`;
+  const dead = (() => { try { return new Map(Object.entries(JSON.parse(sessionStorage.getItem(DEAD_KEY) ?? '{}') ?? {})); } catch { return new Map(); } })();
+  const isDead = (url) => Number(dead.get(url) ?? 0) > Date.now();
+  function setDead(url, down) {
+    if (!NODES.includes(url) || (!down && !dead.has(url))) return;
+    if (down) dead.set(url, Date.now() + DEAD_MS); else dead.delete(url);
+    try { sessionStorage.setItem(DEAD_KEY, JSON.stringify(Object.fromEntries(dead))); } catch { /* private window */ }
+  }
   const candidates = () => (NODES.length ? [...new Set([...NODES, ...(localWanted ? LOCAL : []), ...community])] : []);
   const savedRpc = store.get('aether.rpc');
   let rpcBase = NODES.length ? (NODES.includes(savedRpc) ? savedRpc : NODES[0]) : savedRpc || location.origin;
@@ -276,13 +288,15 @@
    * Takes the node with the highest block from the list. The current one stays while it answers and is not behind.
    * Nodes are also compared with each other: each one is asked for its block a few blocks below the lowest head.
    * A node whose block differs from the majority follows another branch (or lies); the Explorer does not use it and says so.
+   * With `skipDead` nodes that just failed are not asked again, so the switch does not wait for them.
    */
-  function pickNode() {
+  function pickNode(skipDead = false) {
     let LIST = candidates();
     if (LIST.length < 2 && !LOCAL.length) return Promise.resolve(false);
     picking ??= (async () => {
-      const probe = async (url) => ((await sameChain(url)) ? post(url, 'eth_blockNumber').then((h) => Number(BigInt(h))).catch(() => -1) : -1);
+      const probe = async (url) => (!(skipDead && isDead(url)) && (await sameChain(url)) ? post(url, 'eth_blockNumber').then((h) => Number(BigInt(h))).catch(() => -1) : -1);
       const heights = await Promise.all(LIST.map(probe));
+      heights.forEach((h, i) => { if (h >= 0) setDead(LIST[i], false); });
       // None of the network's own nodes answers: from now on the visitor's own node is a candidate too.
       if (!localWanted && LOCAL.length && !LIST.some((url, i) => heights[i] >= 0 && NODES.includes(url))) {
         localWanted = true;
@@ -326,23 +340,64 @@
     return picking;
   }
 
-  async function rpc(method, params = []) {
-    const call = () => fetch(rpcBase, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: reqId++, method, params }) });
-    let res;
-    try {
-      res = await call();
-      // An overloaded or broken node: another one from the list is tried, if there is one.
-      if ((res.status >= 500 || res.status === 429) && await pickNode()) res = await call();
-    } catch (e) {
-      if (!(await pickNode())) throw e;
-      res = await call();
+  // A request that takes longer is not given up as long as the node answers a simple question meanwhile.
+  const SLOW_MS = 1500;
+  const MAX_WAIT_MS = 45_000;
+  /** One request to one node. It fails when the node is down or silent, not when a query merely takes long. */
+  async function ask(base, body) {
+    const stop = new AbortController();
+    let done = false;
+    const answer = fetch(base, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, signal: stop.signal })
+      .then(async (r) => ({ status: r.status, text: await r.text() })).finally(() => { done = true; });
+    // Without other nodes (the Explorer in the app or on one's own node) there is nowhere to switch to.
+    if (!NODES.length) return answer;
+    const silent = (async () => {
+      await sleep(SLOW_MS);
+      if (done) return;
+      const alive = await post(base, 'eth_blockNumber').then((h) => h != null, () => false);
+      if (alive && !done) await sleep(MAX_WAIT_MS);
+      if (done) return;
+      stop.abort();
+      throw new Error('Failed to fetch: the node does not answer');
+    })();
+    return Promise.race([answer, silent.then(() => answer)]);
+  }
+  let siteLoad = null;
+  /** nodes.json, read once per page load; a failed read is tried again at the next switch. */
+  const savedNodes = () => (siteLoad ??= loadSavedNodes().then((ok) => { if (!ok) siteLoad = null; }));
+  /** A JSON-RPC body sent to the node in use; when it does not answer, to the node that replaces it. */
+  async function nodeFetch(body) {
+    const move = async (from) => {
+      await savedNodes();
+      // The list of a live node replaces the known one (refreshCommunity) and may be empty by the time that node goes down.
+      community = [...new Set([...community, ...siteNodes])].slice(0, 16);
+      return rpcBase !== from || pickNode(true);
+    };
+    if (isDead(rpcBase) && !(await move(rpcBase))) setDead(rpcBase, false);
+    const base = rpcBase;
+    let res = null;
+    let error = null;
+    try { res = await ask(base, body); } catch (e) { error = e; }
+    if (res && res.status < 500 && res.status !== 429) return res;
+    // An overloaded node is only compared with the others; a broken or silent one is left out for a while.
+    if (NODES.length && res?.status === 429) return (await pickNode()) ? ask(rpcBase, body) : res;
+    setDead(base, true);
+    if (!(await move(base))) {
+      setDead(base, false);
+      if (error) throw error;
+      return res;
     }
-    let data = await res.json();
+    return ask(rpcBase, body);
+  }
+
+  async function rpc(method, params = []) {
+    const call = async () => JSON.parse((await nodeFetch(JSON.stringify({ jsonrpc: '2.0', id: reqId++, method, params }))).text);
+    let data = await call();
     // The node's per-address limit was reached (other tabs, a wallet on the same connection): wait a little and try again
     // instead of showing an error.
     for (let wait = 700; busy(data) && wait <= 6000; wait *= 2) {
       await sleep(wait + Math.random() * 300);
-      data = await (await call()).json();
+      data = await call();
     }
     if (data.error) throw new Error(data.error.message);
     return data.result;
@@ -361,11 +416,18 @@
   const sleep = (ms) => new Promise((r) => { setTimeout(r, ms); });
   /** One provider per node for contract reads; it batches calls made together and waits out the node's limit like rpc(). */
   class PatientProvider extends ethers.JsonRpcProvider {
+    // The same request path as rpc(): a contract read on a silent node moves to another one instead of hanging.
+    async _post(payload) {
+      const r = await nodeFetch(JSON.stringify(payload));
+      if (r.status >= 400) throw new Error(`HTTP ${r.status}`);
+      const out = JSON.parse(r.text);
+      return Array.isArray(out) ? out : [out];
+    }
     async _send(payload) {
-      let out = await super._send(payload);
+      let out = await this._post(payload);
       for (let wait = 700; out.some(busy) && wait <= 6000; wait *= 2) {
         await sleep(wait + Math.random() * 300);
-        out = await super._send(payload);
+        out = await this._post(payload);
       }
       return out;
     }
@@ -400,13 +462,16 @@
   let pageTick = null;      // a page puts here what should refresh on a new block
   let communityAt = 0;
   /** nodes.json is saved with the site at each deploy (ops/pages/nodes.mjs): a first visit during an outage knows community nodes too. */
+  let siteNodes = [];
   async function loadSavedNodes() {
-    if (!EXPECT) return;
+    if (!EXPECT) return true;
     try {
       const d = await (await fetch('/nodes.json', { signal: AbortSignal.timeout(4000) })).json();
       const urls = (Array.isArray(d?.[EXPECT.chainId]) ? d[EXPECT.chainId] : []).map(String).filter((u) => COMMUNITY_URL.test(u));
-      community = [...new Set([...community, ...urls])].slice(0, 16);
-    } catch { /* not published here */ }
+      siteNodes = urls.slice(0, 16);
+      community = [...new Set([...community, ...siteNodes])].slice(0, 16);
+      return true;
+    } catch { return false; /* not published here */ }
   }
   /** Refreshes the list of verified community nodes from the node in use, at most every ten minutes. */
   function refreshCommunity() {
@@ -5215,12 +5280,13 @@
     await refreshStats();
     deployment().then(placeNav).catch(() => { /* without a deployment the contract labels are not shown */ });
     walletReady = syncWallet();
-    await loadSavedNodes();
+    await savedNodes();
     if (!stats && NODES.length && await pickNode()) await refreshStats();
     if (!stats && !NODES.length && rpcBase !== location.origin) { rpcBase = location.origin; store.set('aether.rpc', rpcBase); await refreshStats(); }
     live();
     render();
-    setInterval(() => { if (!hiddenTab()) refreshStats(); }, 15000);
+    // Without the live connection (it may be the part that is down) the page itself is refreshed too.
+    setInterval(() => { if (!hiddenTab()) (ws?.readyState === 1 ? refreshStats() : liveTick()); }, 15000);
     // A node that answers but lags would not raise an error by itself. Once a minute it is compared with the others.
     // With community nodes known, a single configured node is compared too: the page can leave it when it is down and return later.
     if (candidates().length > 1 || LOCAL.length) {
