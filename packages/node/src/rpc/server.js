@@ -1,5 +1,6 @@
 // HTTP and WebSocket server for JSON-RPC, event subscriptions and the static Explorer.
 import http from 'node:http';
+import os from 'node:os';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { extname, join, normalize, sep } from 'node:path';
 import { WebSocketServer } from 'ws';
@@ -209,7 +210,45 @@ export class RpcServer {
     const proxied = (!this.trustProxy || !isLoopback(req.socket.remoteAddress)) && PROXY_HEADERS.some((h) => req.headers[h]);
     // A web page in the browser on this computer also connects from 127.0.0.1. The browser sends its origin, so a request
     // from a page other than the node's own Explorer is a foreign caller: it reads the chain but does not control the node.
-    return { ip, local: !proxied && !this._foreignOrigin(req) && isLocalCaller(ip) };
+    // A page whose own name was rebound to 127.0.0.1 (DNS rebinding) has a matching origin, but its Host is that foreign name.
+    return { ip, local: !proxied && this._localHost(req) && !this._foreignOrigin(req) && isLocalCaller(ip) };
+  }
+
+  /**
+   * Whether the Host header names this computer: localhost, 127.0.0.1, [::1], one of its own interface addresses or the
+   * address the server was bound to. A request without Host (HTTP/1.0 tools) keeps counting as before.
+   */
+  _localHost(req) {
+    const raw = req.headers.host;
+    if (raw === undefined) return true;
+    let name;
+    try {
+      name = new URL(`http://${raw}`).hostname.toLowerCase();
+    } catch {
+      return false;
+    }
+    if (name.startsWith('[') && name.endsWith(']')) name = name.slice(1, -1);
+    name = name.replace(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/, '$1');
+    if (name === 'localhost' || name === '127.0.0.1' || name === '::1') return true;
+    const bound = String(this.host ?? '').toLowerCase().replace(/^\[|\]$/g, '');
+    if (bound && bound !== '0.0.0.0' && bound !== '::' && name === bound) return true;
+    return this._ownAddresses().has(name);
+  }
+
+  /** This computer's interface addresses, refreshed once a minute (a laptop changes networks). */
+  _ownAddresses() {
+    const now = Date.now();
+    if (!this.ownAddresses || now - this.ownAddressesAt > 60_000) {
+      const set = new Set();
+      try {
+        for (const list of Object.values(os.networkInterfaces())) {
+          for (const a of list ?? []) set.add(String(a.address).toLowerCase().split('%')[0]);
+        }
+      } catch { /* no interface list: only the loopback names count */ }
+      this.ownAddresses = set;
+      this.ownAddressesAt = now;
+    }
+    return this.ownAddresses;
   }
 
   _foreignOrigin(req) {

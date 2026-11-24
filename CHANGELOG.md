@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- RPC: a request counts as coming from this computer only when its Host header names this computer (localhost, 127.0.0.1, [::1], one of its own interface addresses or the address the RPC server is bound to). A web page whose own domain was rebound to 127.0.0.1 (DNS rebinding) had a matching Origin and was treated as local; it is now a foreign caller that reads the chain but cannot control the node, over HTTP and WebSocket. A request without Host (HTTP/1.0 tools) is unchanged (audit finding A-6, 24 November 2026).
+- Operations: `ops/caddy/Caddyfile` has a commented block for host names proxied by Cloudflare (`trusted_proxies` with Cloudflare's ranges, `client_ip_headers Cf-Connecting-Ip`, `header_up X-Forwarded-For {client_ip}`), and Running a public node explains the firewall and why the node takes the last X-Forwarded-For entry (audit finding A-7). The live server is not changed.
+- No consensus change.
+
 ## 2.16.2 (18 November 2026)
 
 - The official pool moves to `0xd7B63BCE0E77E0e53D7309e7E64cA4346e0dF5c8` (version 2); the version 2 pool factory is `0x0c381536835836Fb1AFFEc95BA9121d388E5D90c`. Miners keep connecting to `pool.quinvium.com`.
