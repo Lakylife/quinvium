@@ -8,6 +8,7 @@ const updater = require('./updater.cjs');
 const versions = require('./versions.cjs');
 const { WalletLink } = require('./wallet-link.cjs');
 const { followHost } = require('./home-network.cjs');
+const { safePoolUrl } = require('./pool-url.cjs');
 const cliLauncher = require('./cli-launcher.cjs');
 const { poolOfferDue } = require('./pool-offer.cjs');
 const releases = require('./release-check.cjs');
@@ -229,7 +230,8 @@ function readProgress(line) {
 /** A pool belongs to one network. After switching networks, mining is solo until the user picks another. */
 function activePool() {
   const { pool } = loadSettings();
-  return pool?.network === node.network ? pool : null;
+  // A stored address that is not a plain pool address (for example from an older version) is never passed to the miner.
+  return pool?.network === node.network && safePoolUrl(pool.url) ? pool : null;
 }
 
 /** A sleeping computer does not mine. Only system sleep is blocked; the screen may turn off. */
@@ -508,7 +510,7 @@ ipcMain.handle('explorer:info', () => {
   return { url: `${explorerOrigin}/`, origin: explorerOrigin };
 });
 ipcMain.handle('miner:pool', async (_, pool) => {
-  if (pool && (!/^0x[0-9a-fA-F]{40}$/.test(pool.address ?? '') || !/^https?:\/\/[^\s]+$/.test(pool.url ?? ''))) throw new Error('Invalid pool address');
+  if (pool && (!/^0x[0-9a-fA-F]{40}$/.test(pool.address ?? '') || !safePoolUrl(pool.url))) throw new Error('Invalid pool address');
   saveSettings({ pool: pool ? { address: pool.address, url: pool.url.replace(/\/$/, ''), name: String(pool.name ?? '').slice(0, 64), network: node.network } : null });
   if (miner.proc) {
     const { address, device } = miner;
@@ -908,7 +910,7 @@ async function followHome() {
     if (next !== url) change[key] = next;
   }
   const poolUrl = pool ? await followHost(pool.url, peers, runsPool) : null;
-  if (pool && poolUrl !== pool.url) change.pool = { ...pool, url: poolUrl };
+  if (pool && poolUrl !== pool.url && safePoolUrl(poolUrl)) change.pool = { ...pool, url: poolUrl };
   if (!Object.keys(change).length) return;
   saveSettings(change);
   push(node.log, `New address on the home network: ${Object.values(change).map((v) => v.url ?? v).join(', ')}`);

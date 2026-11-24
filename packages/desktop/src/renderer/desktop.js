@@ -4,6 +4,13 @@
   const d = window.desktop;
   const i18n = window.AetherI18n;
   const tr = i18n.t;
+  // The same rule as packages/desktop/src/pool-url.cjs: a pool's server address from the chain must be a plain address.
+  const POOL_URL = /^https?:\/\/(?:[a-z0-9-]+(?:\.[a-z0-9-]+)*|\[[0-9a-f:.]*:[0-9a-f:.]*\])(?::(\d{1,5}))?(?:\/[a-z0-9/._~-]*)?$/i;
+  const safePoolUrl = (url) => {
+    if (typeof url !== 'string' || url.length > 128) return null;
+    const m = POOL_URL.exec(url);
+    return m && (m[1] === undefined || Number(m[1]) <= 65535) ? url : null;
+  };
   const TABS = ['wallet', 'mining', 'pools', 'explorer', 'node', 'settings', 'about'];
   const CHART_MS = 10_000;
   const number = (n) => Number(n).toLocaleString(i18n.locale());
@@ -404,7 +411,8 @@
       id: p.address, title: p.name, on: p.address.toLowerCase() === chosen.toLowerCase(),
       note: `${tr('Fee {fee} %', { fee: p.fee.toLocaleString(locale) })} · ${share(p)} · ${tr('{n} miners', { n: number(p.miners ?? 0) })}`,
       meta: `${p.address.slice(0, 8)}…${p.address.slice(-4)}`,
-      off: p.url ? null : tr('The operator has not published a server address.'),
+      off: !p.url ? tr('The operator has not published a server address.')
+        : !safePoolUrl(p.url) ? tr('The server address of this pool contains unusual characters. Check the operator before you mine.') : null,
     }));
     box.replaceChildren(...(query ? [] : [card({ id: '', title: tr('Solo'), note: tr('You keep every block you find'), on: !chosen })]), ...items);
     if (query && !items.length) box.append(span('dim choice-empty', tr('No pool matches the search.')));
