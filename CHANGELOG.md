@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Node: a WebSocket `logs` subscription with malformed options (for example `{"address": 1}`) is refused with error -32602; before, the next block with a log made block insertion report a failure although the block was stored, so the miner got `accepted: false` and sync stopped. A subscription whose delivery fails is now removed, and chain observers (`head`, `reorg`, `deep-reorg`, `finality-violation`) can no longer change the outcome of block insertion (audit finding A-1, 24 November 2026). No consensus change.
+
 ## 2.16.2 (18 November 2026)
 
 - The official pool moves to `0xd7B63BCE0E77E0e53D7309e7E64cA4346e0dF5c8` (version 2); the version 2 pool factory is `0x0c381536835836Fb1AFFEc95BA9121d388E5D90c`. Miners keep connecting to `pool.quinvium.com`.
