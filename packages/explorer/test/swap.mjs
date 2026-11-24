@@ -424,7 +424,7 @@ try {
   await step('the miner ranking can be paged, sorted and searched', async () => {
     await page.goto(`${url}/#/miners`);
     await page.locator('.metric-grid').waitFor();
-    assert.match(await page.locator('.metric-grid').innerText(), /Těžařů celkem/);
+    assert.match(await page.locator('.metric-grid').innerText(), /Adresy s odměnou \(celkem\)/);
     assert.ok(await page.locator('tbody tr').count() >= 1);
     const first = await page.locator('tbody tr').first().getAttribute('data-href');
     const address = first.split('/')[2].split('?')[0];

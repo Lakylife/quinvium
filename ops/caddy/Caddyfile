@@ -1,5 +1,28 @@
 # Caddy configuration of the public quinvium.com server. Adapt the domain names for your own node.
 
+# Behind Cloudflare (orange cloud): every request then reaches Caddy from a Cloudflare address, and without the block
+# below Caddy passes that address to the node in X-Forwarded-For. The node (--trust-proxy) takes the last
+# X-Forwarded-For entry as the caller, so all visitors would share one rate limit per Cloudflare edge address.
+# For host names that are proxied by Cloudflare, uncomment the global block and add
+#     header_up X-Forwarded-For {client_ip}
+# inside each of their reverse_proxy directives, for example:
+#     reverse_proxy 127.0.0.1:8545 {
+#         header_up X-Forwarded-For {client_ip}
+#     }
+# {client_ip} is the visitor's address from Cf-Connecting-Ip, and only when the request came from a range listed
+# in trusted_proxies; from anywhere else it is the connecting address, so nobody can forge it by sending the header.
+# Also allow ports 80 and 443 in the firewall only from these ranges (see docs/RUNNING-A-PUBLIC-NODE.md), so the
+# origin cannot be reached around Cloudflare. Leave all of this commented out for names that are "DNS only".
+# Cloudflare's published ranges (https://www.cloudflare.com/ips-v4 and /ips-v6) as of 24 November 2026; check them
+# again when you enable this, Cloudflare announces changes there.
+#
+# {
+# 	servers {
+# 		trusted_proxies static 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+# 		client_ip_headers Cf-Connecting-Ip
+# 	}
+# }
+
 # Website (packages/website/public, built by packages/website/src/build.mjs)
 quinvium.com {
 	encode zstd gzip

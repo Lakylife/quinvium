@@ -74,10 +74,15 @@ function splitRecipients(peers) {
   const full = Math.ceil(Math.sqrt(mixed.length));
   return { full: [...legacy, ...mixed.slice(0, full)], announce: mixed.slice(full) };
 }
-// A branch that diverged deeper than the finality boundary: how many headers are verified at most and how long we stop downloading from the peer,
-// when its branch does not carry twice the work. Verifying one header costs one Ethash computation.
+// A branch that diverged deeper than the finality boundary: how many headers are checked at most and how long we stop downloading from the peer's
+// network when its branch does not carry twice the work. Ethash (about 8 ms per header) runs only once the cheap checks show enough work.
+// The pause doubles with every repeated refusal for the same network, up to 6 hours.
 const MAX_DEEP_HEADERS = 50_000;
 const DEEP_FORK_PAUSE_MS = 10 * 60_000;
+const DEEP_FORK_PAUSE_MAX_MS = 6 * 60 * 60_000;
+// Inbound eviction: when every inbound slot is taken, these peers are never disconnected for a newcomer.
+const PROTECT_LONGEST = 8;
+const PROTECT_RECENT_BLOCK = 4;
 
 // Ranges that are not the public internet: local networks, loopback, the shared operator range (CGNAT), documentation,
 // multicast and reserved addresses. The node does not connect to them from address exchange, otherwise it could be sent into a foreign internal network.
@@ -101,6 +106,34 @@ function ipGroup(host) {
   const v = host.replace(/^::ffff:/, '');
   if (isIP(v) === 4) return v.split('.').slice(0, 2).join('.');
   if (isIP(v) === 6) return v.split(':').slice(0, 2).join(':');
+  return v;
+}
+
+/** Expands an IPv6 address to its eight groups of four hex digits, or returns null. */
+function ipv6Groups(ip) {
+  let v = ip.toLowerCase().split('%')[0];
+  const v4 = /^(.*:)(\d+\.\d+\.\d+\.\d+)$/.exec(v);
+  if (v4) {
+    const b = v4[2].split('.').map(Number);
+    v = `${v4[1]}${((b[0] << 8) | b[1]).toString(16)}:${((b[2] << 8) | b[3]).toString(16)}`;
+  }
+  const [head, tail, extra] = v.split('::');
+  if (extra !== undefined) return null;
+  const a = head ? head.split(':') : [];
+  const b = tail !== undefined ? (tail ? tail.split(':') : []) : [];
+  const missing = 8 - a.length - b.length;
+  if (tail === undefined ? missing !== 0 : missing < 1) return null;
+  return [...a, ...Array(tail === undefined ? 0 : missing).fill('0'), ...b].map((g) => g.padStart(4, '0'));
+}
+
+/** The network an address belongs to for the deep fork pause: /24 for IPv4, /64 for IPv6. Other strings stay as they are. */
+export function pauseNetwork(host) {
+  const v = host.replace(/^::ffff:/i, '');
+  if (isIP(v) === 4) return `${v.split('.').slice(0, 3).join('.')}.0/24`;
+  if (isIP(v) === 6) {
+    const g = ipv6Groups(v);
+    if (g) return `${g.slice(0, 4).join(':')}::/64`;
+  }
   return v;
 }
 
@@ -136,6 +169,8 @@ export class Network extends EventEmitter {
   constructor({ chain, mempool, port, host = '0.0.0.0', seeds = [], maxOutbound = 8, maxInbound = 32, allowPrivate = false, lan = false, agent = 'quintium-node/2.0.0', identity = null, requireIdentity = false, log = () => {} }) {
     super();
     Object.assign(this, { chain, mempool, port, host, maxOutbound, maxInbound, allowPrivate, lan, agent, requireIdentity, log });
+    // A typo in --max-inbound must not lift the limit.
+    if (!Number.isInteger(this.maxInbound) || this.maxInbound < 0) this.maxInbound = 32;
     // A seed can have a pinned key (`key@host:port`). A connection to it then succeeds only with its signature,
     // so not even forged DNS or an attacker on the path can feed a new node a foreign network.
     this.pinned = new Map();
@@ -155,7 +190,7 @@ export class Network extends EventEmitter {
     this.temporary = false;
     this.txBudget = new Bucket(...GLOBAL_TX_RATE);
     this.requested = new Map();      // transaction hash -> time of the request
-    this.deepPauses = new Map();     // IP -> until when we do not download a branch beyond the finality boundary from it; survives a new connection
+    this.deepPauses = new Map();     // network (/24, /64) -> { until, ms }: no branch beyond the finality boundary from it until then; survives a new connection
     this.timers = [];
     this.server = null;
     this._onHead = (e) => this._relayHead(e);
@@ -269,11 +304,38 @@ export class Network extends EventEmitter {
     const fromIp = [...this.peers].filter((p) => p.address === ip).length;
     const fromGroup = inbound.filter((p) => ipGroup(p.address) === ipGroup(ip)).length;
     const limited = !this.allowPrivate && !this.lanPeers.has(ip) && (fromIp >= MAX_PER_IP || fromGroup >= MAX_PER_GROUP);
-    if (this._banned(ip) || inbound.length >= this.maxInbound || limited) {
+    if (this._banned(ip) || limited || (inbound.length >= this.maxInbound && !this._evictInbound(inbound))) {
       socket.destroy();
       return;
     }
     this._setup(socket, ip, true);
+  }
+
+  /**
+   * All inbound slots are taken: makes room for a newcomer, so a few hosts cannot hold every slot for ever.
+   * The peers connected longest and those that most recently delivered an accepted block are protected, as are LAN peers
+   * and pinned seeds (outbound peers are never in the list). Of the rest, the address group with the most connections loses
+   * its most recently connected peer. Returns false when nobody may be evicted.
+   */
+  _evictInbound(inbound) {
+    let candidates = inbound.filter((p) => !this.lanPeers.has(p.address) && !this.pinned.has(`${p.address}:${p.listenPort}`) && !p.pinnedSeed);
+    const protect = new Set();
+    [...candidates].sort((a, b) => a.connectedAt - b.connectedAt).slice(0, PROTECT_LONGEST).forEach((p) => protect.add(p));
+    candidates.filter((p) => p.lastBlockAt > 0).sort((a, b) => b.lastBlockAt - a.lastBlockAt).slice(0, PROTECT_RECENT_BLOCK).forEach((p) => protect.add(p));
+    candidates = candidates.filter((p) => !protect.has(p));
+    if (candidates.length === 0) return false;
+    const groups = new Map();
+    for (const p of candidates) {
+      const g = ipGroup(p.address);
+      groups.set(g, [...(groups.get(g) ?? []), p]);
+    }
+    const largest = [...groups.values()].reduce((best, list) => (list.length > best.length ? list : best));
+    const victim = largest.reduce((newest, p) => (p.connectedAt > newest.connectedAt ? p : newest));
+    // The slot is free right away; the socket closes in the background.
+    this.peers.delete(victim);
+    victim.disconnect('evicted for a new inbound peer');
+    this.emit('evicted', victim);
+    return true;
   }
 
   connect(host, port) {
@@ -300,6 +362,8 @@ export class Network extends EventEmitter {
     const channel = new SecureChannel(socket, !inbound);
     const peer = new Peer(channel, ip, inbound);
     peer.listenPort = dialPort;
+    peer.connectedAt = Date.now();
+    peer.lastBlockAt = 0;   // when the peer last delivered a block we accepted; protects it from inbound eviction
     this.peers.add(peer);
     const timeout = setTimeout(() => peer.disconnect('handshake timed out'), HANDSHAKE_TIMEOUT);
     channel.on('ready', () => this._sendHello(peer));
@@ -390,7 +454,7 @@ export class Network extends EventEmitter {
     peer.listenPort = Number(bytesToInt(port));
     peer.updateHead(headHash, bytesToInt(headNumber), bytesToInt(headTd));
     const paused = this.deepPauses.get(this._pauseKey(peer));
-    if (paused && paused > Date.now()) peer.deepForkUntil = paused;
+    if (paused && paused.until > Date.now()) peer.deepForkUntil = paused.until;
     peer.ready = true;
     peer.channel.unlock();
     peer.emit('hello');
@@ -550,6 +614,7 @@ export class Network extends EventEmitter {
   async _insert(peer, block) {
     try {
       const r = await this.chain.insertBlock(block);
+      if (r.status === 'added' || r.status === 'reorg') peer.lastBlockAt = Date.now();
       if (r.status === 'orphan') this._maybeSync(peer, true);
       return r;
     } catch (e) {
@@ -825,6 +890,9 @@ export class Network extends EventEmitter {
    * A branch that diverged from ours deeper than the finality boundary. The node downloads and verifies all its headers
    * including work, and accepts the branch only when it carries at least twice the work of our branch since the common ancestor.
    * This is how a split network converges and a node escapes a cheap fake branch. A deeper rewrite with less work stays forbidden.
+   * Two phases: first only the cheap checks (linkage, height, time, difficulty by LWMA, the quick proof check) while the claimed
+   * work is summed; Ethash runs on the collected headers only when that sum is enough. A long branch of minimum-difficulty headers
+   * is thus refused without computing a single Ethash.
    * @returns {Promise<boolean>} whether downloading blocks may continue
    */
   async _deepForkAllowed(peer, all) {
@@ -863,9 +931,13 @@ export class Network extends EventEmitter {
     const ours = chain.headTd - chain.getTd(ancestor.hash());
     let theirs = 0n;
     let headers = first;
-    let checked = 0;
+    const collected = [];   // at most MAX_DEEP_HEADERS plus one batch; verified with Ethash in phase 2
     for (;;) {
       for (const h of headers) {
+        if (!chain.pow.quickCheck(h)) {
+          peer.misbehave(100, 'a deep branch header without valid proof of work');
+          return false;
+        }
         if (h.difficulty < minDifficulty) {
           peer.misbehave(100, 'a deep branch header has difficulty below the network minimum');
           return false;
@@ -882,15 +954,11 @@ export class Network extends EventEmitter {
         }
         branch.set(Buffer.from(h.hash()).toString('hex'), h);
         tip = h;
-        if (!(await chain.pow.verify(h))) {
-          peer.misbehave(100, 'a deep branch header without valid proof of work');
-          return false;
-        }
+        collected.push(h);
         theirs += h.difficulty;
-        checked += 1;
       }
       if (theirs >= DEEP_REORG_WORK_RATIO * ours) break;
-      if (headers.length < MAX_HEADERS || checked >= MAX_DEEP_HEADERS || this.stopped || !peer.ready) {
+      if (headers.length < MAX_HEADERS || collected.length >= MAX_DEEP_HEADERS || this.stopped || !peer.ready) {
         return this._refuseDeep(peer, ancestor, `the branch carries ${theirs} work, ${DEEP_REORG_WORK_RATIO * ours} is needed`);
       }
       const last = headers[headers.length - 1];
@@ -915,6 +983,14 @@ export class Network extends EventEmitter {
         prev = h;
       }
     }
+    // Phase 2: the claimed work is enough, so now every header must prove it.
+    for (const h of collected) {
+      if (this.stopped || !peer.ready) return false;
+      if (!(await chain.pow.verify(h))) {
+        peer.misbehave(100, 'a deep branch header without valid proof of work');
+        return false;
+      }
+    }
     chain.permitDeepFork(ancestor);
     this.log(L(
       `VAROVÁNÍ: uzel ${peer.address} nabízí větev odpojenou v bloku ${ancestor.number} s více než dvojnásobnou prací, přecházím na ni`,
@@ -924,17 +1000,26 @@ export class Network extends EventEmitter {
     return true;
   }
 
-  /** The pause applies to the address, so the node cannot bypass it with a new connection. */
+  /**
+   * The pause applies to the peer's network (/24 or /64), so neither a new connection nor a neighbouring address bypasses it.
+   * Each repeated refusal for the same network doubles it, up to 6 hours; a network quiet for that long starts again at 10 minutes.
+   */
   _pauseDeep(peer) {
-    const until = Date.now() + DEEP_FORK_PAUSE_MS;
+    const key = this._pauseKey(peer);
+    const now = Date.now();
+    const prev = this.deepPauses.get(key);
+    const ms = prev && prev.until + DEEP_FORK_PAUSE_MAX_MS > now ? Math.min(prev.ms * 2, DEEP_FORK_PAUSE_MAX_MS) : DEEP_FORK_PAUSE_MS;
+    const until = now + ms;
     peer.deepForkUntil = until;
+    for (const p of this.peers) if (p !== peer && this._pauseKey(p) === key) p.deepForkUntil = until;
+    this.deepPauses.delete(key);
     if (this.deepPauses.size >= MAX_BANS) this.deepPauses.delete(this.deepPauses.keys().next().value);
-    this.deepPauses.set(this._pauseKey(peer), until);
+    this.deepPauses.set(key, { until, ms });
   }
 
   /** On a local network and in tests several nodes run on one address; there the pause is also tied to the port. */
   _pauseKey(peer) {
-    return this.allowPrivate && isPrivate(peer.address) ? `${peer.address}:${peer.listenPort}` : peer.address;
+    return this.allowPrivate && isPrivate(peer.address) ? `${peer.address}:${peer.listenPort}` : pauseNetwork(peer.address);
   }
 
   _refuseDeep(peer, ancestor, reason) {
