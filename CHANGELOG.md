@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Explorer and app: a pool's server address (set by the operator on chain) is used in copyable miner commands, the Stratum address and the miner process only when it is a plain address: http or https, a host of letters, digits, dots and dashes or a bracketed IPv6 address, an optional port and a simple path, no query, fragment, spaces or credentials, at most 128 characters. Otherwise the pool page shows a warning instead of commands, the Mining page does not suggest the pool and the app does not mine through it (audit finding A-3, 24 November 2026). No consensus change.
+
 ## 2.16.2 (18 November 2026)
 
 - The official pool moves to `0xd7B63BCE0E77E0e53D7309e7E64cA4346e0dF5c8` (version 2); the version 2 pool factory is `0x0c381536835836Fb1AFFEc95BA9121d388E5D90c`. Miners keep connecting to `pool.quinvium.com`.
