@@ -148,6 +148,7 @@ export class AetherNode extends EventEmitter {
         this.log(`${L('Blok', 'Block')} #${h.number} ${toHex(h.hash()).slice(0, 12)} tx=${block.txs.length} ${L('obtížnost', 'difficulty')}=${h.difficulty}${removed.length ? ` reorg=${removed.length}` : ''}`);
       }
     });
+    this.chain.on('listener-error', ({ event, error }) => this.log(L(`Chyba posluchače události ${event}: ${error?.message ?? error}`, `Error in a listener of the ${event} event: ${error?.message ?? error}`)));
     this.chain.on('finality-violation', ({ depth }) => this.log(L(`VAROVÁNÍ: odmítnut přepis ${depth} bloků`, `WARNING: refused a reorganisation of ${depth} blocks`)));
     this.chain.on('reorg', ({ depth }) => { if (depth >= DEEP_REORG) this.log(L(`VAROVÁNÍ: přepis ${depth} bloků, ověřte, že nejde o útok`, `WARNING: reorganisation of ${depth} blocks, check that it is not an attack`)); });
     return this;

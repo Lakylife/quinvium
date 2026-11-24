@@ -449,8 +449,14 @@ export class RpcServer {
       return { jsonrpc: '2.0', id: msg.id ?? null, error: { code: -32602, message: 'unknown subscription type' } };
     }
     if (ws.subs.size >= MAX_SUBS) return { jsonrpc: '2.0', id: msg.id ?? null, error: { code: -32005, message: 'too many subscriptions' } };
+    let filter = {};
+    if (kind === 'logs') {
+      const checked = logFilter(opts);
+      if (checked.error) return { jsonrpc: '2.0', id: msg.id ?? null, error: { code: -32602, message: checked.error } };
+      filter = checked.filter;
+    }
     const id = `0x${(this.nextSub++).toString(16)}`;
-    const sub = { ws, kind, opts: opts ?? {} };
+    const sub = { ws, kind, opts: filter };
     ws.subs.set(id, sub);
     this.subs.set(id, sub);
     return { jsonrpc: '2.0', id: msg.id ?? null, result: id };
@@ -460,25 +466,104 @@ export class RpcServer {
     this._wsSend(sub.ws, JSON.stringify({ jsonrpc: '2.0', method: 'eth_subscription', params: { subscription: id, result } }));
   }
 
+  /** A subscription whose delivery fails is dropped, so one client can never disturb the node or other clients. */
+  _dropSub(id, sub, e) {
+    this.subs.delete(id);
+    sub.ws.subs?.delete(id);
+    this.log(`WebSocket: subscription ${id} (${sub.kind}) removed: ${e?.message ?? e}`);
+  }
+
   _pushHead({ added }) {
-    if (this.subs.size === 0) return;
-    for (const block of added) {
-      const head = block.header.toRpc();
-      let logs = null;
-      for (const [id, sub] of this.subs) {
-        if (sub.kind === 'newHeads') this._notify(id, sub, head);
-        if (sub.kind === 'logs') {
-          logs ??= blockReceipts(block, this.node.chain.getReceipts(block.hash()).receipts).flatMap((r) => r.logs).map(logToRpc);
-          for (const l of logs) if (matches(l, sub.opts)) this._notify(id, sub, l);
+    try {
+      if (this.subs.size === 0) return;
+      for (const block of added) {
+        let head = null;
+        let logs = null;
+        for (const [id, sub] of this.subs) {
+          try {
+            if (sub.kind === 'newHeads') {
+              head ??= block.header.toRpc();
+              this._notify(id, sub, head);
+            }
+            if (sub.kind === 'logs') {
+              logs ??= blockReceipts(block, this.node.chain.getReceipts(block.hash()).receipts).flatMap((r) => r.logs).map(logToRpc);
+              for (const l of logs) if (matches(l, sub.opts)) this._notify(id, sub, l);
+            }
+          } catch (e) {
+            this._dropSub(id, sub, e);
+          }
         }
       }
+    } catch (e) {
+      this.log(`WebSocket: new head not delivered: ${e?.message ?? e}`);
     }
   }
 
   _pushPending(tx) {
-    const hash = toHex(tx.hash());
-    for (const [id, sub] of this.subs) if (sub.kind === 'newPendingTransactions') this._notify(id, sub, hash);
+    try {
+      if (this.subs.size === 0) return;
+      const hash = toHex(tx.hash());
+      for (const [id, sub] of this.subs) {
+        if (sub.kind !== 'newPendingTransactions') continue;
+        try {
+          this._notify(id, sub, hash);
+        } catch (e) {
+          this._dropSub(id, sub, e);
+        }
+      }
+    } catch (e) {
+      this.log(`WebSocket: pending transaction not delivered: ${e?.message ?? e}`);
+    }
   }
+}
+
+const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
+const TOPIC_RE = /^0x[0-9a-fA-F]{64}$/;
+const MAX_FILTER_ADDRESSES = 64;
+const MAX_FILTER_TOPICS = 4;
+const MAX_TOPIC_ALTERNATIVES = 16;
+
+/**
+ * Checks the options of a logs subscription, which come straight from the client.
+ * Returns `{ filter }` with lower-case copies of address and topics, or `{ error }`.
+ */
+export function logFilter(opts) {
+  if (opts === undefined || opts === null) return { filter: {} };
+  if (typeof opts !== 'object' || Array.isArray(opts)) return { error: 'logs options must be an object' };
+  const filter = {};
+  const { address, topics } = opts;
+  if (address !== undefined && address !== null) {
+    if (typeof address === 'string') {
+      if (!ADDRESS_RE.test(address)) return { error: 'address must be 0x followed by 40 hex characters' };
+      filter.address = address.toLowerCase();
+    } else if (Array.isArray(address)) {
+      if (address.length > MAX_FILTER_ADDRESSES) return { error: `at most ${MAX_FILTER_ADDRESSES} addresses` };
+      if (!address.every((a) => typeof a === 'string' && ADDRESS_RE.test(a))) return { error: 'every address must be 0x followed by 40 hex characters' };
+      filter.address = address.map((a) => a.toLowerCase());
+    } else {
+      return { error: 'address must be a string or an array of strings' };
+    }
+  }
+  if (topics !== undefined && topics !== null) {
+    if (!Array.isArray(topics)) return { error: 'topics must be an array' };
+    if (topics.length > MAX_FILTER_TOPICS) return { error: `at most ${MAX_FILTER_TOPICS} topics` };
+    const out = [];
+    for (const t of topics) {
+      if (t === null) out.push(null);
+      else if (typeof t === 'string') {
+        if (!TOPIC_RE.test(t)) return { error: 'a topic must be null, 0x followed by 64 hex characters, or an array of these' };
+        out.push(t.toLowerCase());
+      } else if (Array.isArray(t)) {
+        if (t.length > MAX_TOPIC_ALTERNATIVES) return { error: `at most ${MAX_TOPIC_ALTERNATIVES} alternatives per topic` };
+        if (!t.every((x) => typeof x === 'string' && TOPIC_RE.test(x))) return { error: 'a topic must be null, 0x followed by 64 hex characters, or an array of these' };
+        out.push(t.map((x) => x.toLowerCase()));
+      } else {
+        return { error: 'a topic must be null, 0x followed by 64 hex characters, or an array of these' };
+      }
+    }
+    filter.topics = out;
+  }
+  return { filter };
 }
 
 function matches(log, { address, topics }) {
@@ -486,5 +571,5 @@ function matches(log, { address, topics }) {
     const list = [address].flat().map((a) => a.toLowerCase());
     if (!list.includes(log.address.toLowerCase())) return false;
   }
-  return (topics ?? []).every((t, i) => t == null || [t].flat().includes(log.topics[i]));
+  return (topics ?? []).every((t, i) => t == null || (log.topics[i] !== undefined && [t].flat().includes(log.topics[i].toLowerCase())));
 }

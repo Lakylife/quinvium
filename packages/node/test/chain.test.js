@@ -66,6 +66,26 @@ test('mining pays out the reward and the chain is saved', async () => {
   assert.equal(await balance(c, m.address), 4n * WEI);
 });
 
+test('a throwing head listener does not make insertBlock reject and later listeners still run', async () => {
+  const c = await newChain();
+  const seen = [];
+  const failures = [];
+  c.on('listener-error', (f) => failures.push(f));
+  c.on('head', () => { throw new Error('observer failed'); });
+  c.on('head', ({ block }) => seen.push(block.header.number));
+  const { res } = await mine(c);
+  assert.equal(res.status, 'added');
+  assert.equal(c.head.number, 1n);
+  assert.deepEqual(seen, [1n]);
+  assert.equal(failures.length, 1);
+  assert.equal(failures[0].event, 'head');
+  assert.match(failures[0].error.message, /observer failed/);
+  // Without a 'listener-error' listener the failure is swallowed, never thrown.
+  c.removeAllListeners('listener-error');
+  assert.equal((await mine(c)).res.status, 'added');
+  assert.deepEqual(seen, [1n, 2n]);
+});
+
 test('transfer: the miner gets the base fee and the tip; nothing is burned', async () => {
   const a = wallet(); const b = wallet(); const m = wallet();
   const c = await newChain({ alloc: fund(a) });

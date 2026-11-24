@@ -171,6 +171,69 @@ test('filters and subscriptions over WebSocket', async () => {
   ws.close();
 });
 
+const wsOpen = async () => {
+  const ws = new WebSocket(`ws://127.0.0.1:${node.rpc.port}`);
+  await new Promise((r) => ws.once('open', r));
+  const msgs = [];
+  ws.on('message', (m) => msgs.push(JSON.parse(m)));
+  return { ws, msgs };
+};
+
+test('a logs subscription with malformed options is refused with -32602', async () => {
+  const { ws, msgs } = await wsOpen();
+  const cases = [{ address: 1 }, { topics: 5 }, { address: ['0x' + '11'.repeat(20), 7] }, { topics: [[5]] }, { topics: Array(5).fill(null) }, 'logs'];
+  cases.forEach((opts, i) => ws.send(JSON.stringify({ jsonrpc: '2.0', id: 100 + i, method: 'eth_subscribe', params: ['logs', opts] })));
+  await sleep(100);
+  for (let i = 0; i < cases.length; i++) {
+    const reply = msgs.find((m) => m.id === 100 + i);
+    assert.ok(reply, `answer to case ${i}`);
+    assert.equal(reply.error?.code, -32602, `case ${i}: ${JSON.stringify(cases[i])}`);
+    assert.equal(reply.result, undefined);
+  }
+  assert.equal(msgs.filter((m) => m.result !== undefined).length, 0, 'nothing was stored');
+  ws.close();
+});
+
+test('a valid logs subscription receives the log; a failing subscription cannot stop block insertion', async () => {
+  const { abi, bytecode } = compile();
+  const signer = alice.connect(provider);
+  const deploy = await new ethers.ContractFactory(abi, bytecode, signer).deploy();
+  await sleep(20);
+  await mineBlock();
+  const addr = await deploy.getAddress();
+  const c = new ethers.Contract(addr, abi, signer);
+  const topic = c.interface.getEvent('Vklad').topicHash;
+
+  const { ws, msgs } = await wsOpen();
+  ws.send(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_subscribe', params: ['logs', { address: addr.toUpperCase().replace('0X', '0x'), topics: [topic.toUpperCase().replace('0X', '0x')] }] }));
+  ws.send(JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'eth_subscribe', params: ['newHeads'] }));
+  await sleep(50);
+  const subId = msgs.find((m) => m.id === 1)?.result;
+  const headsId = msgs.find((m) => m.id === 2)?.result;
+  assert.ok(subId && headsId, JSON.stringify(msgs));
+
+  // A subscription that slipped past validation (as before the fix) must only remove itself.
+  const brokenId = '0xbad';
+  const serverWs = node.rpc.subs.get(subId).ws;
+  const broken = { ws: serverWs, kind: 'logs', opts: { address: 1 } };
+  node.rpc.subs.set(brokenId, broken);
+  serverWs.subs.set(brokenId, broken);
+
+  await c.vlozit({ value: WEI });
+  await sleep(20);
+  await mineBlock();   // asserts that the block was accepted
+  await sleep(50);
+  const logs = msgs.filter((m) => m.method === 'eth_subscription' && m.params.subscription === subId);
+  assert.equal(logs.length, 1);
+  assert.equal(logs[0].params.result.address.toLowerCase(), addr.toLowerCase());
+  assert.equal(logs[0].params.result.topics[0], topic);
+  assert.ok(msgs.some((m) => m.method === 'eth_subscription' && m.params.subscription === headsId), 'newHeads still delivered');
+  assert.equal(node.rpc.subs.has(brokenId), false, 'the failing subscription was removed');
+  assert.equal(serverWs.subs.has(brokenId), false);
+  assert.equal(node.rpc.subs.has(subId), true);
+  ws.close();
+});
+
 test('getwork: the miner chooses a payout address without an account; a wrong result is rejected', async () => {
   const addr = '0x' + 'cd'.repeat(20);
   const [seal0, seedHash, target, number] = await provider.send('aether_getWork', [addr]);
