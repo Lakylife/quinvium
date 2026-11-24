@@ -509,6 +509,7 @@ window.AetherExplorerText = {
     'pool.notPool': ['Diese Adresse ist kein Pool aus der Netzwerk-Fabrik. Minen Sie nicht dorthin.', 'Esta dirección no es un pool de la fábrica de la red. No mine hacia ella.', "Cette adresse n'est pas un pool de l'usine du réseau. Ne minez pas vers elle."],
     'pool.safe': ['Dieser Pool stammt aus der Netzwerk-Fabrik. Seine Aufteilungsregeln sind geprüft und der Betreiber kann sie nicht ändern.', 'Este pool procede de la fábrica de la red. Sus reglas de reparto están verificadas y el operador no puede cambiarlas.', "Ce pool provient de l'usine du réseau. Ses règles de répartition sont vérifiées et l'opérateur ne peut pas les changer."],
     'pool.noServer': ['Der Betreiber hat keine Serveradresse angegeben.', 'El operador no ha publicado una dirección de servidor.', "L'opérateur n'a pas publié d'adresse de serveur."],
+    'pool.unsafeUrl': ['Die Serveradresse dieses Pools enthält ungewöhnliche Zeichen, daher werden keine Befehle angezeigt. Prüfen Sie den Betreiber, bevor Sie minen.', 'La dirección del servidor de este pool contiene caracteres inusuales, por eso no se muestran comandos. Compruebe al operador antes de minar.', "L'adresse du serveur de ce pool contient des caractères inhabituels, aucune commande n'est donc affichée. Vérifiez l'opérateur avant de miner."],
     'side.network': ['Netzwerk', 'Red', 'Réseau'],
     'nav.overview': ['Übersicht', 'Resumen', 'Aperçu'],
     'nav.blocks': ['Blöcke', 'Bloques', 'Blocs'],
