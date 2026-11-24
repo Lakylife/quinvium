@@ -313,7 +313,7 @@ export class Chain extends EventEmitter {
           this._connect(block, res);
           this._setHead(h, td);
         });
-        this.emit('head', { block, receipts: res.receipts, removed: [], added: [block] });
+        this._notify('head', { block, receipts: res.receipts, removed: [], added: [block] });
         return { status: 'added', hash };
       }
 
@@ -406,13 +406,13 @@ export class Chain extends EventEmitter {
     if (depth > C.maxReorgDepth) {
       if (!this._deepPermitted(ancestor.number)) {
         this.reorgs.refused += 1;
-        this.emit('finality-violation', { hash: block.hash(), depth });
+        this._notify('finality-violation', { hash: block.hash(), depth });
         throw new FinalityError(`a reorganisation of ${depth} blocks is beyond the finality limit`);
       }
       // The branch stays a side branch until it has twice the work of our branch since the common ancestor.
       const base = this.getTd(ancestor.hash());
       if (td - base < DEEP_REORG_WORK_RATIO * (this.headTd - base)) return { status: 'side', hash: block.hash() };
-      this.emit('deep-reorg', { depth, ancestor: ancestor.number });
+      this._notify('deep-reorg', { depth, ancestor: ancestor.number });
     }
 
     const results = [];
@@ -467,9 +467,29 @@ export class Chain extends EventEmitter {
     if (depth > this.reorgs.deepest) this.reorgs.deepest = depth;
     const added = results.map((r) => r.block);
     const last = results[results.length - 1];
-    this.emit('head', { block, receipts: last.res.receipts, removed, added });
-    this.emit('reorg', { depth, removed, added });
+    this._notify('head', { block, receipts: last.res.receipts, removed, added });
+    this._notify('reorg', { depth, removed, added });
     return { status: 'reorg', hash: block.hash(), depth };
+  }
+
+  /**
+   * Tells observers about a chain event. Observers never change the outcome of block insertion: each listener runs
+   * on its own, and one that throws is reported as 'listener-error' (when someone listens for it) instead of
+   * stopping the listeners after it or the insertion that is already stored.
+   */
+  _notify(event, payload) {
+    const report = (error) => {
+      if (this.listenerCount('listener-error') === 0) return;
+      try { this.emit('listener-error', { event, error }); } catch { /* a failing reporter changes nothing either */ }
+    };
+    for (const listener of this.rawListeners(event)) {
+      try {
+        const result = listener.call(this, payload);
+        if (result && typeof result.then === 'function') result.then(undefined, report);
+      } catch (error) {
+        report(error);
+      }
+    }
   }
 
   /** Read access to the state; never writes to disk. */
