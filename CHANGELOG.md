@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Node: a WebSocket `logs` subscription with malformed options (for example `{"address": 1}`) is refused with error -32602; before, the next block with a log made block insertion report a failure although the block was stored, so the miner got `accepted: false` and sync stopped. A subscription whose delivery fails is now removed, and chain observers (`head`, `reorg`, `deep-reorg`, `finality-violation`) can no longer change the outcome of block insertion (audit finding A-1, 24 November 2026). No consensus change.
 - RPC: a request counts as coming from this computer only when its Host header names this computer (localhost, 127.0.0.1, [::1], one of its own interface addresses or the address the RPC server is bound to). A web page whose own domain was rebound to 127.0.0.1 (DNS rebinding) had a matching Origin and was treated as local; it is now a foreign caller that reads the chain but cannot control the node, over HTTP and WebSocket. A request without Host (HTTP/1.0 tools) is unchanged (audit finding A-6, 24 November 2026).
 - Operations: `ops/caddy/Caddyfile` has a commented block for host names proxied by Cloudflare (`trusted_proxies` with Cloudflare's ranges, `client_ip_headers Cf-Connecting-Ip`, `header_up X-Forwarded-For {client_ip}`), and Running a public node explains the firewall and why the node takes the last X-Forwarded-For entry (audit finding A-7). The live server is not changed.
 - No consensus change.
