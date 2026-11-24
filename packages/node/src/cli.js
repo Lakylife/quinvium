@@ -31,6 +31,7 @@ Použití: quintium-node [volby]
   --stratum-host <adresa>           adresa Stratum (0.0.0.0 pro minery v síti)
   --stratum-sessions <n>            kolik zařízení obslouží Stratum, výchozí 1024
   --stratum-sessions-per-ip <n>     kolik zařízení smí z jedné adresy, výchozí 128
+  --max-inbound <n>                 kolik uzlů se smí připojit sem, výchozí 32
   --miner-address <0x...>           výchozí adresa výplaty pro eth_getWork
   --extra <text>                    značka v bloku, nejvýše 32 bajtů
   --pool <0x...>                    provozovat pool: adresa kontraktu z továrny
@@ -65,6 +66,7 @@ Usage: quintium-node [options]
   --stratum-host <address>          Stratum address (0.0.0.0 for miners on the network)
   --stratum-sessions <n>            how many devices Stratum serves, default 1024
   --stratum-sessions-per-ip <n>     how many devices one address may use, default 128
+  --max-inbound <n>                 how many peers may connect to this node, default 32
   --miner-address <0x...>           default payout address for eth_getWork
   --extra <text>                    block tag, at most 32 bytes
   --pool <0x...>                    run a pool: contract address from the factory
@@ -86,7 +88,7 @@ const { values: v } = parseArgs({
   options: {
     network: { type: 'string', default: 'mainnet' }, 'data-dir': { type: 'string' }, seeds: { type: 'string' },
     'p2p-port': { type: 'string' }, 'rpc-port': { type: 'string' }, 'rpc-host': { type: 'string' }, 'rate-limit': { type: 'string' },
-    'stratum-port': { type: 'string' }, 'stratum-host': { type: 'string' }, 'stratum-sessions': { type: 'string' }, 'stratum-sessions-per-ip': { type: 'string' }, 'miner-address': { type: 'string' }, extra: { type: 'string' },
+    'stratum-port': { type: 'string' }, 'stratum-host': { type: 'string' }, 'stratum-sessions': { type: 'string' }, 'stratum-sessions-per-ip': { type: 'string' }, 'max-inbound': { type: 'string' }, 'miner-address': { type: 'string' }, extra: { type: 'string' },
     pool: { type: 'string' }, 'pool-key-file': { type: 'string' },
     explorer: { type: 'string' }, 'dev-mine': { type: 'boolean' }, 'allow-private': { type: 'boolean' }, lan: { type: 'boolean' }, public: { type: 'boolean' }, 'public-host': { type: 'string' }, upnp: { type: 'boolean' }, 'lan-port': { type: 'string' }, verbose: { type: 'boolean' }, 'exit-with-parent': { type: 'boolean' },
     'trust-proxy': { type: 'boolean' }, 'tunnel-port': { type: 'string' }, 'no-mining-rpc': { type: 'boolean' }, 'no-site-check': { type: 'boolean' },
@@ -117,7 +119,7 @@ const explorer = v.explorer ?? [join(here, 'explorer'), join(here, '..', '..', '
 const node = new AetherNode({
   network: v.network, dataDir: v['data-dir'], seeds: v.seeds?.split(',').filter(Boolean), p2pPort: num(v['p2p-port']),
   rpcPort: num(v['rpc-port']), rpcHost: v['rpc-host'] ?? (v.public || v['public-host'] ? '0.0.0.0' : undefined), rateLimit: num(v['rate-limit']), stratumPort: num(v['stratum-port']),
-  stratumHost: v['stratum-host'], stratumSessions: num(v['stratum-sessions']), stratumSessionsPerIp: num(v['stratum-sessions-per-ip']), minerAddress: v['miner-address'], extra: v.extra, pool: v.pool, poolKey: v.pool ? poolKey() : undefined, staticDir: explorer, allowPrivate: v['allow-private'], lan: v.lan && v['lan-port'] ? { listenPort: num(v['lan-port']) } : v.lan, verbose: v.verbose,
+  stratumHost: v['stratum-host'], stratumSessions: num(v['stratum-sessions']), stratumSessionsPerIp: num(v['stratum-sessions-per-ip']), maxInbound: num(v['max-inbound']), minerAddress: v['miner-address'], extra: v.extra, pool: v.pool, poolKey: v.pool ? poolKey() : undefined, staticDir: explorer, allowPrivate: v['allow-private'], lan: v.lan && v['lan-port'] ? { listenPort: num(v['lan-port']) } : v.lan, verbose: v.verbose,
   trustProxy: v['trust-proxy'], tunnelPort: v['tunnel-port'] === undefined ? null : num(v['tunnel-port']), miningRpc: !v['no-mining-rpc'], siteCheck: !v['no-site-check'],
   publicAccess: v.public || !!v['public-host'], publicHost: v['public-host'], upnp: v.upnp,
 });

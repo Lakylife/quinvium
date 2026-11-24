@@ -4,6 +4,10 @@
 
 - Node: a WebSocket `logs` subscription with malformed options (for example `{"address": 1}`) is refused with error -32602; before, the next block with a log made block insertion report a failure although the block was stored, so the miner got `accepted: false` and sync stopped. A subscription whose delivery fails is now removed, and chain observers (`head`, `reorg`, `deep-reorg`, `finality-violation`) can no longer change the outcome of block insertion (audit finding A-1, 24 November 2026). No consensus change.
 - Explorer and app: a pool's server address (set by the operator on chain) is used in copyable miner commands, the Stratum address and the miner process only when it is a plain address: http or https, a host of letters, digits, dots and dashes or a bracketed IPv6 address, an optional port and a simple path, no query, fragment, spaces or credentials, at most 128 characters. Otherwise the pool page shows a warning instead of commands, the Mining page does not suggest the pool and the app does not mine through it (audit finding A-3, 24 November 2026). No consensus change.
+- Node, peer network (audit findings A-2 and A-5, 24 November 2026):
+  - A branch beyond the finality limit is first checked only cheaply (linkage, height, time, LWMA difficulty, quick proof check) while its work is summed. Ethash runs on its headers only once that work is enough, so a long branch of minimum-difficulty headers is refused without a single Ethash computation. The refusal pause now covers the peer's whole /24 (IPv4) or /64 (IPv6) network and doubles with each repeated refusal, up to 6 hours.
+  - When every inbound slot is taken, a newcomer is no longer always turned away. Among inbound peers the 8 connected longest and the 4 that most recently delivered an accepted block are protected, as are LAN peers and pinned seeds; of the rest, the address group with the most connections loses its newest peer. New option `--max-inbound` (default 32).
+  - No consensus change.
 
 ## 2.16.2 (18 November 2026)
 

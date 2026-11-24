@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import net from 'node:net';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { Address } from '@ethereumjs/util';
-import { Network } from '../src/p2p/network.js';
+import { Network, pauseNetwork } from '../src/p2p/network.js';
 import { SecureChannel, MSG } from '../src/p2p/wire.js';
 import { Peer } from '../src/p2p/peer.js';
 import { CONSENSUS as C, NETWORKS, WEI } from '../src/params.js';
@@ -182,6 +182,117 @@ test('a deeper branch with less work is not accepted and its node is not blocked
   assert.deepEqual(a.chain.head.hash(), head);
   assert.equal(a.net.bans.size, 0, 'poctivý uzel z druhé části sítě se neblokuje');
   await stopAll(a, b);
+});
+
+test('a deep branch of minimum-difficulty headers is refused without computing a single Ethash', async () => {
+  const a = await node(); const b = await node();
+  try {
+    await mineMany(a.chain, C.maxReorgDepth + 4);
+    // Slow blocks keep LWMA at the network minimum: many cheap headers, little work.
+    await mineMany(b.chain, C.maxReorgDepth + 20, { miner: new Uint8Array(20).fill(7), step: 600 });
+    const now = Math.max(a.chain.now(), b.chain.now());
+    a.chain.setClock(now); b.chain.setClock(now);
+    const minDifficulty = b.chain.network.minDifficulty ?? 1n;
+    assert.equal(b.chain.head.difficulty, minDifficulty, 'the branch ends at the network minimum difficulty');
+    const ours = a.chain.headTd - a.chain.genesis.difficulty;
+    assert.ok(b.chain.headTd - b.chain.genesis.difficulty < 2n * ours, 'the branch carries less than twice our work');
+    let verified = 0;
+    const verify = a.chain.pow.verify.bind(a.chain.pow);
+    a.chain.pow.verify = (h) => { verified += 1; return verify(h); };
+    const head = a.chain.head.hash();
+    const deep = [];
+    a.net.on('deep-fork', (e) => deep.push(e));
+    a.net.connect('127.0.0.1', b.net.port);
+    assert.ok(await until(() => deep.length > 0, 60000), 'the node looked at the branch');
+    assert.equal(deep[0].accepted, false);
+    assert.match(deep[0].reason, /work/);
+    assert.equal(verified, 0, 'no Ethash before the claimed work is enough');
+    assert.deepEqual(a.chain.head.hash(), head);
+  } finally {
+    await stopAll(a, b);
+  }
+});
+
+test('a deep branch with enough work is verified with Ethash before it is accepted', async () => {
+  const a = await node(); const b = await node();
+  await mineMany(a.chain, C.maxReorgDepth + 4);
+  const ours = a.chain.headTd - a.chain.genesis.difficulty;
+  while (b.chain.headTd - b.chain.genesis.difficulty < 2n * ours + 50n) await mine(b.chain, { step: 1, miner: new Uint8Array(20).fill(5) });
+  const now = Math.max(a.chain.now(), b.chain.now());
+  a.chain.setClock(now); b.chain.setClock(now);
+  const checked = new Set();
+  const verify = a.chain.pow.verify.bind(a.chain.pow);
+  const deep = [];
+  a.chain.pow.verify = (h) => { if (!deep.length) checked.add(toHex(h.hash())); return verify(h); };
+  a.net.on('deep-fork', (e) => deep.push(e));
+  try {
+    a.net.connect('127.0.0.1', b.net.port);
+    assert.ok(await until(() => equalHash(a.chain.head.hash(), b.chain.head.hash()), 60000), `height ${a.chain.head.number}`);
+    assert.equal(deep[0]?.accepted, true);
+    assert.ok(checked.size >= Number(b.chain.head.number) - 1, `Ethash for every branch header before the switch (${checked.size})`);
+  } finally {
+    await stopAll(a, b);
+  }
+});
+
+test('the deep fork pause covers the whole /24 or /64 and doubles on each repeated refusal, up to 6 hours', async () => {
+  assert.equal(pauseNetwork('8.8.8.5'), '8.8.8.0/24');
+  assert.equal(pauseNetwork('::ffff:8.8.8.9'), '8.8.8.0/24');
+  assert.equal(pauseNetwork('2a01:4f8:1:2:3::1'), '2a01:04f8:0001:0002::/64');
+  assert.equal(pauseNetwork('2a01:4f8:1:2::'), pauseNetwork('2a01:4f8:1:2:ffff:ffff:ffff:ffff'));
+  assert.notEqual(pauseNetwork('2a01:4f8:1:2::1'), pauseNetwork('2a01:4f8:1:3::1'));
+  const chain = await newChain();
+  const n = new Network({ chain, mempool: chain.mempool, port: 0 });
+  const peer = (address) => ({ address, listenPort: 30524 });
+  n._refuseDeep(peer('8.8.8.5'), chain.head, 'test');
+  const first = n.deepPauses.get(n._pauseKey(peer('8.8.8.200')));
+  assert.ok(first && first.until > Date.now(), 'a neighbour in the same /24 is paused too');
+  assert.equal(first.ms, 10 * 60_000);
+  assert.equal(n.deepPauses.get(n._pauseKey(peer('8.8.9.5'))), undefined, 'another /24 is not');
+  n._refuseDeep(peer('8.8.8.77'), chain.head, 'test');
+  assert.equal(n.deepPauses.get('8.8.8.0/24').ms, 20 * 60_000, 'the second refusal doubles the pause');
+  for (let i = 0; i < 10; i++) n._refuseDeep(peer('8.8.8.5'), chain.head, 'test');
+  assert.equal(n.deepPauses.get('8.8.8.0/24').ms, 6 * 60 * 60_000, 'at most 6 hours');
+  // A new connection from the neighbouring address gets the pause in its handshake.
+  const p = { ...peer('8.8.8.9') };
+  const paused = n.deepPauses.get(n._pauseKey(p));
+  assert.ok(paused.until - Date.now() > 5 * 60 * 60_000);
+});
+
+test('a full inbound list evicts the newest peer of the largest address group and keeps protected peers', async () => {
+  const chain = await newChain();
+  const n = new Network({ chain, mempool: chain.mempool, port: 0, maxInbound: 17 });
+  const accepted = [];
+  n._setup = (socket, ip) => accepted.push(ip);
+  const evicted = [];
+  let t = 1_000;
+  const add = (address, extra = {}) => {
+    const p = { address, listenPort: 30524, inbound: true, connectedAt: t++, lastBlockAt: 0, disconnect: () => evicted.push(p), ...extra };
+    n.peers.add(p);
+    return p;
+  };
+  const oldest = Array.from({ length: 8 }, (_, i) => add(`1.${i}.0.1`));
+  const miners = Array.from({ length: 4 }, (_, i) => add(`2.${i}.0.1`, { lastBlockAt: Date.now() - i }));
+  // The largest group by connections, all of them new.
+  const crowd = [add('5.5.1.1'), add('5.5.2.2'), add('5.5.3.3')];
+  const single = add('6.6.0.1');
+  const outbound = add('5.5.9.9', { inbound: false });
+  const lan = add('5.5.8.8');
+  n.lanPeers.add('5.5.8.8');
+  assert.equal([...n.peers].filter((p) => p.inbound).length, 17);
+  n._accept({ remoteAddress: '9.9.9.9', destroy: () => assert.fail('the newcomer was refused') });
+  assert.deepEqual(accepted, ['9.9.9.9'], 'the newcomer gets in');
+  assert.deepEqual(evicted, [crowd[2]], 'the newest peer of the largest group goes');
+  for (const p of [...oldest, ...miners, crowd[0], crowd[1], single, outbound, lan]) assert.ok(n.peers.has(p));
+
+  // When only protected peers are left, the newcomer is refused as before.
+  const m = new Network({ chain, mempool: chain.mempool, port: 0, maxInbound: 12 });
+  m._setup = () => assert.fail('no slot may be freed');
+  for (const p of [...oldest, ...miners]) m.peers.add(p);
+  let refused = false;
+  m._accept({ remoteAddress: '9.9.9.9', destroy: () => { refused = true; } });
+  assert.ok(refused);
+  assert.equal(m.peers.size, 12);
 });
 
 test('announcement by hash: only some peers get full messages, yet they reach everyone and an older node gets them in full', async () => {
