@@ -173,3 +173,38 @@ test('proxy headers count only from the proxy on this computer, and a foreign we
     assert.equal(plain._caller(req('127.0.0.1', { origin })).local, false, origin);
   }
 });
+
+test('DNS rebinding: a page whose name points to 127.0.0.1 is a foreign caller, the names of this computer stay local', async () => {
+  const shared = [];
+  const node = { chain: { network: { name: 'mainnet', chainId: 52401n }, head: { number: 1n } }, network: { peers: new Set(), sendPublicNodes() {} }, mempool: {}, work: null, version: 'test', publicNodes: { share: (url) => { shared.push(url); return { url, expires: 1 }; }, outgoing: () => [], list: () => [] } };
+  const plain = new RpcServer(node, { port: 8545 });
+  const req = (host, headers = {}) => ({ headers: { ...(host === undefined ? {} : { host }), ...headers }, socket: { remoteAddress: '127.0.0.1' } });
+  // The attacker's page: its origin matches its own Host, but that Host is not this computer.
+  for (const [host, origin] of [['evil.example', 'http://evil.example'], ['evil.example:8545', 'http://evil.example:8545'], ['evil.example:8545', undefined], ['127.0.0.1.evil.example:8545', 'http://127.0.0.1.evil.example:8545']]) {
+    const caller = plain._caller(req(host, origin ? { origin } : {}));
+    assert.equal(caller.local, false, `${host} ${origin}`);
+    const r = await plain.call({ jsonrpc: '2.0', id: 1, method: 'quinvium_setPublicUrl', params: ['https://rpc.evil.example'] }, caller);
+    assert.equal(r.error?.code, -32601, `${host}: setPublicUrl refused`);
+  }
+  assert.deepEqual(shared, []);
+  // This computer by name, with and without the Explorer's own origin.
+  for (const host of ['127.0.0.1:8545', 'localhost:8545', '[::1]:8545', '127.0.0.1']) {
+    assert.equal(plain._caller(req(host)).local, true, host);
+    assert.equal(plain._caller(req(host, { origin: `http://${host}` })).local, true, `${host} with its origin`);
+  }
+  assert.equal(plain._caller(req('LOCALHOST:8545')).local, true, 'the name is not case-sensitive');
+  // HTTP/1.0 tools send no Host: as before.
+  assert.equal(plain._caller(req(undefined)).local, true);
+  // One of this computer's own interface addresses (for example a miner on the LAN at http://192.168.1.10:8545).
+  plain.ownAddresses = new Set(['192.168.1.10']);
+  plain.ownAddressesAt = Date.now();
+  assert.equal(plain._caller(req('192.168.1.10:8545')).local, true);
+  assert.equal(plain._caller(req('192.168.1.11:8545')).local, false);
+  // The address the server was bound to.
+  const bound = new RpcServer(node, { host: '10.1.2.3' });
+  bound.ownAddresses = new Set();
+  bound.ownAddressesAt = Date.now();
+  assert.equal(bound._caller(req('10.1.2.3:8545')).local, true);
+  // The real interface list is read when nothing is cached.
+  assert.ok(new RpcServer(node, {})._ownAddresses() instanceof Set);
+});

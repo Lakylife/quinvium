@@ -8,6 +8,9 @@
   - A branch beyond the finality limit is first checked only cheaply (linkage, height, time, LWMA difficulty, quick proof check) while its work is summed. Ethash runs on its headers only once that work is enough, so a long branch of minimum-difficulty headers is refused without a single Ethash computation. The refusal pause now covers the peer's whole /24 (IPv4) or /64 (IPv6) network and doubles with each repeated refusal, up to 6 hours.
   - When every inbound slot is taken, a newcomer is no longer always turned away. Among inbound peers the 8 connected longest and the 4 that most recently delivered an accepted block are protected, as are LAN peers and pinned seeds; of the rest, the address group with the most connections loses its newest peer. New option `--max-inbound` (default 32).
   - No consensus change.
+- RPC: a request counts as coming from this computer only when its Host header names this computer (localhost, 127.0.0.1, [::1], one of its own interface addresses or the address the RPC server is bound to). A web page whose own domain was rebound to 127.0.0.1 (DNS rebinding) had a matching Origin and was treated as local; it is now a foreign caller that reads the chain but cannot control the node, over HTTP and WebSocket. A request without Host (HTTP/1.0 tools) is unchanged (audit finding A-6, 24 November 2026).
+- Operations: `ops/caddy/Caddyfile` has a commented block for host names proxied by Cloudflare (`trusted_proxies` with Cloudflare's ranges, `client_ip_headers Cf-Connecting-Ip`, `header_up X-Forwarded-For {client_ip}`), and Running a public node explains the firewall and why the node takes the last X-Forwarded-For entry (audit finding A-7). The live server is not changed.
+- No consensus change.
 
 ## 2.16.2 (18 November 2026)
 

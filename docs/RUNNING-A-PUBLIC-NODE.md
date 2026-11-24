@@ -39,6 +39,15 @@ Rules for a public node:
 - Keep `--rate-limit` (600 requests per minute per IP in the templates).
 - Open the P2P port (30524 mainnet, 30525 testnet) so other nodes can connect.
 
+### Behind Cloudflare
+
+When a host name of the node is proxied by Cloudflare (orange cloud), every request reaches the server from a Cloudflare address. With `--trust-proxy` the node takes the **last** `X-Forwarded-For` entry as the caller, and by default Caddy puts the address that connected to it there, which is Cloudflare's. All visitors would then share the rate limit of a few Cloudflare edge addresses. Do both of these:
+
+- Tell Caddy to trust Cloudflare and pass the visitor's address. Uncomment the global `servers` block at the top of [`ops/caddy/Caddyfile`](../ops/caddy/Caddyfile) (`trusted_proxies` with Cloudflare's published ranges, `client_ip_headers Cf-Connecting-Ip`), and add `header_up X-Forwarded-For {client_ip}` to the `reverse_proxy` of each proxied name. `{client_ip}` comes from `Cf-Connecting-Ip` only when the request arrived from a listed range, so nobody can forge it by sending the header directly.
+- Allow ports 80 and 443 in the firewall only from [Cloudflare's ranges](https://www.cloudflare.com/ips/), so nobody reaches the origin around Cloudflare. For example, with ufw, replace `ufw allow 80/tcp` and `ufw allow 443/tcp` with one `ufw allow from <range> to any port 80,443 proto tcp` per range. Treat 443/udp (HTTP/3) the same way, or leave it closed. Certificates still renew: Cloudflare forwards the HTTP challenge on port 80. Do this only when **every** web name on the server is proxied. A "DNS only" name on the same server (for example a pool's RPC address) would stop working for visitors, so there rely on the Caddy setting alone.
+
+Names that are "DNS only" (grey cloud) need neither: there Caddy sees the visitor directly. Cloudflare changes its ranges rarely and announces it; check them again whenever you change the configuration.
+
 ## Docker
 
 Each release is also published as a container image for `linux/amd64` and `linux/arm64`: `ghcr.io/lakylife/quinvium-node:<version>` and `:latest`. It is built from [`ops/docker/Dockerfile`](../ops/docker/Dockerfile) by the `docker` workflow; the image runs as a non-root user and keeps all data, including `node.key`, in the volume `/data`.
