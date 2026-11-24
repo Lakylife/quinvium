@@ -159,7 +159,7 @@ try {
     await page.goto(`${RPC}/#/pool/${pool}`);
     await page.getByText('Hospodaření poolu').waitFor();
     const text = await page.locator('#app').innerText();
-    for (const part of ['Odměny za bloky', 'Vyplaceno těžařům', 'Poplatek provozovatele celkem', 'k výběru', 'Těžaři v okně poolu', 'V okně poolu zatím nikdo neposlal podíl.', 'tvůrce poolu, dostává poplatek 1,5 %']) {
+    for (const part of ['Odměny za bloky', 'Vyplaceno těžařům', 'Poplatek provozovatele celkem', 'k výběru', 'Těžaři v okně poolu', 'Těžaři za posledních ', 'V okně poolu zatím nikdo neposlal podíl.', 'tvůrce poolu, dostává poplatek 1,5 %']) {
       assert.ok(text.includes(part), `stránka poolu ukazuje ${part}`);
     }
     await page.goto(`${RPC}/#/address/${wallet.address}`);
