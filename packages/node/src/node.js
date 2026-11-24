@@ -82,7 +82,7 @@ export class AetherNode extends EventEmitter {
     const seeds = [...(process.env.AETHER_NO_SEEDS === '1' ? [] : network.seeds), ...(o.seeds ?? [])];
     this.network = new Network({
       chain: this.chain, mempool: this.mempool, port: o.p2pPort ?? network.ports.p2p, host: o.p2pHost ?? '0.0.0.0', seeds,
-      allowPrivate: o.allowPrivate ?? false, lan: o.lan ?? false, agent: VERSION, log: o.verbose ? this.log : () => {},
+      allowPrivate: o.allowPrivate ?? false, lan: o.lan ?? false, agent: VERSION, maxInbound: o.maxInbound, log: o.verbose ? this.log : () => {},
       // Persistent node key in the data folder. Mainnet accepts only nodes with a signed identity; testnet also older versions.
       identity: NodeIdentity.load(dataDir === ':memory:' ? null : join(dataDir, 'node.key')),
       requireIdentity: o.requireIdentity ?? network.name === 'mainnet',
