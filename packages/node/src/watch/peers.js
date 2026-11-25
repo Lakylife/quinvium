@@ -7,7 +7,7 @@ import { EventEmitter } from 'node:events';
 import { toHex } from '../util/bytes.js';
 import { L } from '../lang.js';
 
-export const SETTLED_DEPTH = 6n;      // a peer head this deep in our chain must match; shallower ones may still race
+export const SETTLED_DEPTH = 6n;      // a block this deep below both heads must match; shallower ones may still race
 const KEEP_MS = 3_600_000;            // a peer that has not reported for an hour drops out of the summary
 const MAX_INCIDENTS = 32;
 const MAX_TRACKED = 512;
@@ -50,15 +50,19 @@ export class ChainWatch extends EventEmitter {
   }
 
   /**
-   * Asks the peer which block it has at a settled height: its own head when it lags behind, otherwise the block
-   * SETTLED_DEPTH below our head. The answer must carry valid work. Returns the verdict, or null when it cannot be judged.
+   * Asks the peer which block it has at a settled height: SETTLED_DEPTH below the lower of the two heads. A peer's own
+   * newest blocks are never judged, because a node that was offline or lags may still hold a block that lost a race
+   * (an orphan) until it syncs. The answer must carry valid work. A disagreement counts only when the next question
+   * gives one again: the first one is kept as `suspect` and neither logged nor counted as another branch.
+   * Returns the verdict, or null when it cannot be judged.
    */
   async check(peer) {
     if (!peer.ready || peer.headNumber === undefined || !this.network.probeHeader) return null;
     const id = shortId(peer);
     const last = this.probed.get(id) ?? 0;
     if (this.now() - last < PROBE_EVERY_MS) return null;
-    const height = [BigInt(peer.headNumber), this.chain.head.number - SETTLED_DEPTH].reduce((x, y) => (x < y ? x : y));
+    const lower = [BigInt(peer.headNumber), this.chain.head.number].reduce((x, y) => (x < y ? x : y));
+    const height = lower - SETTLED_DEPTH;
     if (height < 1n) return null;
     const parent = this.chain.store.canonicalHash(height - 1n);
     const ours = this.chain.store.canonicalHash(height);
@@ -70,10 +74,13 @@ export class ChainWatch extends EventEmitter {
     // An earlier block than asked means the peer does not have our block at height-1 on its main branch.
     const theirs = h.number === height ? Buffer.from(h.hash()) : null;
     const agree = !!theirs && Buffer.compare(Buffer.from(ours), theirs) === 0;
-    if (!this.verdicts.has(id) && this.verdicts.size >= MAX_TRACKED) this._prune(true);
-    const verdict = { height: Number(height), agree, ours: toHex(ours), theirs: theirs ? toHex(theirs) : null, at: this.now() };
+    const before = this.verdicts.get(id);
+    if (!before && this.verdicts.size >= MAX_TRACKED) this._prune(true);
+    // Confirmed only when the previous answer of this peer disagreed too (that one was at least PROBE_EVERY_MS ago).
+    const suspect = !agree && !(before && !before.agree);
+    const verdict = { height: Number(height), agree, suspect, ours: toHex(ours), theirs: theirs ? toHex(theirs) : null, at: this.now() };
     this.verdicts.set(id, verdict);
-    if (!agree) {
+    if (!agree && !suspect) {
       const key = `${id}:${verdict.height}`;
       if (!this.warned.has(key)) {
         if (this.warned.size > MAX_TRACKED) this.warned.clear();
@@ -109,13 +116,15 @@ export class ChainWatch extends EventEmitter {
   summary() {
     this._prune();
     const list = [...this.verdicts.entries()];
-    const differ = list.filter(([, v]) => !v.agree);
-    const agree = list.length - differ.length;
+    const differ = list.filter(([, v]) => !v.agree && !v.suspect);
+    const suspect = list.filter(([, v]) => v.suspect).length;
+    const agree = list.length - differ.length - suspect;
     const recent = this.incidents.filter((i) => i.at > this.now() - 24 * KEEP_MS);
     return {
       checked: list.length,
       agree,
       differ: differ.length,
+      suspect,
       minority: differ.length >= 2 && differ.length > agree,
       ok: differ.length === 0 && recent.length === 0,
       differing: differ.map(([peer, v]) => ({ peer, height: v.height, ours: v.ours, theirs: v.theirs, at: v.at })),
