@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-24.04
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url || steps.retry.outputs.page_url }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -51,4 +51,12 @@ jobs:
           path: _site
       - if: steps.check.outputs.skip != '1'
         id: deploy
+        # GitHub sometimes does not list the artifact uploaded a moment ago yet ("No artifacts named github-pages").
+        # The first attempt may fail on that; a second one half a minute later finds it.
+        continue-on-error: true
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+      - if: steps.check.outputs.skip != '1' && steps.deploy.outcome == 'failure'
+        run: sleep 30
+      - if: steps.check.outputs.skip != '1' && steps.deploy.outcome == 'failure'
+        id: retry
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
