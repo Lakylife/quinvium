@@ -34,10 +34,18 @@ test('chain watch: a peer with the same block agrees, a peer on another branch i
   const answers = new Map();
   const network = Object.assign(new EventEmitter(), { probeHeader: async (peer, parent) => answers.get(peer.nodeId[0])(parent) });
   const logs = [];
-  const watch = new ChainWatch({ chain: a, network, log: (m) => logs.push(m) });
+  let clock = 1_000_000;
+  const watch = new ChainWatch({ chain: a, network, log: (m) => logs.push(m), now: () => clock });
   answers.set(1, () => a.getHeaderByNumber(14n));            // the same chain
   answers.set(2, () => b.getHeaderByNumber(14n));            // another branch, same height
   answers.set(3, () => b.getHeaderByNumber(0n));   // does not know our block at all
+  for (const n of [1, 2, 3]) await watch.check(fakePeer(n, 20n));
+  const first = watch.summary();
+  assert.equal(first.differ, 0, 'one answer is not yet another branch');
+  assert.equal(first.suspect, 2);
+  assert.equal(first.ok, true);
+  assert.equal(logs.length, 0, 'nothing logged on the first answer');
+  clock += 121_000;
   const same = await watch.check(fakePeer(1, 20n));
   const other = await watch.check(fakePeer(2, 20n));
   const unknown = await watch.check(fakePeer(3, 20n));
@@ -51,25 +59,53 @@ test('chain watch: a peer with the same block agrees, a peer on another branch i
   assert.equal(s.checked, 3);
   assert.equal(s.agree, 1);
   assert.equal(s.differ, 2);
+  assert.equal(s.suspect, 0);
   assert.equal(s.minority, true, 'two of three peers disagree: this node may be the one cut off');
   assert.equal(s.ok, false);
   assert.ok(!JSON.stringify(s).includes('127.0.0.1'), 'no addresses in the summary');
   watch.stop();
 });
 
-test('chain watch: a lagging peer is asked about its own head, a fresh head is not judged, questions are rate limited', async () => {
+test('chain watch: a lagging peer is judged below its own head, a fresh head is not judged, questions are rate limited', async () => {
   const { a } = await branches();
   const asked = [];
   const network = Object.assign(new EventEmitter(), { probeHeader: async (peer, parent) => { asked.push(parent); return a.getHeaderByNumber(a.getHeader(parent).number + 1n); } });
   const watch = new ChainWatch({ chain: a, network });
-  const lag = await watch.check(fakePeer(1, 5n));
-  assert.equal(lag.height, 5);
+  assert.equal(await watch.check(fakePeer(9, 5n)), null, 'a peer with only 5 blocks has nothing settled yet');
+  const lag = await watch.check(fakePeer(1, 12n));
+  assert.equal(lag.height, 6, 'SETTLED_DEPTH below the peer head, not the peer head itself');
   assert.equal(lag.agree, true);
-  assert.equal(await watch.check(fakePeer(1, 6n)), null, 'the same peer is not asked again right away');
+  assert.equal(await watch.check(fakePeer(1, 13n)), null, 'the same peer is not asked again right away');
   assert.equal(asked.length, 1);
   const tooEarly = new ChainWatch({ chain: await newChain(), network });
   assert.equal(await tooEarly.check(fakePeer(2, 3n)), null, 'nothing settled yet on an empty chain');
   watch.stop(); tooEarly.stop();
+});
+
+test('chain watch: a node back online with an orphan on top is not reported, nor is one disagreement that heals', async () => {
+  const { a, b } = await branches();
+  let clock = 1_000_000;
+  let answer;
+  const network = Object.assign(new EventEmitter(), { probeHeader: async (peer, parent) => answer(parent) });
+  const logs = [];
+  const watch = new ChainWatch({ chain: a, network, log: (m) => logs.push(m), now: () => clock });
+  // The peer comes back with head 16, whose top block lost a race: it is asked about block 10, which it shares with us.
+  answer = (parent) => a.getHeaderByNumber(a.getHeader(parent).number + 1n);
+  const back = await watch.check(fakePeer(4, 16n));
+  assert.equal(back.height, 10);
+  assert.equal(back.agree, true);
+  // One odd answer, then a good one: never another branch, never logged.
+  clock += 121_000;
+  answer = () => b.getHeaderByNumber(10n);
+  assert.equal((await watch.check(fakePeer(4, 16n))).suspect, true);
+  clock += 121_000;
+  answer = (parent) => a.getHeaderByNumber(a.getHeader(parent).number + 1n);
+  assert.equal((await watch.check(fakePeer(4, 16n))).agree, true);
+  const s = watch.summary();
+  assert.equal(s.differ, 0);
+  assert.equal(s.suspect, 0);
+  assert.equal(logs.length, 0);
+  watch.stop();
 });
 
 test('chain watch: a deep reorganisation and a refused one are recorded as incidents', async () => {
@@ -91,10 +127,14 @@ test('two real nodes on different branches of equal work report each other', asy
   const na = new Network({ chain: a, mempool: a.mempool, port: 0, host: '127.0.0.1', allowPrivate: true });
   const nb = new Network({ chain: b, mempool: b.mempool, port: 0, host: '127.0.0.1', allowPrivate: true, seeds: [] });
   await na.start(); await nb.start();
-  const wa = new ChainWatch({ chain: a, network: na });
+  let clock = Date.now();
+  const wa = new ChainWatch({ chain: a, network: na, now: () => clock });
   nb.connect('127.0.0.1', na.port);
   assert.ok(await until(() => na.peerCount === 1 && nb.peerCount === 1), 'connected');
   assert.ok(await until(() => wa.summary().checked === 1, 10000), 'the peer was asked on connecting');
+  assert.equal(wa.summary().suspect, 1, 'the first answer is only a suspicion');
+  clock += 121_000;
+  await wa.check([...na.peers][0]);
   const s = wa.summary();
   assert.equal(s.differ, 1);
   assert.equal(s.differing[0].height, 14);
