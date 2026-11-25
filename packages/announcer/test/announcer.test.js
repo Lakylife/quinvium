@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DAY, LIMITS, allowed, count, detect, initialState, milestonesUpTo } from '../src/events.js';
+import { CHAIN_CLEAR_AFTER, DAY, LIMITS, allowed, count, detect, initialState, milestonesUpTo } from '../src/events.js';
 import { format, telegramMessage, xMessage } from '../src/format.js';
 import { oauthHeader, telegram, x } from '../src/channels.js';
 
@@ -235,4 +235,26 @@ test('small events never go out one by one: one digest at most every 6 hours, im
   state.queue = [small('node:d')];
   batchSmall(state, 1000 + 2 * DIGEST_EVERY);
   assert.equal(state.queue[0].due, true);
+});
+
+test('a peer on another branch: one all-clear after every peer has agreed for a while, none for a short flap', () => {
+  const s = initialState(snap(), T0);
+  const clean = { differ: 0, checked: 26, minority: false, incidents: [], sites: [] };
+  const bad = { ...clean, differ: 1, checked: 27 };
+  let t = T0 + 60;
+  const step = (watch, dt = 60) => { t += dt; const r = detect(state, snap({ headTime: t - 10, watch }), t); state = r.state; return r; };
+  let state = detect(s, snap({ headTime: T0 + 50, watch: clean }), t).state;
+  const warn = step(bad);
+  assert.deepEqual(kinds(warn), ['watch-chain']);
+  assert.match(telegramMessage(warn.events[0]).text, /posts again once all checked nodes agree/);
+  assert.deepEqual(kinds(step(clean)), [], 'not right away');
+  assert.deepEqual(kinds(step(bad)), [], 'a flap back is not a new warning');
+  assert.deepEqual(kinds(step(clean)), []);
+  assert.deepEqual(kinds(step(clean, CHAIN_CLEAR_AFTER - 30)), [], 'the clean time starts again after the flap');
+  const ok = step(clean, 60);
+  assert.deepEqual(kinds(ok), ['watch-chain-ok']);
+  assert.deepEqual(ok.events[0].channels, ['telegram']);
+  assert.match(telegramMessage(ok.events[0]).text, /26 of 26 checked peers have the same block/);
+  assert.deepEqual(kinds(step(clean, CHAIN_CLEAR_AFTER)), [], 'only once');
+  assert.deepEqual(kinds(step(bad)), ['watch-chain'], 'a later problem is reported again');
 });
