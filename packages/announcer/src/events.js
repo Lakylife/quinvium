@@ -4,6 +4,8 @@
 export const DAY = 86400;
 export const WEEK = 7 * DAY;
 const NODE_MEMORY = 2000;   // remembered node IDs
+/** How long every checked peer must agree again before the all-clear for a peer on another branch goes out. */
+export const CHAIN_CLEAR_AFTER = 15 * 60;
 /** Week number, weeks start on Monday (1 January 1970 was a Thursday). */
 const weekOf = (t) => Math.floor((t - 4 * DAY) / WEEK);
 
@@ -149,14 +151,24 @@ export function detect(state, snap, now, { stallAfter = 600, summaryHour = 12 } 
   }
 
   // The node's watch (Telegram only): a peer on another branch, a deep reorganisation, or a website or Explorer file
-  // that differs from GitHub. Each problem once while it lasts, and once when everything matches again.
+  // that differs from GitHub. Each problem once while it lasts, and once when everything matches again (not for reorganisations).
   if (snap.watch) {
     const w = snap.watch;
+    // The all-clear goes out only when every checked peer has agreed for CHAIN_CLEAR_AFTER, so a peer that flaps
+    // between branches costs one warning and one all-clear, not a pair per flap.
     const chainKey = w.differ > 0 ? `${w.differ}/${w.checked}/${w.minority}` : null;
-    if (chainKey && !s.watchChain) {
-      add(`watch-chain:${now}`, 'watch-chain', { differ: w.differ, checked: w.checked, minority: w.minority }, ['telegram']);
+    if (chainKey) {
+      if (!s.watchChain) add(`watch-chain:${now}`, 'watch-chain', { differ: w.differ, checked: w.checked, minority: w.minority }, ['telegram']);
+      s.watchChain = chainKey;
+      s.watchChainClear = null;
+    } else if (s.watchChain) {
+      s.watchChainClear ??= now;
+      if (now - s.watchChainClear >= CHAIN_CLEAR_AFTER) {
+        add(`watch-chain-ok:${now}`, 'watch-chain-ok', { checked: w.checked }, ['telegram']);
+        s.watchChain = null;
+        s.watchChainClear = null;
+      }
     }
-    s.watchChain = chainKey;
     const seen = new Set(s.watchIncidents ?? []);
     const fresh = w.incidents.filter((i) => !seen.has(i));
     if (fresh.length && s.watchIncidents) add(`watch-reorg:${fresh[0]}`, 'watch-reorg', { kinds: [...new Set(fresh.map((i) => i.split(':')[0]))] }, ['telegram']);
@@ -201,7 +213,7 @@ export function count(state, channel, now) {
 }
 
 /** The more important event wins when the X budget is tight. */
-export const PRIORITY = { 'watch-site': 0, 'watch-chain': 0, 'watch-reorg': 0, 'watch-site-ok': 1, majority: 0, 'majority-end': 1, halving: 0, 'halving-soon': 1, release: 2, milestone: 3, hashrate: 4, pool: 4, week: 5, summary: 5, stall: 6, resume: 6, 'hashrate-jump': 7, miner: 8, node: 8, digest: 8 };
+export const PRIORITY = { 'watch-site': 0, 'watch-chain': 0, 'watch-reorg': 0, 'watch-site-ok': 1, 'watch-chain-ok': 1, majority: 0, 'majority-end': 1, halving: 0, 'halving-soon': 1, release: 2, milestone: 3, hashrate: 4, pool: 4, week: 5, summary: 5, stall: 6, resume: 6, 'hashrate-jump': 7, miner: 8, node: 8, digest: 8 };
 
 /** Telegram at most this many messages an hour; small events above it are merged into one digest. */
 export const TELEGRAM_PER_HOUR = 5;

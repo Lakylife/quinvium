@@ -113,6 +113,12 @@ export function compose(e) {
       return { emoji: '⚠️', title: d.minority ? 'Most peers see a different chain than the public node' : 'A node follows another branch', link: `${EXPLORER}/network`, lines: [
         `${n(d.differ)} of ${n(d.checked)} checked peers have a different block at a settled height.`,
         d.minority ? 'The public node may be cut off. Wait for more confirmations before relying on new payments.' : 'Every node still verifies every block itself; this is a warning, not a change of the chain.',
+        'This channel posts again once all checked nodes agree.',
+      ] };
+    case 'watch-chain-ok':
+      return { emoji: '✅', title: 'All checked nodes follow the same chain again', link: `${EXPLORER}/network`, lines: [
+        d.checked > 0 ? `${n(d.checked)} of ${n(d.checked)} checked peers have the same block at a settled height.` : 'No checked peer has a different block at a settled height now.',
+        'Nothing changed on the chain; no action is needed.',
       ] };
     case 'watch-reorg':
       return { emoji: '⚠️', title: 'Deep chain reorganisation', link: `${EXPLORER}/network`, lines: [
