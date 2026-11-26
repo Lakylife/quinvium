@@ -6,6 +6,8 @@ import { readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { MERGEABLE, PRIORITY, TELEGRAM_PER_HOUR, allowed, batchSmall, count, detect, initialState } from './events.js';
 import { telegramMessage, xMessage } from './format.js';
 import { telegram, x } from './channels.js';
+import { dirname, join } from 'node:path';
+import { fromEnv as gatekeeperFromEnv } from './gatekeeper.js';
 
 const env = process.env;
 const args = new Set(process.argv.slice(2));
@@ -14,6 +16,8 @@ const STATE = env.ANNOUNCER_STATE || 'announcer-state.json';
 const INTERVAL = Math.max(30, Number(env.ANNOUNCER_INTERVAL || 60)) * 1000;
 const REPO = env.ANNOUNCER_GITHUB_REPO || 'Lakylife/quinvium';
 const DRY = args.has('--dry-run');
+// The community gatekeeper (src/gatekeeper.js) runs only when COMMUNITY_CHAT_ID is set; its offset lives next to the state file.
+const GATE_STATE = env.GATEKEEPER_STATE || join(dirname(STATE), 'gatekeeper.json');
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 
 /** How long an event may wait for a channel that fails. A late outage warning helps nobody. */
@@ -128,5 +132,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   log(`announcer: ${RPC}, state ${STATE}, telegram ${channels[0].dry ? 'dry run' : 'live'}, x ${channels[1].dry ? 'dry run' : 'live'}`);
   await tick();
   let busy = false;   // a slow round must not overlap with the next one
+  // Its own long poll beside the announcement loop; its private messages do not use the channel limits.
+  if (!args.has('--once')) gatekeeperFromEnv(env, { dry: DRY, stateFile: GATE_STATE, log })?.run().catch((e) => log('gatekeeper stopped:', e.message));
   if (!args.has('--once')) setInterval(() => { if (busy) return; busy = true; tick().catch((e) => log('error:', e.message)).finally(() => { busy = false; }); }, INTERVAL);
 }

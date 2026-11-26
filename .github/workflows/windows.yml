@@ -36,7 +36,7 @@ jobs:
       - run: node --test packages/bridge/test/relayer.test.js packages/bridge/test/bitcoin.test.js packages/bridge/test/btc-bridge.test.js
       - run: node --test packages/desktop/test/updater.test.cjs packages/desktop/test/cli-launcher.test.cjs packages/desktop/test/pool-offer.test.cjs packages/desktop/test/pool-url.test.cjs packages/desktop/test/release-check.test.cjs packages/desktop/test/share-node.test.cjs
       - run: node --test packages/explorer/test/design.test.mjs packages/explorer/test/i18n.test.mjs packages/explorer/test/pool-url.test.mjs packages/extension/test/i18n.test.cjs packages/extension/test/qr.test.cjs packages/extension/test/kinds.test.cjs packages/extension/test/local-rpc.test.cjs packages/extension/test/community-fallback.test.cjs
-      - run: node --test packages/announcer/test/announcer.test.js scripts/consensus-guard.test.mjs
+      - run: node --test packages/announcer/test/announcer.test.js packages/announcer/test/gatekeeper.test.js scripts/consensus-guard.test.mjs
       # Mobile layout: every website and Explorer page at phone, tablet and landscape sizes (no sideways scrolling, 16 px fields).
       - run: npx playwright install --with-deps chromium
       - run: node packages/website/src/build.mjs && node --test packages/website/test/i18n.test.mjs && node packages/website/test/mobile.mjs
