@@ -49,6 +49,19 @@ New members: after the bot approves someone, it welcomes them in General chat by
 
 Rights in the group: **Invite users via link** (approving), **Delete messages** (the "joined" messages), **Pin messages** and **Manage topics**. 📢 Announcements is a closed topic; without "Manage topics" Telegram refuses the post with `TOPIC_CLOSED`, which the log names.
 
+### Community assistant (AI answers)
+
+With `ANTHROPIC_API_KEY` set, the bot answers questions with Claude Haiku 5.5 (`claude-haiku-5-5`, effort low):
+
+- **When:** in the group, a message that mentions @quinviumbot or replies to one of its messages; in private, any message from a member of the group (others get the join instructions). Never in the topics linked as `announcements`, `mining` or `rules` (`/topic rules` in 📌 START HERE), never to bots or `/commands`.
+- **What it knows:** [`assistant/FAQ.md`](assistant/FAQ.md), condensed from the repository docs, plus live numbers from the announcer's last snapshot (height, hashrate, supply, 24-hour blocks and miners, reward, next halving, latest release). It never calls the RPC per question. Edit the FAQ and restart to change what it knows.
+- **Rules in its prompt:** short answers in the asker's language, no price predictions or financial advice, never asks for seed phrases, keys or coins, says when it does not know and points to 🆘 HELP or GitHub, never claims to be a person or an admin.
+- **Cost guards:** the rules and FAQ are a frozen, cached system prompt (about 2,300 tokens, read from the cache at $0.01 per million tokens); no chat history, only the question and the message it replies to, each cut to 1,500 characters; at most 5 answers per user per hour and `ASSISTANT_DAILY_LIMIT` (default 150) a day, kept in `assistant.json` next to the state file. Every answer logs its token counts and estimated USD, and the day's total; never the texts. Set a monthly spend limit in the Anthropic console as well.
+- **Estimated cost** (Haiku 5.5: $0.10 per million input tokens, $0.50 output, $0.01 cached reads, $0.125 cache writes): about $0.0003 per answer when the cache is warm, about $0.0006 when it is cold; roughly $0.30 to $0.60 per 1,000 answers, so the default cap costs at most about $0.10 a day.
+- Its replies do not count against the channel limits above.
+
+The SDK is a dependency of this package only: on the server run `npm ci --omit=dev` in `packages/announcer` once.
+
 How it runs: a long poll of `getUpdates` (`message`, `callback_query`, `chat_join_request`) beside the announcement loop. The update offset is saved in `gatekeeper.json` next to the state file (or `GATEKEEPER_STATE`), so a restart handles nothing twice. If the bot has a webhook, the gatekeeper says so in the log and stays off; it never deletes or sets a webhook. Its private messages do not count against the channel limits above. Repeated presses or `/start` within 5 seconds are ignored. The log shows user IDs only, never message texts or the token.
 
 ## Running

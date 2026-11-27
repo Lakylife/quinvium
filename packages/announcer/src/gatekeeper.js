@@ -4,6 +4,10 @@
 // Logs carry the user ID and Telegram's error description, never message texts or the token.
 import { readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { TOPIC_KEYS } from './events.js';
+import { trigger as assistantTrigger } from './assistant.js';
+
+/** Topic keys an admin can link: the posting topics plus rules, where the assistant stays quiet. */
+export const LINK_KEYS = [...TOPIC_KEYS, 'rules'];
 
 /** The rules shown before joining. Plain text (no parse_mode), so no character needs escaping. */
 export const COMMUNITY_RULES = `👋 Welcome to the Quinvium Community
@@ -88,7 +92,8 @@ export function botApi({ token, fetch: f = fetch }) {
  * @param {{ call: (method: string, params?: object, opts?: object) => Promise<any>, chatId: string|number,
  *           stateFile?: string|null, log?: Function, now?: () => number }} opts
  */
-export function gatekeeper({ call, chatId, stateFile = null, log = console.log, now = Date.now }) {
+export function gatekeeper({ call, chatId, stateFile = null, log = console.log, now = Date.now, assistant = null, me = null }) {
+  const members = new Map();   // user ID -> {ok, at}: group membership for private questions, cached 10 minutes
   const community = String(chatId);
   const lastSeen = new Map();   // user ID -> last handled callback or /start (ms)
   const pending = new Set();    // users we sent the rules to since this process started
@@ -149,18 +154,19 @@ export function gatekeeper({ call, chatId, stateFile = null, log = console.log, 
       return;
     }
     const m = typeof msg.text === 'string' ? /^\/topic(?:@\w+)?(?:\s+(\w+))?\s*$/i.exec(msg.text) : null;
-    if (!m || !(await isAdmin(msg))) return;
+    if (!m) return askAssistant(msg);
+    if (!(await isAdmin(msg))) return;
     const here = msg.is_topic_message ? msg.message_thread_id : null;
     const key = m[1]?.toLowerCase();
     let text;
-    if (key && TOPIC_KEYS.includes(key)) {
+    if (key && LINK_KEYS.includes(key)) {
       topics[key] = here;
       saveOffset();
       log(`gatekeeper: topic ${key} linked to ${here ?? 'General chat'} by user ${msg.from?.id ?? 'anonymous admin'}`);
       text = `✅ This topic now gets the bot's ${key} posts.`;
     } else {
-      const links = TOPIC_KEYS.map((k) => `${k}: ${topics[k] ? `topic ${topics[k]}` : 'General chat'}`).join('\n');
-      text = `Use /topic <key> inside a topic. Keys: ${TOPIC_KEYS.join(', ')}.\n\n${links}`;
+      const links = LINK_KEYS.map((k) => `${k}: ${topics[k] ? `topic ${topics[k]}` : k === 'rules' ? 'not linked' : 'General chat'}`).join('\n');
+      text = `Use /topic <key> inside a topic. Keys: ${LINK_KEYS.join(', ')}.\n\n${links}`;
     }
     await call('sendMessage', { chat_id: chatId, ...(here ? { message_thread_id: here } : {}), text, reply_parameters: { message_id: msg.message_id, allow_sending_without_reply: true } })
       .catch((e) => log(`gatekeeper: could not answer /topic: ${e.description || e.message}`));
@@ -220,10 +226,42 @@ export function gatekeeper({ call, chatId, stateFile = null, log = console.log, 
     }
   }
 
+  async function isMember(user) {
+    const hit = members.get(user);
+    if (hit && now() - hit.at < 600_000) return hit.ok;
+    let ok = false;
+    try {
+      const m = await call('getChatMember', { chat_id: chatId, user_id: user });
+      ok = ['creator', 'administrator', 'member'].includes(m?.status) || (m?.status === 'restricted' && m.is_member === true);
+    } catch { ok = false; }
+    members.set(user, { ok, at: now() });
+    if (members.size > 5000) members.clear();
+    return ok;
+  }
+
+  /** A question for the assistant: a mention or a reply to the bot in the group, or a private message from a member. */
+  async function askAssistant(msg) {
+    if (!assistant || !me) return;
+    const q = assistantTrigger(msg, { me, community, topics });
+    if (!q) return;
+    const user = msg.from?.id;
+    if (!user) return;
+    if (q.where === 'private' && !(await isMember(user))) {
+      if (!repeated(user)) await call('sendMessage', { chat_id: msg.chat.id, text: INTRO, link_preview_options: { is_disabled: true } }).catch(() => {});
+      return;
+    }
+    const text = await assistant.answer(user, q);
+    if (!text) return;
+    await call('sendMessage', {
+      chat_id: msg.chat.id, ...(msg.is_topic_message && msg.message_thread_id ? { message_thread_id: msg.message_thread_id } : {}),
+      text, link_preview_options: { is_disabled: true }, reply_parameters: { message_id: msg.message_id, allow_sending_without_reply: true },
+    }).catch((e) => log(`assistant: could not send the answer to user ${user}: ${e.description || e.message}`));
+  }
+
   async function onMessage(msg) {
     if (String(msg.chat?.id) === community) return onGroupMessage(msg);
     if (msg.chat?.type !== 'private' || typeof msg.text !== 'string') return;
-    if (!/^\/start(@\w+)?(\s|$)/.test(msg.text)) return;
+    if (!/^\/start(@\w+)?(\s|$)/.test(msg.text)) return askAssistant(msg);
     const user = msg.from?.id;
     if (!user || repeated(user)) return;
     try {
@@ -257,7 +295,10 @@ export function gatekeeper({ call, chatId, stateFile = null, log = console.log, 
       const info = await call('getWebhookInfo');
       if (info?.url) { log('gatekeeper: the bot has a webhook set, so join requests cannot be polled; gatekeeper is off (the webhook was left as it is)'); return 'webhook'; }
     } catch (e) { log(`gatekeeper: getWebhookInfo failed: ${e.description || e.message}`); }
-    log(`gatekeeper: on for chat ${community}`);
+    if (assistant && !me) {
+      try { me = await call('getMe'); } catch (e) { log(`gatekeeper: getMe failed, the assistant stays off: ${e.description || e.message}`); }
+    }
+    log(`gatekeeper: on for chat ${community}${assistant && me ? `, assistant on as @${me.username}` : ''}`);
     while (!stopped) {
       try { await pollOnce(); } catch (e) {
         // 409: another getUpdates is running (a second copy of the announcer) or a webhook was set meanwhile.
@@ -275,9 +316,9 @@ export function gatekeeper({ call, chatId, stateFile = null, log = console.log, 
  * Builds the gatekeeper from the environment, or returns null (and the announcer behaves as before) when
  * COMMUNITY_CHAT_ID is unset, or when there is no bot token / this is a dry run.
  */
-export function fromEnv(env, { dry = false, stateFile = null, log = console.log, fetch: f = fetch } = {}) {
+export function fromEnv(env, { dry = false, stateFile = null, log = console.log, fetch: f = fetch, assistant = null } = {}) {
   const chatId = env.COMMUNITY_CHAT_ID?.trim();
   if (!chatId) return null;
   if (dry || !env.TELEGRAM_BOT_TOKEN) { log('gatekeeper: COMMUNITY_CHAT_ID is set but there is no TELEGRAM_BOT_TOKEN (or this is a dry run), so it stays off'); return null; }
-  return gatekeeper({ call: botApi({ token: env.TELEGRAM_BOT_TOKEN, fetch: f }), chatId, stateFile, log });
+  return gatekeeper({ call: botApi({ token: env.TELEGRAM_BOT_TOKEN, fetch: f }), chatId, stateFile, log, assistant });
 }
