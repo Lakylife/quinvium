@@ -47,3 +47,28 @@ test('the download is kept only when GitHub and quinvium.com agree on the checks
   await assert.rejects(() => releases.download(r, dir, fake({ 'https://gh/sums': other, 'https://quinvium.com/downloads/2.16.0/SHA256SUMS.txt': other, 'https://gh/zip': file.toString() })), /does not match/);
   assert.ok(!fs.existsSync(`${path.join(dir, r.name)}.part`), 'a bad download leaves nothing behind');
 });
+
+test('the check falls back to a second fetch only when the first cannot connect', async () => {
+  const fail = (code) => async () => { throw new TypeError('fetch failed', { cause: Object.assign(new Error(`connect ${code}`), { code }) }); };
+  const ok = fake({ [GH]: release('v9.0.0') });
+  const found = await releases.latest('2.16.2', 'darwin', releases.withFallback(fail('UNABLE_TO_GET_ISSUER_CERT_LOCALLY'), ok));
+  assert.equal(found.version, '9.0.0');
+  let second = 0;
+  const http = releases.withFallback(async () => new Response('limit', { status: 403 }), async () => { second += 1; return new Response('{}'); });
+  await assert.rejects(releases.latest('2.16.2', 'darwin', http), /HTTP 403/);
+  assert.equal(second, 0, 'an HTTP answer is not retried');
+});
+
+test('a failed check explains itself instead of a bare "fetch failed"', async () => {
+  const cause = (code) => new TypeError('fetch failed', { cause: Object.assign(new Error(`boom ${code}`), { code }) });
+  const both = releases.withFallback(async () => { throw new Error('net::ERR_CERT_AUTHORITY_INVALID'); }, async () => { throw cause('SELF_SIGNED_CERT_IN_CHAIN'); });
+  const e = await releases.latest('2.16.2', 'win32', both).catch((x) => x);
+  assert.match(releases.describe(e), /antivirus or firewall/);
+  assert.match(releases.describe(e), /SELF_SIGNED_CERT_IN_CHAIN/);
+  assert.doesNotMatch(releases.describe(e), /^fetch failed$/);
+  assert.match(releases.describe(cause('ENOTFOUND')), /internet connection.*ENOTFOUND/);
+  assert.match(releases.describe(Object.assign(new Error('The operation was aborted due to timeout'), { name: 'TimeoutError' })), /did not answer in time/);
+  assert.match(releases.describe(new Error(`HTTP 403 ${GH}`)), /rate limit/);
+  assert.equal(releases.describe(new Error('HTTP 404 https://quinvium.com/downloads/x')), 'HTTP 404 https://quinvium.com/downloads/x');
+  assert.equal(releases.describe(new Error('The downloaded file does not match the published checksum. It was deleted.')), 'The downloaded file does not match the published checksum. It was deleted.');
+});
