@@ -8,6 +8,7 @@ import { telegramMessage, xMessage } from './format.js';
 import { telegram, x } from './channels.js';
 import { dirname, join } from 'node:path';
 import { fromEnv as gatekeeperFromEnv, readTopics } from './gatekeeper.js';
+import { DAILY_LIMIT, assistant as makeAssistant } from './assistant.js';
 
 const env = process.env;
 const args = new Set(process.argv.slice(2));
@@ -95,10 +96,25 @@ const channels = DRY ? [telegram({}), x({})] : [
   x({ apiKey: env.X_API_KEY, apiSecret: env.X_API_SECRET, accessToken: env.X_ACCESS_TOKEN, accessSecret: env.X_ACCESS_SECRET }),
 ];
 
+/** The last snapshot, for the assistant's live numbers (it never calls the RPC itself). */
+let lastSnap = null;
+
+/** The community assistant (src/assistant.js) runs only with ANTHROPIC_API_KEY; the SDK is loaded only then. */
+async function assistantFromEnv() {
+  if (!env.ANTHROPIC_API_KEY || DRY) return null;
+  const { default: Anthropic } = await import('@anthropic-ai/sdk');
+  return makeAssistant({
+    client: new Anthropic({ timeout: 30_000, maxRetries: 1 }),   // reads ANTHROPIC_API_KEY from the environment
+    facts: () => lastSnap, stateFile: join(dirname(STATE), 'assistant.json'), log,
+    dailyLimit: Math.max(0, Number(env.ASSISTANT_DAILY_LIMIT || DAILY_LIMIT)),
+  });
+}
+
 export async function tick() {
   const now = Math.floor(Date.now() / 1000);
   let snap;
   try { snap = await snapshot(); } catch (e) { log('RPC unavailable, staying silent:', e.message); return; }
+  lastSnap = snap;
   let state = load();
   if (!state) { save(initialState(snap, now)); log(`first run at block ${snap.height}: history is not announced`); return; }
   const found = detect(state, snap, now);
@@ -145,6 +161,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   await tick();
   let busy = false;   // a slow round must not overlap with the next one
   // Its own long poll beside the announcement loop; its private messages do not use the channel limits.
-  if (!args.has('--once')) gatekeeperFromEnv(env, { dry: DRY, stateFile: GATE_STATE, log })?.run().catch((e) => log('gatekeeper stopped:', e.message));
+  if (!args.has('--once')) {
+    const helper = await assistantFromEnv().catch((e) => { log('assistant: could not start:', e.message); return null; });
+    gatekeeperFromEnv(env, { dry: DRY, stateFile: GATE_STATE, log, assistant: helper })?.run().catch((e) => log('gatekeeper stopped:', e.message));
+  }
   if (!args.has('--once')) setInterval(() => { if (busy) return; busy = true; tick().catch((e) => log('error:', e.message)).finally(() => { busy = false; }); }, INTERVAL);
 }
