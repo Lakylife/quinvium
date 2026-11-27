@@ -150,6 +150,53 @@ export function hashimotoLight(cache, fullSize, headerHash, nonce) {
   return { mixDigest, result: keccak_256(concat(seed, mixDigest)) };
 }
 
+/**
+ * Generates the full DAG from the light cache. Only the CPU miner needs it (testnet); nodes verify with the cache.
+ * Yields to the event loop regularly so a miner process keeps its connection alive.
+ * @param {(done: number, total: number) => void} [onProgress]
+ * @returns {Promise<Uint32Array>} 16 words per 64-byte item
+ */
+export async function generateDataset(cache, fullSize, onProgress) {
+  const cacheWords = new Uint32Array(cache.buffer, cache.byteOffset, Math.floor(cache.length / 4));
+  const cacheRows = Math.floor(cache.length / HASH_BYTES);
+  const items = Math.floor(fullSize / HASH_BYTES);
+  const dataset = new Uint32Array(items * 16);
+  for (let i = 0; i < items; i++) {
+    datasetItem(cacheWords, cacheRows, i, dataset, i * 16);
+    if (i % 65536 === 65535) {
+      onProgress?.(i + 1, items);
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+  }
+  return dataset;
+}
+
+/**
+ * Full hashimoto computation over a generated DAG; the same result as hashimotoLight, many times faster.
+ * @param {Uint32Array} dataset from generateDataset
+ */
+export function hashimotoFull(dataset, headerHash, nonce) {
+  const pages = Math.floor(dataset.length / 32);
+  const seed = mixSeed(headerHash, nonce);
+  const seedCopy = seed.slice();
+  const seedWords = new Uint32Array(seedCopy.buffer, seedCopy.byteOffset, 16);
+  const mix = new Uint32Array(32);
+  for (let i = 0; i < 32; i++) mix[i] = seedWords[i % 16];
+
+  const seedHead = seedWords[0];
+  for (let i = 0; i < ACCESSES; i++) {
+    const base = (fnv((i ^ seedHead) >>> 0, mix[i % 32]) % pages) * 32;
+    for (let k = 0; k < 32; k++) mix[k] = (Math.imul(mix[k], FNV_PRIME) ^ dataset[base + k]) >>> 0;
+  }
+
+  const digest = new Uint32Array(8);
+  for (let i = 0; i < 32; i += 4) {
+    digest[i / 4] = fnv(fnv(fnv(mix[i], mix[i + 1]), mix[i + 2]), mix[i + 3]);
+  }
+  const mixDigest = new Uint8Array(digest.buffer.slice(0));
+  return { mixDigest, result: keccak_256(concat(seed, mixDigest)) };
+}
+
 /** Quick check without the cache: discards nonsensical blocks before full verification is computed. */
 export function quickResult(headerHash, nonce, mixHash) {
   return keccak_256(concat(mixSeed(headerHash, nonce), mixHash));

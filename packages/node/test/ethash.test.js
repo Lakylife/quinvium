@@ -94,3 +94,18 @@ test('the cache of the next epoch is computed in advance, not with its first blo
   assert.equal(near.caches.has(1), true, 'blízko hranice se cache epochy 1 už připravuje');
   await near.caches.get(1);
 });
+
+test('hashimotoFull over a generated DAG gives the same result as hashimotoLight', async () => {
+  const { generateDataset, hashimotoFull } = await import('../src/crypto/ethash.js');
+  const cache = await generateCache(64 * 1031, seedHash(0));
+  const fullSize = 128 * 4099;
+  const dataset = await generateDataset(cache, fullSize);
+  for (let n = 0; n < 20; n++) {
+    const header = keccak_256(new Uint8Array([n]));
+    const nonce = keccak_256(new Uint8Array([n, 1])).subarray(0, 8);
+    const light = hashimotoLight(cache, fullSize, header, nonce);
+    const full = hashimotoFull(dataset, header, nonce);
+    assert.equal(hex(full.mixDigest), hex(light.mixDigest));
+    assert.equal(hex(full.result), hex(light.result));
+  }
+});

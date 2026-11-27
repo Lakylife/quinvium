@@ -1,0 +1,32 @@
+# Small CPU miner that keeps the Quinvium testnet producing blocks (the testnet needs blocks for the
+# 60-day testing of upgrades, docs/GOVERNANCE.md). It mines into the testnet node's local Stratum
+# (127.0.0.1:3334) and never touches mainnet. It runs at the lowest priority and at most at CPUQuota,
+# so the mainnet node and the pool on the same server always come first. The difficulty adjusts to
+# whatever hashrate it has, so a small quota only means fewer hashes, not fewer blocks.
+# It runs from its own copy of the code in /opt/quinvium-testnet-miner, so deploying it never changes the code the mainnet node and the pool run.
+# Install: see docs/TESTNET-MINER.md.
+[Unit]
+Description=Quinvium testnet CPU miner
+After=quinvium-node.service quinvium-testnet.service
+Wants=network-online.target
+
+[Service]
+User=quinvium
+Group=quinvium
+WorkingDirectory=/opt/quinvium-testnet-miner
+ExecStart=/usr/bin/node /opt/quinvium-testnet-miner/packages/node/src/cpu-miner.js --stratum 127.0.0.1:3334 --key-file /var/lib/quinvium/testnet-miner/payout.key --dag-dir /var/lib/quinvium/testnet-miner
+Restart=always
+RestartSec=30
+Nice=19
+CPUSchedulingPolicy=idle
+IOSchedulingClass=idle
+CPUQuota=30%
+MemoryMax=2G
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+StateDirectory=quinvium/testnet-miner
+
+[Install]
+WantedBy=multi-user.target
