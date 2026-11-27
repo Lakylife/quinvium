@@ -128,6 +128,13 @@ export function compose(e) {
       return { emoji: '⚠️', title: 'Deep chain reorganisation', link: `${EXPLORER}/network`, lines: [
         `The public node saw: ${d.kinds.join(', ')}. Wait for more confirmations on large payments.`,
       ] };
+    case 'watch-fork-refused': {
+      const at = d.heights?.length ? ` at block ${d.heights.map(n).join(', ')}` : '';
+      return { emoji: '🛡', title: 'Foreign chain refused', link: `${EXPLORER}/network`, lines: [
+        `A node offered a chain that splits from ours${at}, deeper than the 256-block limit.`,
+        'The public node refused it and stays on the main chain. Nothing was rewritten; no action is needed.',
+      ] };
+    }
     case 'digest': {
       const count = (k) => d.items.filter((i) => i.kind === k).length;
       const parts = [count('miner') && `⛏ New miners: ${n(count('miner'))}`, count('node') && `🛰 New nodes: ${n(count('node'))}`, count('hashrate-jump') && '📈 Hashrate rising fast'].filter(Boolean);

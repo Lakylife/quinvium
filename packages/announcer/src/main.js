@@ -77,6 +77,8 @@ export async function snapshot() {
     watch: watch ? {
       differ: watch.chain?.differ ?? 0, checked: watch.chain?.checked ?? 0, minority: !!watch.chain?.minority,
       incidents: (watch.chain?.incidents ?? []).map((i) => `${i.kind}:${i.at}`),
+      // The block where a branch left ours, by incident key (a refused foreign branch is named with it).
+      heights: Object.fromEntries((watch.chain?.incidents ?? []).filter((i) => i.height != null).map((i) => [`${i.kind}:${i.at}`, i.height])),
       sites: (watch.sites?.changed ?? []).map((c) => c.url),
     } : null,
     majority: hour?.work && hour.blocks >= 20 ? (() => { const top = [...hour.items].sort((a, b) => b.work - a.work)[0]; return top ? { address: top.address, share: top.work / hour.work, blocks: top.blocks, of: hour.blocks } : null; })() : null,
