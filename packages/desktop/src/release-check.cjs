@@ -97,4 +97,49 @@ async function download(release, dir, fetchImpl = fetch, onProgress = () => {}) 
   return file;
 }
 
-module.exports = { latest, download, expectedSum, parseSums, assetName };
+/**
+ * A fetch that tries `primary` first and `secondary` when the first one cannot connect at all (an HTTP error is an answer
+ * and is not retried). In the app the primary is Electron's net.fetch: it uses the system proxy and the Windows or macOS
+ * certificate store, which Node's own fetch ignores, so an antivirus that inspects HTTPS or a company proxy no longer
+ * ends in a bare "fetch failed".
+ */
+function withFallback(primary, secondary) {
+  return async (url, init) => {
+    try { return await primary(url, init); } catch (first) {
+      if (!secondary) throw first;
+      try { return await secondary(url, init); } catch (second) { second.first = first; throw second; }
+    }
+  };
+}
+
+const HINTS = [
+  [/CERT|SELF_SIGNED|UNABLE_TO_VERIFY|UNABLE_TO_GET_ISSUER|ERR_CERT/i, 'the secure connection to GitHub was not trusted; an antivirus or firewall that inspects HTTPS may be in the way'],
+  [/ENOTFOUND|EAI_AGAIN|ERR_NAME_NOT_RESOLVED/i, 'GitHub could not be found; check the internet connection'],
+  [/ETIMEDOUT|TimeoutError|ERR_TIMED_OUT|aborted due to timeout/i, 'GitHub did not answer in time'],
+  [/ECONNREFUSED|ECONNRESET|ERR_CONNECTION|ERR_PROXY|ERR_INTERNET_DISCONNECTED|ENETUNREACH/i, 'the connection to GitHub was blocked or dropped; check the internet connection, proxy or firewall'],
+];
+
+/** The codes and messages of an error, its causes and, after a fallback, the first attempt's error. */
+function chain(e) {
+  const out = [];
+  for (const top of [e, e?.first]) {
+    for (let x = top, n = 0; x && n < 4; x = x.cause, n += 1) {
+      for (const v of [x.code, ['Error', 'TypeError'].includes(x.name) ? null : x.name, x.message]) if (v != null && !out.includes(String(v))) out.push(String(v));
+    }
+  }
+  return out;
+}
+
+/** A readable reason instead of a bare "fetch failed": the code hidden in `cause` and a hint what to check. */
+function describe(e) {
+  const message = String(e?.message ?? e);
+  if (/^HTTP 403 https:\/\/api\.github\.com\//.test(message)) return 'GitHub refused the request for now (rate limit); it is checked again later';
+  if (/^HTTP /.test(message)) return message;
+  const parts = chain(e);
+  const hint = HINTS.find(([re]) => re.test(parts.join(' ')));
+  const detail = parts.filter((v) => v !== 'fetch failed').slice(0, 3).join(', ');
+  if (!hint) return detail || 'no connection to GitHub';
+  return detail ? `${hint[1]} (${detail})` : hint[1];
+}
+
+module.exports = { latest, download, expectedSum, parseSums, assetName, withFallback, describe };
