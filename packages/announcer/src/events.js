@@ -181,7 +181,11 @@ export function detect(state, snap, now, { stallAfter = 600, summaryHour = 12 } 
     }
     const seen = new Set(s.watchIncidents ?? []);
     const fresh = w.incidents.filter((i) => !seen.has(i));
-    if (fresh.length && s.watchIncidents) add(`watch-reorg:${fresh[0]}`, 'watch-reorg', { kinds: [...new Set(fresh.map((i) => i.split(':')[0]))] }, ['telegram']);
+    // A refused foreign branch changed nothing: the node stayed on its chain. It gets a calm note, not the reorg warning.
+    const refused = fresh.filter((i) => i.startsWith('deep-fork-refused:'));
+    const rewrites = fresh.filter((i) => !refused.includes(i));
+    if (rewrites.length && s.watchIncidents) add(`watch-reorg:${rewrites[0]}`, 'watch-reorg', { kinds: [...new Set(rewrites.map((i) => i.split(':')[0]))] }, ['telegram']);
+    if (refused.length && s.watchIncidents) add(`watch-fork-refused:${refused[0]}`, 'watch-fork-refused', { heights: [...new Set(refused.map((i) => w.heights?.[i]).filter((h) => h != null))] }, ['telegram']);
     s.watchIncidents = w.incidents.slice(-64);
     const sites = [...w.sites].sort().join(' ');
     if (sites && sites !== s.watchSites) add(`watch-site:${now}`, 'watch-site', { urls: w.sites }, ['telegram']);
@@ -223,7 +227,7 @@ export function count(state, channel, now) {
 }
 
 /** The more important event wins when the X budget is tight. */
-export const PRIORITY = { 'watch-site': 0, 'watch-chain': 0, 'watch-reorg': 0, 'watch-site-ok': 1, 'watch-chain-ok': 1, majority: 0, 'majority-end': 1, 'node-count': 4, halving: 0, 'halving-soon': 1, release: 2, milestone: 3, hashrate: 4, pool: 4, week: 5, summary: 5, stall: 6, resume: 6, 'hashrate-jump': 7, miner: 8, node: 8, digest: 8 };
+export const PRIORITY = { 'watch-site': 0, 'watch-chain': 0, 'watch-reorg': 0, 'watch-fork-refused': 1, 'watch-site-ok': 1, 'watch-chain-ok': 1, majority: 0, 'majority-end': 1, 'node-count': 4, halving: 0, 'halving-soon': 1, release: 2, milestone: 3, hashrate: 4, pool: 4, week: 5, summary: 5, stall: 6, resume: 6, 'hashrate-jump': 7, miner: 8, node: 8, digest: 8 };
 
 /** Telegram at most this many messages an hour; small events above it are merged into one digest. */
 export const TELEGRAM_PER_HOUR = 5;
@@ -257,8 +261,8 @@ export const TOPIC = {
   release: 'announcements', halving: 'announcements', 'halving-soon': 'announcements', milestone: 'announcements',
   hashrate: 'announcements', summary: 'announcements', stall: 'announcements', resume: 'announcements',
   'watch-reorg': 'announcements', 'watch-site': 'announcements', 'watch-site-ok': 'announcements',
-  // Nodes & RPC: a node on another branch, its all-clear and node count milestones.
-  'watch-chain': 'nodes', 'watch-chain-ok': 'nodes', 'node-count': 'nodes',
+  // Nodes & RPC: a node on another branch, its all-clear, a refused foreign branch and node count milestones.
+  'watch-chain': 'nodes', 'watch-chain-ok': 'nodes', 'watch-fork-refused': 'nodes', 'node-count': 'nodes',
   // Mining & Pools: new miners, pools, hashrate swings, the majority warning and the 6-hour digest of small events.
   miner: 'mining', node: 'mining', pool: 'mining', 'hashrate-jump': 'mining', week: 'mining', majority: 'mining', 'majority-end': 'mining', digest: 'mining',
 };

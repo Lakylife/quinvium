@@ -29,7 +29,7 @@ test('every event kind has a topic among the known keys, and the routing follows
   for (const kind of Object.keys(PRIORITY)) assert.ok(TOPIC_KEYS.includes(TOPIC[kind]), `${kind} has a topic`);
   assert.ok(!Object.values(TOPIC).includes('rules'), 'nothing goes to Rules & Links');
   for (const k of ['release', 'halving', 'halving-soon', 'milestone', 'hashrate', 'summary', 'stall', 'resume', 'watch-reorg', 'watch-site', 'watch-site-ok']) assert.equal(TOPIC[k], 'announcements', k);
-  for (const k of ['watch-chain', 'watch-chain-ok', 'node-count']) assert.equal(TOPIC[k], 'nodes', k);
+  for (const k of ['watch-chain', 'watch-chain-ok', 'watch-fork-refused', 'node-count']) assert.equal(TOPIC[k], 'nodes', k);
   for (const k of ['miner', 'pool', 'hashrate-jump', 'majority', 'majority-end', 'digest']) assert.equal(TOPIC[k], 'mining', k);
 });
 

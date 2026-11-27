@@ -220,6 +220,25 @@ test('the node watch: a changed website file and a peer on another branch go to 
   assert.deepEqual(kinds(d), ['watch-reorg']);
 });
 
+test('a refused foreign branch gets a calm note, not the reorganisation warning', () => {
+  const s = initialState(snap(), T0);
+  const clean = { differ: 0, checked: 4, minority: false, incidents: [], heights: {}, sites: [] };
+  const a = detect(s, snap({ headTime: T0 + 50, watch: clean }), T0 + 60);
+  const refused = { ...clean, incidents: ['deep-fork-refused:7'], heights: { 'deep-fork-refused:7': 0 } };
+  const b = detect(a.state, snap({ headTime: T0 + 110, watch: refused }), T0 + 120);
+  assert.deepEqual(kinds(b), ['watch-fork-refused']);
+  const text = telegramMessage(b.events[0]).text;
+  assert.match(text, /Foreign chain refused/);
+  assert.match(text, /at block 0,/);
+  assert.match(text, /no action is needed/);
+  assert.doesNotMatch(text, /reorganisation|Wait for more confirmations/i);
+  assert.deepEqual(detect(b.state, snap({ headTime: T0 + 170, watch: refused }), T0 + 180).events, [], 'not repeated');
+  const both = { ...refused, incidents: ['deep-fork-refused:7', 'deep-fork-refused:8', 'finality-violation:9'], heights: { 'deep-fork-refused:7': 0, 'deep-fork-refused:8': 12 } };
+  const c = detect(b.state, snap({ headTime: T0 + 230, watch: both }), T0 + 240);
+  assert.deepEqual(kinds(c).sort(), ['watch-fork-refused', 'watch-reorg']);
+  assert.deepEqual(c.events.find((e) => e.kind === 'watch-reorg').data.kinds, ['finality-violation']);
+});
+
 test('small events never go out one by one: one digest at most every 6 hours, important news keeps its limit', async () => {
   const { batchSmall, DIGEST_EVERY } = await import('../src/events.js');
   const small = (key, kind = 'node') => ({ key, kind, data: {}, channels: ['telegram'], at: 0, done: [] });
