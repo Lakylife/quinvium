@@ -11,7 +11,7 @@ const CHAT = '-1005888614238';
 const ME = { id: 999, username: 'quinviumbot', is_bot: true };
 const quiet = () => {};
 const dir = mkdtempSync(join(tmpdir(), 'assistant-'));
-const usage = { input_tokens: 180, cache_read_input_tokens: 2300, cache_creation_input_tokens: 0, output_tokens: 250 };
+const usage = { input_tokens: 180, cache_read_input_tokens: 3500, cache_creation_input_tokens: 0, output_tokens: 250 };
 
 function fakeClient(reply = () => ({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Chain ID 52401.' }], usage })) {
   const calls = [];
@@ -52,6 +52,8 @@ test('the request: Haiku, low effort, a cached frozen system prompt, live number
   assert.doesNotMatch(p.system[0].text, /12,345|Etherscan/, 'no live numbers and no Etherscan in the cached part');
   assert.match(p.system[0].text, /52401/);
   assert.match(p.system[0].text, /financial advice/);
+  for (const topic of ['📌 RULES & LINKS', '🆘 HELP & SUPPORT', '⛏️ MINING CHAT', '🍴 Forks & Upgrades', '🇰🇷 Korean']) assert.ok(p.system[0].text.includes(topic), topic);
+  assert.ok(p.system[0].text.length < 16_000, 'the knowledge stays a few thousand tokens');
   assert.equal(p.messages.length, 1, 'no history');
   const content = p.messages[0].content;
   assert.match(content, /height 12,345/);
@@ -64,7 +66,7 @@ test('the request: Haiku, low effort, a cached frozen system prompt, live number
 
 test('one answer costs well under $0.002 with the cache, and the estimate follows the usage numbers', () => {
   assert.ok(cost(usage) < 0.0005, `cached answer ${cost(usage)}`);
-  const cold = { input_tokens: 180, cache_creation_input_tokens: 2300, output_tokens: 600 };
+  const cold = { input_tokens: 180, cache_creation_input_tokens: 3500, output_tokens: 600 };
   assert.ok(cost(cold) < 0.002, `first answer ${cost(cold)}`);
   assert.equal(cost({ input_tokens: 1_000_000 }), 0.10);
   assert.equal(cost({ output_tokens: 1_000_000 }), 0.50);
@@ -98,7 +100,7 @@ test('a refusal, an empty answer and an API error get a short polite reply; the 
   assert.equal(await empty.answer(5, { question: 'q' }), ERROR_TEXT);
   const failing = assistant({ client: { messages: { create: async () => { throw Object.assign(new Error('boom'), { status: 529 }); } } }, log: (l) => lines.push(l) });
   assert.equal(await failing.answer(5, { question: 'q' }), ERROR_TEXT);
-  assert.ok(lines.some((l) => /\$0\.000\d+/.test(l) && /cache read 2300/.test(l)));
+  assert.ok(lines.some((l) => /\$0\.000\d+/.test(l) && /cache read 3500/.test(l)));
   assert.ok(lines.every((l) => !l.includes('secret question text') && !l.includes('Chain ID')));
 });
 

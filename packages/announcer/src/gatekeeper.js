@@ -27,7 +27,7 @@ Quinvium (QU) is a decentralized proof-of-work network. There is no company, no 
 Press the button below to confirm you agree and join.`;
 
 export const AGREE_BUTTON = '✅ I have read and agree to the rules';
-export const WELCOME = 'Welcome to the Quinvium Community! You are in. Start with 📌 Rules & Links and 💬 General chat.';
+export const WELCOME = 'Welcome to the Quinvium Community! You are in. Start with 📌 RULES & LINKS, then say hi in 💬 GENERAL CHAT. Questions go to 🆘 HELP & SUPPORT.';
 export const INTRO = `Hi, I am the Quinvium bot. I post network news to the channel @Quinvium and let people into the Quinvium Community group.
 
 To join the group, open the invite link from the channel @Quinvium or from quinvium.com and send a join request. I will then send you the rules here.`;
@@ -46,7 +46,7 @@ export function welcomeText(users) {
   const rest = users.length - shown.length;
   const list = rest > 0 ? `${shown.join(', ')} and ${rest} other${rest === 1 ? '' : 's'}`
     : shown.length > 1 ? `${shown.slice(0, -1).join(', ')} and ${shown.at(-1)}` : shown[0];
-  return `👋 Welcome to the Quinvium Community, ${list}!\n\nStart with 📌 Rules &amp; Links. Questions go to 🆘 Help &amp; Support, mining to ⛏️ Mining &amp; Pools.`;
+  return `👋 Welcome to the Quinvium Community, ${list}!\n\nStart with 📌 RULES &amp; LINKS. Questions go to 🆘 HELP &amp; SUPPORT, mining talk to ⛏️ MINING CHAT, and other languages have their own topics (🇨🇿 Czech &amp; Slovak, 🇷🇺 Russian, 🇨🇳 Chinese, 🇯🇵 Japanese, 🇰🇷 Korean, 🌍 Other languages).`;
 }
 
 /**
