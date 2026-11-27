@@ -85,6 +85,10 @@ export function compose(e) {
       return { emoji: '🛰', title: 'New node joined the network', link: `${EXPLORER}/network`, lines: [
         `Node ${String(d.id).slice(0, 8)}…${d.agent ? ` running ${String(d.agent).replace('quintium-node/', 'v')}` : ''}. More nodes, more resilience.`,
       ] };
+    case 'node-count':
+      return { emoji: '🛰', title: `${n(d.count)} nodes on the network`, link: `${EXPLORER}/network`, lines: [
+        `The public node now sees ${n(d.seen)} verified Quinvium nodes. Every node checks every block itself; more nodes, more resilience.`,
+      ] };
     case 'hashrate-jump':
       return { emoji: '📈', title: 'Hashrate rising fast', link: `${EXPLORER}/charts`, lines: [
         `The Quinvium network is at ${hashrate(d.hashrate)}, up ${n((d.hashrate / d.base - 1) * 100)}% on its recent average.`,
@@ -113,7 +117,7 @@ export function compose(e) {
       return { emoji: '⚠️', title: d.minority ? 'Most peers see a different chain than the public node' : 'A node follows another branch', link: `${EXPLORER}/network`, lines: [
         `${n(d.differ)} of ${n(d.checked)} checked peers have a different block at a settled height.`,
         d.minority ? 'The public node may be cut off. Wait for more confirmations before relying on new payments.' : 'Every node still verifies every block itself; this is a warning, not a change of the chain.',
-        'This channel posts again once all checked nodes agree.',
+        'The bot posts again once all checked nodes agree.',
       ] };
     case 'watch-chain-ok':
       return { emoji: '✅', title: 'All checked nodes follow the same chain again', link: `${EXPLORER}/network`, lines: [

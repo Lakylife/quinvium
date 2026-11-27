@@ -17,6 +17,9 @@ export function milestonesUpTo(height) {
   return out;
 }
 
+/** Numbers of verified peer nodes worth a post (seen by the public node). */
+export const NODE_COUNTS = [5, 10, 25, 50, 100, 250, 500, 1000];
+
 const QU = (wei) => Number(BigInt(wei) / 10n ** 14n) / 1e4;   // 4 decimal places are enough for a post
 
 /** The first run only remembers the current situation; it must not announce the whole history at once. */
@@ -26,6 +29,7 @@ export function initialState(snap, now) {
     sent: Object.fromEntries([
       ...milestonesUpTo(snap.height).map((m) => `milestone:${m}`),
       ...Array.from({ length: Math.floor(snap.height / snap.halvingInterval) }, (_, i) => `halving:${i + 1}:done`),
+      ...NODE_COUNTS.filter((c) => c <= (snap.nodes?.length ?? 0)).map((c) => `nodes:${c}`),
     ].map((k) => [k, now])),
     hashrateRecord: snap.hashrate,
     hashrateAnnounced: 0,
@@ -37,6 +41,7 @@ export function initialState(snap, now) {
     counts: {},
     minerHeight: snap.height,           // miners whose first block is above this height are new
     nodes: (snap.nodes ?? []).map((n) => n.id).filter(Boolean).slice(0, NODE_MEMORY),
+    nodeCountsKnown: true,
     hashrateBase: snap.hashrate,
     jumpAnnounced: 0,
     weekMiners: 0,
@@ -127,6 +132,11 @@ export function detect(state, snap, now, { stallAfter = 600, summaryHour = 12 } 
     const known = new Set(s.nodes ?? []);
     for (const n of snap.nodes) if (n.id && !known.has(n.id)) { add(`node:${n.id}`, 'node', { id: n.id, agent: n.agent }, ['telegram']); known.add(n.id); }
     s.nodes = [...known].slice(-NODE_MEMORY);
+    // Node count milestones: how many verified nodes the public node sees at once. A state from before this feature
+    // remembers today's count first, so it does not announce counts that were reached long ago.
+    const reached = NODE_COUNTS.filter((c) => c <= snap.nodes.length);
+    if (!s.nodeCountsKnown) { for (const c of reached) s.sent[`nodes:${c}`] ??= now; s.nodeCountsKnown = true; }
+    for (const c of reached) add(`nodes:${c}`, 'node-count', { count: c, seen: snap.nodes.length }, ['telegram']);
   }
 
   // A sharp rise of the hashrate against its slow average (half-life of about a day): Telegram, at most every 6 hours.
@@ -213,7 +223,7 @@ export function count(state, channel, now) {
 }
 
 /** The more important event wins when the X budget is tight. */
-export const PRIORITY = { 'watch-site': 0, 'watch-chain': 0, 'watch-reorg': 0, 'watch-site-ok': 1, 'watch-chain-ok': 1, majority: 0, 'majority-end': 1, halving: 0, 'halving-soon': 1, release: 2, milestone: 3, hashrate: 4, pool: 4, week: 5, summary: 5, stall: 6, resume: 6, 'hashrate-jump': 7, miner: 8, node: 8, digest: 8 };
+export const PRIORITY = { 'watch-site': 0, 'watch-chain': 0, 'watch-reorg': 0, 'watch-site-ok': 1, 'watch-chain-ok': 1, majority: 0, 'majority-end': 1, 'node-count': 4, halving: 0, 'halving-soon': 1, release: 2, milestone: 3, hashrate: 4, pool: 4, week: 5, summary: 5, stall: 6, resume: 6, 'hashrate-jump': 7, miner: 8, node: 8, digest: 8 };
 
 /** Telegram at most this many messages an hour; small events above it are merged into one digest. */
 export const TELEGRAM_PER_HOUR = 5;
@@ -236,3 +246,19 @@ export function batchSmall(state, now) {
   state.queue = state.queue.filter((q) => !small.includes(q));
   state.queue.push({ key: `digest:${now}:${small.length}`, kind: 'digest', data: { items: small.map((q) => ({ kind: q.kind, data: q.data })) }, channels: ['telegram'], at: now, done: [], due: true });
 }
+
+/**
+ * Where each event goes in the forum group "Quinvium Community". Topic keys are linked to real topics by an admin with
+ * `/topic <key>` (see gatekeeper.js); an unlinked key goes to the group's General chat. Nothing ever goes to Rules & Links.
+ */
+export const TOPIC_KEYS = ['announcements', 'nodes', 'mining', 'general'];
+export const TOPIC = {
+  // Announcements: releases, halvings, milestones, records, the daily summary and urgent network alerts.
+  release: 'announcements', halving: 'announcements', 'halving-soon': 'announcements', milestone: 'announcements',
+  hashrate: 'announcements', summary: 'announcements', stall: 'announcements', resume: 'announcements',
+  'watch-reorg': 'announcements', 'watch-site': 'announcements', 'watch-site-ok': 'announcements',
+  // Nodes & RPC: a node on another branch, its all-clear and node count milestones.
+  'watch-chain': 'nodes', 'watch-chain-ok': 'nodes', 'node-count': 'nodes',
+  // Mining & Pools: new miners, pools, hashrate swings, the majority warning and the 6-hour digest of small events.
+  miner: 'mining', node: 'mining', pool: 'mining', 'hashrate-jump': 'mining', week: 'mining', majority: 'mining', 'majority-end': 'mining', digest: 'mining',
+};
