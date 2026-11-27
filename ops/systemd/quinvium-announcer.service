@@ -1,6 +1,7 @@
 # Quinvium announcer: posts important mainnet events to Telegram and X (packages/announcer).
 # Install: copy to /etc/systemd/system/, put the keys into /etc/quinvium/announcer.env (chmod 600, see
 # packages/announcer/announcer.env.example), then `systemctl daemon-reload && systemctl enable --now quinvium-announcer`.
+# With COMMUNITY_CHAT_ID in announcer.env it also approves join requests to the community group (see the README).
 # Without keys it runs in dry-run mode and only writes what it would post to the journal.
 [Unit]
 Description=Quinvium announcer (Telegram and X)
