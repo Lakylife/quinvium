@@ -3,6 +3,7 @@
 // Enabled only when COMMUNITY_CHAT_ID is set. Private messages here never count against the channel limits in events.js.
 // Logs carry the user ID and Telegram's error description, never message texts or the token.
 import { readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { TOPIC_KEYS } from './events.js';
 
 /** The rules shown before joining. Plain text (no parse_mode), so no character needs escaping. */
 export const COMMUNITY_RULES = `👋 Welcome to the Quinvium Community
@@ -28,6 +29,35 @@ export const INTRO = `Hi, I am the Quinvium bot. I post network news to the chan
 To join the group, open the invite link from the channel @Quinvium or from quinvium.com and send a join request. I will then send you the rules here.`;
 export const EXPIRED = 'This join request is no longer pending. Open the invite link from @Quinvium or quinvium.com again.';
 export const ALREADY = 'You are already a member of the Quinvium Community.';
+
+/** New members approved within this window are welcomed together in one message in General chat. */
+export const WELCOME_WINDOW_MS = 10 * 60 * 1000;
+const WELCOME_NAMES = 10;   // at most this many names, then "and N others"
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+/** The welcome text for a batch of new members: @username, or the first name as a mention when there is no username. */
+export function welcomeText(users) {
+  const name = (u) => (u.username ? `@${esc(u.username)}` : `<a href="tg://user?id=${Number(u.id)}">${esc(u.first_name || 'friend')}</a>`);
+  const shown = users.slice(0, WELCOME_NAMES).map(name);
+  const rest = users.length - shown.length;
+  const list = rest > 0 ? `${shown.join(', ')} and ${rest} other${rest === 1 ? '' : 's'}`
+    : shown.length > 1 ? `${shown.slice(0, -1).join(', ')} and ${shown.at(-1)}` : shown[0];
+  return `👋 Welcome to the Quinvium Community, ${list}!\n\nStart with 📌 Rules &amp; Links. Questions go to 🆘 Help &amp; Support, mining to ⛏️ Mining &amp; Pools.`;
+}
+
+/**
+ * The topic links an admin made with /topic, from the gatekeeper's state file, with COMMUNITY_TOPICS
+ * ("announcements=12,mining=34") on top. A key without a link (or linked to null) means General chat.
+ */
+export function readTopics(stateFile, override = '') {
+  let topics = {};
+  if (stateFile) { try { topics = JSON.parse(readFileSync(stateFile, 'utf8')).topics ?? {}; } catch { /* none yet */ } }
+  for (const part of String(override).split(',')) {
+    const m = /^\s*(\w+)\s*=\s*(\d+)\s*$/.exec(part);
+    if (m && TOPIC_KEYS.includes(m[1])) topics[m[1]] = Number(m[2]);
+  }
+  return topics;
+}
 
 /** Repeated button presses or /start from the same user within this window are ignored. */
 export const REPEAT_MS = 5000;
@@ -63,12 +93,77 @@ export function gatekeeper({ call, chatId, stateFile = null, log = console.log, 
   const lastSeen = new Map();   // user ID -> last handled callback or /start (ms)
   const pending = new Set();    // users we sent the rules to since this process started
   let offset = 0;
-  if (stateFile) { try { offset = Number(JSON.parse(readFileSync(stateFile, 'utf8')).offset) || 0; } catch { /* first run */ } }
+  let topics = {};                      // topic key -> message_thread_id (null: General chat)
+  let welcome = { since: null, users: [] };
+  if (stateFile) {
+    try {
+      const saved = JSON.parse(readFileSync(stateFile, 'utf8'));
+      offset = Number(saved.offset) || 0;
+      topics = saved.topics ?? {};
+      if (Array.isArray(saved.welcome?.users)) welcome = saved.welcome;
+    } catch { /* first run */ }
+  }
 
+  /** Offset, topic links and the waiting welcome, written atomically; the announcer reads the topic links from here. */
   function saveOffset() {
     if (!stateFile) return;
-    writeFileSync(`${stateFile}.tmp`, JSON.stringify({ offset }));
+    writeFileSync(`${stateFile}.tmp`, JSON.stringify({ offset, topics, welcome }));
     renameSync(`${stateFile}.tmp`, stateFile);
+  }
+  const thread = (key) => (topics[key] ? { message_thread_id: topics[key] } : {});
+
+  function queueWelcome(from) {
+    if (!from?.id || welcome.users.some((u) => u.id === from.id)) return;
+    welcome.since ??= now();
+    welcome.users.push({ id: from.id, username: from.username ?? null, first_name: from.first_name ?? null });
+    saveOffset();
+  }
+
+  /** Sends the waiting welcome once the window is over. A failure is retried on the next poll, for at most an hour. */
+  async function flushWelcome() {
+    if (!welcome.users.length || now() - welcome.since < WELCOME_WINDOW_MS) return false;
+    try {
+      await call('sendMessage', { chat_id: chatId, ...thread('general'), text: welcomeText(welcome.users), parse_mode: 'HTML', link_preview_options: { is_disabled: true } });
+      log(`gatekeeper: welcomed ${welcome.users.length} new member(s)`);
+    } catch (e) {
+      log(`gatekeeper: welcome failed: ${e.description || e.message}`);
+      if (now() - welcome.since < WELCOME_WINDOW_MS + 3600_000) return false;
+    }
+    welcome = { since: null, users: [] };
+    saveOffset();
+    return true;
+  }
+
+  async function isAdmin(msg) {
+    if (msg.sender_chat && String(msg.sender_chat.id) === community) return true;   // an anonymous admin writes as the group
+    if (!msg.from?.id) return false;
+    try { return ['creator', 'administrator'].includes((await call('getChatMember', { chat_id: chatId, user_id: msg.from.id }))?.status); }
+    catch { return false; }
+  }
+
+  /** In the community group: delete "X joined" service messages, and let an admin link a topic with /topic <key>. */
+  async function onGroupMessage(msg) {
+    if (Array.isArray(msg.new_chat_members) && msg.new_chat_members.length) {
+      await call('deleteMessage', { chat_id: chatId, message_id: msg.message_id })
+        .catch((e) => log(`gatekeeper: could not delete a join message (the bot needs the "Delete messages" right): ${e.description || e.message}`));
+      return;
+    }
+    const m = typeof msg.text === 'string' ? /^\/topic(?:@\w+)?(?:\s+(\w+))?\s*$/i.exec(msg.text) : null;
+    if (!m || !(await isAdmin(msg))) return;
+    const here = msg.is_topic_message ? msg.message_thread_id : null;
+    const key = m[1]?.toLowerCase();
+    let text;
+    if (key && TOPIC_KEYS.includes(key)) {
+      topics[key] = here;
+      saveOffset();
+      log(`gatekeeper: topic ${key} linked to ${here ?? 'General chat'} by user ${msg.from?.id ?? 'anonymous admin'}`);
+      text = `✅ This topic now gets the bot's ${key} posts.`;
+    } else {
+      const links = TOPIC_KEYS.map((k) => `${k}: ${topics[k] ? `topic ${topics[k]}` : 'General chat'}`).join('\n');
+      text = `Use /topic <key> inside a topic. Keys: ${TOPIC_KEYS.join(', ')}.\n\n${links}`;
+    }
+    await call('sendMessage', { chat_id: chatId, ...(here ? { message_thread_id: here } : {}), text, reply_parameters: { message_id: msg.message_id, allow_sending_without_reply: true } })
+      .catch((e) => log(`gatekeeper: could not answer /topic: ${e.description || e.message}`));
   }
 
   /** True when this user was handled a moment ago; the map is pruned so it cannot grow without bound. */
@@ -117,6 +212,7 @@ export function gatekeeper({ call, chatId, stateFile = null, log = console.log, 
     }
     pending.delete(user);
     log(`gatekeeper: approved user ${user}`);
+    queueWelcome(cq.from);
     await call('answerCallbackQuery', { callback_query_id: cq.id, text: 'Welcome!' }).catch(() => {});
     if (cq.message) {
       await call('editMessageText', { chat_id: cq.message.chat.id, message_id: cq.message.message_id, text: WELCOME })
@@ -125,6 +221,7 @@ export function gatekeeper({ call, chatId, stateFile = null, log = console.log, 
   }
 
   async function onMessage(msg) {
+    if (String(msg.chat?.id) === community) return onGroupMessage(msg);
     if (msg.chat?.type !== 'private' || typeof msg.text !== 'string') return;
     if (!/^\/start(@\w+)?(\s|$)/.test(msg.text)) return;
     const user = msg.from?.id;
@@ -149,6 +246,7 @@ export function gatekeeper({ call, chatId, stateFile = null, log = console.log, 
       offset = u.update_id + 1;
       saveOffset();
     }
+    await flushWelcome();
     return updates.length;
   }
 
@@ -170,7 +268,7 @@ export function gatekeeper({ call, chatId, stateFile = null, log = console.log, 
     return 'stopped';
   }
 
-  return { handle, pollOnce, run, stop: () => { stopped = true; }, get offset() { return offset; } };
+  return { handle, pollOnce, flushWelcome, run, stop: () => { stopped = true; }, get offset() { return offset; }, get topics() { return { ...topics }; }, get welcome() { return welcome; } };
 }
 
 /**

@@ -32,6 +32,23 @@ Setup in Telegram:
 - Add the bot to the group as an administrator with only the right **Invite users via link** (that right is what allows approving join requests).
 - Edit the group's invite link and turn on **Request admin approval**. Share only that link.
 
+### Posts in the group's topics
+
+With `COMMUNITY_CHAT_ID` set, every Telegram post goes to the group instead of the channel, each into its topic. The channel [@Quinvium](https://t.me/Quinvium) then gets nothing from the bot (its pinned join post is kept by hand); `TELEGRAM_ANNOUNCE_TO=channel` switches back. X is unchanged. The limits stay: at most 5 messages an hour and 20 a day, urgent warnings first, small events in a digest every 6 hours.
+
+| Topic key | Topic in the group | What the bot posts there |
+| --- | --- | --- |
+| `announcements` | 📢 Announcements | Releases, halvings, height milestones, hashrate records, the daily summary, block outage and recovery, deep reorganisation, changed website or Explorer files |
+| `nodes` | 🖥️ Nodes & RPC | A node on another branch and the all-clear, node count milestones (5, 10, 25, 50, 100, 250, 500, 1000 verified nodes) |
+| `mining` | ⛏️ Mining & Pools | New miners, new pools, hashrate swings, a miner with over half of the work, the weekly new-miner count, the 6-hour digest |
+| `general` | 💬 General chat | Only the welcome for new members |
+
+The bot never posts in 📌 Rules & Links. To link a topic, an admin writes `/topic announcements` (or `nodes`, `mining`, `general`) inside that topic; `/topic` alone lists the links. Until a key is linked its posts go to the group's General chat. The links are kept in `gatekeeper.json`; `COMMUNITY_TOPICS=announcements=2,mining=4` can set them by hand.
+
+New members: after the bot approves someone, it welcomes them in General chat by @username (or first name). Everyone approved within 10 minutes shares one welcome message. The bot deletes Telegram's "X joined the group" messages.
+
+Rights in the group: **Invite users via link** (approving), **Delete messages** (the "joined" messages), **Pin messages** and **Manage topics**. 📢 Announcements is a closed topic; without "Manage topics" Telegram refuses the post with `TOPIC_CLOSED`, which the log names.
+
 How it runs: a long poll of `getUpdates` (`message`, `callback_query`, `chat_join_request`) beside the announcement loop. The update offset is saved in `gatekeeper.json` next to the state file (or `GATEKEEPER_STATE`), so a restart handles nothing twice. If the bot has a webhook, the gatekeeper says so in the log and stays off; it never deletes or sets a webhook. Its private messages do not count against the channel limits above. Repeated presses or `/start` within 5 seconds are ignored. The log shows user IDs only, never message texts or the token.
 
 ## Running

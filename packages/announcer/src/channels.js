@@ -1,22 +1,36 @@
 // Sending to Telegram and X. Without the keys a channel only prints what it would send (dry run).
 import { createHmac, randomBytes } from 'node:crypto';
 
-/** Telegram Bot API: the bot must be an administrator of the channel. */
+/**
+ * Telegram Bot API: the bot must be an administrator of the channel or group. In a forum group a message may name its
+ * topic (`msg.thread`, the topic's message_thread_id); without one it goes to the group's General chat.
+ */
 export function telegram({ token, chat, fetch: f = fetch, log = console.log }) {
-  if (!token || !chat) return { name: 'telegram', dry: true, send: async (msg) => log(`[dry-run telegram]\n${msg.text}\n`) };
+  if (!token || !chat) return { name: 'telegram', dry: true, send: async (msg) => log(`[dry-run telegram${msg.thread ? ` topic ${msg.thread}` : ''}]\n${msg.text}\n`) };
+  const post = async (msg, thread) => {
+    const r = await f(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chat, text: msg.text, parse_mode: 'HTML', ...(thread ? { message_thread_id: thread } : {}),
+        link_preview_options: msg.link ? { url: msg.link, prefer_large_media: true, show_above_text: false } : { is_disabled: true },
+      }),
+    });
+    const j = await r.json().catch(() => ({}));
+    return { ok: r.ok && j.ok, status: r.status, description: j.description ?? 'error' };   // the token is never printed
+  };
   return {
     name: 'telegram', dry: false,
-    /** @param {{text: string, link?: string}} msg HTML text; the link is shown as a preview card above the text. */
+    /** @param {{text: string, link?: string, thread?: number}} msg HTML text; the link is shown as a preview card above the text. */
     async send(msg) {
-      const r = await f(`https://api.telegram.org/bot${token}/sendMessage`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chat, text: msg.text, parse_mode: 'HTML',
-          link_preview_options: msg.link ? { url: msg.link, prefer_large_media: true, show_above_text: false } : { is_disabled: true },
-        }),
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok || !j.ok) throw new Error(`telegram ${r.status}: ${j.description ?? 'error'}`);   // the token is never printed
+      let res = await post(msg, msg.thread);
+      if (!res.ok && msg.thread && /TOPIC_CLOSED/i.test(res.description)) {
+        throw new Error(`telegram ${res.status}: topic ${msg.thread} is closed and the bot may not write there; give it the "Manage topics" right in the group (${res.description})`);
+      }
+      if (!res.ok && msg.thread && /thread not found|TOPIC_DELETED|TOPIC_ID_INVALID/i.test(res.description)) {
+        log(`telegram: topic ${msg.thread} no longer exists (${res.description}); posting to General chat instead, link the topic again with /topic`);
+        res = await post(msg, undefined);
+      }
+      if (!res.ok) throw new Error(`telegram ${res.status}: ${res.description}`);
     },
   };
 }

@@ -3,11 +3,11 @@
 // Usage: node packages/announcer/src/main.js [--once] [--dry-run]
 // Keys come only from environment variables (see packages/announcer/README.md); without them the channel only prints.
 import { readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { MERGEABLE, PRIORITY, TELEGRAM_PER_HOUR, allowed, batchSmall, count, detect, initialState } from './events.js';
+import { MERGEABLE, PRIORITY, TELEGRAM_PER_HOUR, TOPIC, allowed, batchSmall, count, detect, initialState } from './events.js';
 import { telegramMessage, xMessage } from './format.js';
 import { telegram, x } from './channels.js';
 import { dirname, join } from 'node:path';
-import { fromEnv as gatekeeperFromEnv } from './gatekeeper.js';
+import { fromEnv as gatekeeperFromEnv, readTopics } from './gatekeeper.js';
 
 const env = process.env;
 const args = new Set(process.argv.slice(2));
@@ -18,6 +18,18 @@ const REPO = env.ANNOUNCER_GITHUB_REPO || 'Lakylife/quinvium';
 const DRY = args.has('--dry-run');
 // The community gatekeeper (src/gatekeeper.js) runs only when COMMUNITY_CHAT_ID is set; its offset lives next to the state file.
 const GATE_STATE = env.GATEKEEPER_STATE || join(dirname(STATE), 'gatekeeper.json');
+// Where Telegram posts go. With COMMUNITY_CHAT_ID they go to the forum group, each into its topic (TOPIC in events.js,
+// linked by an admin with /topic), and the channel gets nothing. TELEGRAM_ANNOUNCE_TO=channel posts to TELEGRAM_CHAT again.
+const COMMUNITY = env.COMMUNITY_CHAT_ID?.trim() || null;
+const TO_COMMUNITY = !!COMMUNITY && (env.TELEGRAM_ANNOUNCE_TO || 'community') !== 'channel';
+export const TELEGRAM_TARGET = TO_COMMUNITY ? COMMUNITY : env.TELEGRAM_CHAT || '@Quinvium';
+/** The Telegram message for an event, with its topic in the community group. */
+export function telegramFor(q) {
+  const msg = telegramMessage(q);
+  if (!TO_COMMUNITY) return msg;
+  const thread = readTopics(GATE_STATE, env.COMMUNITY_TOPICS)[TOPIC[q.kind] ?? 'general'];
+  return thread ? { ...msg, thread } : msg;
+}
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 
 /** How long an event may wait for a channel that fails. A late outage warning helps nobody. */
@@ -79,7 +91,7 @@ function save(state) {
 }
 
 const channels = DRY ? [telegram({}), x({})] : [
-  telegram({ token: env.TELEGRAM_BOT_TOKEN, chat: env.TELEGRAM_CHAT || '@Quinvium' }),
+  telegram({ token: env.TELEGRAM_BOT_TOKEN, chat: TELEGRAM_TARGET }),
   x({ apiKey: env.X_API_KEY, apiSecret: env.X_API_SECRET, accessToken: env.X_ACCESS_TOKEN, accessSecret: env.X_ACCESS_SECRET }),
 ];
 
@@ -107,7 +119,7 @@ export async function tick() {
       if (ch.name === 'telegram' && MERGEABLE.has(q.kind) && !q.due) continue;   // waits for the next digest
       if (!allowed(state, ch.name, now)) { log(`${ch.name}: limit reached, ${q.key} skipped`); q.done.push(ch.name); continue; }
       try {
-        await ch.send(ch.name === 'telegram' ? telegramMessage(q) : xMessage(q));
+        await ch.send(ch.name === 'telegram' ? telegramFor(q) : xMessage(q));
         if (!ch.dry) count(state, ch.name, now);
         if (ch.name === 'telegram') state.tgHour.n += 1;
         q.done.push(ch.name);
@@ -129,7 +141,7 @@ export async function tick() {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  log(`announcer: ${RPC}, state ${STATE}, telegram ${channels[0].dry ? 'dry run' : 'live'}, x ${channels[1].dry ? 'dry run' : 'live'}`);
+  log(`announcer: ${RPC}, state ${STATE}, telegram ${channels[0].dry ? 'dry run' : 'live'} to ${TO_COMMUNITY ? 'the community group' : TELEGRAM_TARGET}, x ${channels[1].dry ? 'dry run' : 'live'}`);
   await tick();
   let busy = false;   // a slow round must not overlap with the next one
   // Its own long poll beside the announcement loop; its private messages do not use the channel limits.

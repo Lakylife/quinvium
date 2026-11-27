@@ -110,7 +110,7 @@ test('polling asks for join requests, buttons and messages, and keeps the offset
   assert.equal(await g.pollOnce(0), 2);
   const [poll] = api.of('getUpdates');
   assert.deepEqual([...poll.params.allowed_updates].sort(), ['callback_query', 'chat_join_request', 'message']);
-  assert.deepEqual(JSON.parse(readFileSync(stateFile, 'utf8')), { offset: 42 });
+  assert.equal(JSON.parse(readFileSync(stateFile, 'utf8')).offset, 42);
   const again = gatekeeper({ call: api.call, chatId: CHAT, stateFile, log: quiet });
   assert.equal(again.offset, 42);
   assert.equal(await again.pollOnce(0), 0, 'nothing is handled twice');
