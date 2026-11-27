@@ -3,3 +3,6 @@ contact_links:
   - name: Security vulnerability
     url: https://github.com/Lakylife/quinvium/security/advisories/new
     about: Report vulnerabilities privately, not as a public issue.
+  - name: Idea for a network upgrade (hard fork)
+    url: https://github.com/Lakylife/quinvium/discussions/categories/network-upgrades
+    about: Propose and discuss changes to the consensus rules before they become a QIP.

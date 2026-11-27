@@ -19,6 +19,8 @@ Everything else (wallets, Explorer, RPC methods, networking performance, the web
 
 Every consensus change needs a **Quinvium Improvement Proposal (QIP)** in [`docs/qips`](qips/). Template: [`qips/qip-template.md`](qips/qip-template.md).
 
+Ideas come first. Before a QIP is written, anyone can propose and discuss an idea in [GitHub Discussions, category Network upgrades](https://github.com/Lakylife/quinvium/discussions/categories/network-upgrades), using its template. Ideas for one upgrade are collected in a fixed round; at its end the maintainers publish which ideas move on to a QIP and why the others do not. Reactions show interest but are not a vote: an idea goes ahead on technical merit and safety. Anyone can then write the QIP, not only the author of the idea.
+
 | Stage | What happens | Minimum time |
 | --- | --- | --- |
 | Draft | Pull request with the QIP: motivation, exact rules, security considerations, test vectors, backwards compatibility | none |

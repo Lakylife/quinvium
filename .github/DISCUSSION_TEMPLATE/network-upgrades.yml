@@ -1,0 +1,49 @@
+title: "[Upgrade idea] "
+labels: ["upgrade-idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One idea per discussion. The 64 million QU cap, the halving schedule and "no premine" are fixed, and no change may add an owner, admin key, pause function or fee recipient. See [docs/GOVERNANCE.md](https://github.com/Lakylife/quinvium/blob/main/docs/GOVERNANCE.md).
+        Ideas that do not change consensus (wallets, Explorer, RPC, pool server, docs) do not need a fork: open a normal issue or pull request instead.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is wrong or missing today, and who it affects.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should change. Link an EIP if one exists.
+    validations:
+      required: true
+  - type: dropdown
+    id: consensus
+    attributes:
+      label: Does it change consensus?
+      options:
+        - "Yes: block validity, rewards, fees, EVM or system contracts (needs a fork)"
+        - "No: wallet, Explorer, RPC, pool server, contracts deployed by users, docs"
+        - "Not sure"
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and trade-offs
+      description: Attacks, effect on miners, wallets, contracts and older nodes, legal or exchange impact. Does it add any trust?
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: Checks
+      options:
+        - label: This does not change the supply cap or the halving schedule, and adds no premine, owner, admin key, pause function or fee recipient.
+          required: true
+        - label: I am willing to help write the QIP or test it on testnet.
