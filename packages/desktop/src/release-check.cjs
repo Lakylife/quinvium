@@ -13,6 +13,13 @@ const SITE = 'https://quinvium.com/downloads';
 const TIMEOUT_MS = 15_000;
 const MAX_NOTES = 4000;
 
+/** A readable reason: Node's fetch only says "fetch failed" and hides the real network error in `cause`. */
+function reason(e) {
+  const c = e?.cause;
+  const detail = c ? [c.code, c.message].filter(Boolean).join(' ') : '';
+  return detail && !String(e.message).includes(detail) ? `${e.message} (${detail})` : String(e?.message ?? e);
+}
+
 /** The file name of this computer's build in a release. */
 function assetName(version, platform) {
   return platform === 'win32' ? `Quinvium-${version}-Windows-x64.exe` : `Quinvium-${version}-macOS-x64.zip`;
@@ -45,7 +52,8 @@ async function latest(current, platform, fetchImpl = fetch) {
   const name = assetName(version, platform);
   const asset = (release.assets ?? []).find((a) => a.name === name);
   const sums = (release.assets ?? []).find((a) => a.name === 'SHA256SUMS.txt');
-  if (!asset || !sums) return null;
+  // Say so instead of claiming this is the latest version.
+  if (!asset || !sums) throw new Error(`Version ${version} is out, but its release has no ${asset ? 'SHA256SUMS.txt' : name}. Download it from ${release.html_url}`);
   return {
     version, name, size: asset.size, url: asset.browser_download_url, sums: sums.browser_download_url,
     page: release.html_url, notes: String(release.body ?? '').slice(0, MAX_NOTES),
@@ -97,4 +105,4 @@ async function download(release, dir, fetchImpl = fetch, onProgress = () => {}) 
   return file;
 }
 
-module.exports = { latest, download, expectedSum, parseSums, assetName };
+module.exports = { latest, download, expectedSum, parseSums, assetName, reason };

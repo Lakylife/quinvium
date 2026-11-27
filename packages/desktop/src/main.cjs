@@ -1,5 +1,5 @@
 // Main process of the Quinvium app: manages the node, the miner and the window.
-const { app, BrowserWindow, ipcMain, Menu, nativeImage, nativeTheme, Notification, powerSaveBlocker, shell, Tray } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, nativeImage, nativeTheme, net, Notification, powerSaveBlocker, shell, Tray } = require('electron');
 const { spawn, execFile } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -668,15 +668,18 @@ async function checkPayments() {
 }
 setInterval(() => { checkPayments().catch(() => {}); }, PAYMENT_CHECK_MS);
 
+// Requests to GitHub and quinvium.com go through Chromium's network stack: it uses the system proxy, VPN and
+// certificates like a browser does. Node's own fetch ignores them and on such networks only says "fetch failed".
+const webFetch = (url, options) => net.fetch(url, options);
 /** New versions from GitHub, checked on start and every six hours; one notification per version. */
 const RELEASE_CHECK_MS = 6 * 3_600_000;
 const release = { latest: null, checked: null, error: null, downloading: null, file: null };
 async function checkRelease() {
   try {
-    release.latest = await releases.latest(app.getVersion(), process.platform);
+    release.latest = await releases.latest(app.getVersion(), process.platform, webFetch);
     release.checked = Date.now();
     release.error = null;
-  } catch (e) { release.error = e.message; }
+  } catch (e) { release.error = releases.reason(e); }
   if (release.latest && loadSettings().notifiedVersion !== release.latest.version) {
     saveSettings({ notifiedVersion: release.latest.version });
     notify('updates', tr('New version {v}', { v: release.latest.version }), tr('Quinvium {v} is available. Open Settings to download it.', { v: release.latest.version }));
@@ -692,10 +695,10 @@ ipcMain.handle('release:download', async () => {
   release.downloading = { got: 0, total: release.latest.size };
   release.error = null;
   try {
-    release.file = await releases.download(release.latest, app.getPath('downloads'), fetch, (got, total) => { release.downloading = { got, total }; });
+    release.file = await releases.download(release.latest, app.getPath('downloads'), webFetch, (got, total) => { release.downloading = { got, total }; });
     shell.showItemInFolder(release.file);
   } catch (e) {
-    release.error = e.message;
+    release.error = releases.reason(e);
   } finally {
     release.downloading = null;
     send({ type: 'state' });

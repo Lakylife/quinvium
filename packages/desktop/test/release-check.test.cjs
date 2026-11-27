@@ -29,7 +29,9 @@ test('checksum lists are read in the usual format', () => {
 test('only a newer, final release with a build for this computer is offered', async () => {
   assert.equal(await releases.latest('2.15.1', 'darwin', fake({ [GH]: release('v2.15.1') })), null, 'same version');
   assert.equal(await releases.latest('2.15.1', 'darwin', fake({ [GH]: release('v2.16.0', { prerelease: true }) })), null, 'pre-release');
-  assert.equal(await releases.latest('2.15.1', 'win32', fake({ [GH]: release('v2.16.0') })), null, 'no Windows build in this release');
+  await assert.rejects(releases.latest('2.15.1', 'win32', fake({ [GH]: release('v2.16.0') })), /no Quinvium-2\.16\.0-Windows-x64\.exe/, 'no Windows build in this release is reported, not hidden');
+  const e = Object.assign(new TypeError('fetch failed'), { cause: Object.assign(new Error('getaddrinfo ENOTFOUND api.github.com'), { code: 'ENOTFOUND' }) });
+  assert.equal(releases.reason(e), 'fetch failed (ENOTFOUND getaddrinfo ENOTFOUND api.github.com)');
   const r = await releases.latest('2.15.1', 'darwin', fake({ [GH]: release('v2.16.0') }));
   assert.equal(r.version, '2.16.0');
   assert.equal(r.notes, 'What is new');
