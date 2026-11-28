@@ -109,6 +109,7 @@ async function assistantFromEnv() {
     client: new Anthropic({ timeout: 30_000, maxRetries: 1 }),   // reads ANTHROPIC_API_KEY from the environment
     facts: () => lastSnap, stateFile: join(dirname(STATE), 'assistant.json'), log,
     dailyLimit: Math.max(0, Number(env.ASSISTANT_DAILY_LIMIT || DAILY_LIMIT)),
+    auto: (env.ASSISTANT_AUTO || 'on').trim().toLowerCase() !== 'off',   // answer QU questions nobody addressed to the bot
   });
 }
 
