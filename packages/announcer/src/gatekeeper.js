@@ -4,10 +4,10 @@
 // Logs carry the user ID and Telegram's error description, never message texts or the token.
 import { readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { TOPIC_KEYS } from './events.js';
-import { trigger as assistantTrigger } from './assistant.js';
+import { autoTrigger, trigger as assistantTrigger } from './assistant.js';
 
 /** Topic keys an admin can link: the posting topics plus rules, where the assistant stays quiet. */
-export const LINK_KEYS = [...TOPIC_KEYS, 'rules'];
+export const LINK_KEYS = [...TOPIC_KEYS, 'welcome', 'rules'];
 
 /** The rules shown before joining. Plain text (no parse_mode), so no character needs escaping. */
 export const COMMUNITY_RULES = `👋 Welcome to the Quinvium Community
@@ -242,7 +242,12 @@ export function gatekeeper({ call, chatId, stateFile = null, log = console.log, 
   /** A question for the assistant: a mention or a reply to the bot in the group, or a private message from a member. */
   async function askAssistant(msg) {
     if (!assistant || !me) return;
-    const q = assistantTrigger(msg, { me, community, topics });
+    let q = assistantTrigger(msg, { me, community, topics });
+    if (!q && assistant.auto) {
+      // Not addressed to the bot, but maybe a question about QU: answered unless an admin wrote it.
+      q = autoTrigger(msg, { me, community, topics });
+      if (q && (await isAdmin(msg))) return;
+    }
     if (!q) return;
     const user = msg.from?.id;
     if (!user) return;

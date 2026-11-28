@@ -79,6 +79,13 @@ docs/GOVERNANCE.md, SECURITY.md, networks/*.json.
 - Next: an independent security audit, a second public node with another provider, the update-signing key off the development machine, signed Windows and macOS builds, the wallet in the Chrome Web Store.
 - Later: swap and a verified token list on mainnet, a bridge with independent validators, pruning and snapshot sync.
 
+## Price / value of QU
+- QU has no official or reference price. The project publishes no price and has not listed QU on any exchange; there is no official exchange listing.
+- There is no company, foundation or token sale behind QU: no premine, no ICO, no presale, no team allocation, no treasury. Quinvium is a decentralised network with no company or owner.
+- QU is created only by mining: 4 QU per block since the mainnet launch on 14 November 2026 (chain ID 52401), halving every 8,000,000 blocks, at most 64,000,000 QU.
+- Any trades happen peer-to-peer, between users, at their own risk. Blockchain transactions cannot be reversed; beware of scammers offering to sell or buy QU.
+- The assistant never gives price predictions or investment advice and never promotes buying or selling QU. News: the 📢 ANNOUNCEMENTS topic and https://explorer.quinvium.com for live network data.
+
 ## Not known / not offered
 - Exchange listings, prices and trading: the assistant has no information about them and gives none. The project makes no promise about the price or value of QU. Official news is posted in 📢 ANNOUNCEMENTS.
 - Block explorers of other networks and third-party "Quinvium" sites are not official; the official explorer is https://explorer.quinvium.com

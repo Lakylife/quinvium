@@ -129,3 +129,73 @@ test('in the group the answer replies to the question in the same topic; private
   await off.handle({ update_id: 4, message: mention() });
   assert.equal(calls.length, before, 'without the assistant nothing happens');
 });
+
+test('auto-answers: questions about QU or Quinvium nobody addressed to the bot', async () => {
+  const { autoTrigger } = await import('../src/assistant.js');
+  const ctx = { me: ME, community: CHAT, topics: { announcements: 11, mining: 33, welcome: 3, rules: 2 } };
+  const msg = (text, o = {}) => group({ text, ...o });
+  for (const text of ['Is there a reference price for QU coins now?', 'how do I mine QU?', 'where can I buy quinvium?', 'Which pool is best for mining this coin?', 'does tQU have any value', 'any news about Quinvium']) {
+    const q = autoTrigger(msg(text), ctx);
+    assert.ok(q, text);
+    assert.equal(q.where, 'auto');
+    assert.equal(q.topic, 50);
+  }
+  for (const text of ['hello everyone', 'nice weather?', "what's the price?", 'when listing on an exchange?', 'QU', 'QU to the moon', "qu'est-ce que c'est ?", 'is anyone mining tonight?']) {
+    assert.equal(autoTrigger(msg(text), ctx), null, text);
+  }
+  assert.equal(autoTrigger(msg('how do I mine QU?', { from: { id: 6, is_bot: true } }), ctx), null, 'bots');
+  assert.equal(autoTrigger(msg('how do I mine QU?', { sender_chat: { id: Number(CHAT) } }), ctx), null, 'anonymous admins');
+  for (const thread of [11, 33, 3, 2]) assert.equal(autoTrigger(msg('how do I mine QU?', { message_thread_id: thread }), ctx), null, `closed topic ${thread}`);
+  assert.equal(autoTrigger(mention('@quinviumbot how do I mine QU?'), ctx), null, 'a mention takes the normal path');
+  assert.equal(autoTrigger(msg('and QU?', { reply_to_message: { from: { id: ME.id }, text: 'x' } }), ctx), null, 'a reply to the bot takes the normal path');
+  assert.equal(autoTrigger(msg('/price QU?'), ctx), null, 'commands');
+  assert.equal(autoTrigger({ ...msg('how do I mine QU?'), chat: { id: 5, type: 'private' } }, ctx), null, 'not in private');
+  assert.equal(autoTrigger(msg('how do I mine QU?', { is_topic_message: false, message_thread_id: undefined }), ctx).topic, 'general');
+});
+
+test('auto-answers: SKIP stays silent, one per topic a minute, off with ASSISTANT_AUTO=off, no notices', async () => {
+  let t = Date.UTC(2026, 10, 28, 12);
+  let reply = 'QU has no official price.';
+  const client = fakeClient(() => ({ stop_reason: 'end_turn', content: [{ type: 'text', text: reply }], usage }));
+  const a = assistant({ client, log: quiet, now: () => t });
+  const q = (topic = 50) => ({ question: 'Is there a reference price for QU coins now?', repliedTo: null, where: 'auto', topic });
+  assert.equal(await a.answer(5, q()), 'QU has no official price.');
+  assert.match(client.calls[0].messages[0].content, /^Mode: auto\n/);
+  assert.match(client.calls[0].system[0].text, /reply with exactly SKIP/);
+  assert.equal(client.calls[0].system[0].text, systemPrompt(), 'the same cached system prompt as normal answers');
+  assert.equal(await a.answer(6, q()), null, 'cooldown in the same topic');
+  assert.equal(client.calls.length, 1);
+  assert.equal(await a.answer(6, q(51)), 'QU has no official price.', 'another topic');
+  t += 61_000;
+  reply = 'SKIP';
+  assert.equal(await a.answer(7, q()), null, 'SKIP means silence');
+  assert.equal(a.state.users[7].at.length, 0, 'a skip does not use the user\'s hourly answers');
+  assert.equal(a.state.answers, 3, 'but it counts against the daily cap');
+  const normal = await a.answer(8, { question: 'q', repliedTo: null, where: 'group' });
+  assert.equal(normal, 'SKIP', 'SKIP is only special for auto-answers');
+  const off = assistant({ client, log: quiet, now: () => t, auto: false });
+  assert.equal(await off.answer(5, q(60)), null);
+  assert.equal(off.auto, false);
+  const failing = assistant({ client: { messages: { create: async () => { throw new Error('down'); } } }, log: quiet });
+  assert.equal(await failing.answer(5, q()), null, 'no error notice for an auto-answer');
+  const limited = assistant({ client, log: quiet, now: () => (t += 61_000) });
+  reply = 'ok';
+  for (let i = 0; i < PER_USER_HOUR; i++) await limited.answer(9, q(70 + i));
+  assert.equal(await limited.answer(9, q(80)), null, 'no limit notice for an auto-answer');
+});
+
+test('the gatekeeper auto-answers members but never admins, and never twice', async () => {
+  const calls = [];
+  const call = async (method, params) => { calls.push({ method, params }); return method === 'getChatMember' ? { status: params.user_id === 1 ? 'administrator' : 'member' } : true; };
+  const helper = assistant({ client: fakeClient(() => ({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Mine with the app.' }], usage })), log: quiet });
+  const g = gatekeeper({ call, chatId: CHAT, log: quiet, assistant: helper, me: ME });
+  await g.handle({ update_id: 1, message: group({ text: 'how do I mine QU?' }) });
+  const sent = calls.filter((c) => c.method === 'sendMessage');
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].params.reply_parameters.message_id, 7);
+  assert.equal(sent[0].params.message_thread_id, 50);
+  await g.handle({ update_id: 2, message: group({ message_id: 8, message_thread_id: 52, from: { id: 1 }, text: 'how do I mine QU?' }) });
+  assert.equal(calls.filter((c) => c.method === 'sendMessage').length, 1, 'an admin gets no auto-answer');
+  await g.handle({ update_id: 3, message: mention('@quinviumbot how do I mine QU?', { message_thread_id: 53 }) });
+  assert.equal(calls.filter((c) => c.method === 'sendMessage').length, 2, 'a mention: exactly one answer');
+});
